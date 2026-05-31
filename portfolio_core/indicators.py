@@ -71,11 +71,23 @@ def price_on_or_before(rows: list[sqlite3.Row], target: date) -> float | None:
     return None
 
 
+def price_near_target(rows: list[sqlite3.Row], target: date, max_forward_days: int = 7) -> float | None:
+    before = price_on_or_before(rows, target)
+    if before is not None:
+        return before
+    if not rows:
+        return None
+    first_date = datetime.strptime(rows[0]["date"], "%Y-%m-%d").date()
+    if 0 <= (first_date - target).days <= max_forward_days:
+        return float(rows[0]["close"])
+    return None
+
+
 def performance_pct(rows: list[sqlite3.Row], target: date) -> float | None:
     if not rows:
         return None
     latest = float(rows[-1]["close"])
-    base = price_on_or_before(rows, target)
+    base = price_near_target(rows, target)
     if base in (None, 0):
         return None
     return (latest - base) / base * 100

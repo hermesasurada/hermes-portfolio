@@ -16,7 +16,7 @@ KOREAN_ETF_BRANDS = ("KODEX", "TIGER", "ACE", "SOL")
 US_ETF_TICKERS = frozenset(
     {
         "QLD", "TSLL", "TQQQ", "SQQQ", "SOXL", "SOXS", "SPY", "VOO", "VTI",
-        "IVV", "QQQ", "DIA", "IWM", "ARKK", "SCHD",
+        "IVV", "QQQ", "DIA", "IWM", "ARKK", "ARKG", "SCHD",
     }
 )
 MARKET_INDEXES = {

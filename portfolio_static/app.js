@@ -126,6 +126,7 @@ function tickerAssetClass(ticker, name, category) {
   const upperTicker = String(ticker || "").toUpperCase();
   if (category === "crypto" || upperTicker === "BTC") return "crypto";
   if (category === "index") return "index";
+  if (["ARKG", "ARKK", "QLD", "TQQQ", "SQQQ", "SOXL", "SOXS", "SPY", "VOO", "VTI", "IVV", "QQQ", "DIA", "IWM", "SCHD"].includes(upperTicker)) return "etf";
   if (["KODEX", "TIGER", "ACE", "SOL", "ETF", "ISHARES", "PROSHARES", "DIREXION"].some(token => upperName.includes(token))) return "etf";
   return "stock";
 }
@@ -535,7 +536,7 @@ function statsRows(rows) {
     const rsi = stats.rsi || {};
     const bb = stats.bollinger_pband || {};
     const perf = stats.performance || {};
-    const isEtf = row.asset_class === "etf";
+    const isEtf = (row.assetClass || row.asset_class) === "etf";
     const marketCap = isEtf ? null : Number(stats.market_cap);
     return {
       ...row,

@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from portfolio_core.fundamentals import normalize_pe, parse_number
 from portfolio_core.indicators import (
     performance_pct,
+    price_near_target,
     recent_performance,
     resample_last,
     shift_months,
@@ -102,6 +103,7 @@ def test_normalize_yfinance_symbol():
 def test_asset_class():
     assert asset_class("BTC", "Bitcoin") == "crypto"
     assert asset_class("QQQ", "Invesco QQQ") == "etf"
+    assert asset_class("ARKG", "ARK Genomic") == "etf"
     assert asset_class("069500.KS", "KODEX 200") == "etf"
     assert asset_class("SCHD", "") == "etf"          # ticker-only ETF
     assert asset_class("AAPL", "Apple Inc.") == "stock"
@@ -162,6 +164,15 @@ def test_performance_pct():
     ]
     assert performance_pct(rows, date(2026, 1, 1)) == 10.0
     assert performance_pct([], date(2026, 1, 1)) is None
+
+
+def test_price_near_target_uses_first_trading_day_for_edge_weekend():
+    rows = [
+        {"date": "2021-06-01", "close": 100.0},
+        {"date": "2026-05-29", "close": 150.0},
+    ]
+    assert price_near_target(rows, date(2021, 5, 29)) == 100.0
+    assert price_near_target(rows, date(2021, 5, 1)) is None
 
 
 def test_recent_performance_keys():
