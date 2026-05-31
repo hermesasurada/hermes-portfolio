@@ -133,7 +133,7 @@ def fetch_naver_fundamentals(ticker: str) -> tuple[dict, dict]:
     }, obj
 
 
-def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str]) -> dict[str, dict]:
+def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_stale: bool = True) -> dict[str, dict]:
     earnings_by_ticker = {
         row["ticker"]: row["next_earnings_date"]
         for row in conn.execute(
@@ -155,6 +155,12 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str]) -> dict[str
         stale = load_stats_cache_item(conn, ticker, now_ts, fresh_only=False)
         if stale:
             stale["next_earnings_date"] = earnings_by_ticker.get(ticker)
+            if not refresh_stale:
+                result[ticker] = stale
+                continue
+        elif not refresh_stale:
+            result[ticker] = {"next_earnings_date": earnings_by_ticker.get(ticker)}
+            continue
         data: dict = {}
         source = "unknown"
         raw: dict | None = None

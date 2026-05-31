@@ -6,7 +6,8 @@ const usPriceStorage = {
   extended: "portfolio.usPrice.extendedHours"
 };
 const detailStorage = {
-  fxAdjusted: "portfolio.detail.fxAdjusted"
+  fxAdjusted: "portfolio.detail.fxAdjusted",
+  currencyFilter: "portfolio.detail.currencyFilter"
 };
 const defaultSortDir = {
   name: 1,

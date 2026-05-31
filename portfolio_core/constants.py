@@ -17,6 +17,7 @@ US_ETF_TICKERS = frozenset(
     {
         "QLD", "TSLL", "TQQQ", "SQQQ", "SOXL", "SOXS", "SPY", "VOO", "VTI",
         "IVV", "QQQ", "DIA", "IWM", "ARKK", "ARKG", "SCHD",
+        "1629.T", "200A.T",
     }
 )
 MARKET_INDEXES = {

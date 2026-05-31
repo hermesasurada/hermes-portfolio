@@ -104,6 +104,7 @@ def test_asset_class():
     assert asset_class("BTC", "Bitcoin") == "crypto"
     assert asset_class("QQQ", "Invesco QQQ") == "etf"
     assert asset_class("ARKG", "ARK Genomic") == "etf"
+    assert asset_class("200A.T", "Nikkei Semiconductor") == "etf"
     assert asset_class("069500.KS", "KODEX 200") == "etf"
     assert asset_class("SCHD", "") == "etf"          # ticker-only ETF
     assert asset_class("AAPL", "Apple Inc.") == "stock"

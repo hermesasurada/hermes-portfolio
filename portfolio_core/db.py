@@ -43,6 +43,21 @@ def ensure_stats_cache_table(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN next_earnings_date TEXT")
 
 
+def ensure_technical_stats_cache_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ticker_technical_stats_cache (
+            ticker TEXT PRIMARY KEY,
+            version INTEGER NOT NULL,
+            latest_date TEXT,
+            price_count INTEGER NOT NULL,
+            computed_at TEXT NOT NULL,
+            payload_json TEXT NOT NULL
+        )
+        """
+    )
+
+
 def ensure_price_indexes(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
@@ -78,6 +93,7 @@ def initialize_schema() -> None:
     with connect() as conn:
         ensure_ticker_metadata_columns(conn)
         ensure_stats_cache_table(conn)
+        ensure_technical_stats_cache_table(conn)
         ensure_transaction_columns(conn)
         ensure_price_indexes(conn)
         ensure_market_index_tickers(conn)

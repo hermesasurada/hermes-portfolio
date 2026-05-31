@@ -67,6 +67,9 @@ function krwRate(row) {
 function fxAdjustedEnabled() {
   return document.getElementById("fxAdjustedToggle")?.checked || false;
 }
+function currencyFilterValue() {
+  return document.getElementById("currencyFilter")?.value || "all";
+}
 function holdingChangePct(row, fxAdjusted = fxAdjustedEnabled()) {
   if (fxAdjusted && row.currency !== "KRW" && Number.isFinite(row.change_krw_pct)) return row.change_krw_pct;
   return Number.isFinite(row.change_pct) ? row.change_pct : null;
@@ -126,7 +129,7 @@ function tickerAssetClass(ticker, name, category) {
   const upperTicker = String(ticker || "").toUpperCase();
   if (category === "crypto" || upperTicker === "BTC") return "crypto";
   if (category === "index") return "index";
-  if (["ARKG", "ARKK", "QLD", "TQQQ", "SQQQ", "SOXL", "SOXS", "SPY", "VOO", "VTI", "IVV", "QQQ", "DIA", "IWM", "SCHD"].includes(upperTicker)) return "etf";
+  if (["ARKG", "ARKK", "QLD", "TQQQ", "SQQQ", "SOXL", "SOXS", "SPY", "VOO", "VTI", "IVV", "QQQ", "DIA", "IWM", "SCHD", "1629.T", "200A.T"].includes(upperTicker)) return "etf";
   if (["KODEX", "TIGER", "ACE", "SOL", "ETF", "ISHARES", "PROSHARES", "DIREXION"].some(token => upperName.includes(token))) return "etf";
   return "stock";
 }
@@ -290,6 +293,25 @@ function renderUsPriceControl() {
   scheduleUsPriceRefresh();
 }
 
+function renderCurrencyFilter() {
+  const select = document.getElementById("currencyFilter");
+  if (!select || !data) return;
+  const saved = storageGet(detailStorage.currencyFilter) || "all";
+  const currencies = Array.from(new Set([
+    ...flattenHoldings().map(row => row.currency),
+    ...(data.tickers || []).map(row => row.currency),
+  ].filter(Boolean))).sort((a, b) => {
+    const order = { KRW: 0, USD: 1, JPY: 2, EUR: 3 };
+    return (order[a] ?? 99) - (order[b] ?? 99) || String(a).localeCompare(String(b));
+  });
+  select.innerHTML = [
+    `<option value="all">전체</option>`,
+    ...currencies.map(currency => `<option value="${esc(currency)}">${esc(currency)}</option>`),
+  ].join("");
+  select.value = currencies.includes(saved) ? saved : "all";
+  syncFilterToggleControls();
+}
+
 function scheduleUsPriceRefresh() {
   if (usPriceTimer) {
     clearInterval(usPriceTimer);
@@ -329,7 +351,7 @@ function syncMobileCollapsePanels() {
 }
 
 function renderAccounts() {
-  const rows = filteredRows({ ignoreAccount: true, ignoreAggregate: true });
+  const rows = filteredRows({ ignoreAccount: true, ignoreAggregate: true, ignoreCurrency: true });
   const byAccount = new Map();
   rows.forEach(r => {
     const current = byAccount.get(r.accountId) || { value_krw: 0, change_krw: 0, previous_krw: 0, count: 0 };
@@ -446,11 +468,13 @@ function renderAccounts() {
 
 function filteredRows(options = {}) {
   const activeOnly = document.getElementById("activeOnlyToggle").checked;
+  const currencyFilter = currencyFilterValue();
   let rows = flattenHoldings();
   if (!activeOnly) rows = rows.concat(watchlistRows());
   const fxAdjusted = fxAdjustedEnabled();
   if (!options.ignoreAccount && selectionMode !== "all") rows = rows.filter(r => selectedAccounts.has(r.accountId));
   if (activeOnly) rows = rows.filter(r => (r.qty || 0) > 0);
+  if (!options.ignoreCurrency && currencyFilter !== "all") rows = rows.filter(r => r.currency === currencyFilter);
   rows = rows.map(row => ({
       ...row,
       display_change_pct: holdingChangePct(row, fxAdjusted),
@@ -499,6 +523,7 @@ function syncFilterToggleControls() {
     const control = document.getElementById(controlId);
     if (toggle && control) control.classList.toggle("enabled", toggle.checked);
   });
+  document.getElementById("currencyFilterControl")?.classList.toggle("active", currencyFilterValue() !== "all");
 }
 
 function syncDetailTabs() {
@@ -512,7 +537,7 @@ function syncDetailTabs() {
   document.getElementById("chartView").classList.toggle("hidden", !showingChart);
   document.getElementById("chartBack").classList.toggle("hidden", !showingChart);
   document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart);
-  ["aggregateControl", "activeOnlyControl", "fxAdjustedControl", "rowCount", "accountTotal"].forEach(id => {
+  ["aggregateControl", "activeOnlyControl", "fxAdjustedControl", "currencyFilterControl", "rowCount", "accountTotal"].forEach(id => {
     document.getElementById(id)?.classList.toggle("hidden", showingChart);
   });
 }
@@ -1818,7 +1843,7 @@ function render() {
   renderAccounts();
   const rows = filteredRows();
   renderSummary(rows);
-  renderAllocation(filteredRows({ ignoreAggregate: true }));
+  renderAllocation(filteredRows({ ignoreAggregate: true, ignoreCurrency: true }));
   renderTable();
   renderTradeControls();
   syncMobileCollapsePanels();
@@ -1829,6 +1854,7 @@ async function load() {
   loadInFlight = (async () => {
     data = await apiFetchPortfolio(usExtendedEnabled());
     if (!document.getElementById("tradeDate").value) document.getElementById("tradeDate").value = todayLocal();
+    renderCurrencyFilter();
     render();
     if (transactionsExpanded) loadTransactions().catch(() => {});
   })();
@@ -2094,6 +2120,12 @@ document.getElementById("activeOnlyToggle").addEventListener("change", () => {
 document.getElementById("fxAdjustedToggle").checked = storageGet(detailStorage.fxAdjusted) === "true";
 document.getElementById("fxAdjustedToggle").addEventListener("change", () => {
   storageSet(detailStorage.fxAdjusted, String(document.getElementById("fxAdjustedToggle").checked));
+  syncFilterToggleControls();
+  render();
+});
+document.getElementById("currencyFilter").value = storageGet(detailStorage.currencyFilter) || "all";
+document.getElementById("currencyFilter").addEventListener("change", () => {
+  storageSet(detailStorage.currencyFilter, currencyFilterValue());
   syncFilterToggleControls();
   render();
 });
