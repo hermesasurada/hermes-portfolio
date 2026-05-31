@@ -1036,11 +1036,13 @@ tr:hover td { background: var(--surface-hover); }
 }
 .perf-contrib-chart {
   position: relative;
-  height: 340px;
+  height: 460px;
   margin: 6px 10.612% 8px 8px;
   overflow: hidden;
   border-radius: 8px;
-  background: var(--surface-2);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
 }
 .perf-contrib-tile {
   position: absolute;
@@ -1050,27 +1052,41 @@ tr:hover td { background: var(--surface-hover); }
   align-items: center;
   justify-content: center;
   gap: 3px;
-  border: 2px solid var(--panel);
-  border-radius: 7px;
-  color: #202124;
+  border: 1px solid var(--panel);
+  border-radius: 6px;
+  color: var(--ink);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   text-align: center;
   font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18);
+  transition: filter var(--t-fast), box-shadow var(--t-fast);
+}
+.perf-contrib-tile.up {
+  background: color-mix(in srgb, var(--up) var(--tile-mix, 32%), var(--panel));
+  border-color: color-mix(in srgb, var(--up) 16%, var(--panel));
+}
+.perf-contrib-tile.down {
+  background: color-mix(in srgb, var(--down) var(--tile-mix, 32%), var(--panel));
+  border-color: color-mix(in srgb, var(--down) 16%, var(--panel));
+}
+.perf-contrib-tile:hover {
+  filter: saturate(1.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .30), 0 1px 4px rgba(15, 23, 42, .08);
 }
 .perf-contrib-ticker {
   max-width: 96%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 30px;
-  font-weight: 650;
+  font-size: 28px;
+  font-weight: var(--fw-bold);
   line-height: 1;
 }
 .perf-contrib-pct {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: var(--fw-bold);
   line-height: 1;
 }
 .perf-contrib-tile.medium .perf-contrib-ticker {

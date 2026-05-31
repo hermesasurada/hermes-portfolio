@@ -201,8 +201,7 @@ function binaryTreemap(items, x, y, width, height) {
 
 function contributionTileColor(item, maxAbsPct) {
   const intensity = Math.min(1, Math.max(0.18, Math.abs(item.contributionSharePct) / Math.max(0.01, maxAbsPct)));
-  if (item.contribution > 0) return `rgba(239, 82, 75, ${0.28 + intensity * 0.62})`;
-  return `rgba(112, 158, 232, ${0.32 + intensity * 0.54})`;
+  return `${Math.round(16 + intensity * 42)}%`;
 }
 
 function contributionTileLabel(item) {
@@ -226,7 +225,7 @@ function renderPerformanceContributionChart(payload, portfolioPoints) {
         const label = contributionTileLabel(item);
         return `
           <div class="perf-contrib-tile ${item.contribution >= 0 ? "up" : "down"} ${sizeClass}"
-            style="left:${item.x.toFixed(3)}%;top:${item.y.toFixed(3)}%;width:${item.width.toFixed(3)}%;height:${item.height.toFixed(3)}%;background:${contributionTileColor(item, maxAbsPct)}"
+            style="left:${item.x.toFixed(3)}%;top:${item.y.toFixed(3)}%;width:${item.width.toFixed(3)}%;height:${item.height.toFixed(3)}%;--tile-mix:${contributionTileColor(item, maxAbsPct)}"
             title="${esc(title)}">
             <span class="perf-contrib-ticker">${esc(label)}</span>
             <span class="perf-contrib-pct">${esc(pctChartLabel(item.contributionSharePct))}</span>
