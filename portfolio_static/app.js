@@ -974,16 +974,10 @@ function chartCompareSeries(payload) {
 }
 
 function renderChartCompareControls() {
-  const options = (data?.tickers || [])
-    .filter(item => item.ticker && item.ticker !== chartTicker && !chartComparePayloads.some(row => row.ticker === item.ticker))
-    .sort((a, b) => String(a.ticker).localeCompare(String(b.ticker)))
-    .map(item => `<option value="${esc(item.ticker)}">${esc(item.name || item.ticker)}</option>`)
-    .join("");
   return `
     <div class="chart-compare-panel">
       <div class="chart-compare-add">
-        <input id="chartCompareInput" list="chartCompareOptions" placeholder="비교 종목 추가" autocomplete="off">
-        <datalist id="chartCompareOptions">${options}</datalist>
+        <input id="chartCompareInput" placeholder="티커 직접 입력" autocomplete="off" spellcheck="false">
         <button class="ghost-btn" id="chartCompareAdd" type="button">추가</button>
       </div>
       <div class="chart-compare-list">
@@ -1031,6 +1025,11 @@ async function addChartCompareTicker(value) {
   if (input) input.value = "";
   try {
     const payload = await apiFetchChart(ticker);
+    const pricedPoints = (payload.points || []).filter(point => point.date && Number.isFinite(Number(point.close)));
+    if (pricedPoints.length < 2) {
+      showTradeStatus(`${ticker} 가격 이력이 없습니다.`, true);
+      return;
+    }
     chartComparePayloads = [...chartComparePayloads, payload];
     renderLineChart(chartPayload);
   } catch (err) {
