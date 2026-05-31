@@ -99,7 +99,12 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
         ).fetchall()
         holding_rows = conn.execute(
             f"""
-            SELECT h.account_id, h.ticker, h.qty, COALESCE(h.currency, tk.currency, '') AS currency
+            SELECT
+                h.account_id,
+                h.ticker,
+                h.qty,
+                COALESCE(h.currency, tk.currency, '') AS currency,
+                COALESCE(tk.name, h.ticker) AS name
             FROM holdings h
             JOIN accounts a ON a.id = h.account_id
             LEFT JOIN tickers tk ON tk.ticker = h.ticker
@@ -112,6 +117,7 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
         holdings = [
             {
                 "ticker": row["ticker"],
+                "name": row["name"] or row["ticker"],
                 "qty": float(row["qty"] or 0),
                 "currency": row["currency"] or ticker_currency(row["ticker"]),
             }
@@ -166,11 +172,34 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
     ]
     tickers = sorted({holding["ticker"] for holding in holding_specs})
 
+    contributor_specs: dict[str, dict] = {}
+    for holding in holding_specs:
+        spec = contributor_specs.setdefault(
+            holding["ticker"],
+            {
+                "ticker": holding["ticker"],
+                "name": holding.get("name") or holding["ticker"],
+                "currency": holding["currency"],
+                "qty": 0.0,
+                "rate": holding["rate"],
+                "points": [],
+            },
+        )
+        spec["qty"] += holding["qty"]
+
     latest_by_ticker: dict[str, float] = dict(first_prices)
     points = []
     for date, rows_iter in groupby(price_rows, key=lambda row: row["date"]):
         for row in rows_iter:
             latest_by_ticker[row["ticker"]] = float(row["close"])
+            spec = contributor_specs.get(row["ticker"])
+            if spec:
+                spec["points"].append(
+                    {
+                        "date": row["date"],
+                        "value": float(row["close"]) * spec["qty"] * spec["rate"],
+                    }
+                )
         if tickers and all(ticker in latest_by_ticker for ticker in tickers):
             value = sum(
                 holding["qty"] * latest_by_ticker[holding["ticker"]] * holding["rate"]
@@ -201,5 +230,16 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
         ],
         "holdings_count": len(holding_specs),
         "points": points,
+        "contributors": [
+            {
+                "ticker": spec["ticker"],
+                "name": spec["name"],
+                "currency": spec["currency"],
+                "qty": spec["qty"],
+                "points": spec["points"],
+            }
+            for spec in contributor_specs.values()
+            if len(spec["points"]) >= 2
+        ],
         "indexes": indexes,
     }

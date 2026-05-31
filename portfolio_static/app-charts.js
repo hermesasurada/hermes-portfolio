@@ -126,6 +126,100 @@ function renderPerformanceControls() {
   `;
 }
 
+function performanceContributionItems(payload, portfolioPoints) {
+  const startPoint = portfolioPoints?.[0];
+  const endPoint = portfolioPoints?.[portfolioPoints.length - 1];
+  const startValue = Number(startPoint?.value);
+  if (!startPoint?.date || !endPoint?.date || !Number.isFinite(startValue) || startValue <= 0) return [];
+  return (payload?.contributors || [])
+    .map(item => {
+      const periodPoints = (item.points || [])
+        .filter(point => point.date >= startPoint.date && point.date <= endPoint.date && Number.isFinite(Number(point.value)))
+        .map(point => ({ date: point.date, value: Number(point.value) }));
+      if (periodPoints.length < 2) return null;
+      const start = periodPoints[0].value;
+      const end = periodPoints[periodPoints.length - 1].value;
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start <= 0) return null;
+      const contribution = end - start;
+      const contributionPct = contribution / startValue * 100;
+      const holdingPct = (end / start - 1) * 100;
+      return {
+        ticker: String(item.ticker || "").toUpperCase(),
+        name: item.name || item.ticker,
+        contribution,
+        contributionPct,
+        holdingPct,
+        size: Math.abs(contribution),
+      };
+    })
+    .filter(item => item && item.size > 0)
+    .sort((a, b) => b.size - a.size);
+}
+
+function binaryTreemap(items, x, y, width, height) {
+  if (!items.length || width <= 0 || height <= 0) return [];
+  if (items.length === 1) return [{ ...items[0], x, y, width, height }];
+  const total = items.reduce((sum, item) => sum + item.size, 0);
+  if (total <= 0) return [];
+  let bestIndex = 1;
+  let bestDistance = Infinity;
+  let running = 0;
+  for (let index = 0; index < items.length - 1; index++) {
+    running += items[index].size;
+    const distance = Math.abs(total / 2 - running);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = index + 1;
+    }
+  }
+  const leftItems = items.slice(0, bestIndex);
+  const rightItems = items.slice(bestIndex);
+  const leftTotal = leftItems.reduce((sum, item) => sum + item.size, 0);
+  const ratio = leftTotal / total;
+  if (width >= height) {
+    const leftWidth = width * ratio;
+    return [
+      ...binaryTreemap(leftItems, x, y, leftWidth, height),
+      ...binaryTreemap(rightItems, x + leftWidth, y, width - leftWidth, height),
+    ];
+  }
+  const topHeight = height * ratio;
+  return [
+    ...binaryTreemap(leftItems, x, y, width, topHeight),
+    ...binaryTreemap(rightItems, x, y + topHeight, width, height - topHeight),
+  ];
+}
+
+function contributionTileColor(item, maxAbsPct) {
+  const intensity = Math.min(1, Math.max(0.18, Math.abs(item.contributionPct) / Math.max(0.01, maxAbsPct)));
+  if (item.contribution > 0) return `rgba(239, 82, 75, ${0.28 + intensity * 0.62})`;
+  return `rgba(112, 158, 232, ${0.32 + intensity * 0.54})`;
+}
+
+function renderPerformanceContributionChart(payload, portfolioPoints) {
+  const items = performanceContributionItems(payload, portfolioPoints);
+  if (!items.length) return `<div class="perf-contrib-empty">기여도 데이터 없음</div>`;
+  const maxAbsPct = Math.max(...items.map(item => Math.abs(item.contributionPct)));
+  const rects = binaryTreemap(items, 0, 0, 100, 100);
+  return `
+    <div class="perf-contrib-chart" aria-label="기간 성과 기여도">
+      ${rects.map(item => {
+        const area = item.width * item.height;
+        const sizeClass = area > 1200 ? "large" : area > 620 ? "medium" : area > 260 ? "small" : "tiny";
+        const title = `${item.ticker} ${pctChartLabel(item.contributionPct)} · 종목 ${pctChartLabel(item.holdingPct)}`;
+        return `
+          <div class="perf-contrib-tile ${item.contribution >= 0 ? "up" : "down"} ${sizeClass}"
+            style="left:${item.x.toFixed(3)}%;top:${item.y.toFixed(3)}%;width:${item.width.toFixed(3)}%;height:${item.height.toFixed(3)}%;background:${contributionTileColor(item, maxAbsPct)}"
+            title="${esc(title)}">
+            <span class="perf-contrib-ticker">${esc(item.ticker)}</span>
+            <span class="perf-contrib-pct">${esc(pctChartLabel(item.contributionPct))}</span>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
 function bindPerformanceHover(series, geometry) {
   const svg = document.querySelector("#chartCanvas svg");
   const hoverLayer = document.getElementById("chartHoverLayer");
@@ -298,6 +392,7 @@ function renderPerformanceChart(payload) {
         <text id="chartTooltip" class="chart-tooltip perf-tooltip" x="0" y="0">-</text>
       </g>
     </svg>
+    ${renderPerformanceContributionChart(payload, portfolio.points)}
     ${renderChartRangeButtons()}
   `;
   bindPerformanceHover(series, { width, height, pad, plotW, plotH, minTime, maxTime, xForTime, yFor });
