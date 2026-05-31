@@ -149,15 +149,20 @@ function watchlistAccountsForTicker(tickerMeta) {
 function watchlistRowForAccount(tickerMeta, account) {
   const price = Number(tickerMeta.current_price);
   const currentPrice = Number.isFinite(price) ? price : null;
+  const previous = Number(tickerMeta.previous_price);
+  const previousPrice = Number.isFinite(previous) ? previous : null;
+  const change = currentPrice != null && previousPrice ? currentPrice - previousPrice : null;
+  const changePct = change != null && previousPrice ? change / previousPrice * 100 : null;
   const currency = tickerMeta.currency || "USD";
   const fxRate = Number(data?.fx?.[currency] || 1);
   const assetClass = tickerAssetClass(tickerMeta.ticker, tickerMeta.name, tickerMeta.category);
   return {
+    is_watchlist: true,
     ticker: tickerMeta.ticker,
     name: tickerMeta.name || tickerMeta.ticker,
-    qty: 0,
+    qty: null,
     avg_price: null,
-    invested: 0,
+    invested: null,
     currency,
     accountId: account?.id || "__watch",
     accountName: account?.name || "관리종목",
@@ -165,17 +170,17 @@ function watchlistRowForAccount(tickerMeta, account) {
     assetClass,
     memberName: account?.memberName || "Watchlist",
     current_price: currentPrice,
-    previous_price: null,
-    previous_date: null,
-    change: null,
-    change_pct: null,
+    previous_price: previousPrice,
+    previous_date: tickerMeta.previous_date || null,
+    change,
+    change_pct: changePct,
     change_krw_pct: null,
-    extended_change_pct: null,
+    extended_change_pct: tickerMeta.extended_change_pct ?? null,
     fx_rate: fxRate,
     previous_fx_rate: fxRate,
-    value: 0,
-    value_krw: 0,
-    price_source: null,
+    value: null,
+    value_krw: null,
+    price_source: tickerMeta.price_source || null,
     next_earnings_date: tickerMeta.next_earnings_date || null,
     logo: tickerMeta.logo || { kind: assetClass, text: String(tickerMeta.ticker).slice(0, 2).toUpperCase(), url: null },
   };
@@ -652,17 +657,17 @@ function renderTable() {
           </span>
         </div>
       </td>
-      <td>${changeMarkup(r)}</td>
-      <td>${extendedChangeText(r)}</td>
-      <td>${changeKrwText(r.change_krw)}</td>
-      <td>${fmt2.format(r.qty)}</td>
+      <td>${r.is_watchlist ? "-" : changeMarkup(r)}</td>
+      <td>${r.is_watchlist ? "-" : extendedChangeText(r)}</td>
+      <td>${r.is_watchlist ? "-" : changeKrwText(r.change_krw)}</td>
+      <td>${r.is_watchlist ? "-" : fmt2.format(r.qty)}</td>
       <td>${localCurrentPriceText(r)}</td>
       <td>${krwCurrentPriceText(r)}</td>
-      <td>${localValueText(r)}</td>
-      <td>${krwValueText(r)}</td>
-      <td>${weightText(r.weight_pct)}</td>
-      <td>${earningsText(r.next_earnings_date)}</td>
-      <td><button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button></td>
+      <td>${r.is_watchlist ? "-" : localValueText(r)}</td>
+      <td>${r.is_watchlist ? "-" : krwValueText(r)}</td>
+      <td>${r.is_watchlist ? "-" : weightText(r.weight_pct)}</td>
+      <td>${r.is_watchlist ? "-" : earningsText(r.next_earnings_date)}</td>
+      <td>${r.is_watchlist ? "-" : `<button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button>`}</td>
     </tr>
   `).join("");
   document.querySelectorAll(".tx-pick").forEach(btn => {

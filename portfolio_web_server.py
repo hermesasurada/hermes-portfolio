@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import math
 import mimetypes
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -87,6 +88,16 @@ def load_portfolio(us_extended: bool = False) -> dict:
     return load_portfolio_data(us_extended=us_extended, logo_hint_fn=logo_hint)
 
 
+def json_safe(value):
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {key: json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [json_safe(item) for item in value]
+    return value
+
+
 STATIC_DIR = Path(__file__).with_name("portfolio_static")
 INDEX_HTML = STATIC_DIR / "index.html"
 
@@ -104,7 +115,11 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def send_json(self, payload: dict, status: int = 200) -> None:
-        self.send_bytes(json.dumps(payload, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8", status)
+        self.send_bytes(
+            json.dumps(json_safe(payload), ensure_ascii=False, allow_nan=False).encode("utf-8"),
+            "application/json; charset=utf-8",
+            status,
+        )
 
     def send_file(self, file_path: Path, content_type: str | None = None, cache_control: str = "no-store") -> bool:
         if not file_path.exists() or not file_path.is_file():

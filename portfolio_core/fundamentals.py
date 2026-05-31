@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import json
+import math
 import re
 import sqlite3
 import urllib.request
@@ -13,6 +14,14 @@ from .tickers import is_korean_stock_ticker, normalize_yfinance_symbol
 
 STATS_CACHE_SECONDS = 30 * 60
 STATS_CACHE_VERSION = 7
+
+
+def finite_number(value) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
 
 
 def stats_cache_expires_today() -> bool:
@@ -37,10 +46,10 @@ def load_stats_cache_item(conn: sqlite3.Connection, ticker: str, now_ts: float, 
     if fresh_only and stats_cache_expires_today() and now_ts - float(row["fetched_ts"] or 0) >= STATS_CACHE_SECONDS:
         return None
     return {
-        "market_cap": row["market_cap"],
-        "dividend_yield": row["dividend_yield"],
-        "trailing_pe": row["trailing_pe"],
-        "forward_pe": row["forward_pe"],
+        "market_cap": finite_number(row["market_cap"]),
+        "dividend_yield": finite_number(row["dividend_yield"]),
+        "trailing_pe": normalize_pe(row["trailing_pe"]),
+        "forward_pe": normalize_pe(row["forward_pe"]),
         "next_earnings_date": row["next_earnings_date"],
     }
 
@@ -69,10 +78,10 @@ def save_stats_cache_item(conn: sqlite3.Connection, ticker: str, source: str, da
             datetime.now().timestamp(),
             datetime.now(KST).isoformat(timespec="seconds"),
             source,
-            data.get("market_cap"),
-            data.get("dividend_yield"),
-            data.get("trailing_pe"),
-            data.get("forward_pe"),
+            finite_number(data.get("market_cap")),
+            finite_number(data.get("dividend_yield")),
+            normalize_pe(data.get("trailing_pe")),
+            normalize_pe(data.get("forward_pe")),
             data.get("next_earnings_date"),
             json.dumps(raw or {}, ensure_ascii=False, default=str),
         ),
@@ -92,9 +101,8 @@ def parse_number(text: str | None) -> float | None:
 
 
 def normalize_pe(value) -> float | None:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
+    number = finite_number(value)
+    if number is None:
         return None
     return number if number > 0 else None
 
@@ -166,8 +174,8 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str]) -> dict[str
                     if dividend_yield is None:
                         dividend_yield = info.get("trailingAnnualDividendYield")
                     data = {
-                        "market_cap": info.get("marketCap"),
-                        "dividend_yield": dividend_yield,
+                        "market_cap": finite_number(info.get("marketCap")),
+                        "dividend_yield": finite_number(dividend_yield),
                         "trailing_pe": normalize_pe(info.get("trailingPE")),
                         "forward_pe": normalize_pe(info.get("forwardPE")),
                         "next_earnings_date": earnings_by_ticker.get(ticker),

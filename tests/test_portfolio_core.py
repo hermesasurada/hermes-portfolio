@@ -59,6 +59,7 @@ def test_normalize_pe():
     assert normalize_pe("12.3") == 12.3
     assert normalize_pe(0) is None
     assert normalize_pe(-5) is None
+    assert normalize_pe(float("inf")) is None
     assert normalize_pe(None) is None
     assert normalize_pe("n/a") is None
 

@@ -192,6 +192,28 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
                     row["currency"] or ticker_currency(row["ticker"]),
                 ),
                 "current_price": prices.get(row["ticker"], {}).get("price"),
+                "previous_price": prices.get(row["ticker"], {}).get("previous_price"),
+                "previous_date": prices.get(row["ticker"], {}).get("previous_date"),
+                "change": (
+                    float(prices[row["ticker"]]["price"]) - float(prices[row["ticker"]]["previous_price"])
+                    if row["ticker"] in prices
+                    and prices[row["ticker"]].get("price") is not None
+                    and prices[row["ticker"]].get("previous_price") not in (None, 0)
+                    else None
+                ),
+                "change_pct": (
+                    (
+                        float(prices[row["ticker"]]["price"])
+                        - float(prices[row["ticker"]]["previous_price"])
+                    )
+                    / float(prices[row["ticker"]]["previous_price"])
+                    * 100
+                    if row["ticker"] in prices
+                    and prices[row["ticker"]].get("price") is not None
+                    and prices[row["ticker"]].get("previous_price") not in (None, 0)
+                    else None
+                ),
+                "extended_change_pct": prices.get(row["ticker"], {}).get("extended_change_pct"),
                 "next_earnings_date": row["next_earnings_date"],
                 "earnings_updated_at": row["earnings_updated_at"],
                 "logo": logo_hint(row["ticker"], row["name"] or row["ticker"]),
