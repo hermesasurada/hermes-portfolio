@@ -778,6 +778,44 @@ function nearestPointIndex(points, dateText) {
   return bestIndex;
 }
 
+function chartLocalDateText(time) {
+  const date = new Date(time);
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function indexedChartVerticalGrid(points, xFor, rangeKey) {
+  if (points.length < 2) return { unit: "month", ticks: [] };
+  const minTime = new Date(`${points[0].date}T00:00:00`).getTime();
+  const maxTime = new Date(`${points[points.length - 1].date}T00:00:00`).getTime();
+  const grid = perfVerticalGrid(minTime, maxTime, rangeKey);
+  const seen = new Set();
+  const ticks = grid.lines
+    .map(time => {
+      const date = chartLocalDateText(time);
+      const index = nearestPointIndex(points, date);
+      if (seen.has(index)) return null;
+      seen.add(index);
+      return { time, index, x: xFor(index), date: points[index].date };
+    })
+    .filter(Boolean);
+  if (ticks.length) return { unit: grid.unit, ticks };
+  return {
+    unit: grid.unit,
+    ticks: [0, points.length - 1]
+      .filter((value, index, arr) => arr.indexOf(value) === index)
+      .map(index => ({
+        time: new Date(`${points[index].date}T00:00:00`).getTime(),
+        index,
+        x: xFor(index),
+        date: points[index].date,
+      })),
+  };
+}
+
 function chartExtremes(values) {
   if (!values.length) return [];
   const highIndex = values.reduce((best, value, index) => value > values[best] ? index : best, 0);
@@ -1104,11 +1142,8 @@ function renderCompareLineChart(payload) {
     <span class="${cls}">${pctChartLabel(last.close)}</span>
   `;
   const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
-  const xTicks = [minTime, minTime + (maxTime - minTime) / 2, maxTime].map((time, index) => ({
-    x: xForTime(time),
-    date: new Date(time).toISOString().slice(0, 10),
-    anchor: index === 0 ? "start" : index === 2 ? "end" : "middle",
-  }));
+  const vGrid = perfVerticalGrid(minTime, maxTime, chartRange);
+  const labelEvery = Math.max(1, Math.ceil(vGrid.lines.length / 8));
   const endLabels = series
     .map(item => {
       const lastPoint = item.points[item.points.length - 1];
@@ -1130,10 +1165,16 @@ function renderCompareLineChart(payload) {
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
         <text class="chart-y-label" x="${pad.left - 8}" y="${(tick.y + 4).toFixed(2)}">${esc(pctChartLabel(tick.value))}</text>
       `).join("")}
-      <line class="perf-zero-line" x1="${pad.left}" x2="${pad.left + plotW}" y1="${yFor(0).toFixed(2)}" y2="${yFor(0).toFixed(2)}"></line>
-      ${xTicks.map(tick => `
-        <text class="chart-x-label" x="${tick.x.toFixed(2)}" y="${height - 12}" text-anchor="${tick.anchor}">${esc(chartDateLabel(tick.date))}</text>
+      ${vGrid.lines.map(time => `
+        <line class="chart-grid perf-vgrid" x1="${xForTime(time).toFixed(2)}" x2="${xForTime(time).toFixed(2)}" y1="${pad.top}" y2="${(pad.top + plotH).toFixed(2)}"></line>
       `).join("")}
+      <line class="perf-zero-line" x1="${pad.left}" x2="${pad.left + plotW}" y1="${yFor(0).toFixed(2)}" y2="${yFor(0).toFixed(2)}"></line>
+      ${vGrid.lines.map((time, index) => {
+        if (index % labelEvery !== 0) return "";
+        const x = xForTime(time);
+        const anchor = x < pad.left + 18 ? "start" : x > pad.left + plotW - 18 ? "end" : "middle";
+        return `<text class="chart-x-label" x="${x.toFixed(2)}" y="${height - 12}" text-anchor="${anchor}">${esc(perfGridLabel(time, vGrid.unit))}</text>`;
+      }).join("")}
       ${series.map(item => `<path class="perf-line ${item.primary ? "primary" : "index"}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>`).join("")}
       ${endLabels.map(label => `
         <text class="perf-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(pctChartLabel(label.close))}</text>
@@ -1382,13 +1423,8 @@ function renderLineChart(payload) {
   const line = points.map((point, index) => `${index === 0 ? "M" : "L"}${xFor(index).toFixed(2)},${yFor(Number(point.close)).toFixed(2)}`).join(" ");
   const area = `${line} L${pad.left + plotW},${pad.top + plotH} L${pad.left},${pad.top + plotH} Z`;
   const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
-  const xTicks = [0, Math.floor((points.length - 1) / 2), points.length - 1]
-    .filter((value, index, arr) => arr.indexOf(value) === index)
-    .map(index => ({ index, x: xFor(index), date: points[index].date }))
-    .map((tick, index, arr) => ({
-      ...tick,
-      anchor: index === 0 ? "start" : index === arr.length - 1 ? "end" : "middle",
-    }));
+  const vGrid = indexedChartVerticalGrid(points, xFor, chartRange);
+  const labelEvery = Math.max(1, Math.ceil(vGrid.ticks.length / 8));
   const markers = chartTransactions.map((tx, index) => {
     const pointIndex = nearestPointIndex(points, tx.date);
     const x = xFor(pointIndex);
@@ -1438,9 +1474,14 @@ function renderLineChart(payload) {
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
         <text class="chart-y-label" x="${width - 6}" y="${(tick.y + 4).toFixed(2)}">${esc(chartMoney(tick.value, payload.currency))}</text>
       `).join("")}
-      ${xTicks.map(tick => `
-        <text class="chart-x-label" x="${tick.x.toFixed(2)}" y="${height - 12}" text-anchor="${tick.anchor}">${esc(chartDateLabel(tick.date))}</text>
+      ${vGrid.ticks.map(tick => `
+        <line class="chart-grid perf-vgrid" x1="${tick.x.toFixed(2)}" x2="${tick.x.toFixed(2)}" y1="${pad.top}" y2="${(pad.top + plotH).toFixed(2)}"></line>
       `).join("")}
+      ${vGrid.ticks.map((tick, index) => {
+        if (index % labelEvery !== 0) return "";
+        const anchor = tick.x < pad.left + 18 ? "start" : tick.x > pad.left + plotW - 18 ? "end" : "middle";
+        return `<text class="chart-x-label" x="${tick.x.toFixed(2)}" y="${height - 12}" text-anchor="${anchor}">${esc(perfGridLabel(tick.time, vGrid.unit))}</text>`;
+      }).join("")}
       <path class="chart-area" d="${area}"></path>
       <path class="chart-line" d="${line}"></path>
       ${extremes.map(item => `
