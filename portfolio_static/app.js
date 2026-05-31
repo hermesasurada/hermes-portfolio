@@ -1055,7 +1055,7 @@ function bindCompareHover(series, geometry) {
     ].forEach((line, index) => {
       const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
       tspan.setAttribute("x", tx.toFixed(2));
-      tspan.setAttribute("dy", index === 0 ? "0" : "13");
+      tspan.setAttribute("dy", index === 0 ? "0" : "11");
       tspan.textContent = line;
       tooltip.appendChild(tspan);
     });
@@ -1084,7 +1084,7 @@ function renderCompareLineChart(payload) {
   const scale = niceChartScale([...values, 0]);
   const width = 980;
   const height = 350;
-  const pad = { top: 28, right: 92, bottom: 34, left: 52 };
+  const pad = { top: 28, right: 108, bottom: 34, left: 52 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const min = scale.min;
@@ -1092,6 +1092,7 @@ function renderCompareLineChart(payload) {
   const range = max - min || 1;
   const xForTime = time => pad.left + (maxTime === minTime ? 0 : (time - minTime) / (maxTime - minTime) * plotW);
   const yFor = value => pad.top + (max - value) / range * plotH;
+  const clampY = value => Math.max(pad.top + 4, Math.min(pad.top + plotH - 2, value));
   const pathFor = points => points.map((point, index) => `${index === 0 ? "M" : "L"}${xForTime(point.time).toFixed(2)},${yFor(point.close).toFixed(2)}`).join(" ");
   const main = series[0];
   const first = main.points[0];
@@ -1108,6 +1109,16 @@ function renderCompareLineChart(payload) {
     date: new Date(time).toISOString().slice(0, 10),
     anchor: index === 0 ? "start" : index === 2 ? "end" : "middle",
   }));
+  const endLabels = series
+    .map(item => {
+      const lastPoint = item.points[item.points.length - 1];
+      return { color: item.color, close: lastPoint.close, y: yFor(lastPoint.close) };
+    })
+    .sort((a, b) => a.y - b.y);
+  const minGap = 13;
+  for (let i = 1; i < endLabels.length; i++) {
+    if (endLabels[i].y - endLabels[i - 1].y < minGap) endLabels[i].y = endLabels[i - 1].y + minGap;
+  }
   const legend = series.map(item => `<span class="perf-legend-item"><i style="background:${item.color}"></i>${esc(item.ticker || item.name)}</span>`).join("");
   document.getElementById("chartCanvas").innerHTML = `
     <div class="perf-chart-top">
@@ -1124,6 +1135,9 @@ function renderCompareLineChart(payload) {
         <text class="chart-x-label" x="${tick.x.toFixed(2)}" y="${height - 12}" text-anchor="${tick.anchor}">${esc(chartDateLabel(tick.date))}</text>
       `).join("")}
       ${series.map(item => `<path class="perf-line ${item.primary ? "primary" : "index"}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>`).join("")}
+      ${endLabels.map(label => `
+        <text class="perf-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(pctChartLabel(label.close))}</text>
+      `).join("")}
       <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
       <g id="chartHoverGroup" class="chart-hover hidden">
         <line id="chartHoverLine" class="chart-hover-line" x1="0" x2="0" y1="${pad.top}" y2="${pad.top + plotH}"></line>

@@ -190,7 +190,7 @@ function bindPerformanceHover(series, geometry) {
     ].forEach((line, index) => {
       const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
       tspan.setAttribute("x", tx.toFixed(2));
-      tspan.setAttribute("dy", index === 0 ? "0" : "15");
+      tspan.setAttribute("dy", index === 0 ? "0" : "11");
       tspan.textContent = line;
       tooltip.appendChild(tspan);
     });
