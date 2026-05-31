@@ -204,6 +204,12 @@ function contributionTileColor(item, maxAbsPct) {
   return `${Math.round(16 + intensity * 42)}%`;
 }
 
+function contributionShareLabel(value) {
+  if (!Number.isFinite(value)) return "-";
+  const sign = value < 0 ? "-" : "";
+  return `${sign}${fmt1.format(Math.abs(value))}%`;
+}
+
 function contributionTileLabel(item) {
   const ticker = String(item.ticker || "").toUpperCase();
   const name = String(item.name || "").trim();
@@ -221,14 +227,15 @@ function renderPerformanceContributionChart(payload, portfolioPoints) {
       ${rects.map(item => {
         const area = item.width * item.height;
         const sizeClass = area > 1200 ? "large" : area > 620 ? "medium" : area > 260 ? "small" : "tiny";
-        const title = `${item.ticker} 기여 ${pctChartLabel(item.contributionSharePct)} · 종목 ${pctChartLabel(item.holdingPct)}`;
+        const contributionLabel = contributionShareLabel(item.contributionSharePct);
+        const title = `${item.ticker} 기여 ${contributionLabel} · 종목 ${pctChartLabel(item.holdingPct)}`;
         const label = contributionTileLabel(item);
         return `
           <div class="perf-contrib-tile ${item.contribution >= 0 ? "up" : "down"} ${sizeClass}"
             style="left:${item.x.toFixed(3)}%;top:${item.y.toFixed(3)}%;width:${item.width.toFixed(3)}%;height:${item.height.toFixed(3)}%;--tile-mix:${contributionTileColor(item, maxAbsPct)}"
             title="${esc(title)}">
             <span class="perf-contrib-ticker">${esc(label)}</span>
-            <span class="perf-contrib-pct">${esc(pctChartLabel(item.contributionSharePct))}</span>
+            <span class="perf-contrib-pct">${esc(contributionLabel)}</span>
           </div>
         `;
       }).join("")}

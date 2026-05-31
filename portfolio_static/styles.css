@@ -1052,8 +1052,8 @@ tr:hover td { background: var(--surface-hover); }
   align-items: center;
   justify-content: center;
   gap: 3px;
-  border: 1px solid var(--panel);
-  border-radius: 6px;
+  border: 2px solid var(--panel);
+  border-radius: 7px;
   color: var(--ink);
   min-width: 0;
   min-height: 0;
