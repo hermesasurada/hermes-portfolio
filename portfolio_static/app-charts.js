@@ -130,7 +130,16 @@ function performanceContributionItems(payload, portfolioPoints) {
   const startPoint = portfolioPoints?.[0];
   const endPoint = portfolioPoints?.[portfolioPoints.length - 1];
   const startValue = Number(startPoint?.value);
-  if (!startPoint?.date || !endPoint?.date || !Number.isFinite(startValue) || startValue <= 0) return [];
+  const endValue = Number(endPoint?.value);
+  const totalContribution = endValue - startValue;
+  if (
+    !startPoint?.date
+    || !endPoint?.date
+    || !Number.isFinite(startValue)
+    || !Number.isFinite(endValue)
+    || startValue <= 0
+    || Math.abs(totalContribution) < 0.000001
+  ) return [];
   return (payload?.contributors || [])
     .map(item => {
       const periodPoints = (item.points || [])
@@ -141,13 +150,13 @@ function performanceContributionItems(payload, portfolioPoints) {
       const end = periodPoints[periodPoints.length - 1].value;
       if (!Number.isFinite(start) || !Number.isFinite(end) || start <= 0) return null;
       const contribution = end - start;
-      const contributionPct = contribution / startValue * 100;
+      const contributionSharePct = contribution / totalContribution * 100;
       const holdingPct = (end / start - 1) * 100;
       return {
         ticker: String(item.ticker || "").toUpperCase(),
         name: item.name || item.ticker,
         contribution,
-        contributionPct,
+        contributionSharePct,
         holdingPct,
         size: Math.abs(contribution),
       };
@@ -191,7 +200,7 @@ function binaryTreemap(items, x, y, width, height) {
 }
 
 function contributionTileColor(item, maxAbsPct) {
-  const intensity = Math.min(1, Math.max(0.18, Math.abs(item.contributionPct) / Math.max(0.01, maxAbsPct)));
+  const intensity = Math.min(1, Math.max(0.18, Math.abs(item.contributionSharePct) / Math.max(0.01, maxAbsPct)));
   if (item.contribution > 0) return `rgba(239, 82, 75, ${0.28 + intensity * 0.62})`;
   return `rgba(112, 158, 232, ${0.32 + intensity * 0.54})`;
 }
@@ -206,21 +215,21 @@ function contributionTileLabel(item) {
 function renderPerformanceContributionChart(payload, portfolioPoints) {
   const items = performanceContributionItems(payload, portfolioPoints);
   if (!items.length) return `<div class="perf-contrib-empty">기여도 데이터 없음</div>`;
-  const maxAbsPct = Math.max(...items.map(item => Math.abs(item.contributionPct)));
+  const maxAbsPct = Math.max(...items.map(item => Math.abs(item.contributionSharePct)));
   const rects = binaryTreemap(items, 0, 0, 100, 100);
   return `
     <div class="perf-contrib-chart" aria-label="기간 성과 기여도">
       ${rects.map(item => {
         const area = item.width * item.height;
         const sizeClass = area > 1200 ? "large" : area > 620 ? "medium" : area > 260 ? "small" : "tiny";
-        const title = `${item.ticker} ${pctChartLabel(item.contributionPct)} · 종목 ${pctChartLabel(item.holdingPct)}`;
+        const title = `${item.ticker} 기여 ${pctChartLabel(item.contributionSharePct)} · 종목 ${pctChartLabel(item.holdingPct)}`;
         const label = contributionTileLabel(item);
         return `
           <div class="perf-contrib-tile ${item.contribution >= 0 ? "up" : "down"} ${sizeClass}"
             style="left:${item.x.toFixed(3)}%;top:${item.y.toFixed(3)}%;width:${item.width.toFixed(3)}%;height:${item.height.toFixed(3)}%;background:${contributionTileColor(item, maxAbsPct)}"
             title="${esc(title)}">
             <span class="perf-contrib-ticker">${esc(label)}</span>
-            <span class="perf-contrib-pct">${esc(pctChartLabel(item.contributionPct))}</span>
+            <span class="perf-contrib-pct">${esc(pctChartLabel(item.contributionSharePct))}</span>
           </div>
         `;
       }).join("")}
