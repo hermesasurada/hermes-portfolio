@@ -22,6 +22,8 @@ let performanceChartOpen = false;
 let performancePayload = null;
 let performanceLoadInFlight = null;
 let performanceIndexes = { SP500: true, NASDAQ: true, KOSPI: true };
+let mobileAccountsCollapsed = false;
+let mobileAllocationCollapsed = true;
 let watchLookupResult = null;
 let watchPending = [];
 let transactionRows = [];
@@ -299,6 +301,23 @@ function renderPriceUpdated() {
   const priceDate = String(data.price_updated_at || data.price_updated || "").slice(0, 10);
   const fxUpdated = data.fx_updated && data.fx_updated !== priceDate ? ` · 환율 ${data.fx_updated}` : "";
   document.getElementById("priceUpdated").textContent = `가격 갱신: ${priceUpdated}${fxUpdated}`;
+}
+
+function syncMobileCollapsePanels() {
+  const accountPanel = document.getElementById("accountPanel");
+  const accountToggle = document.getElementById("accountCollapseToggle");
+  const allocationPanel = document.getElementById("allocationPanel");
+  const allocationToggle = document.getElementById("allocationCollapseToggle");
+  accountPanel?.classList.toggle("mobile-collapsed", mobileAccountsCollapsed);
+  allocationPanel?.classList.toggle("mobile-collapsed", mobileAllocationCollapsed);
+  if (accountToggle) {
+    accountToggle.textContent = mobileAccountsCollapsed ? "펼침" : "접기";
+    accountToggle.setAttribute("aria-expanded", String(!mobileAccountsCollapsed));
+  }
+  if (allocationToggle) {
+    allocationToggle.textContent = mobileAllocationCollapsed ? "펼침" : "접기";
+    allocationToggle.setAttribute("aria-expanded", String(!mobileAllocationCollapsed));
+  }
 }
 
 function renderAccounts() {
@@ -1794,6 +1813,7 @@ function render() {
   renderAllocation(filteredRows({ ignoreAggregate: true }));
   renderTable();
   renderTradeControls();
+  syncMobileCollapsePanels();
 }
 
 async function load() {
@@ -2001,6 +2021,14 @@ document.getElementById("chartBack").addEventListener("click", closeChart);
 document.getElementById("performanceOpen").addEventListener("click", () => {
   history.pushState(null, "", "#performance");
   openPerformanceChart();
+});
+document.getElementById("accountCollapseToggle").addEventListener("click", () => {
+  mobileAccountsCollapsed = !mobileAccountsCollapsed;
+  syncMobileCollapsePanels();
+});
+document.getElementById("allocationCollapseToggle").addEventListener("click", () => {
+  mobileAllocationCollapsed = !mobileAllocationCollapsed;
+  syncMobileCollapsePanels();
 });
 document.getElementById("transactionToggle").addEventListener("click", () => {
   setTransactionsExpanded(!transactionsExpanded, true);

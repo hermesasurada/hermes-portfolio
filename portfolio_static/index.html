@@ -53,17 +53,25 @@
   <main>
     <section class="layout">
       <div class="side-col">
-      <aside class="section">
-        <h2>계좌</h2>
-        <div id="accounts" class="account-list"></div>
-        <div id="priceUpdated" class="account-footer">가격 갱신: -</div>
+      <aside class="section mobile-collapse-panel" id="accountPanel">
+        <div class="mobile-panel-head">
+          <h2>계좌</h2>
+          <button id="accountCollapseToggle" class="mobile-collapse-toggle" type="button" aria-expanded="true">접기</button>
+        </div>
+        <div class="mobile-collapse-body" id="accountPanelBody">
+          <div id="accounts" class="account-list"></div>
+          <div id="priceUpdated" class="account-footer">가격 갱신: -</div>
+        </div>
       </aside>
       <section class="section allocation-panel" id="allocationPanel">
         <div class="alloc-head">
           <h2>자산 배분</h2>
-          <span class="pill" id="allocTotal">-</span>
+          <div class="panel-head-actions">
+            <span class="pill" id="allocTotal">-</span>
+            <button id="allocationCollapseToggle" class="mobile-collapse-toggle" type="button" aria-expanded="false">펼침</button>
+          </div>
         </div>
-        <div class="alloc-body">
+        <div class="alloc-body mobile-collapse-body" id="allocationPanelBody">
           <div class="alloc-donut" id="allocDonut" role="img" aria-label="자산군 배분 도넛 차트"></div>
           <ul class="alloc-legend" id="allocLegend"></ul>
         </div>

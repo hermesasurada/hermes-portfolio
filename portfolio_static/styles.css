@@ -327,6 +327,33 @@ main {
   gap: var(--sp-4);
   min-width: 0;
 }
+.mobile-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  border-bottom: 1px solid var(--line);
+}
+.mobile-panel-head h2 {
+  flex: 1;
+  border: 0;
+}
+.panel-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.mobile-collapse-toggle {
+  display: none;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+}
 /* --- allocation donut --- */
 .alloc-head {
   display: flex;
@@ -402,6 +429,14 @@ main {
   padding: 13px 14px;
   font-size: 15px;
   border-bottom: 1px solid var(--line);
+}
+.section .mobile-panel-head h2,
+.section .alloc-head h2 {
+  border: 0;
+}
+.section .alloc-head h2 {
+  padding: 0;
+  font-size: var(--fs-md);
 }
 .account-list { display: grid; gap: 7px; padding: 8px; }
 .account-footer {
@@ -1506,6 +1541,18 @@ tr:hover td { background: var(--surface-hover); }
   }
   .line-chart {
     min-height: 0;
+  }
+  .perf-contrib-chart {
+    aspect-ratio: 1.05 / 1;
+  }
+  .mobile-collapse-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mobile-collapse-panel.mobile-collapsed .mobile-collapse-body,
+  .allocation-panel.mobile-collapsed .mobile-collapse-body {
+    display: none;
   }
   .chart-empty {
     min-height: 300px;
