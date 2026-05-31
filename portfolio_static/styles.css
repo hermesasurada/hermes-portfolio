@@ -1052,7 +1052,7 @@ tr:hover td { background: var(--surface-hover); }
   align-items: center;
   justify-content: center;
   gap: 3px;
-  border: 2px solid var(--panel);
+  border: 1px solid var(--line);
   border-radius: 7px;
   color: var(--ink);
   min-width: 0;
@@ -1065,11 +1065,9 @@ tr:hover td { background: var(--surface-hover); }
 }
 .perf-contrib-tile.up {
   background: color-mix(in srgb, var(--up) var(--tile-mix, 32%), var(--panel));
-  border-color: color-mix(in srgb, var(--up) 16%, var(--panel));
 }
 .perf-contrib-tile.down {
   background: color-mix(in srgb, var(--down) var(--tile-mix, 32%), var(--panel));
-  border-color: color-mix(in srgb, var(--down) 16%, var(--panel));
 }
 .perf-contrib-tile:hover {
   filter: saturate(1.08);
