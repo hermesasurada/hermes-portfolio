@@ -12,6 +12,7 @@ let activeDetailTab = "detail";
 let statsData = {};
 let statsLoadKey = "";
 let statsInFlight = null;
+let statsFetchedTickers = new Set();
 let chartTicker = null;
 let chartLoadInFlight = null;
 let chartPayload = null;
@@ -588,9 +589,16 @@ function statsRows(rows) {
   });
 }
 
+function hasMissingTechnicalStats(stats) {
+  if (!stats) return true;
+  const rsi = stats.rsi || {};
+  const bb = stats.bollinger_pband || {};
+  return ["day", "week", "month"].some(key => !Number.isFinite(Number(rsi[key])) || !Number.isFinite(Number(bb[key])));
+}
+
 async function loadStatsForRows(rows) {
   const tickers = Array.from(new Set(rows.map(row => row.ticker).filter(Boolean))).sort();
-  const missing = tickers.filter(ticker => !statsData[ticker]);
+  const missing = tickers.filter(ticker => !statsData[ticker] || (!statsFetchedTickers.has(ticker) && hasMissingTechnicalStats(statsData[ticker])));
   const key = missing.join(",");
   if (!missing.length || statsLoadKey === key || statsInFlight) return;
   statsLoadKey = key;
@@ -598,6 +606,7 @@ async function loadStatsForRows(rows) {
   statsInFlight = (async () => {
     const payload = await apiFetchStats(missing);
     statsData = { ...statsData, ...(payload.stats || {}) };
+    missing.forEach(ticker => statsFetchedTickers.add(ticker));
     renderStatsTable(rows);
   })();
   try {
@@ -613,7 +622,7 @@ function renderStatsTable(baseRows = null) {
   const rows = statsRows(baseRows || filteredRows());
   sortRows(rows);
   const tickers = Array.from(new Set(rows.map(row => row.ticker).filter(Boolean))).sort();
-  if (tickers.some(ticker => !statsData[ticker])) loadStatsForRows(rows);
+  if (tickers.some(ticker => !statsData[ticker] || (!statsFetchedTickers.has(ticker) && hasMissingTechnicalStats(statsData[ticker])))) loadStatsForRows(rows);
   if (statsInFlight && !rows.some(row => statsData[row.ticker])) return;
   document.getElementById("statsRows").innerHTML = rows.map(r => `
     <tr>
@@ -2038,6 +2047,7 @@ function initWatchlistControls() {
       renderWatchPending();
       statsData = {};
       statsLoadKey = "";
+      statsFetchedTickers = new Set();
       await load();
       setWatchStatus(result.message || "등록되었습니다. 동기화는 백그라운드에서 진행됩니다.");
     } catch (err) {
