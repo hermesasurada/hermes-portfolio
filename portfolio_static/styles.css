@@ -875,30 +875,31 @@ tr:hover td { background: var(--surface-hover); }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  padding: 8px 12px 16px;
+  gap: 6px;
+  padding: 10px 12px 16px;
   flex-wrap: wrap;
 }
 .chart-range-btn {
-  height: 36px;
-  min-width: 66px;
-  padding: 0 8px;
-  border: 0;
-  border-bottom: 3px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  color: var(--chart-axis);
-  font-size: 13px;
-  font-weight: 700;
+  height: 30px;
+  min-width: 54px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: var(--fw-bold);
 }
 .chart-range-btn:hover {
-  background: #f1f5fb;
+  background: var(--brand-soft);
+  border-color: var(--brand);
   color: var(--brand);
 }
 .chart-range-btn.active {
-  background: transparent;
+  background: var(--brand);
   border-color: var(--brand);
-  color: var(--brand);
+  color: var(--on-accent);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .18);
 }
 .chart-selection {
   pointer-events: none;
@@ -932,6 +933,11 @@ tr:hover td { background: var(--surface-hover); }
   fill: transparent;
   cursor: ew-resize;
   pointer-events: all;
+}
+/* the hover overlay (line/dots/tooltip) must never steal pointer events from
+   the hover layer, or moving onto the tooltip fires pointerleave → flicker */
+.chart-hover, .chart-hover * {
+  pointer-events: none;
 }
 .chart-hover-line {
   stroke: #9aa0a6;
