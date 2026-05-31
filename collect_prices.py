@@ -24,6 +24,7 @@ from portfolio_core.price_store import (
     update_earnings_dates,
     update_price_cache,
 )
+from portfolio_core.technical_stats import refresh_technical_stats_cache
 from portfolio_core.tickers import asset_class
 
 KR_EARNINGS_DELAY_SECONDS = 0.8
@@ -136,6 +137,9 @@ def main() -> int:
         cache_entries.append((item.ticker, item.price, item.currency, item.source))
     if cache_entries:
         update_price_cache(cache_entries)
+    technical_updated = refresh_technical_stats_cache(item.ticker for item in fetched)
+    if technical_updated:
+        print(f"Updated {technical_updated} technical stats")
     earnings_errors: list[str] = []
     if not args.skip_earnings:
         earnings_entries, earnings_errors = collect_earnings_dates(

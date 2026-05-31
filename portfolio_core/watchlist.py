@@ -16,6 +16,7 @@ from .db import connect, ensure_ticker_metadata_columns
 from .fundamentals import fetch_fundamentals
 from .logos import cache_logo
 from .price_store import infer_category, save_daily_prices, update_earnings_dates, update_price_cache
+from .technical_stats import refresh_technical_stats_cache
 from .tickers import asset_class, normalize_yfinance_symbol, ticker_currency
 
 # Cache the full KRX listing in-process so name-based lookups don't re-download
@@ -257,6 +258,7 @@ def hydrate_ticker(ticker: str, years: int = 5) -> dict:
             last_date, last_price = rows[-1]
             update_price_cache([(ticker, last_price, currency, source)])
             result["last_date"] = last_date
+            result["technical_stats"] = refresh_technical_stats_cache([ticker])
     except Exception as exc:
         result["error"] = f"history: {exc}"
 
