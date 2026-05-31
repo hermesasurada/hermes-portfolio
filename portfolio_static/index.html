@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=acct-perf1">
+  <link rel="stylesheet" href="/static/styles.css?v=compare-chart1">
 </head>
 <body>
   <header>
@@ -269,10 +269,32 @@
       <div class="status" id="watchStatus"></div>
     </form>
   </dialog>
-  <script src="/static/state.js?v=acct-perf1"></script>
-  <script src="/static/format.js?v=acct-perf1"></script>
-  <script src="/static/api.js?v=acct-perf1"></script>
-  <script src="/static/app-charts.js?v=acct-perf1"></script>
-  <script src="/static/app.js?v=acct-perf1"></script>
+  <dialog class="watch-modal" id="chartRangeModal">
+    <form method="dialog" class="modal-card">
+      <div class="modal-head">
+        <strong>기간 직접설정</strong>
+        <button class="ghost-btn" id="chartRangeClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <div class="range-fields">
+        <div class="field">
+          <label for="chartRangeStart">시작일</label>
+          <input id="chartRangeStart" type="date">
+        </div>
+        <div class="field">
+          <label for="chartRangeEnd">종료일</label>
+          <input id="chartRangeEnd" type="date">
+        </div>
+      </div>
+      <div class="range-actions">
+        <button id="chartRangeApply" class="primary-btn" type="button">적용</button>
+      </div>
+      <div class="status" id="chartRangeStatus"></div>
+    </form>
+  </dialog>
+  <script src="/static/state.js?v=compare-chart1"></script>
+  <script src="/static/format.js?v=compare-chart1"></script>
+  <script src="/static/api.js?v=compare-chart1"></script>
+  <script src="/static/app-charts.js?v=compare-chart1"></script>
+  <script src="/static/app.js?v=compare-chart1"></script>
 </body>
 </html>

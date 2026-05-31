@@ -956,7 +956,7 @@ tr:hover td { background: var(--surface-hover); }
 }
 .chart-tooltip {
   fill: var(--chart-ink);
-  font-size: 12.5px;
+  font-size: 11px;
   font-weight: 700;
 }
 .perf-chart-top {
@@ -1034,6 +1034,59 @@ tr:hover td { background: var(--surface-hover); }
 .perf-tooltip tspan:first-child {
   font-weight: 900;
 }
+.chart-compare-panel {
+  display: grid;
+  gap: 8px;
+  padding: 4px 12px 2px;
+}
+.chart-compare-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.chart-compare-add input {
+  width: min(260px, 52vw);
+  height: 30px;
+  font-size: 12px;
+}
+.chart-compare-list {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.compare-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+}
+.compare-chip button {
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+}
+.compare-empty {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
 .trade-marker {
   cursor: pointer;
   outline: none;
@@ -1099,6 +1152,18 @@ tr:hover td { background: var(--surface-hover); }
 .watch-search input {
   flex: 1 1 auto;
   width: auto;
+}
+.range-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.range-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.range-actions button {
+  min-width: 84px;
 }
 .watch-result {
   min-height: 34px;

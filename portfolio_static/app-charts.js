@@ -54,12 +54,17 @@ function accountPerformanceTitle(payload) {
   return `${accounts.length}개 계좌`;
 }
 
-function normalizePerformancePoints(points, rangeKey, startDate = null) {
+function normalizePerformancePoints(points, rangeKey, bounds = null) {
   const raw = (points || [])
     .filter(point => point.date && Number.isFinite(Number(point.value)))
     .map(point => ({ date: point.date, value: Number(point.value) }));
-  const filtered = startDate
-    ? raw.filter(point => new Date(`${point.date}T00:00:00`) >= startDate)
+  const startDate = bounds?.startDate || null;
+  const endDate = bounds?.endDate || null;
+  const filtered = startDate || endDate
+    ? raw.filter(point => {
+        const date = new Date(`${point.date}T00:00:00`);
+        return (!startDate || date >= startDate) && (!endDate || date <= endDate);
+      })
     : filterChartPoints(raw.map(point => ({ date: point.date, close: point.value })), rangeKey)
         .map(point => ({ date: point.date, value: Number(point.close) }));
   if (filtered.length < 2) return [];
@@ -77,13 +82,13 @@ function performanceSeries(payload) {
   const portfolioRaw = payload?.points || [];
   const lastDate = portfolioRaw[portfolioRaw.length - 1]?.date
     || Object.values(payload?.indexes || {}).flatMap(item => item.points || []).map(point => point.date).sort().at(-1);
-  const startDate = lastDate ? chartRangeStartDate([{ date: lastDate }], chartRange) : null;
+  const bounds = lastDate ? chartRangeBounds([{ date: lastDate }], chartRange) : null;
   const series = [
     {
       key: "portfolio",
       name: "선택 계좌",
       color: "var(--brand)",
-      points: normalizePerformancePoints(portfolioRaw, chartRange, startDate),
+      points: normalizePerformancePoints(portfolioRaw, chartRange, bounds),
       primary: true,
     },
   ];
@@ -99,7 +104,7 @@ function performanceSeries(payload) {
       key,
       name: label,
       color,
-      points: normalizePerformancePoints(index?.points || [], chartRange, startDate),
+      points: normalizePerformancePoints(index?.points || [], chartRange, bounds),
       primary: false,
     });
   });
@@ -190,7 +195,7 @@ function bindPerformanceHover(series, geometry) {
       tooltip.appendChild(tspan);
     });
     tooltip.setAttribute("x", tx.toFixed(2));
-    tooltip.setAttribute("y", (y < 76 ? y + 24 : y - 56).toFixed(2));
+    tooltip.setAttribute("y", (y < geometry.pad.top + geometry.plotH / 2 ? y + 42 : y - 62).toFixed(2));
     updateTooltipBox();
   };
 
@@ -309,6 +314,10 @@ function bindPerformanceChartControls() {
   });
   document.querySelectorAll(".chart-range-btn").forEach(btn => {
     btn.addEventListener("click", () => {
+      if (btn.dataset.chartCustom != null) {
+        openChartRangeModal();
+        return;
+      }
       chartRange = btn.dataset.chartRange || "6m";
       renderPerformanceChart(performancePayload);
     });
@@ -346,8 +355,9 @@ async function openChart(ticker) {
   const cleanTicker = String(ticker || "").trim().toUpperCase();
   if (!cleanTicker) return;
   performanceChartOpen = false;
-  syncTransactionPanel();
+  if (chartTicker !== cleanTicker) chartComparePayloads = [];
   chartTicker = cleanTicker;
+  syncTransactionPanel();
   syncDetailTabs();
   document.getElementById("tableTitle").textContent = cleanTicker;
   renderChartIdentity({ ticker: cleanTicker, name: cleanTicker });
@@ -373,6 +383,7 @@ function closeChart(updateHash = true) {
   chartTicker = null;
   chartLoadInFlight = null;
   chartPayload = null;
+  chartComparePayloads = [];
   performanceChartOpen = false;
   performanceLoadInFlight = null;
   performancePayload = null;
@@ -394,4 +405,3 @@ function syncChartRoute() {
   if (ticker) openChart(ticker);
   else if (chartTicker || performanceChartOpen) closeChart(false);
 }
-

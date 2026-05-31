@@ -16,6 +16,8 @@ let chartTicker = null;
 let chartLoadInFlight = null;
 let chartPayload = null;
 let chartRange = "6m";
+let chartCustomRange = { start: "", end: "" };
+let chartComparePayloads = [];
 let performanceChartOpen = false;
 let performancePayload = null;
 let performanceLoadInFlight = null;
@@ -35,6 +37,8 @@ const chartRanges = [
   { key: "3y", label: "3년", months: 36 },
   { key: "5y", label: "5년", months: 60 },
 ];
+const chartCompareLimit = 10;
+const chartCompareColors = ["var(--brand)", "#ea4335", "#34a853", "#fbbc04", "#9333ea", "#06b6d4", "#f97316", "#64748b", "#be123c", "#16a34a", "#7c3aed"];
 
 function flattenAccounts() {
   return data.members.flatMap(m => m.accounts.map(a => ({...a, memberName: m.name})));
@@ -595,9 +599,9 @@ function renderStatsTable(baseRows = null) {
 }
 
 function syncTransactionPanel() {
-  // 성과관리 차트에서는 하단 거래내역 패널을 숨긴다 (#3)
+  // 차트 화면에서는 하단 거래내역 패널을 숨긴다.
   const panel = document.querySelector(".transaction-panel");
-  if (panel) panel.classList.toggle("hidden", performanceChartOpen);
+  if (panel) panel.classList.toggle("hidden", Boolean(performanceChartOpen || chartTicker));
 }
 
 function renderTable() {
@@ -680,6 +684,12 @@ function chartFullDateLabel(dateText) {
   return text.length >= 10 ? text.slice(0, 10).replaceAll("-", ".") : text;
 }
 
+function chartDateObject(dateText) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateText || ""))) return null;
+  const date = new Date(`${dateText}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function chartRangeStartDate(points, rangeKey) {
   const lastDateText = points[points.length - 1]?.date;
   if (!lastDateText) return null;
@@ -694,11 +704,28 @@ function chartRangeStartDate(points, rangeKey) {
   return start;
 }
 
+function chartRangeBounds(points, rangeKey) {
+  if (rangeKey === "custom") {
+    return {
+      startDate: chartDateObject(chartCustomRange.start),
+      endDate: chartDateObject(chartCustomRange.end),
+    };
+  }
+  return {
+    startDate: chartRangeStartDate(points, rangeKey),
+    endDate: null,
+  };
+}
+
 function filterChartPoints(points, rangeKey) {
   if (!points.length) return points;
-  const startDate = chartRangeStartDate(points, rangeKey);
-  if (!startDate) return points;
-  const filtered = points.filter(point => new Date(`${point.date}T00:00:00`) >= startDate);
+  const { startDate, endDate } = chartRangeBounds(points, rangeKey);
+  if (!startDate && !endDate) return points;
+  const filtered = points.filter(point => {
+    const date = new Date(`${point.date}T00:00:00`);
+    return (!startDate || date >= startDate) && (!endDate || date <= endDate);
+  });
+  if (rangeKey === "custom") return filtered;
   return filtered.length >= 2 ? filtered : points.slice(-Math.min(points.length, 2));
 }
 
@@ -767,8 +794,80 @@ function renderChartRangeButtons() {
       ${chartRanges.map(range => `
         <button class="chart-range-btn ${range.key === chartRange ? "active" : ""}" type="button" data-chart-range="${range.key}">${range.label}</button>
       `).join("")}
+      <button class="chart-range-btn ${chartRange === "custom" ? "active" : ""}" type="button" data-chart-custom>직접설정</button>
     </div>
   `;
+}
+
+function chartPointDatesForModal() {
+  const rawPoints = performanceChartOpen
+    ? (performancePayload?.points || []).map(point => ({ date: point.date, close: Number(point.value) }))
+    : (chartPayload?.points || []).map(point => ({ date: point.date, close: Number(point.close) }));
+  const points = rawPoints.filter(point => point.date && Number.isFinite(point.close));
+  if (!points.length) return { start: "", end: "" };
+  const visible = chartRange === "custom"
+    ? points
+    : filterChartPoints(points, chartRange);
+  const selected = visible.length >= 2 ? visible : points;
+  return {
+    start: selected[0]?.date || "",
+    end: selected[selected.length - 1]?.date || "",
+  };
+}
+
+function setChartRangeStatus(message, error = false) {
+  const el = document.getElementById("chartRangeStatus");
+  if (!el) return;
+  el.textContent = message || "";
+  el.classList.toggle("error", error);
+}
+
+function openChartRangeModal() {
+  const modal = document.getElementById("chartRangeModal");
+  const startInput = document.getElementById("chartRangeStart");
+  const endInput = document.getElementById("chartRangeEnd");
+  const defaults = chartPointDatesForModal();
+  startInput.value = chartCustomRange.start || defaults.start;
+  endInput.value = chartCustomRange.end || defaults.end;
+  setChartRangeStatus("");
+  modal.showModal();
+  startInput.focus();
+}
+
+function applyChartCustomRange() {
+  const modal = document.getElementById("chartRangeModal");
+  const start = document.getElementById("chartRangeStart").value;
+  const end = document.getElementById("chartRangeEnd").value;
+  const startDate = chartDateObject(start);
+  const endDate = chartDateObject(end);
+  if (!startDate || !endDate) {
+    setChartRangeStatus("시작일과 종료일을 모두 입력하세요.", true);
+    return;
+  }
+  if (startDate > endDate) {
+    setChartRangeStatus("시작일은 종료일보다 늦을 수 없습니다.", true);
+    return;
+  }
+  chartCustomRange = { start, end };
+  chartRange = "custom";
+  modal.close();
+  if (performanceChartOpen) renderPerformanceChart(performancePayload);
+  else if (chartPayload) renderLineChart(chartPayload);
+}
+
+function initChartRangeModal() {
+  document.getElementById("chartRangeClose").addEventListener("click", () => {
+    document.getElementById("chartRangeModal").close();
+  });
+  document.getElementById("chartRangeApply").addEventListener("click", applyChartCustomRange);
+  ["chartRangeStart", "chartRangeEnd"].forEach(id => {
+    document.getElementById(id).addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        applyChartCustomRange();
+      }
+    });
+  });
 }
 
 function chartLogoRow(payload) {
@@ -787,6 +886,258 @@ function renderChartIdentity(payload) {
   document.getElementById("chartIcon").innerHTML = logoMarkup(row);
   document.getElementById("chartTicker").textContent = row.ticker || "";
   document.getElementById("chartName").textContent = row.name || row.ticker || "";
+}
+
+function bindLineChartControls(payload) {
+  document.querySelectorAll(".chart-range-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.chartCustom != null) {
+        openChartRangeModal();
+        return;
+      }
+      chartRange = btn.dataset.chartRange || "6m";
+      renderLineChart(payload);
+    });
+  });
+}
+
+function tickerDisplayName(ticker) {
+  const key = String(ticker || "").toUpperCase();
+  const meta = findTickerMeta(key);
+  return meta?.name || key;
+}
+
+function chartCompareSeries(payload) {
+  return [payload, ...chartComparePayloads].map((item, index) => {
+    const rawPoints = (item.points || [])
+      .filter(point => point.date && Number.isFinite(Number(point.close)))
+      .map(point => ({ date: point.date, value: Number(point.close) }));
+    const filtered = filterChartPoints(rawPoints.map(point => ({ date: point.date, close: point.value })), chartRange)
+      .map(point => ({
+        date: point.date,
+        value: Number(point.close),
+        time: new Date(`${point.date}T00:00:00`).getTime(),
+      }));
+    if (filtered.length < 2) return null;
+    const base = filtered.find(point => point.value > 0)?.value;
+    if (!base) return null;
+    return {
+      key: String(item.ticker || `compare-${index}`).toUpperCase(),
+      ticker: String(item.ticker || "").toUpperCase(),
+      name: item.name || item.ticker,
+      color: chartCompareColors[index % chartCompareColors.length],
+      primary: index === 0,
+      points: filtered.map(point => ({
+        ...point,
+        close: (point.value / base - 1) * 100,
+      })),
+    };
+  }).filter(Boolean);
+}
+
+function renderChartCompareControls() {
+  const options = (data?.tickers || [])
+    .filter(item => item.ticker && item.ticker !== chartTicker && !chartComparePayloads.some(row => row.ticker === item.ticker))
+    .sort((a, b) => String(a.ticker).localeCompare(String(b.ticker)))
+    .map(item => `<option value="${esc(item.ticker)}">${esc(item.name || item.ticker)}</option>`)
+    .join("");
+  return `
+    <div class="chart-compare-panel">
+      <div class="chart-compare-add">
+        <input id="chartCompareInput" list="chartCompareOptions" placeholder="비교 종목 추가" autocomplete="off">
+        <datalist id="chartCompareOptions">${options}</datalist>
+        <button class="ghost-btn" id="chartCompareAdd" type="button">추가</button>
+      </div>
+      <div class="chart-compare-list">
+        ${chartComparePayloads.map(item => `
+          <span class="compare-chip">
+            ${esc(item.ticker)} · ${esc(item.name || item.ticker)}
+            <button type="button" data-compare-remove="${esc(item.ticker)}" aria-label="${esc(item.ticker)} 삭제">&times;</button>
+          </span>
+        `).join("") || `<span class="compare-empty">비교 종목 없음</span>`}
+      </div>
+    </div>
+  `;
+}
+
+function bindChartCompareControls(payload) {
+  const input = document.getElementById("chartCompareInput");
+  const add = document.getElementById("chartCompareAdd");
+  if (add && input) {
+    add.addEventListener("click", () => addChartCompareTicker(input.value));
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addChartCompareTicker(input.value);
+      }
+    });
+  }
+  document.querySelectorAll("[data-compare-remove]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const ticker = btn.dataset.compareRemove;
+      chartComparePayloads = chartComparePayloads.filter(item => item.ticker !== ticker);
+      renderLineChart(payload);
+    });
+  });
+}
+
+async function addChartCompareTicker(value) {
+  const ticker = String(value || "").trim().toUpperCase();
+  if (!ticker || ticker === chartTicker) return;
+  if (chartComparePayloads.some(item => item.ticker === ticker)) return;
+  if (chartComparePayloads.length >= chartCompareLimit) {
+    showTradeStatus(`비교 종목은 최대 ${chartCompareLimit}개까지 추가할 수 있습니다.`, true);
+    return;
+  }
+  const input = document.getElementById("chartCompareInput");
+  if (input) input.value = "";
+  try {
+    const payload = await apiFetchChart(ticker);
+    chartComparePayloads = [...chartComparePayloads, payload];
+    renderLineChart(chartPayload);
+  } catch (err) {
+    showTradeStatus(err.message || String(err), true);
+  }
+}
+
+function bindCompareHover(series, geometry) {
+  const svg = document.querySelector("#chartCanvas svg");
+  const hoverLayer = document.getElementById("chartHoverLayer");
+  const hoverGroup = document.getElementById("chartHoverGroup");
+  const hoverLine = document.getElementById("chartHoverLine");
+  const tooltip = document.getElementById("chartTooltip");
+  const tooltipBox = document.getElementById("chartTooltipBox");
+  if (!svg || !hoverLayer || !hoverGroup || !hoverLine || !tooltip || !tooltipBox) return;
+  const nearest = (points, targetTime) => points.reduce((best, point) => {
+    const distance = Math.abs(point.time - targetTime);
+    return !best || distance < best.distance ? { point, distance } : best;
+  }, null)?.point;
+  const updateTooltipBox = () => {
+    let bbox = tooltip.getBBox();
+    let x = Number(tooltip.getAttribute("x") || 0);
+    if (bbox.x + bbox.width > geometry.width - 8) x -= bbox.x + bbox.width - (geometry.width - 8);
+    if (bbox.x < 8) x += 8 - bbox.x;
+    tooltip.setAttribute("x", x.toFixed(2));
+    tooltip.querySelectorAll("tspan").forEach(tspan => tspan.setAttribute("x", x.toFixed(2)));
+    bbox = tooltip.getBBox();
+    tooltipBox.setAttribute("x", (bbox.x - 8).toFixed(2));
+    tooltipBox.setAttribute("y", (bbox.y - 6).toFixed(2));
+    tooltipBox.setAttribute("width", (bbox.width + 16).toFixed(2));
+    tooltipBox.setAttribute("height", (bbox.height + 12).toFixed(2));
+  };
+  const showPoint = clientX => {
+    const rect = svg.getBoundingClientRect();
+    const svgX = (clientX - rect.left) / rect.width * geometry.width;
+    const ratio = Math.min(1, Math.max(0, (svgX - geometry.pad.left) / geometry.plotW));
+    const targetTime = geometry.minTime + ratio * (geometry.maxTime - geometry.minTime);
+    const x = geometry.xForTime(targetTime);
+    const mainPoint = nearest(series[0]?.points || [], targetTime);
+    const dateText = mainPoint?.date || new Date(targetTime).toISOString().slice(0, 10);
+    hoverGroup.classList.remove("hidden");
+    hoverLine.setAttribute("x1", x.toFixed(2));
+    hoverLine.setAttribute("x2", x.toFixed(2));
+    series.forEach(item => {
+      const dot = document.getElementById(`compareDot-${item.key}`);
+      const point = nearest(item.points, targetTime);
+      if (!dot || !point) return;
+      dot.setAttribute("cx", x.toFixed(2));
+      dot.setAttribute("cy", geometry.yFor(point.close).toFixed(2));
+      dot.style.display = "";
+    });
+    tooltip.textContent = "";
+    const tx = x > geometry.width - 250 ? x - 176 : x + 14;
+    [
+      chartFullDateLabel(dateText),
+      ...series.map(item => {
+        const point = nearest(item.points, targetTime);
+        return `${item.ticker || item.name} ${pctChartLabel(point?.close)}`;
+      }),
+    ].forEach((line, index) => {
+      const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+      tspan.setAttribute("x", tx.toFixed(2));
+      tspan.setAttribute("dy", index === 0 ? "0" : "13");
+      tspan.textContent = line;
+      tooltip.appendChild(tspan);
+    });
+    tooltip.setAttribute("x", tx.toFixed(2));
+    tooltip.setAttribute("y", geometry.pad.top + 14);
+    updateTooltipBox();
+  };
+  hoverLayer.addEventListener("pointermove", event => showPoint(event.clientX));
+  hoverLayer.addEventListener("pointerenter", event => showPoint(event.clientX));
+  hoverLayer.addEventListener("pointerleave", () => hoverGroup.classList.add("hidden"));
+}
+
+function renderCompareLineChart(payload) {
+  const series = chartCompareSeries(payload);
+  renderChartIdentity(payload);
+  if (series.length < 2 || !series[0]?.points.length) {
+    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">비교 차트 데이터 없음</div>${renderChartCompareControls()}${renderChartRangeButtons()}`;
+    bindChartCompareControls(payload);
+    bindLineChartControls(payload);
+    return;
+  }
+  const allPoints = series.flatMap(item => item.points);
+  const minTime = Math.min(...allPoints.map(point => point.time));
+  const maxTime = Math.max(...allPoints.map(point => point.time));
+  const values = allPoints.map(point => point.close);
+  const scale = niceChartScale([...values, 0]);
+  const width = 980;
+  const height = 350;
+  const pad = { top: 28, right: 92, bottom: 34, left: 52 };
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+  const min = scale.min;
+  const max = scale.max;
+  const range = max - min || 1;
+  const xForTime = time => pad.left + (maxTime === minTime ? 0 : (time - minTime) / (maxTime - minTime) * plotW);
+  const yFor = value => pad.top + (max - value) / range * plotH;
+  const pathFor = points => points.map((point, index) => `${index === 0 ? "M" : "L"}${xForTime(point.time).toFixed(2)},${yFor(point.close).toFixed(2)}`).join(" ");
+  const main = series[0];
+  const first = main.points[0];
+  const last = main.points[main.points.length - 1];
+  const cls = last.close > 0 ? "up" : last.close < 0 ? "down" : "flat";
+  document.getElementById("chartMeta").innerHTML = `
+    <span>${chartDateLabel(first.date)} - ${chartDateLabel(last.date)}</span>
+    <span>비교 ${chartComparePayloads.length}개</span>
+    <span class="${cls}">${pctChartLabel(last.close)}</span>
+  `;
+  const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
+  const xTicks = [minTime, minTime + (maxTime - minTime) / 2, maxTime].map((time, index) => ({
+    x: xForTime(time),
+    date: new Date(time).toISOString().slice(0, 10),
+    anchor: index === 0 ? "start" : index === 2 ? "end" : "middle",
+  }));
+  const legend = series.map(item => `<span class="perf-legend-item"><i style="background:${item.color}"></i>${esc(item.ticker || item.name)}</span>`).join("");
+  document.getElementById("chartCanvas").innerHTML = `
+    <div class="perf-chart-top">
+      <div class="perf-legend">${legend}</div>
+    </div>
+    <svg class="line-chart compare-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(payload.name)} 비교 차트">
+      <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
+      ${yTicks.map(tick => `
+        <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
+        <text class="chart-y-label" x="${pad.left - 8}" y="${(tick.y + 4).toFixed(2)}">${esc(pctChartLabel(tick.value))}</text>
+      `).join("")}
+      <line class="perf-zero-line" x1="${pad.left}" x2="${pad.left + plotW}" y1="${yFor(0).toFixed(2)}" y2="${yFor(0).toFixed(2)}"></line>
+      ${xTicks.map(tick => `
+        <text class="chart-x-label" x="${tick.x.toFixed(2)}" y="${height - 12}" text-anchor="${tick.anchor}">${esc(chartDateLabel(tick.date))}</text>
+      `).join("")}
+      ${series.map(item => `<path class="perf-line ${item.primary ? "primary" : "index"}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>`).join("")}
+      <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
+      <g id="chartHoverGroup" class="chart-hover hidden">
+        <line id="chartHoverLine" class="chart-hover-line" x1="0" x2="0" y1="${pad.top}" y2="${pad.top + plotH}"></line>
+        ${series.map(item => `<circle id="compareDot-${item.key}" class="perf-hover-dot" r="3.6" cx="0" cy="0" style="stroke:${item.color}"></circle>`).join("")}
+        <rect id="chartTooltipBox" class="chart-tooltip-box" x="0" y="0" width="0" height="0" rx="6"></rect>
+        <text id="chartTooltip" class="chart-tooltip perf-tooltip" x="0" y="0">-</text>
+      </g>
+    </svg>
+    ${renderChartCompareControls()}
+    ${renderChartRangeButtons()}
+  `;
+  bindCompareHover(series, { width, height, pad, plotW, plotH, minTime, maxTime, xForTime, yFor });
+  bindChartCompareControls(payload);
+  bindLineChartControls(payload);
 }
 
 function bindChartInteractions(points, payload, geometry) {
@@ -828,13 +1179,14 @@ function bindChartInteractions(points, payload, geometry) {
   function showMarker(marker) {
     const x = Number(marker.dataset.x);
     const y = Number(marker.dataset.y);
+    const tooltipY = y < geometry.pad.top + geometry.plotH / 2 ? y + 42 : y - 58;
     hoverGroup.classList.remove("hidden");
     hoverLine.setAttribute("x1", x.toFixed(2));
     hoverLine.setAttribute("x2", x.toFixed(2));
     hoverDot.setAttribute("cx", x.toFixed(2));
     hoverDot.setAttribute("cy", y.toFixed(2));
     tooltip.setAttribute("x", (x > geometry.width - 280 ? x - 218 : x + 14).toFixed(2));
-    tooltip.setAttribute("y", (y < 70 ? y + 18 : y - 46).toFixed(2));
+    tooltip.setAttribute("y", tooltipY.toFixed(2));
     tooltip.textContent = marker.dataset.tooltip || "";
     updateTooltipBox();
   }
@@ -858,7 +1210,7 @@ function bindChartInteractions(points, payload, geometry) {
     const x = geometry.xFor(index);
     const y = geometry.yFor(Number(point.close));
     const tooltipX = x > geometry.width - 250 ? x - 188 : x + 12;
-    const tooltipY = y < 70 ? y + 16 : y - 46;
+    const tooltipY = y < geometry.pad.top + geometry.plotH / 2 ? y + 42 : y - 58;
     hoverGroup.classList.remove("hidden");
     hoverLine.setAttribute("x1", x.toFixed(2));
     hoverLine.setAttribute("x2", x.toFixed(2));
@@ -972,13 +1324,19 @@ function bindChartInteractions(points, payload, geometry) {
 }
 
 function renderLineChart(payload) {
+  if (chartComparePayloads.length) {
+    renderCompareLineChart(payload);
+    return;
+  }
   const allPoints = (payload.points || []).filter(point => Number.isFinite(Number(point.close)));
   const points = filterChartPoints(allPoints, chartRange);
   const chartTransactions = transactionsForChart(payload, points);
   renderChartIdentity(payload);
   if (points.length < 2) {
     document.getElementById("chartMeta").textContent = `${points.length} points`;
-    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">차트 데이터 없음</div>${renderChartRangeButtons()}`;
+    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">차트 데이터 없음</div>${renderChartCompareControls()}${renderChartRangeButtons()}`;
+    bindChartCompareControls(payload);
+    bindLineChartControls(payload);
     return;
   }
 
@@ -1099,15 +1457,12 @@ function renderLineChart(payload) {
         <text id="chartTooltip" class="chart-tooltip" x="0" y="0">-</text>
       </g>
     </svg>
+    ${renderChartCompareControls()}
     ${renderChartRangeButtons()}
   `;
   bindChartInteractions(points, payload, { width, height, pad, plotW, plotH, xFor, yFor });
-  document.querySelectorAll(".chart-range-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      chartRange = btn.dataset.chartRange || "6m";
-      renderLineChart(payload);
-    });
-  });
+  bindChartCompareControls(payload);
+  bindLineChartControls(payload);
 }
 
 function updateSortHeaders() {
@@ -1679,6 +2034,7 @@ initAutoRefreshControls();
 initUsPriceControls();
 initThemeControl();
 initWatchlistControls();
+initChartRangeModal();
 initTradeSideToggle();
 initTradeApplyToggle();
 setTransactionsExpanded(false);
