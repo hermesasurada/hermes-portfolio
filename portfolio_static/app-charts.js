@@ -232,7 +232,7 @@ function renderPerformanceContributionChart(payload, portfolioPoints) {
         const label = contributionTileLabel(item);
         return `
           <div class="perf-contrib-tile ${item.contribution >= 0 ? "up" : "down"} ${sizeClass}"
-            style="left:${item.x.toFixed(3)}%;top:${item.y.toFixed(3)}%;width:${item.width.toFixed(3)}%;height:${item.height.toFixed(3)}%;--tile-mix:${contributionTileColor(item, maxAbsPct)}"
+            style="left:calc(${item.x.toFixed(3)}% + var(--tile-gap));top:calc(${item.y.toFixed(3)}% + var(--tile-gap));width:max(0px, calc(${item.width.toFixed(3)}% - var(--tile-gap) * 2));height:max(0px, calc(${item.height.toFixed(3)}% - var(--tile-gap) * 2));--tile-mix:${contributionTileColor(item, maxAbsPct)}"
             title="${esc(title)}">
             <span class="perf-contrib-ticker">${esc(label)}</span>
             <span class="perf-contrib-pct">${esc(contributionLabel)}</span>

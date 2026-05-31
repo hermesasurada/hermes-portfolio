@@ -1036,13 +1036,15 @@ tr:hover td { background: var(--surface-hover); }
 }
 .perf-contrib-chart {
   position: relative;
-  height: 460px;
+  aspect-ratio: 4 / 3;
+  height: auto;
   margin: 6px 10.612% 8px 8px;
   overflow: hidden;
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--panel);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
+  --tile-gap: 3px;
 }
 .perf-contrib-tile {
   position: absolute;
