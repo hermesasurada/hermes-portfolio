@@ -1501,7 +1501,12 @@ tr:hover td { background: var(--surface-hover); }
   .chart-view {
     padding: 8px;
   }
-  .chart-canvas,
+  .chart-canvas {
+    min-height: 0;
+  }
+  .line-chart {
+    min-height: 0;
+  }
   .chart-empty {
     min-height: 300px;
   }
