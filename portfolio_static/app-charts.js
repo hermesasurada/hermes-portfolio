@@ -118,11 +118,25 @@ function bindPerformanceHover(series, geometry) {
     const x = geometry.xForTime(targetTime);
     const portfolioPoint = nearest(series[0]?.points || [], targetTime);
     const y = portfolioPoint ? geometry.yFor(portfolioPoint.close) : geometry.pad.top;
-    const dateText = portfolioPoint?.date || chartFullDateLabel(new Date(targetTime).toISOString().slice(0, 10));
+    const dateText = portfolioPoint?.date || new Date(targetTime).toISOString().slice(0, 10);
     hoverGroup.classList.remove("hidden");
     hoverLine.setAttribute("x1", x.toFixed(2));
     hoverLine.setAttribute("x2", x.toFixed(2));
+    // place a dot on each line at the hovered date (from-start performance point)
+    series.forEach(item => {
+      const dot = document.getElementById(`perfDot-${item.key}`);
+      if (!dot) return;
+      const point = nearest(item.points, targetTime);
+      if (point) {
+        dot.setAttribute("cx", x.toFixed(2));
+        dot.setAttribute("cy", geometry.yFor(point.close).toFixed(2));
+        dot.style.display = "";
+      } else {
+        dot.style.display = "none";
+      }
+    });
     tooltip.textContent = "";
+    const tx = x > geometry.width - 250 ? x - 176 : x + 14;
     [
       chartFullDateLabel(dateText),
       ...series.map(item => {
@@ -131,12 +145,12 @@ function bindPerformanceHover(series, geometry) {
       }),
     ].forEach((line, index) => {
       const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-      tspan.setAttribute("x", (x > geometry.width - 250 ? x - 176 : x + 14).toFixed(2));
+      tspan.setAttribute("x", tx.toFixed(2));
       tspan.setAttribute("dy", index === 0 ? "0" : "15");
       tspan.textContent = line;
       tooltip.appendChild(tspan);
     });
-    tooltip.setAttribute("x", (x > geometry.width - 250 ? x - 176 : x + 14).toFixed(2));
+    tooltip.setAttribute("x", tx.toFixed(2));
     tooltip.setAttribute("y", (y < 76 ? y + 24 : y - 56).toFixed(2));
     updateTooltipBox();
   };
@@ -169,12 +183,13 @@ function renderPerformanceChart(payload) {
   const max = scale.max;
   const width = 980;
   const height = 360;
-  const pad = { top: 26, right: 58, bottom: 34, left: 40 };
+  const pad = { top: 26, right: 104, bottom: 34, left: 56 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const range = max - min || 1;
   const xForTime = time => pad.left + (maxTime === minTime ? 0 : (time - minTime) / (maxTime - minTime) * plotW);
   const yFor = value => pad.top + (max - value) / range * plotH;
+  const clampY = value => Math.max(pad.top + 4, Math.min(pad.top + plotH - 2, value));
   const pathFor = points => points.map((point, index) => `${index === 0 ? "M" : "L"}${xForTime(point.time).toFixed(2)},${yFor(point.close).toFixed(2)}`).join(" ");
   const portfolio = series[0];
   const lastPoint = portfolio.points[portfolio.points.length - 1];
@@ -184,6 +199,7 @@ function renderPerformanceChart(payload) {
     <span>${payload.holdings_count || 0}개 종목</span>
     <span class="${cls}">${pctChartLabel(lastPoint.close)}</span>
   `;
+  const tickLabel = value => `${value > 0 ? "+" : value < 0 ? "-" : ""}${Math.round(Math.abs(value))}%`;
   const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
   const xTicks = [minTime, minTime + (maxTime - minTime) / 2, maxTime].map((time, index) => ({
     time,
@@ -191,10 +207,21 @@ function renderPerformanceChart(payload) {
     date: new Date(time).toISOString().slice(0, 10),
     anchor: index === 0 ? "start" : index === 2 ? "end" : "middle",
   }));
-  const legend = series.map(item => {
-    const last = item.points[item.points.length - 1]?.close;
-    return `<span class="perf-legend-item"><i style="background:${item.color}"></i>${esc(item.name)} <strong class="${last > 0 ? "up" : last < 0 ? "down" : "flat"}">${pctChartLabel(last)}</strong></span>`;
-  }).join("");
+  // (#3) per-line total performance shown at each line's right end, de-collided vertically
+  const endLabels = series
+    .map(item => {
+      const last = item.points[item.points.length - 1].close;
+      return { color: item.color, close: last, y: yFor(last) };
+    })
+    .sort((a, b) => a.y - b.y);
+  const minGap = 13;
+  for (let i = 1; i < endLabels.length; i++) {
+    if (endLabels[i].y - endLabels[i - 1].y < minGap) endLabels[i].y = endLabels[i - 1].y + minGap;
+  }
+  // (#3) top legend keeps only colour + name; the % moved to the line ends
+  const legend = series
+    .map(item => `<span class="perf-legend-item"><i style="background:${item.color}"></i>${esc(item.name)}</span>`)
+    .join("");
 
   document.getElementById("chartCanvas").innerHTML = `
     <div class="perf-chart-top">
@@ -205,7 +232,7 @@ function renderPerformanceChart(payload) {
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
       ${yTicks.map(tick => `
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
-        <text class="chart-y-label" x="${width - 6}" y="${(tick.y + 4).toFixed(2)}">${esc(pctChartLabel(tick.value))}</text>
+        <text class="chart-y-label" x="${pad.left - 8}" y="${(tick.y + 4).toFixed(2)}">${esc(tickLabel(tick.value))}</text>
       `).join("")}
       <line class="perf-zero-line" x1="${pad.left}" x2="${pad.left + plotW}" y1="${yFor(0).toFixed(2)}" y2="${yFor(0).toFixed(2)}"></line>
       ${xTicks.map(tick => `
@@ -214,9 +241,13 @@ function renderPerformanceChart(payload) {
       ${series.map(item => `
         <path class="perf-line ${item.primary ? "primary" : "index"}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>
       `).join("")}
+      ${endLabels.map(label => `
+        <text class="perf-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(pctChartLabel(label.close))}</text>
+      `).join("")}
       <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
       <g id="chartHoverGroup" class="chart-hover hidden">
         <line id="chartHoverLine" class="chart-hover-line" x1="0" x2="0" y1="${pad.top}" y2="${pad.top + plotH}"></line>
+        ${series.map(item => `<circle id="perfDot-${item.key}" class="perf-hover-dot" r="3.6" cx="0" cy="0" style="stroke:${item.color}"></circle>`).join("")}
         <rect id="chartTooltipBox" class="chart-tooltip-box" x="0" y="0" width="0" height="0" rx="6"></rect>
         <text id="chartTooltip" class="chart-tooltip perf-tooltip" x="0" y="0">-</text>
       </g>

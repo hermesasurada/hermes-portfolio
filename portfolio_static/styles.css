@@ -1013,6 +1013,17 @@ tr:hover td { background: var(--surface-hover); }
   stroke-width: 1;
   opacity: .45;
 }
+.perf-end-label {
+  font-size: 11.5px;
+  font-weight: var(--fw-strong);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.perf-hover-dot {
+  fill: var(--panel);
+  stroke-width: 2;
+  pointer-events: none;
+}
 .perf-tooltip tspan:first-child {
   font-weight: 900;
 }
