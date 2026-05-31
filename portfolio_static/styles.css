@@ -1036,8 +1036,8 @@ tr:hover td { background: var(--surface-hover); }
 }
 .perf-contrib-chart {
   position: relative;
-  height: 220px;
-  margin: 6px 8px 8px;
+  height: 340px;
+  margin: 6px 10.612% 8px 8px;
   overflow: hidden;
   border-radius: 8px;
   background: var(--surface-2);

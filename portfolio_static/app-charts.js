@@ -196,6 +196,13 @@ function contributionTileColor(item, maxAbsPct) {
   return `rgba(112, 158, 232, ${0.32 + intensity * 0.54})`;
 }
 
+function contributionTileLabel(item) {
+  const ticker = String(item.ticker || "").toUpperCase();
+  const name = String(item.name || "").trim();
+  if (/\.(KS|KQ)$/.test(ticker) && name) return name;
+  return ticker || name;
+}
+
 function renderPerformanceContributionChart(payload, portfolioPoints) {
   const items = performanceContributionItems(payload, portfolioPoints);
   if (!items.length) return `<div class="perf-contrib-empty">기여도 데이터 없음</div>`;
@@ -207,11 +214,12 @@ function renderPerformanceContributionChart(payload, portfolioPoints) {
         const area = item.width * item.height;
         const sizeClass = area > 1200 ? "large" : area > 620 ? "medium" : area > 260 ? "small" : "tiny";
         const title = `${item.ticker} ${pctChartLabel(item.contributionPct)} · 종목 ${pctChartLabel(item.holdingPct)}`;
+        const label = contributionTileLabel(item);
         return `
           <div class="perf-contrib-tile ${item.contribution >= 0 ? "up" : "down"} ${sizeClass}"
             style="left:${item.x.toFixed(3)}%;top:${item.y.toFixed(3)}%;width:${item.width.toFixed(3)}%;height:${item.height.toFixed(3)}%;background:${contributionTileColor(item, maxAbsPct)}"
             title="${esc(title)}">
-            <span class="perf-contrib-ticker">${esc(item.ticker)}</span>
+            <span class="perf-contrib-ticker">${esc(label)}</span>
             <span class="perf-contrib-pct">${esc(pctChartLabel(item.contributionPct))}</span>
           </div>
         `;
