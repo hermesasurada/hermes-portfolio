@@ -8,6 +8,45 @@ function pctChartLabel(value) {
   return `${sign}${fmt2.format(Math.abs(value))}%`;
 }
 
+// (#6) vertical gridline cadence by selected range: 1m→주, 3y/5y→분기, 그 외→월
+function perfGridUnit(rangeKey) {
+  if (rangeKey === "1m") return "week";
+  if (rangeKey === "3y" || rangeKey === "5y") return "quarter";
+  return "month";
+}
+
+function perfVerticalGrid(minTime, maxTime, rangeKey) {
+  const unit = perfGridUnit(rangeKey);
+  const start = new Date(minTime);
+  let cursor;
+  if (unit === "week") {
+    cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    cursor.setDate(cursor.getDate() - ((cursor.getDay() + 6) % 7)); // back to Monday
+    if (cursor.getTime() < minTime) cursor.setDate(cursor.getDate() + 7);
+  } else if (unit === "quarter") {
+    cursor = new Date(start.getFullYear(), Math.floor(start.getMonth() / 3) * 3, 1);
+    if (cursor.getTime() < minTime) cursor.setMonth(cursor.getMonth() + 3);
+  } else {
+    cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+    if (cursor.getTime() < minTime) cursor.setMonth(cursor.getMonth() + 1);
+  }
+  const lines = [];
+  let guard = 0;
+  while (cursor.getTime() <= maxTime && guard++ < 240) {
+    lines.push(cursor.getTime());
+    if (unit === "week") cursor.setDate(cursor.getDate() + 7);
+    else if (unit === "quarter") cursor.setMonth(cursor.getMonth() + 3);
+    else cursor.setMonth(cursor.getMonth() + 1);
+  }
+  return { unit, lines };
+}
+
+function perfGridLabel(time, unit) {
+  const d = new Date(time);
+  if (unit === "week") return `${d.getMonth() + 1}/${d.getDate()}`;
+  return `${String(d.getFullYear()).slice(2)}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function accountPerformanceTitle(payload) {
   const accounts = payload?.accounts || [];
   if (!accounts.length) return "선택 계좌 성과";
@@ -201,12 +240,8 @@ function renderPerformanceChart(payload) {
   `;
   const tickLabel = value => `${value > 0 ? "+" : value < 0 ? "-" : ""}${Math.round(Math.abs(value))}%`;
   const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
-  const xTicks = [minTime, minTime + (maxTime - minTime) / 2, maxTime].map((time, index) => ({
-    time,
-    x: xForTime(time),
-    date: new Date(time).toISOString().slice(0, 10),
-    anchor: index === 0 ? "start" : index === 2 ? "end" : "middle",
-  }));
+  const vGrid = perfVerticalGrid(minTime, maxTime, chartRange);
+  const labelEvery = Math.max(1, Math.ceil(vGrid.lines.length / 8));
   // (#3) per-line total performance shown at each line's right end, de-collided vertically
   const endLabels = series
     .map(item => {
@@ -234,10 +269,16 @@ function renderPerformanceChart(payload) {
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
         <text class="chart-y-label" x="${pad.left - 8}" y="${(tick.y + 4).toFixed(2)}">${esc(tickLabel(tick.value))}</text>
       `).join("")}
-      <line class="perf-zero-line" x1="${pad.left}" x2="${pad.left + plotW}" y1="${yFor(0).toFixed(2)}" y2="${yFor(0).toFixed(2)}"></line>
-      ${xTicks.map(tick => `
-        <text class="chart-x-label" x="${tick.x.toFixed(2)}" y="${height - 12}" text-anchor="${tick.anchor}">${esc(chartDateLabel(tick.date))}</text>
+      ${vGrid.lines.map(time => `
+        <line class="chart-grid perf-vgrid" x1="${xForTime(time).toFixed(2)}" x2="${xForTime(time).toFixed(2)}" y1="${pad.top}" y2="${(pad.top + plotH).toFixed(2)}"></line>
       `).join("")}
+      <line class="perf-zero-line" x1="${pad.left}" x2="${pad.left + plotW}" y1="${yFor(0).toFixed(2)}" y2="${yFor(0).toFixed(2)}"></line>
+      ${vGrid.lines.map((time, index) => {
+        if (index % labelEvery !== 0) return "";
+        const x = xForTime(time);
+        const anchor = x < pad.left + 18 ? "start" : x > pad.left + plotW - 18 ? "end" : "middle";
+        return `<text class="chart-x-label" x="${x.toFixed(2)}" y="${height - 12}" text-anchor="${anchor}">${esc(perfGridLabel(time, vGrid.unit))}</text>`;
+      }).join("")}
       ${series.map(item => `
         <path class="perf-line ${item.primary ? "primary" : "index"}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>
       `).join("")}
@@ -276,6 +317,7 @@ function bindPerformanceChartControls() {
 
 async function openPerformanceChart() {
   performanceChartOpen = true;
+  syncTransactionPanel();
   chartTicker = null;
   chartPayload = null;
   syncDetailTabs();
@@ -304,6 +346,7 @@ async function openChart(ticker) {
   const cleanTicker = String(ticker || "").trim().toUpperCase();
   if (!cleanTicker) return;
   performanceChartOpen = false;
+  syncTransactionPanel();
   chartTicker = cleanTicker;
   syncDetailTabs();
   document.getElementById("tableTitle").textContent = cleanTicker;

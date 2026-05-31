@@ -40,7 +40,10 @@ function flattenAccounts() {
   return data.members.flatMap(m => m.accounts.map(a => ({...a, memberName: m.name})));
 }
 function accountGroupKey(account) {
-  return account.type || "other";
+  const type = account.type || "other";
+  // 연금저축(pension_kr)·퇴직연금(retirement_kr)을 하나의 "연금" 카테고리로 통합
+  if (type === "pension_kr" || type === "retirement_kr") return "pension";
+  return type;
 }
 function isAccountSelected(id) {
   return selectionMode === "all" || selectedAccounts.has(id);
@@ -336,8 +339,7 @@ function renderAccounts() {
     { key: "overseas", label: "해외주식" },
     { key: "kr_individual", label: "한국개별주" },
     { key: "bitcoin", label: "비트코인" },
-    { key: "pension_kr", label: "연금저축" },
-    { key: "retirement_kr", label: "퇴직연금" },
+    { key: "pension", label: "연금" },
     { key: "other", label: "기타" }
   ];
   const totalButton = `
@@ -592,7 +594,14 @@ function renderStatsTable(baseRows = null) {
   bindChartLinks();
 }
 
+function syncTransactionPanel() {
+  // 성과관리 차트에서는 하단 거래내역 패널을 숨긴다 (#3)
+  const panel = document.querySelector(".transaction-panel");
+  if (panel) panel.classList.toggle("hidden", performanceChartOpen);
+}
+
 function renderTable() {
+  syncTransactionPanel();
   const rows = filteredRows();
   const accounts = flattenAccounts();
   const selected = selectionMode === "all" ? accounts : accounts.filter(a => selectedAccounts.has(a.id));
