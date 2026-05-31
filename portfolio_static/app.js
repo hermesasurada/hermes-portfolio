@@ -311,12 +311,14 @@ function syncMobileCollapsePanels() {
   accountPanel?.classList.toggle("mobile-collapsed", mobileAccountsCollapsed);
   allocationPanel?.classList.toggle("mobile-collapsed", mobileAllocationCollapsed);
   if (accountToggle) {
-    accountToggle.textContent = mobileAccountsCollapsed ? "펼침" : "접기";
     accountToggle.setAttribute("aria-expanded", String(!mobileAccountsCollapsed));
+    accountToggle.setAttribute("aria-label", mobileAccountsCollapsed ? "계좌 펼치기" : "계좌 접기");
+    accountToggle.title = mobileAccountsCollapsed ? "계좌 펼치기" : "계좌 접기";
   }
   if (allocationToggle) {
-    allocationToggle.textContent = mobileAllocationCollapsed ? "펼침" : "접기";
     allocationToggle.setAttribute("aria-expanded", String(!mobileAllocationCollapsed));
+    allocationToggle.setAttribute("aria-label", mobileAllocationCollapsed ? "자산 배분 펼치기" : "자산 배분 접기");
+    allocationToggle.title = mobileAllocationCollapsed ? "자산 배분 펼치기" : "자산 배분 접기";
   }
 }
 

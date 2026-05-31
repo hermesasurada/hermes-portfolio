@@ -345,14 +345,28 @@ main {
 }
 .mobile-collapse-toggle {
   display: none;
-  height: 26px;
-  padding: 0 9px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface-2);
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--muted);
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
+}
+.mobile-collapse-toggle::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+.mobile-collapse-toggle[aria-expanded="false"]::before {
+  transform: rotate(-45deg) translate(-1px, -1px);
+}
+.mobile-collapse-toggle:hover {
+  background: var(--surface-2);
+  color: var(--ink);
 }
 /* --- allocation donut --- */
 .alloc-head {
