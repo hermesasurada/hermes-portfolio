@@ -1,0 +1,188 @@
+from __future__ import annotations
+
+import html
+import json
+import re
+import sqlite3
+import urllib.request
+from datetime import datetime
+from urllib.parse import quote
+
+from .paths import KST
+from .tickers import is_korean_stock_ticker, normalize_yfinance_symbol
+
+STATS_CACHE_SECONDS = 30 * 60
+STATS_CACHE_VERSION = 7
+
+
+def stats_cache_expires_today() -> bool:
+    return datetime.now(KST).weekday() < 5
+
+
+def load_stats_cache_item(conn: sqlite3.Connection, ticker: str, now_ts: float, fresh_only: bool = True) -> dict | None:
+    row = conn.execute(
+        """
+        SELECT version, fetched_ts, source, market_cap, dividend_yield, trailing_pe, forward_pe, next_earnings_date
+        FROM ticker_stats_cache
+        WHERE ticker = ?
+        """,
+        (ticker,),
+    ).fetchone()
+    if not row:
+        return None
+    if int(row["version"] or 0) != STATS_CACHE_VERSION:
+        return None
+    if row["source"] == "unknown":
+        return None
+    if fresh_only and stats_cache_expires_today() and now_ts - float(row["fetched_ts"] or 0) >= STATS_CACHE_SECONDS:
+        return None
+    return {
+        "market_cap": row["market_cap"],
+        "dividend_yield": row["dividend_yield"],
+        "trailing_pe": row["trailing_pe"],
+        "forward_pe": row["forward_pe"],
+        "next_earnings_date": row["next_earnings_date"],
+    }
+
+
+def save_stats_cache_item(conn: sqlite3.Connection, ticker: str, source: str, data: dict, raw: dict | None = None) -> None:
+    conn.execute(
+        """
+        INSERT INTO ticker_stats_cache
+          (ticker, version, fetched_ts, fetched_at, source, market_cap, dividend_yield, trailing_pe, forward_pe, next_earnings_date, raw_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(ticker) DO UPDATE SET
+          version = excluded.version,
+          fetched_ts = excluded.fetched_ts,
+          fetched_at = excluded.fetched_at,
+          source = excluded.source,
+          market_cap = excluded.market_cap,
+          dividend_yield = excluded.dividend_yield,
+          trailing_pe = excluded.trailing_pe,
+          forward_pe = excluded.forward_pe,
+          next_earnings_date = excluded.next_earnings_date,
+          raw_json = excluded.raw_json
+        """,
+        (
+            ticker,
+            STATS_CACHE_VERSION,
+            datetime.now().timestamp(),
+            datetime.now(KST).isoformat(timespec="seconds"),
+            source,
+            data.get("market_cap"),
+            data.get("dividend_yield"),
+            data.get("trailing_pe"),
+            data.get("forward_pe"),
+            data.get("next_earnings_date"),
+            json.dumps(raw or {}, ensure_ascii=False, default=str),
+        ),
+    )
+
+
+def parse_number(text: str | None) -> float | None:
+    if text is None:
+        return None
+    cleaned = re.sub(r"[^0-9.\-]", "", html.unescape(str(text)))
+    if cleaned in {"", "-", ".", "-."}:
+        return None
+    try:
+        return float(cleaned)
+    except ValueError:
+        return None
+
+
+def normalize_pe(value) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number > 0 else None
+
+
+def fetch_naver_fundamentals(ticker: str) -> tuple[dict, dict]:
+    code = ticker.split(".")[0]
+    url = f"https://stock.naver.com/api/domestic/detail/{quote(code)}/detail?codeType=KRX"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        obj = json.loads(resp.read().decode("utf-8"))
+    if obj.get("type") == "EF":
+        return {
+            "market_cap": None,
+            "dividend_yield": None,
+            "trailing_pe": None,
+            "forward_pe": None,
+            "next_earnings_date": None,
+        }, obj
+    now_price = parse_number(obj.get("nowPrice"))
+    dividend_amount = parse_number(obj.get("dividendAmount"))
+    dividend_yield = dividend_amount / now_price * 100 if dividend_amount is not None and now_price not in (None, 0) else None
+    return {
+        "market_cap": parse_number(obj.get("marketSum")),
+        "dividend_yield": dividend_yield,
+        "trailing_pe": normalize_pe(parse_number(obj.get("per"))),
+        "forward_pe": normalize_pe(parse_number(obj.get("estimatedPer"))),
+        "next_earnings_date": None,
+    }, obj
+
+
+def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str]) -> dict[str, dict]:
+    earnings_by_ticker = {
+        row["ticker"]: row["next_earnings_date"]
+        for row in conn.execute(
+            """
+            SELECT ticker, next_earnings_date
+            FROM tickers
+            WHERE ticker IS NOT NULL AND TRIM(ticker) <> ''
+            """
+        ).fetchall()
+    }
+    now_ts = datetime.now().timestamp()
+    result: dict[str, dict] = {}
+    for ticker in tickers:
+        cached = load_stats_cache_item(conn, ticker, now_ts)
+        if cached:
+            cached["next_earnings_date"] = earnings_by_ticker.get(ticker)
+            result[ticker] = cached
+            continue
+        stale = load_stats_cache_item(conn, ticker, now_ts, fresh_only=False)
+        if stale:
+            stale["next_earnings_date"] = earnings_by_ticker.get(ticker)
+        data: dict = {}
+        source = "unknown"
+        raw: dict | None = None
+        fetched = False
+        try:
+            if is_korean_stock_ticker(ticker):
+                data, raw = fetch_naver_fundamentals(ticker)
+                source = "naver"
+                fetched = True
+            else:
+                symbol = normalize_yfinance_symbol(ticker)
+                if symbol:
+                    import yfinance as yf
+
+                    info = yf.Ticker(symbol).info or {}
+                    dividend_yield = info.get("dividendYield")
+                    if dividend_yield is None:
+                        dividend_yield = info.get("trailingAnnualDividendYield")
+                    data = {
+                        "market_cap": info.get("marketCap"),
+                        "dividend_yield": dividend_yield,
+                        "trailing_pe": normalize_pe(info.get("trailingPE")),
+                        "forward_pe": normalize_pe(info.get("forwardPE")),
+                        "next_earnings_date": earnings_by_ticker.get(ticker),
+                    }
+                    source = "yfinance"
+                    raw = {"info": info}
+                    fetched = True
+        except Exception as exc:
+            print(f"[stats] fundamentals failed for {ticker}: {exc}")
+            if stale:
+                result[ticker] = stale
+                continue
+        if fetched:
+            data["next_earnings_date"] = earnings_by_ticker.get(ticker)
+            save_stats_cache_item(conn, ticker, source, data, raw)
+        result[ticker] = data
+    conn.commit()
+    return result

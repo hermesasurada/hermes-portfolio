@@ -1,0 +1,8 @@
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Local runtime data lives outside the repo (~/.hermes/data)
+*.db
+*.sqlite
+.DS_Store

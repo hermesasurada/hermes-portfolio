@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portfolio V2</title>
+  <script>
+    (function () {
+      try {
+        var pref = localStorage.getItem("theme") || "auto";
+        var dark = pref === "dark" || (pref === "auto" && window.matchMedia
+          && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="/static/styles.css?v=acct-perf1">
+</head>
+<body>
+  <header>
+    <div class="bar">
+      <div>
+        <h1><a class="home-link" href="/">Portfolio V2</a></h1>
+        <div class="fx-top" id="fxTop">환율 loading...</div>
+      </div>
+      <div class="controls">
+        <div class="auto-refresh-control">
+          <label class="toggle-switch" for="autoRefreshToggle">
+            <input id="autoRefreshToggle" type="checkbox">
+            <span class="toggle-ui" aria-hidden="true"></span>
+            <span class="toggle-label">자동갱신</span>
+          </label>
+          <label for="autoRefreshInterval">
+            <input id="autoRefreshInterval" type="number" min="1" max="1440" step="1" value="5" inputmode="numeric">
+            <span>분</span>
+          </label>
+        </div>
+        <div class="us-price-control" id="usPriceControl">
+          <label class="toggle-switch" for="usExtendedToggle">
+            <input id="usExtendedToggle" type="checkbox">
+            <span class="toggle-ui" aria-hidden="true"></span>
+            <span class="toggle-label">연장</span>
+          </label>
+          <span class="us-market-status" id="usMarketStatus">-</span>
+        </div>
+        <button id="watchlistOpen" class="ghost-btn" type="button">관리종목</button>
+        <button id="performanceOpen" class="ghost-btn" type="button">성과차트</button>
+        <button id="themeToggle" class="theme-btn" type="button" title="테마">자동</button>
+        <button id="refresh">Refresh</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <section class="layout">
+      <div class="side-col">
+      <aside class="section">
+        <h2>계좌</h2>
+        <div id="accounts" class="account-list"></div>
+        <div id="priceUpdated" class="account-footer">가격 갱신: -</div>
+      </aside>
+      <section class="section allocation-panel" id="allocationPanel">
+        <div class="alloc-head">
+          <h2>자산 배분</h2>
+          <span class="pill" id="allocTotal">-</span>
+        </div>
+        <div class="alloc-body">
+          <div class="alloc-donut" id="allocDonut" role="img" aria-label="자산군 배분 도넛 차트"></div>
+          <ul class="alloc-legend" id="allocLegend"></ul>
+        </div>
+      </section>
+      </div>
+      <div class="main-col">
+      <section class="section">
+        <div class="toolbar">
+          <div class="title-tools">
+            <strong id="tableTitle">전체</strong>
+            <button class="ghost-btn hidden" id="chartBack" type="button">목록</button>
+            <span class="detail-tabs" role="tablist" aria-label="상세 탭">
+              <button class="tab-btn active" id="detailTabBtn" type="button" data-tab="detail">세부내역</button>
+              <button class="tab-btn" id="statsTabBtn" type="button" data-tab="stats">통계</button>
+            </span>
+            <span class="filter-toggle-control enabled" id="aggregateControl">
+              <label class="toggle-switch" for="aggregateToggle">
+                <input id="aggregateToggle" type="checkbox" checked>
+                <span class="toggle-ui" aria-hidden="true"></span>
+                <span class="toggle-label">합산</span>
+              </label>
+            </span>
+            <span class="filter-toggle-control enabled" id="activeOnlyControl">
+              <label class="toggle-switch" for="activeOnlyToggle">
+                <input id="activeOnlyToggle" type="checkbox" checked>
+                <span class="toggle-ui" aria-hidden="true"></span>
+                <span class="toggle-label">보유</span>
+              </label>
+            </span>
+            <span class="filter-toggle-control" id="fxAdjustedControl">
+              <label class="toggle-switch" for="fxAdjustedToggle">
+                <input id="fxAdjustedToggle" type="checkbox">
+                <span class="toggle-ui" aria-hidden="true"></span>
+                <span class="toggle-label">환율 적용</span>
+              </label>
+            </span>
+            <span class="pill" id="rowCount">0 rows</span>
+          </div>
+          <span class="pill" id="accountTotal">-</span>
+        </div>
+        <div class="table-wrap" id="detailTableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th data-key="name">종목</th>
+                <th data-key="display_change_pct">등락</th>
+                <th data-key="extended_change_pct">연장</th>
+                <th data-key="change_krw">등락금액(한화)</th>
+                <th data-key="qty">수량</th>
+                <th data-key="current_price">현재단가</th>
+                <th data-key="current_price_krw">현재단가(한화)</th>
+                <th data-key="value">평가액</th>
+                <th data-key="value_krw">평가액(한화)</th>
+                <th data-key="weight_pct">비중</th>
+                <th data-key="next_earnings_date">실적</th>
+                <th>거래</th>
+              </tr>
+            </thead>
+            <tbody id="holdings"></tbody>
+          </table>
+        </div>
+        <div class="table-wrap hidden" id="statsTableWrap">
+          <table class="stats-list">
+            <thead>
+              <tr>
+                <th data-key="name">종목</th>
+                <th data-key="market_cap_usd">시가총액</th>
+                <th data-key="dividend_yield">배당율</th>
+                <th class="indicator-head" data-key="rsi_day"><span>RSI</span><span>(일)</span></th>
+                <th class="indicator-head" data-key="rsi_week"><span>RSI</span><span>(주)</span></th>
+                <th class="indicator-head" data-key="rsi_month"><span>RSI</span><span>(월)</span></th>
+                <th class="indicator-head" data-key="bb_day"><span>BB</span><span>(일)</span></th>
+                <th class="indicator-head" data-key="bb_week"><span>BB</span><span>(주)</span></th>
+                <th class="indicator-head" data-key="bb_month"><span>BB</span><span>(월)</span></th>
+                <th data-key="trailing_pe">Trailing<br>P/E</th>
+                <th data-key="forward_pe">Forward<br>P/E</th>
+                <th data-key="perf_1m">1개월</th>
+                <th data-key="perf_3m">3개월</th>
+                <th data-key="perf_6m">6개월</th>
+                <th data-key="perf_ytd">YTD</th>
+                <th data-key="perf_1y">1년</th>
+                <th data-key="perf_3y">3년</th>
+                <th data-key="perf_5y">5년</th>
+              </tr>
+            </thead>
+            <tbody id="statsRows"></tbody>
+          </table>
+        </div>
+        <div class="chart-view hidden" id="chartView">
+          <div class="chart-head">
+            <div class="chart-title-line">
+              <span id="chartIcon" class="chart-icon-slot"></span>
+              <span id="chartTicker">-</span>
+              <strong id="chartName">-</strong>
+            </div>
+            <div class="chart-meta" id="chartMeta">-</div>
+          </div>
+          <div class="chart-canvas" id="chartCanvas"></div>
+        </div>
+      </section>
+      <section class="section transaction-panel collapsed">
+      <div class="toolbar">
+        <div class="title-tools">
+          <strong>거래내역</strong>
+          <span class="pill" id="tradeScope">계좌와 종목을 선택</span>
+        </div>
+        <div class="transaction-actions">
+          <span class="status" id="tradeStatus"></span>
+          <button class="ghost-btn" id="transactionToggle" type="button" aria-expanded="false">펼치기</button>
+        </div>
+      </div>
+      <form id="tradeForm" class="trade-form compact">
+        <div class="field">
+          <label for="tradeDate">거래일</label>
+          <input id="tradeDate" type="date" required>
+        </div>
+        <div class="field field-wide">
+          <label for="tradeAccount">계좌</label>
+          <select id="tradeAccount" required></select>
+        </div>
+        <div class="field">
+          <label for="tradeTicker">티커</label>
+          <input id="tradeTicker" list="tickerOptions" required>
+          <datalist id="tickerOptions"></datalist>
+        </div>
+        <div class="field">
+          <label for="tradeName">종목명</label>
+          <input id="tradeName">
+        </div>
+        <div class="field">
+          <label>유형</label>
+          <input id="tradeSide" type="hidden" value="BUY">
+          <div class="segmented trade-side-toggle" role="group" aria-label="거래 유형">
+            <button class="seg-btn active" type="button" data-side="BUY">매수</button>
+            <button class="seg-btn" type="button" data-side="SELL">매도</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="tradeQty">수량</label>
+          <input id="tradeQty" type="number" min="0" step="any" required>
+        </div>
+        <div class="field">
+          <label for="tradePrice">단가</label>
+          <input id="tradePrice" type="number" min="0" step="any" required>
+        </div>
+        <div class="field">
+          <label for="tradeCurrency">통화</label>
+          <select id="tradeCurrency">
+            <option>USD</option>
+            <option>KRW</option>
+            <option>EUR</option>
+            <option>JPY</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="tradeApplyToggle">잔고</label>
+          <input id="tradeApply" type="checkbox" checked hidden>
+          <button id="tradeApplyToggle" class="apply-seg active" type="button" aria-pressed="true">반영</button>
+        </div>
+        <div class="trade-actions">
+          <button class="primary-btn" type="submit">저장</button>
+        </div>
+      </form>
+      <div class="table-wrap tx-wrap">
+        <table class="tx-list">
+          <thead>
+            <tr>
+              <th>거래일</th>
+              <th>계좌</th>
+              <th>티커</th>
+              <th>종목명</th>
+              <th>유형</th>
+              <th>수량</th>
+              <th>단가</th>
+              <th>금액</th>
+              <th>현재대비</th>
+            </tr>
+          </thead>
+          <tbody id="transactions"></tbody>
+        </table>
+      </div>
+      <div class="tx-pager" id="transactionPager"></div>
+    </section>
+      </div>
+    </section>
+  </main>
+  <dialog class="watch-modal" id="watchModal">
+    <form method="dialog" class="modal-card">
+      <div class="modal-head">
+        <strong>관리종목</strong>
+        <button class="ghost-btn" id="watchClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <div class="watch-search">
+        <input id="watchTickerInput" placeholder="종목코드" autocomplete="off">
+        <button id="watchLookup" class="ghost-btn" type="button">검색</button>
+      </div>
+      <div class="watch-result" id="watchResult">-</div>
+      <div class="watch-actions">
+        <button id="watchAdd" class="ghost-btn" type="button" disabled>추가</button>
+        <button id="watchApply" class="primary-btn" type="button" disabled>적용</button>
+      </div>
+      <ul class="watch-pending" id="watchPending"></ul>
+      <div class="status" id="watchStatus"></div>
+    </form>
+  </dialog>
+  <script src="/static/state.js?v=acct-perf1"></script>
+  <script src="/static/format.js?v=acct-perf1"></script>
+  <script src="/static/api.js?v=acct-perf1"></script>
+  <script src="/static/app-charts.js?v=acct-perf1"></script>
+  <script src="/static/app.js?v=acct-perf1"></script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+// Performance & price-chart rendering — extracted from app.js (#12).
+// Classic script loaded before app.js; shares the global scope (state and
+// helpers live in app.js and resolve at call time).
+
+function pctChartLabel(value) {
+  if (!Number.isFinite(value)) return "-";
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+  return `${sign}${fmt2.format(Math.abs(value))}%`;
+}
+
+function accountPerformanceTitle(payload) {
+  const accounts = payload?.accounts || [];
+  if (!accounts.length) return "선택 계좌 성과";
+  if (accounts.length === 1) return `${accounts[0].member} · ${accounts[0].name}`;
+  return `${accounts.length}개 계좌`;
+}
+
+function normalizePerformancePoints(points, rangeKey, startDate = null) {
+  const raw = (points || [])
+    .filter(point => point.date && Number.isFinite(Number(point.value)))
+    .map(point => ({ date: point.date, value: Number(point.value) }));
+  const filtered = startDate
+    ? raw.filter(point => new Date(`${point.date}T00:00:00`) >= startDate)
+    : filterChartPoints(raw.map(point => ({ date: point.date, close: point.value })), rangeKey)
+        .map(point => ({ date: point.date, value: Number(point.close) }));
+  if (filtered.length < 2) return [];
+  const base = filtered.find(point => point.value > 0)?.value;
+  if (!base) return [];
+  return filtered.map(point => ({
+    date: point.date,
+    close: (point.value / base - 1) * 100,
+    value: point.value,
+    time: new Date(`${point.date}T00:00:00`).getTime(),
+  }));
+}
+
+function performanceSeries(payload) {
+  const portfolioRaw = payload?.points || [];
+  const lastDate = portfolioRaw[portfolioRaw.length - 1]?.date
+    || Object.values(payload?.indexes || {}).flatMap(item => item.points || []).map(point => point.date).sort().at(-1);
+  const startDate = lastDate ? chartRangeStartDate([{ date: lastDate }], chartRange) : null;
+  const series = [
+    {
+      key: "portfolio",
+      name: "선택 계좌",
+      color: "var(--brand)",
+      points: normalizePerformancePoints(portfolioRaw, chartRange, startDate),
+      primary: true,
+    },
+  ];
+  const indexMeta = [
+    ["SP500", "S&P 500", "#ea4335"],
+    ["NASDAQ", "나스닥", "#fbbc04"],
+    ["KOSPI", "코스피", "#34a853"],
+  ];
+  indexMeta.forEach(([key, label, color]) => {
+    if (!performanceIndexes[key]) return;
+    const index = payload?.indexes?.[key];
+    series.push({
+      key,
+      name: label,
+      color,
+      points: normalizePerformancePoints(index?.points || [], chartRange, startDate),
+      primary: false,
+    });
+  });
+  return series.filter(item => item.points.length >= 2);
+}
+
+function renderPerformanceControls() {
+  const items = [
+    ["SP500", "S&P 500"],
+    ["NASDAQ", "나스닥"],
+    ["KOSPI", "코스피"],
+  ];
+  return `
+    <div class="perf-controls" role="group" aria-label="비교 지수">
+      ${items.map(([key, label]) => `
+        <button class="perf-index-toggle ${performanceIndexes[key] ? "active" : ""}" type="button" data-index="${key}" aria-pressed="${performanceIndexes[key] ? "true" : "false"}">${label}</button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function bindPerformanceHover(series, geometry) {
+  const svg = document.querySelector("#chartCanvas svg");
+  const hoverLayer = document.getElementById("chartHoverLayer");
+  const hoverGroup = document.getElementById("chartHoverGroup");
+  const hoverLine = document.getElementById("chartHoverLine");
+  const tooltip = document.getElementById("chartTooltip");
+  const tooltipBox = document.getElementById("chartTooltipBox");
+  if (!svg || !hoverLayer || !hoverGroup || !hoverLine || !tooltip || !tooltipBox) return;
+
+  const nearest = (points, targetTime) => points.reduce((best, point) => {
+    const distance = Math.abs(point.time - targetTime);
+    return !best || distance < best.distance ? { point, distance } : best;
+  }, null)?.point;
+
+  const updateTooltipBox = () => {
+    let bbox = tooltip.getBBox();
+    let x = Number(tooltip.getAttribute("x") || 0);
+    if (bbox.x + bbox.width > geometry.width - 8) x -= bbox.x + bbox.width - (geometry.width - 8);
+    if (bbox.x < 8) x += 8 - bbox.x;
+    tooltip.setAttribute("x", x.toFixed(2));
+    tooltip.querySelectorAll("tspan").forEach(tspan => tspan.setAttribute("x", x.toFixed(2)));
+    bbox = tooltip.getBBox();
+    tooltipBox.setAttribute("x", (bbox.x - 9).toFixed(2));
+    tooltipBox.setAttribute("y", (bbox.y - 7).toFixed(2));
+    tooltipBox.setAttribute("width", (bbox.width + 18).toFixed(2));
+    tooltipBox.setAttribute("height", (bbox.height + 14).toFixed(2));
+  };
+
+  const showPoint = clientX => {
+    const rect = svg.getBoundingClientRect();
+    const svgX = (clientX - rect.left) / rect.width * geometry.width;
+    const ratio = Math.min(1, Math.max(0, (svgX - geometry.pad.left) / geometry.plotW));
+    const targetTime = geometry.minTime + ratio * (geometry.maxTime - geometry.minTime);
+    const x = geometry.xForTime(targetTime);
+    const portfolioPoint = nearest(series[0]?.points || [], targetTime);
+    const y = portfolioPoint ? geometry.yFor(portfolioPoint.close) : geometry.pad.top;
+    const dateText = portfolioPoint?.date || chartFullDateLabel(new Date(targetTime).toISOString().slice(0, 10));
+    hoverGroup.classList.remove("hidden");
+    hoverLine.setAttribute("x1", x.toFixed(2));
+    hoverLine.setAttribute("x2", x.toFixed(2));
+    tooltip.textContent = "";
+    [
+      chartFullDateLabel(dateText),
+      ...series.map(item => {
+        const point = nearest(item.points, targetTime);
+        return `${item.name} ${pctChartLabel(point?.close)}`;
+      }),
+    ].forEach((line, index) => {
+      const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+      tspan.setAttribute("x", (x > geometry.width - 250 ? x - 176 : x + 14).toFixed(2));
+      tspan.setAttribute("dy", index === 0 ? "0" : "15");
+      tspan.textContent = line;
+      tooltip.appendChild(tspan);
+    });
+    tooltip.setAttribute("x", (x > geometry.width - 250 ? x - 176 : x + 14).toFixed(2));
+    tooltip.setAttribute("y", (y < 76 ? y + 24 : y - 56).toFixed(2));
+    updateTooltipBox();
+  };
+
+  hoverLayer.addEventListener("pointermove", event => showPoint(event.clientX));
+  hoverLayer.addEventListener("pointerenter", event => showPoint(event.clientX));
+  hoverLayer.addEventListener("pointerleave", () => hoverGroup.classList.add("hidden"));
+}
+
+function renderPerformanceChart(payload) {
+  performancePayload = payload;
+  const series = performanceSeries(payload);
+  document.getElementById("chartIcon").innerHTML = `<span class="asset-icon">%</span>`;
+  document.getElementById("chartTicker").textContent = "성과";
+  document.getElementById("chartName").textContent = accountPerformanceTitle(payload);
+
+  if (!series.length || !series[0]?.points.length) {
+    document.getElementById("chartMeta").textContent = `${payload?.holdings_count || 0}개 종목`;
+    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">성과 차트 데이터 없음</div>${renderPerformanceControls()}${renderChartRangeButtons()}`;
+    bindPerformanceChartControls();
+    return;
+  }
+
+  const allPoints = series.flatMap(item => item.points);
+  const minTime = Math.min(...allPoints.map(point => point.time));
+  const maxTime = Math.max(...allPoints.map(point => point.time));
+  const values = allPoints.map(point => point.close);
+  const scale = niceChartScale([...values, 0]);
+  const min = scale.min;
+  const max = scale.max;
+  const width = 980;
+  const height = 360;
+  const pad = { top: 26, right: 58, bottom: 34, left: 40 };
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+  const range = max - min || 1;
+  const xForTime = time => pad.left + (maxTime === minTime ? 0 : (time - minTime) / (maxTime - minTime) * plotW);
+  const yFor = value => pad.top + (max - value) / range * plotH;
+  const pathFor = points => points.map((point, index) => `${index === 0 ? "M" : "L"}${xForTime(point.time).toFixed(2)},${yFor(point.close).toFixed(2)}`).join(" ");
+  const portfolio = series[0];
+  const lastPoint = portfolio.points[portfolio.points.length - 1];
+  const cls = lastPoint.close > 0 ? "up" : lastPoint.close < 0 ? "down" : "flat";
+  document.getElementById("chartMeta").innerHTML = `
+    <span>${chartDateLabel(portfolio.points[0].date)} - ${chartDateLabel(lastPoint.date)}</span>
+    <span>${payload.holdings_count || 0}개 종목</span>
+    <span class="${cls}">${pctChartLabel(lastPoint.close)}</span>
+  `;
+  const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
+  const xTicks = [minTime, minTime + (maxTime - minTime) / 2, maxTime].map((time, index) => ({
+    time,
+    x: xForTime(time),
+    date: new Date(time).toISOString().slice(0, 10),
+    anchor: index === 0 ? "start" : index === 2 ? "end" : "middle",
+  }));
+  const legend = series.map(item => {
+    const last = item.points[item.points.length - 1]?.close;
+    return `<span class="perf-legend-item"><i style="background:${item.color}"></i>${esc(item.name)} <strong class="${last > 0 ? "up" : last < 0 ? "down" : "flat"}">${pctChartLabel(last)}</strong></span>`;
+  }).join("");
+
+  document.getElementById("chartCanvas").innerHTML = `
+    <div class="perf-chart-top">
+      <div class="perf-legend">${legend}</div>
+      ${renderPerformanceControls()}
+    </div>
+    <svg class="line-chart perf-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="계좌 기간 성과 차트">
+      <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
+      ${yTicks.map(tick => `
+        <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
+        <text class="chart-y-label" x="${width - 6}" y="${(tick.y + 4).toFixed(2)}">${esc(pctChartLabel(tick.value))}</text>
+      `).join("")}
+      <line class="perf-zero-line" x1="${pad.left}" x2="${pad.left + plotW}" y1="${yFor(0).toFixed(2)}" y2="${yFor(0).toFixed(2)}"></line>
+      ${xTicks.map(tick => `
+        <text class="chart-x-label" x="${tick.x.toFixed(2)}" y="${height - 12}" text-anchor="${tick.anchor}">${esc(chartDateLabel(tick.date))}</text>
+      `).join("")}
+      ${series.map(item => `
+        <path class="perf-line ${item.primary ? "primary" : "index"}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>
+      `).join("")}
+      <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
+      <g id="chartHoverGroup" class="chart-hover hidden">
+        <line id="chartHoverLine" class="chart-hover-line" x1="0" x2="0" y1="${pad.top}" y2="${pad.top + plotH}"></line>
+        <rect id="chartTooltipBox" class="chart-tooltip-box" x="0" y="0" width="0" height="0" rx="6"></rect>
+        <text id="chartTooltip" class="chart-tooltip perf-tooltip" x="0" y="0">-</text>
+      </g>
+    </svg>
+    ${renderChartRangeButtons()}
+  `;
+  bindPerformanceHover(series, { width, height, pad, plotW, plotH, minTime, maxTime, xForTime, yFor });
+  bindPerformanceChartControls();
+}
+
+function bindPerformanceChartControls() {
+  document.querySelectorAll(".perf-index-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.index;
+      performanceIndexes[key] = !performanceIndexes[key];
+      renderPerformanceChart(performancePayload);
+    });
+  });
+  document.querySelectorAll(".chart-range-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      chartRange = btn.dataset.chartRange || "6m";
+      renderPerformanceChart(performancePayload);
+    });
+  });
+}
+
+async function openPerformanceChart() {
+  performanceChartOpen = true;
+  chartTicker = null;
+  chartPayload = null;
+  syncDetailTabs();
+  document.getElementById("chartIcon").innerHTML = `<span class="asset-icon">%</span>`;
+  document.getElementById("chartTicker").textContent = "성과";
+  document.getElementById("chartName").textContent = "계좌 퍼포먼스";
+  document.getElementById("chartMeta").textContent = "loading...";
+  document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">loading...</div>`;
+  const accounts = visibleAccounts();
+  const allAccounts = selectionMode === "all";
+  performanceLoadInFlight = apiFetchAccountPerformance(accounts.map(account => account.id), allAccounts);
+  try {
+    const payload = await performanceLoadInFlight;
+    if (!performanceChartOpen) return;
+    renderPerformanceChart(payload);
+  } catch (err) {
+    if (!performanceChartOpen) return;
+    document.getElementById("chartMeta").textContent = "";
+    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">${esc(err.message || String(err))}</div>`;
+  } finally {
+    if (performanceLoadInFlight) performanceLoadInFlight = null;
+  }
+}
+
+async function openChart(ticker) {
+  const cleanTicker = String(ticker || "").trim().toUpperCase();
+  if (!cleanTicker) return;
+  performanceChartOpen = false;
+  chartTicker = cleanTicker;
+  syncDetailTabs();
+  document.getElementById("tableTitle").textContent = cleanTicker;
+  renderChartIdentity({ ticker: cleanTicker, name: cleanTicker });
+  document.getElementById("chartMeta").textContent = "loading...";
+  document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">loading...</div>`;
+  chartLoadInFlight = apiFetchChart(cleanTicker);
+  try {
+    const payload = await chartLoadInFlight;
+    if (chartTicker !== cleanTicker) return;
+    chartPayload = payload;
+    document.getElementById("tableTitle").textContent = payload.name || payload.ticker;
+    renderLineChart(payload);
+  } catch (err) {
+    if (chartTicker !== cleanTicker) return;
+    document.getElementById("chartMeta").textContent = "";
+    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">${esc(err.message || String(err))}</div>`;
+  } finally {
+    if (chartLoadInFlight) chartLoadInFlight = null;
+  }
+}
+
+function closeChart(updateHash = true) {
+  chartTicker = null;
+  chartLoadInFlight = null;
+  chartPayload = null;
+  performanceChartOpen = false;
+  performanceLoadInFlight = null;
+  performancePayload = null;
+  if (updateHash && (location.hash.startsWith("#chart=") || location.hash === "#performance")) {
+    history.pushState(null, "", location.pathname + location.search);
+  }
+  renderTable();
+}
+window.openChart = openChart;
+window.openPerformanceChart = openPerformanceChart;
+window.closeChart = closeChart;
+
+function syncChartRoute() {
+  if (performanceChartFromHash()) {
+    openPerformanceChart();
+    return;
+  }
+  const ticker = chartTickerFromHash();
+  if (ticker) openChart(ticker);
+  else if (chartTicker || performanceChartOpen) closeChart(false);
+}
+

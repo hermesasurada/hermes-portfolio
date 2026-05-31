@@ -1,0 +1,289 @@
+#!/usr/bin/env python3
+"""Pure-function tests for portfolio_core.
+
+Runs with plain `python3 tests/test_portfolio_core.py` (no pytest required) and is
+also discoverable by pytest. Covers the deterministic, network-free helpers — the
+layer where the original parse_number regression slipped through unnoticed.
+"""
+
+from __future__ import annotations
+
+import sys
+from datetime import date
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from portfolio_core.fundamentals import normalize_pe, parse_number
+from portfolio_core.indicators import (
+    performance_pct,
+    recent_performance,
+    resample_last,
+    shift_months,
+)
+from portfolio_core.price_store import infer_category
+from portfolio_core.prices import (
+    extended_change_from_quote,
+    extended_quote_pick,
+    fx_previous_rates,
+    fx_rates,
+    live_price_from_quote,
+)
+from portfolio_core.tickers import (
+    account_kind,
+    account_label,
+    account_scope,
+    asset_class,
+    is_korean_stock_ticker,
+    is_us_stock_ticker,
+    normalize_yfinance_symbol,
+    ticker_currency,
+    ticker_scope,
+)
+from portfolio_core.logos import candidate_symbols, logo_stem
+from portfolio_core.watchlist import estimate_hydration_minutes, normalize_lookup_ticker
+
+
+# --- fundamentals.parse_number (the regression that started all this) -------
+def test_parse_number():
+    assert parse_number("1,234.5") == 1234.5
+    assert parse_number("12,345억") == 12345.0
+    assert parse_number("-12.5") == -12.5
+    assert parse_number(None) is None
+    assert parse_number("-") is None
+    assert parse_number("") is None
+    assert parse_number("abc") is None
+
+
+def test_normalize_pe():
+    assert normalize_pe("12.3") == 12.3
+    assert normalize_pe(0) is None
+    assert normalize_pe(-5) is None
+    assert normalize_pe(None) is None
+    assert normalize_pe("n/a") is None
+
+
+# --- tickers ----------------------------------------------------------------
+def test_ticker_currency():
+    assert ticker_currency("BTC") == "KRW"
+    assert ticker_currency("005930.KS") == "KRW"
+    assert ticker_currency("000660.KQ") == "KRW"
+    assert ticker_currency("ASML.PA") == "EUR"
+    assert ticker_currency("7203.T") == "JPY"
+    assert ticker_currency("AAPL") == "USD"
+
+
+def test_is_us_stock_ticker():
+    assert is_us_stock_ticker("AAPL", "USD") is True
+    assert is_us_stock_ticker("AAPL", "KRW") is False
+    assert is_us_stock_ticker("USDKRW", "USD") is False
+    assert is_us_stock_ticker("005930.KS", "USD") is False  # has a dot
+    # market indexes must NOT be live-quoted as US stocks (SP500 -> ^GSPC 404 bug)
+    assert is_us_stock_ticker("SP500", "USD") is False
+    assert is_us_stock_ticker("NASDAQ", "USD") is False
+
+
+def test_is_korean_stock_ticker():
+    assert is_korean_stock_ticker("005930.KS") is True
+    assert is_korean_stock_ticker("000660.KQ") is True
+    assert is_korean_stock_ticker("AAPL") is False
+
+
+def test_normalize_yfinance_symbol():
+    assert normalize_yfinance_symbol("BTC") == "BTC-KRW"
+    assert normalize_yfinance_symbol("USDKRW") is None
+    assert normalize_yfinance_symbol("AAPL") == "AAPL"
+    # market indexes map to their Yahoo symbol, not the bare internal ticker
+    assert normalize_yfinance_symbol("SP500") == "^GSPC"
+    assert normalize_yfinance_symbol("NASDAQ") == "^IXIC"
+
+
+def test_asset_class():
+    assert asset_class("BTC", "Bitcoin") == "crypto"
+    assert asset_class("QQQ", "Invesco QQQ") == "etf"
+    assert asset_class("069500.KS", "KODEX 200") == "etf"
+    assert asset_class("SCHD", "") == "etf"          # ticker-only ETF
+    assert asset_class("AAPL", "Apple Inc.") == "stock"
+
+
+def test_account_kind_and_label():
+    assert account_kind("pension_kr") == "pension"
+    assert account_kind("retirement_kr") == "pension"
+    assert account_kind("overseas") == "general"
+    assert account_label("철수", "overseas", None) == "해외주식계좌"
+    assert account_label("철수", "overseas", "내계좌") == "내계좌"  # explicit name wins
+    assert account_label("철수", "unknown", None) == "철수 unknown"
+
+
+# --- price_store.infer_category --------------------------------------------
+def test_infer_category():
+    assert infer_category("USDKRW") == "fx"
+    assert infer_category("BTC") == "crypto"
+    assert infer_category("KOSPI") == "index"
+    assert infer_category("005930.KS") == "kr"
+    assert infer_category("AAPL") == "overseas"
+    assert infer_category("WHATEVER", "kr") == "kr"  # explicit category respected
+
+
+# --- prices.fx_rates --------------------------------------------------------
+def test_fx_rates_uses_quotes_then_fallback():
+    prices = {"USDKRW": {"price": 1500.0, "previous_price": 1490.0}}
+    rates = fx_rates(prices)
+    assert rates["USD"] == 1500.0
+    assert rates["KRW"] == 1.0
+    assert rates["EUR"] == 1700.0  # fallback when no EURKRW quote
+    prev = fx_previous_rates(prices)
+    assert prev["USD"] == 1490.0
+    assert prev["EUR"] == 1700.0
+
+
+# --- indicators -------------------------------------------------------------
+def test_shift_months():
+    assert shift_months(date(2026, 3, 31), -1) == date(2026, 2, 28)
+    assert shift_months(date(2024, 3, 31), -1) == date(2024, 2, 29)  # leap year
+    assert shift_months(date(2026, 1, 15), -1) == date(2025, 12, 15)
+    assert shift_months(date(2026, 5, 31), -12) == date(2025, 5, 31)
+
+
+def test_resample_last_monthly():
+    rows = [
+        {"date": "2026-01-10", "close": 10.0},
+        {"date": "2026-01-20", "close": 11.0},   # later in same month overrides
+        {"date": "2026-02-05", "close": 12.0},
+    ]
+    assert resample_last(rows, "month") == [11.0, 12.0]
+
+
+def test_performance_pct():
+    rows = [
+        {"date": "2026-01-01", "close": 100.0},
+        {"date": "2026-02-01", "close": 110.0},
+    ]
+    assert performance_pct(rows, date(2026, 1, 1)) == 10.0
+    assert performance_pct([], date(2026, 1, 1)) is None
+
+
+def test_recent_performance_keys():
+    keys = set(recent_performance([]).keys())
+    assert keys == {
+        "one_month", "three_month", "six_month", "ytd",
+        "one_year", "three_year", "five_year",
+    }
+
+
+# --- quote parsing: behaviour-preservation regression -----------------------
+def _legacy_live_price(quote_row, include_extended, regular_hours):
+    """Original (pre-refactor) live_price_from_quote logic, kept here as oracle."""
+    market_state = str(quote_row.get("marketState") or "").upper()
+    if include_extended and not regular_hours:
+        if market_state == "PRE" and quote_row.get("preMarketPrice"):
+            return float(quote_row["preMarketPrice"]), "yf-pre"
+        if market_state in {"POST", "POSTPOST"} and quote_row.get("postMarketPrice"):
+            return float(quote_row["postMarketPrice"]), "yf-after"
+        if quote_row.get("preMarketPrice"):
+            return float(quote_row["preMarketPrice"]), "yf-pre"
+        if quote_row.get("postMarketPrice"):
+            return float(quote_row["postMarketPrice"]), "yf-after"
+    if quote_row.get("regularMarketPrice"):
+        return float(quote_row["regularMarketPrice"]), "yf-live"
+    return None, None
+
+
+def _quote_matrix():
+    states = ["", "PRE", "POST", "POSTPOST", "REGULAR"]
+    rows = []
+    for state in states:
+        for pre in (None, 0, 201.0):
+            for post in (None, 0, 202.0):
+                for reg in (None, 0, 200.0):
+                    rows.append({
+                        "marketState": state,
+                        "preMarketPrice": pre,
+                        "postMarketPrice": post,
+                        "regularMarketPrice": reg,
+                        "regularMarketPreviousClose": 199.0,
+                    })
+    return rows
+
+
+def test_live_price_from_quote_matches_legacy():
+    for row in _quote_matrix():
+        for include_extended in (False, True):
+            for regular_hours in (False, True):
+                assert live_price_from_quote(row, include_extended, regular_hours) == \
+                    _legacy_live_price(row, include_extended, regular_hours), row
+
+
+def test_extended_quote_pick_and_change():
+    pre = {"marketState": "PRE", "preMarketPrice": 201.0, "regularMarketPrice": 200.0}
+    assert extended_quote_pick(pre) == (201.0, "yf-pre")
+    change = extended_change_from_quote(pre, regular_hours=False)
+    assert change["extended_price"] == 201.0
+    assert change["extended_base_price"] == 200.0
+    assert round(change["extended_change"], 6) == 1.0
+    # during regular hours there is no extended block
+    assert extended_change_from_quote(pre, regular_hours=True) == {}
+    # nothing to pick
+    assert extended_quote_pick({"marketState": "REGULAR"}) == (None, None)
+
+
+# --- scope rules (single source shared by validation + API) -----------------
+def test_account_scope():
+    assert account_scope("overseas") == "overseas"
+    assert account_scope("kr_individual") == "kr_stock"
+    assert account_scope("pension_kr") == "kr_etf"
+    assert account_scope("retirement_kr") == "kr_etf"
+    assert account_scope("bitcoin") == "crypto"
+    assert account_scope("unknown") is None
+
+
+def test_ticker_scope():
+    assert ticker_scope("BTC", "Bitcoin", "crypto", "KRW") == "crypto"
+    assert ticker_scope("SP500", "S&P 500", "index", "USD") is None
+    assert ticker_scope("005930.KS", "삼성전자", "kr", "KRW") == "kr_stock"
+    assert ticker_scope("069500.KS", "KODEX 200", "kr", "KRW") == "kr_etf"
+    assert ticker_scope("AAPL", "Apple", "overseas", "USD") == "overseas"
+    # KRW currency without an explicit category still resolves to a KR scope
+    assert ticker_scope("042660.KS", "한화오션", None, "KRW") == "kr_stock"
+
+
+# --- watchlist helpers ------------------------------------------------------
+def test_estimate_hydration_minutes():
+    assert estimate_hydration_minutes(0) == 1
+    assert estimate_hydration_minutes(1) == 1
+    assert estimate_hydration_minutes(3) == 2   # ceil(1.8)
+    assert estimate_hydration_minutes(10) == 6  # ceil(6.0)
+
+
+def test_normalize_lookup_ticker():
+    assert normalize_lookup_ticker("005930") == "005930.KS"  # 6 digits -> KOSPI
+    assert normalize_lookup_ticker(" aapl ") == "AAPL"
+    assert normalize_lookup_ticker("brk.b") == "BRK.B"
+    assert normalize_lookup_ticker("") == ""
+
+
+# --- logos ------------------------------------------------------------------
+def test_logo_stem_and_candidates():
+    assert logo_stem("005930.KS") == "005930_KS"
+    assert logo_stem("AAPL") == "AAPL"
+    assert candidate_symbols("BTC") == ["BTC", "BTCUSD", "BTC-USD"]
+    assert candidate_symbols("005930.KS") == ["005930.KS", "005930"]
+
+
+# --- runner -----------------------------------------------------------------
+def _run() -> int:
+    tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
+    failed = 0
+    for fn in tests:
+        try:
+            fn()
+            print(f"  PASS  {fn.__name__}")
+        except Exception as exc:  # noqa: BLE001
+            failed += 1
+            print(f"  FAIL  {fn.__name__}: {exc!r}")
+    print(f"\n{len(tests) - failed}/{len(tests)} passed")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_run())
