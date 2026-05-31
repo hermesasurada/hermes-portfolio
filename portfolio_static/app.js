@@ -2018,7 +2018,6 @@ function initWatchlistControls() {
   renderWatchPending();
 }
 
-document.getElementById("refresh").addEventListener("click", load);
 document.getElementById("chartBack").addEventListener("click", closeChart);
 document.getElementById("performanceOpen").addEventListener("click", () => {
   history.pushState(null, "", "#performance");
