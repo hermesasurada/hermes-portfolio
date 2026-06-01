@@ -2,6 +2,18 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import date, datetime
+from functools import lru_cache
+
+
+@lru_cache(maxsize=1)
+def technical_indicators_available() -> bool:
+    try:
+        import pandas  # noqa: F401
+        import ta  # noqa: F401
+    except Exception as exc:
+        print(f"[stats] technical indicators unavailable: {exc}")
+        return False
+    return True
 
 
 def last_number(series) -> float | None:

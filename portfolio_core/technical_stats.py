@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Iterable
 
 from .db import connect, ensure_technical_stats_cache_table
-from .indicators import bollinger_pband, recent_performance, resample_last, rsi_value
+from .indicators import bollinger_pband, recent_performance, resample_last, rsi_value, technical_indicators_available
 from .paths import KST
 
 TECHNICAL_CACHE_VERSION = 1
@@ -76,6 +76,9 @@ def load_technical_stats_cache(conn: sqlite3.Connection, tickers: Iterable[str])
 def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
     clean_tickers = normalize_tickers(tickers)
     if not clean_tickers:
+        return 0
+    if not technical_indicators_available():
+        print("[stats] skipped technical stats refresh; pandas/ta is not available in this Python environment")
         return 0
     with connect() as conn:
         ensure_technical_stats_cache_table(conn)
