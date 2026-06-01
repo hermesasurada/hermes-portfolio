@@ -1123,76 +1123,127 @@ tr:hover td { background: var(--surface-hover); }
 .perf-tooltip tspan:first-child {
   font-weight: 900;
 }
+.perf-contrib-section {
+  margin: 6px 10.612% 8px 8px;
+}
+.perf-contrib-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 30px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: var(--fw-strong);
+}
+.perf-contrib-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+}
+.perf-contrib-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.perf-contrib-legend i.up { background: var(--up); }
+.perf-contrib-legend i.down { background: var(--down); }
 .perf-contrib-chart {
   position: relative;
   aspect-ratio: 2.1 / 1;
   height: auto;
-  margin: 6px 10.612% 8px 8px;
   overflow: hidden;
-  border-radius: 8px;
-  background: var(--panel);
-  --tile-gap: 3px;
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 46%, transparent), transparent 38%),
+    var(--panel);
+  --tile-gap: 4px;
 }
 .perf-contrib-tile {
   position: absolute;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: 3px;
+  gap: 5px;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: 6px;
   color: var(--ink);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  text-align: center;
+  padding: 8px 10px;
+  text-align: left;
   font-variant-numeric: tabular-nums;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18);
-  transition: filter var(--t-fast), box-shadow var(--t-fast);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+  transition: background var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast), transform var(--t-fast);
+}
+.perf-contrib-tile::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: currentColor;
+  opacity: .85;
 }
 .perf-contrib-tile.up {
-  background: color-mix(in srgb, var(--up) var(--tile-mix, 32%), var(--panel));
+  color: var(--up);
+  border-color: color-mix(in srgb, var(--up) 26%, var(--line));
+  background: color-mix(in srgb, var(--up) var(--tile-mix, 22%), var(--panel));
 }
 .perf-contrib-tile.down {
-  background: color-mix(in srgb, var(--down) var(--tile-mix, 32%), var(--panel));
+  color: var(--down);
+  border-color: color-mix(in srgb, var(--down) 26%, var(--line));
+  background: color-mix(in srgb, var(--down) var(--tile-mix, 22%), var(--panel));
 }
 .perf-contrib-tile:hover {
-  filter: saturate(1.08);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .30), 0 1px 4px rgba(15, 23, 42, .08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .10);
 }
 .perf-contrib-ticker {
-  max-width: 96%;
+  position: relative;
+  z-index: 1;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 28px;
+  color: var(--ink);
+  font-size: 18px;
   font-weight: var(--fw-bold);
-  line-height: 1;
+  line-height: 1.08;
 }
 .perf-contrib-pct {
-  font-size: 14px;
+  position: relative;
+  z-index: 1;
+  color: currentColor;
+  font-size: 12px;
   font-weight: var(--fw-bold);
   line-height: 1;
 }
 .perf-contrib-tile.medium .perf-contrib-ticker {
-  font-size: 22px;
+  font-size: 15px;
 }
 .perf-contrib-tile.medium .perf-contrib-pct {
-  font-size: 12px;
+  font-size: 11px;
 }
 .perf-contrib-tile.small {
   gap: 2px;
+  padding: 6px 8px;
 }
 .perf-contrib-tile.small .perf-contrib-ticker {
-  font-size: 15px;
+  font-size: 12px;
 }
 .perf-contrib-tile.small .perf-contrib-pct {
-  font-size: 9px;
+  font-size: 10px;
 }
 .perf-contrib-tile.tiny .perf-contrib-ticker {
-  font-size: 11px;
+  font-size: 10px;
 }
 .perf-contrib-tile.tiny .perf-contrib-pct {
   display: none;
@@ -1605,6 +1656,9 @@ tr:hover td { background: var(--surface-hover); }
   }
   .perf-contrib-chart {
     aspect-ratio: 1.05 / 1;
+  }
+  .perf-contrib-section {
+    margin: 8px 0 10px;
   }
   .mobile-collapse-toggle {
     display: inline-flex;

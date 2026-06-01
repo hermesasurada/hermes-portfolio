@@ -165,43 +165,92 @@ function performanceContributionItems(payload, portfolioPoints) {
     .sort((a, b) => b.size - a.size);
 }
 
-function binaryTreemap(items, x, y, width, height) {
-  if (!items.length || width <= 0 || height <= 0) return [];
-  if (items.length === 1) return [{ ...items[0], x, y, width, height }];
+function compactContributionItems(items, maxTiles = 28) {
+  if (items.length <= maxTiles) return items;
+  const kept = items.slice(0, maxTiles - 2);
+  const rest = items.slice(maxTiles - 2);
+  const group = (groupItems, name, sign) => {
+    if (!groupItems.length) return null;
+    const contribution = groupItems.reduce((sum, item) => sum + item.contribution, 0);
+    return {
+      ticker: name,
+      name,
+      contribution,
+      contributionSharePct: groupItems.reduce((sum, item) => sum + item.contributionSharePct, 0),
+      holdingPct: null,
+      size: groupItems.reduce((sum, item) => sum + item.size, 0),
+      aggregate: true,
+      sign,
+    };
+  };
+  return [
+    ...kept,
+    group(rest.filter(item => item.contribution >= 0), "기타 상승", 1),
+    group(rest.filter(item => item.contribution < 0), "기타 하락", -1),
+  ].filter(Boolean).sort((a, b) => b.size - a.size);
+}
+
+function squarifiedTreemap(items, x, y, width, height) {
   const total = items.reduce((sum, item) => sum + item.size, 0);
-  if (total <= 0) return [];
-  let bestIndex = 1;
-  let bestDistance = Infinity;
-  let running = 0;
-  for (let index = 0; index < items.length - 1; index++) {
-    running += items[index].size;
-    const distance = Math.abs(total / 2 - running);
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      bestIndex = index + 1;
+  if (!items.length || total <= 0 || width <= 0 || height <= 0) return [];
+  const remaining = items.map(item => ({ ...item, area: item.size / total * width * height }));
+  const rects = [];
+  let row = [];
+  let cx = x;
+  let cy = y;
+  let cw = width;
+  let ch = height;
+  const sumArea = values => values.reduce((sum, item) => sum + item.area, 0);
+  const worstRatio = (values, side) => {
+    if (!values.length || side <= 0) return Infinity;
+    const areas = values.map(item => item.area).filter(area => area > 0);
+    const sum = areas.reduce((acc, area) => acc + area, 0);
+    const min = Math.min(...areas);
+    const max = Math.max(...areas);
+    return Math.max((side * side * max) / (sum * sum), (sum * sum) / (side * side * min));
+  };
+  const layoutRow = () => {
+    if (!row.length) return;
+    const area = sumArea(row);
+    if (cw >= ch) {
+      const rowHeight = area / cw;
+      let rx = cx;
+      row.forEach(item => {
+        const rectWidth = item.area / rowHeight;
+        rects.push({ ...item, x: rx, y: cy, width: rectWidth, height: rowHeight });
+        rx += rectWidth;
+      });
+      cy += rowHeight;
+      ch -= rowHeight;
+    } else {
+      const rowWidth = area / ch;
+      let ry = cy;
+      row.forEach(item => {
+        const rectHeight = item.area / rowWidth;
+        rects.push({ ...item, x: cx, y: ry, width: rowWidth, height: rectHeight });
+        ry += rectHeight;
+      });
+      cx += rowWidth;
+      cw -= rowWidth;
+    }
+    row = [];
+  };
+  while (remaining.length) {
+    const item = remaining[0];
+    const side = Math.min(cw, ch);
+    if (!row.length || worstRatio([...row, item], side) <= worstRatio(row, side)) {
+      row.push(remaining.shift());
+    } else {
+      layoutRow();
     }
   }
-  const leftItems = items.slice(0, bestIndex);
-  const rightItems = items.slice(bestIndex);
-  const leftTotal = leftItems.reduce((sum, item) => sum + item.size, 0);
-  const ratio = leftTotal / total;
-  if (width >= height) {
-    const leftWidth = width * ratio;
-    return [
-      ...binaryTreemap(leftItems, x, y, leftWidth, height),
-      ...binaryTreemap(rightItems, x + leftWidth, y, width - leftWidth, height),
-    ];
-  }
-  const topHeight = height * ratio;
-  return [
-    ...binaryTreemap(leftItems, x, y, width, topHeight),
-    ...binaryTreemap(rightItems, x, y + topHeight, width, height - topHeight),
-  ];
+  layoutRow();
+  return rects;
 }
 
 function contributionTileColor(item, maxAbsPct) {
-  const intensity = Math.min(1, Math.max(0.18, Math.abs(item.contributionSharePct) / Math.max(0.01, maxAbsPct)));
-  return `${Math.round(16 + intensity * 42)}%`;
+  const intensity = Math.min(1, Math.max(0.2, Math.abs(item.contributionSharePct) / Math.max(0.01, maxAbsPct)));
+  return `${Math.round(10 + intensity * 28)}%`;
 }
 
 function contributionShareLabel(value) {
@@ -211,6 +260,7 @@ function contributionShareLabel(value) {
 }
 
 function contributionTileLabel(item) {
+  if (item.aggregate) return item.name;
   const ticker = String(item.ticker || "").toUpperCase();
   const name = String(item.name || "").trim();
   if (/\.(KS|KQ)$/.test(ticker) && name) return name;
@@ -218,27 +268,35 @@ function contributionTileLabel(item) {
 }
 
 function renderPerformanceContributionChart(payload, portfolioPoints) {
-  const items = performanceContributionItems(payload, portfolioPoints);
+  const items = compactContributionItems(performanceContributionItems(payload, portfolioPoints));
   if (!items.length) return `<div class="perf-contrib-empty">기여도 데이터 없음</div>`;
   const maxAbsPct = Math.max(...items.map(item => Math.abs(item.contributionSharePct)));
-  const rects = binaryTreemap(items, 0, 0, 100, 100);
+  const rects = squarifiedTreemap(items, 0, 0, 100, 100);
   return `
-    <div class="perf-contrib-chart" aria-label="기간 성과 기여도">
-      ${rects.map(item => {
-        const area = item.width * item.height;
-        const sizeClass = area > 1200 ? "large" : area > 620 ? "medium" : area > 260 ? "small" : "tiny";
-        const contributionLabel = contributionShareLabel(item.contributionSharePct);
-        const title = `${item.ticker} 기여 ${contributionLabel} · 종목 ${pctChartLabel(item.holdingPct)}`;
-        const label = contributionTileLabel(item);
-        return `
-          <div class="perf-contrib-tile ${item.contribution >= 0 ? "up" : "down"} ${sizeClass}"
-            style="left:calc(${item.x.toFixed(3)}% + var(--tile-gap));top:calc(${item.y.toFixed(3)}% + var(--tile-gap));width:max(0px, calc(${item.width.toFixed(3)}% - var(--tile-gap) * 2));height:max(0px, calc(${item.height.toFixed(3)}% - var(--tile-gap) * 2));--tile-mix:${contributionTileColor(item, maxAbsPct)}"
-            title="${esc(title)}">
-            <span class="perf-contrib-ticker">${esc(label)}</span>
-            <span class="perf-contrib-pct">${esc(contributionLabel)}</span>
-          </div>
-        `;
-      }).join("")}
+    <div class="perf-contrib-section">
+      <div class="perf-contrib-head">
+        <span>성과 기여도</span>
+        <span class="perf-contrib-legend"><i class="up"></i>상승 <i class="down"></i>하락</span>
+      </div>
+      <div class="perf-contrib-chart" aria-label="기간 성과 기여도">
+        ${rects.map(item => {
+          const area = item.width * item.height;
+          const sizeClass = area > 1350 ? "large" : area > 720 ? "medium" : area > 300 ? "small" : "tiny";
+          const contributionLabel = contributionShareLabel(item.contributionSharePct);
+          const title = item.aggregate
+            ? `${item.name} 기여 ${contributionLabel}`
+            : `${item.ticker} 기여 ${contributionLabel} · 종목 ${pctChartLabel(item.holdingPct)}`;
+          const label = contributionTileLabel(item);
+          return `
+            <div class="perf-contrib-tile ${item.contribution >= 0 ? "up" : "down"} ${sizeClass}"
+              style="left:calc(${item.x.toFixed(3)}% + var(--tile-gap));top:calc(${item.y.toFixed(3)}% + var(--tile-gap));width:max(0px, calc(${item.width.toFixed(3)}% - var(--tile-gap) * 2));height:max(0px, calc(${item.height.toFixed(3)}% - var(--tile-gap) * 2));--tile-mix:${contributionTileColor(item, maxAbsPct)}"
+              title="${esc(title)}">
+              <span class="perf-contrib-ticker">${esc(label)}</span>
+              <span class="perf-contrib-pct">${esc(contributionLabel)}</span>
+            </div>
+          `;
+        }).join("")}
+      </div>
     </div>
   `;
 }
