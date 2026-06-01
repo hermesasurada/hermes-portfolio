@@ -33,6 +33,22 @@ def _date_text(value: Any) -> str | None:
     return text[:10] if len(text) >= 10 else None
 
 
+def _parse_date(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _add_one_year(value: date) -> date:
+    try:
+        return value.replace(year=value.year + 1)
+    except ValueError:
+        return value.replace(year=value.year + 1, day=28)
+
+
 def _float_value(value: Any) -> float | None:
     try:
         number = float(value)
@@ -177,6 +193,50 @@ def _tax_rate(currency: str) -> float:
     return 15.0
 
 
+def _event_schedule_date(event) -> date | None:
+    return _parse_date(event["pay_date"] or event["ex_date"])
+
+
+def _estimated_events(history_rows, start: date, end: date, actual_rows) -> list[dict]:
+    actual_months: set[tuple[str, int, int]] = set()
+    for event in actual_rows:
+        for text in (event["pay_date"], event["ex_date"]):
+            actual_date = _parse_date(text)
+            if actual_date:
+                actual_months.add((event["ticker"], actual_date.year, actual_date.month))
+
+    estimates = []
+    seen: set[tuple[str, str]] = set()
+    today = _today()
+    for event in history_rows:
+        base_date = _event_schedule_date(event)
+        if not base_date or base_date > today:
+            continue
+        estimated_pay_date = _add_one_year(base_date)
+        if estimated_pay_date < start or estimated_pay_date > end:
+            continue
+        if (event["ticker"], estimated_pay_date.year, estimated_pay_date.month) in actual_months:
+            continue
+        key = (event["ticker"], estimated_pay_date.isoformat())
+        if key in seen:
+            continue
+        amount = _float_value(event["amount"])
+        if amount is None:
+            continue
+        seen.add(key)
+        estimates.append(
+            {
+                "ticker": event["ticker"],
+                "ex_date": None,
+                "pay_date": estimated_pay_date.isoformat(),
+                "amount": amount,
+                "currency": event["currency"],
+                "source": "estimated-history",
+            }
+        )
+    return estimates
+
+
 def load_dividends(account_ids: list[str] | None = None) -> dict:
     cleaned_account_ids = [int(value) for value in (account_ids or []) if str(value).strip()]
     account_filter = ""
@@ -242,6 +302,16 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
             """,
             [*tickers, start.isoformat(), end.isoformat()] if tickers else [start.isoformat(), end.isoformat()],
         ).fetchall()
+        history_rows = conn.execute(
+            f"""
+            SELECT ticker, ex_date, pay_date, amount, currency, source, fetched_at
+            FROM dividend_events
+            WHERE ticker IN ({placeholders})
+              AND amount IS NOT NULL
+            ORDER BY ticker, date(COALESCE(pay_date, ex_date))
+            """,
+            tickers if tickers else [],
+        ).fetchall()
         cache_rows = conn.execute(
             f"""
             SELECT ticker, fetched_at, status
@@ -262,7 +332,8 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
         "JPY": float(prices.get("JPYKRW", {}).get("price") or FX_DEFAULT_RATES["JPY"]),
     }
     rows = []
-    for event in event_rows:
+    dividend_events = [*event_rows, *_estimated_events(history_rows, start, end, event_rows)]
+    for event in dividend_events:
         currency = event["currency"] or ticker_currency(event["ticker"])
         amount = _float_value(event["amount"])
         if amount is None:
