@@ -21,6 +21,11 @@ NASDAQ_HEADERS = {
     "Referer": "https://www.nasdaq.com/",
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
 }
+NASDAQ_PRESS_RELEASE_URLS = {
+    "DE": (
+        "https://www.nasdaq.com/press-release/deere-company-announces-quarterly-dividend-2026-02-25",
+    ),
+}
 
 
 def _today() -> date:
@@ -83,6 +88,34 @@ def _amount_from_text(value: Any) -> float | None:
     return _float_value(text)
 
 
+def _month_name_to_number(name: str) -> int | None:
+    months = {
+        "january": 1,
+        "february": 2,
+        "march": 3,
+        "april": 4,
+        "may": 5,
+        "june": 6,
+        "july": 7,
+        "august": 8,
+        "september": 9,
+        "october": 10,
+        "november": 11,
+        "december": 12,
+    }
+    return months.get(name.lower())
+
+
+def _date_from_english_text(month: str, day: str, year: str) -> str | None:
+    month_number = _month_name_to_number(month)
+    if not month_number:
+        return None
+    try:
+        return date(int(year), month_number, int(day)).isoformat()
+    except ValueError:
+        return None
+
+
 def _cache_due(fetched_at: str | None) -> bool:
     if not fetched_at:
         return True
@@ -98,7 +131,12 @@ def _nasdaq_candidate(ticker: str) -> bool:
 
 
 def _nasdaq_attempt_due(ticker: str, status: str | None) -> bool:
-    return _nasdaq_candidate(ticker) and "nasdaq" not in (status or "")
+    status_text = status or ""
+    if not _nasdaq_candidate(ticker):
+        return False
+    if "nasdaq" not in status_text:
+        return True
+    return bool(NASDAQ_PRESS_RELEASE_URLS.get(ticker)) and "nasdaq_press" not in status_text
 
 
 def _fetch_nasdaq_dividends(ticker: str) -> list[dict]:
@@ -128,6 +166,34 @@ def _fetch_nasdaq_dividends(ticker: str) -> list[dict]:
                 "amount": amount,
                 "currency": row.get("currency") or "USD",
                 "source": "nasdaq",
+            }
+        )
+    return events
+
+
+def _fetch_nasdaq_press_release_dividends(ticker: str) -> list[dict]:
+    events = []
+    for url in NASDAQ_PRESS_RELEASE_URLS.get(ticker, ()):
+        req = urllib.request.Request(url, headers=NASDAQ_HEADERS)
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            html = resp.read().decode("utf-8", "ignore")
+        text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html))
+        amount_match = re.search(r"dividend of \$([0-9]+(?:\.[0-9]+)?) per share", text, re.IGNORECASE)
+        pay_match = re.search(r"payable ([A-Z][a-z]+) (\d{1,2}), (\d{4})", text)
+        record_match = re.search(r"(?:record|stockholders of record) (?:as of |on )([A-Z][a-z]+) (\d{1,2}), (\d{4})", text)
+        amount = _amount_from_text(amount_match.group(1) if amount_match else None)
+        pay_date = _date_from_english_text(*pay_match.groups()) if pay_match else None
+        record_date = _date_from_english_text(*record_match.groups()) if record_match else None
+        if amount is None or not pay_date or not record_date:
+            continue
+        events.append(
+            {
+                "ticker": ticker,
+                "ex_date": record_date,
+                "pay_date": pay_date,
+                "amount": amount,
+                "currency": "USD",
+                "source": "nasdaq-press",
             }
         )
     return events
@@ -203,6 +269,15 @@ def _fetch_dividends(ticker: str) -> tuple[list[dict], str]:
                     events[event["ex_date"]] = event
         except Exception:
             sources.append("nasdaq_error")
+        try:
+            press_events = _fetch_nasdaq_press_release_dividends(ticker)
+            if press_events:
+                sources.append("nasdaq_press")
+            for event in press_events:
+                if event.get("ex_date"):
+                    events[event["ex_date"]] = event
+        except Exception:
+            sources.append("nasdaq_press_error")
 
     return list(events.values()), "+".join(sources) or "none"
 
