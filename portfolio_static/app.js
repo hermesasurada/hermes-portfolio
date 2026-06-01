@@ -684,7 +684,7 @@ function renderTable() {
         </div>
       </td>
       <td>${changeMarkup(r)}</td>
-      <td>${r.is_watchlist ? "-" : extendedChangeText(r)}</td>
+      <td>${extendedChangeText(r) || "-"}</td>
       <td>${r.is_watchlist ? "-" : changeKrwText(r.change_krw)}</td>
       <td>${r.is_watchlist ? "-" : fmt2.format(r.qty)}</td>
       <td>${localCurrentPriceText(r)}</td>
