@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import Any
 
-from .constants import FX_DEFAULT_RATES
+from .constants import FX_DEFAULT_RATES, KOREAN_SUFFIXES
 from .db import connect, ensure_dividend_tables
 from .paths import KST
 from .prices import latest_prices
@@ -223,7 +223,7 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
             "currency": row["currency"] or ticker_currency(row["ticker"]),
         }
         for row in holding_rows
-        if row["ticker"] and float(row["qty"] or 0) > 0
+        if row["ticker"] and float(row["qty"] or 0) > 0 and not str(row["ticker"]).upper().endswith(KOREAN_SUFFIXES)
     ]
     tickers = sorted({row["ticker"] for row in holdings})
     refresh_dividend_events(tickers)
@@ -274,8 +274,6 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
             gross = amount * qty
             tax = gross * tax_rate / 100
             net = gross - tax
-            gross_krw = gross * rate
-            tax_krw = tax * rate
             net_krw = net * rate
             rows.append(
                 {
@@ -290,11 +288,8 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
                     "qty": qty,
                     "gross": gross,
                     "tax_rate": tax_rate,
-                    "tax": tax,
                     "net": net,
                     "fx_rate": rate if currency != "KRW" else None,
-                    "tax_krw": tax_krw,
-                    "gross_krw": gross_krw,
                     "net_krw": net_krw,
                     "source": event["source"],
                 }

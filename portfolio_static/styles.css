@@ -591,10 +591,6 @@ th:first-child, td:first-child { text-align: left; }
   color: var(--ink);
   font-weight: 800;
 }
-.currency-code {
-  color: var(--muted);
-  font-weight: 800;
-}
 .tax-rate,
 .fx-rate {
   color: var(--muted);
