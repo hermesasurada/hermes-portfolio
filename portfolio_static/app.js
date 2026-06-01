@@ -13,6 +13,9 @@ let statsData = {};
 let statsLoadKey = "";
 let statsInFlight = null;
 let statsFetchedTickers = new Set();
+let dividendData = null;
+let dividendLoadKey = "";
+let dividendInFlight = null;
 let chartTicker = null;
 let chartLoadInFlight = null;
 let chartPayload = null;
@@ -41,6 +44,16 @@ const chartRanges = [
 ];
 const chartCompareLimit = 10;
 const chartCompareColors = ["var(--brand)", "#ea4335", "#34a853", "#fbbc04", "#9333ea", "#06b6d4", "#f97316", "#64748b", "#be123c", "#16a34a", "#7c3aed"];
+const detailSortKeys = new Set(["name", "display_change_pct", "extended_change_pct", "change_krw", "qty", "current_price", "current_price_krw", "value", "value_krw", "weight_pct", "next_earnings_date"]);
+const statsSortKeys = new Set(["name", "market_cap_usd", "dividend_yield", "rsi_day", "rsi_week", "rsi_month", "bb_day", "bb_week", "bb_month", "trailing_pe", "forward_pe", "perf_1m", "perf_3m", "perf_6m", "perf_ytd", "perf_1y", "perf_3y", "perf_5y"]);
+const dividendSortKeys = new Set(["pay_date", "ex_date", "member", "ticker", "currency", "name", "amount", "qty", "gross", "tax_rate", "tax", "net", "fx_rate", "gross_krw", "net_krw"]);
+
+function ensureTabSortKey(tab) {
+  const currentSet = tab === "stats" ? statsSortKeys : tab === "dividend" ? dividendSortKeys : detailSortKeys;
+  if (currentSet.has(sortKey)) return;
+  sortKey = tab === "dividend" ? "pay_date" : tab === "stats" ? "market_cap_usd" : "value_krw";
+  sortDir = defaultSortDir[sortKey] || -1;
+}
 
 function flattenAccounts() {
   return data.members.flatMap(m => m.accounts.map(a => ({...a, memberName: m.name})));
@@ -529,6 +542,7 @@ function syncDetailTabs() {
   document.getElementById("tableTitle").classList.toggle("hidden", showingChart);
   document.getElementById("detailTableWrap").classList.toggle("hidden", showingChart || activeDetailTab !== "detail");
   document.getElementById("statsTableWrap").classList.toggle("hidden", showingChart || activeDetailTab !== "stats");
+  document.getElementById("dividendTableWrap").classList.toggle("hidden", showingChart || activeDetailTab !== "dividend");
   document.getElementById("chartView").classList.toggle("hidden", !showingChart);
   document.getElementById("chartBack").classList.toggle("hidden", !showingChart);
   document.getElementById("performanceDetailControl")?.classList.toggle("hidden", !performanceChartOpen);
@@ -654,6 +668,60 @@ function renderStatsTable(baseRows = null) {
   bindChartLinks();
 }
 
+function dividendSelectionKey() {
+  if (selectionMode === "all") return "all";
+  return Array.from(selectedAccounts).sort((a, b) => String(a).localeCompare(String(b), "ko-KR", { numeric: true })).join(",");
+}
+
+async function loadDividendsForSelection() {
+  const key = dividendSelectionKey();
+  if (dividendInFlight || dividendLoadKey === key) return;
+  dividendLoadKey = key;
+  const accounts = visibleAccounts();
+  const allAccounts = selectionMode === "all";
+  document.getElementById("dividendRows").innerHTML = `<tr><td colspan="15">배당 loading...</td></tr>`;
+  dividendInFlight = apiFetchDividends(accounts.map(account => account.id), allAccounts);
+  try {
+    dividendData = await dividendInFlight;
+    renderDividendTable();
+  } catch (err) {
+    document.getElementById("dividendRows").innerHTML = `<tr><td colspan="15">${esc(err.message || String(err))}</td></tr>`;
+  } finally {
+    dividendInFlight = null;
+  }
+}
+
+function renderDividendTable() {
+  if (dividendLoadKey !== dividendSelectionKey() || !dividendData) {
+    loadDividendsForSelection();
+    return;
+  }
+  const rows = [...(dividendData.rows || [])];
+  sortRows(rows);
+  document.getElementById("rowCount").textContent = `${rows.length} rows`;
+  const empty = `<tr><td colspan="15" class="flat">예정 배당 없음</td></tr>`;
+  document.getElementById("dividendRows").innerHTML = rows.length ? rows.map(r => `
+    <tr>
+      <td>${shortDateText(r.pay_date)}</td>
+      <td>${shortDateText(r.ex_date)}</td>
+      <td>${esc(r.member || "-")}</td>
+      <td class="dividend-ticker"><a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">${esc(r.ticker)}</a></td>
+      <td class="currency-code ${esc(String(r.currency || "").toLowerCase())}">${esc(r.currency || "-")}</td>
+      <td>${esc(r.name || r.ticker || "-")}</td>
+      <td>${dividendAmountText(r.amount, r.currency)}</td>
+      <td>${fmt2.format(Number(r.qty) || 0)}</td>
+      <td>${dividendMoneyText(r.gross, r.currency)}</td>
+      <td class="tax-rate">${numberText(r.tax_rate, 2)}</td>
+      <td>${dividendMoneyText(r.tax, r.currency)}</td>
+      <td class="net-dividend">${dividendMoneyText(r.net, r.currency)}</td>
+      <td class="fx-rate">${dividendFxText(r.fx_rate)}</td>
+      <td class="krw-estimate">${dividendManText(r.gross_krw)}</td>
+      <td class="net-krw">${fmt.format(Math.round(Number(r.net_krw) || 0))}</td>
+    </tr>
+  `).join("") : empty;
+  bindChartLinks();
+}
+
 function syncTransactionPanel() {
   // 차트 화면에서는 하단 거래내역 패널을 숨긴다.
   const panel = document.querySelector(".transaction-panel");
@@ -707,6 +775,7 @@ function renderTable() {
   });
   bindChartLinks();
   if (activeDetailTab === "stats") renderStatsTable(rows);
+  if (activeDetailTab === "dividend") renderDividendTable();
 }
 
 function bindChartLinks() {
@@ -2092,6 +2161,7 @@ window.addEventListener("hashchange", syncChartRoute);
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     activeDetailTab = btn.dataset.tab || "detail";
+    ensureTabSortKey(activeDetailTab);
     renderTable();
   });
 });

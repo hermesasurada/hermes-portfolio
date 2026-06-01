@@ -570,10 +570,54 @@ th[data-key].sort-desc::after { content: "▼"; }
 th[data-key].sort-asc::after { content: "▲"; }
 th:first-child, td:first-child { text-align: left; }
 .stats-list th,
-.stats-list th:first-child {
+.stats-list th:first-child,
+.dividend-list th,
+.dividend-list th:first-child {
   text-align: center;
 }
 #detailTableWrap th { white-space: nowrap; }
+#dividendTableWrap {
+  overflow-x: auto;
+}
+.dividend-list {
+  min-width: 1060px;
+}
+.dividend-list th,
+.dividend-list td {
+  padding: 5px 7px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.dividend-list th {
+  background: #f5f500;
+  color: #111827;
+}
+.dividend-list td:nth-child(10),
+.dividend-list td:nth-child(12),
+.dividend-list td:nth-child(13),
+.dividend-list td:nth-child(14),
+.dividend-list td:nth-child(15) {
+  background: #fffdd1;
+}
+.dividend-list .ticker-link {
+  color: var(--ink);
+  font-weight: 800;
+}
+.currency-code {
+  font-weight: 900;
+}
+.currency-code.usd { color: #1d4ed8; }
+.currency-code.eur { color: #c2410c; }
+.currency-code.krw { color: #111827; }
+.currency-code.jpy { color: #7c3aed; }
+.tax-rate,
+.fx-rate {
+  color: var(--muted);
+}
+.net-dividend,
+.net-krw {
+  font-weight: 900;
+}
 #detailTableWrap th:first-child,
 #detailTableWrap td:first-child { min-width: 210px; }
 tbody tr:nth-child(even) td { background: var(--zebra); }

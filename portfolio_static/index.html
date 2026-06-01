@@ -79,6 +79,7 @@
             <span class="detail-tabs" role="tablist" aria-label="상세 탭">
               <button class="tab-btn active" id="detailTabBtn" type="button" data-tab="detail">세부내역</button>
               <button class="tab-btn" id="statsTabBtn" type="button" data-tab="stats">통계</button>
+              <button class="tab-btn" id="dividendTabBtn" type="button" data-tab="dividend">배당</button>
             </span>
             <span class="filter-toggle-control enabled" id="activeOnlyControl">
               <label class="toggle-switch" for="activeOnlyToggle">
@@ -150,6 +151,30 @@
               </tr>
             </thead>
             <tbody id="statsRows"></tbody>
+          </table>
+        </div>
+        <div class="table-wrap hidden" id="dividendTableWrap">
+          <table class="dividend-list">
+            <thead>
+              <tr>
+                <th data-key="pay_date">지급일자</th>
+                <th data-key="ex_date">배당락</th>
+                <th data-key="member">대상</th>
+                <th data-key="ticker">티커</th>
+                <th data-key="currency">화폐</th>
+                <th data-key="name">종목</th>
+                <th data-key="amount">주당배당금</th>
+                <th data-key="qty">수량</th>
+                <th data-key="gross">세전</th>
+                <th data-key="tax_rate">세율</th>
+                <th data-key="tax">세금</th>
+                <th data-key="net">세후</th>
+                <th data-key="fx_rate">환율</th>
+                <th data-key="gross_krw">세전(만)</th>
+                <th data-key="net_krw">실지급액</th>
+              </tr>
+            </thead>
+            <tbody id="dividendRows"></tbody>
           </table>
         </div>
         <div class="chart-view hidden" id="chartView">

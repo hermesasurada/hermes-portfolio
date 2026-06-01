@@ -15,6 +15,11 @@ function apiFetchStats(tickers) {
   return fetchJson(`/api/stats?tickers=${encodeURIComponent(key)}`);
 }
 
+function apiFetchDividends(accountIds, allAccounts) {
+  const query = allAccounts ? "" : `?account_ids=${encodeURIComponent((accountIds || []).join(","))}`;
+  return fetchJson(`/api/dividends${query}`);
+}
+
 function apiFetchChart(ticker) {
   return fetchJson(`/api/chart?ticker=${encodeURIComponent(ticker || "")}`);
 }

@@ -73,6 +73,38 @@ def ensure_transaction_columns(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE transactions ADD COLUMN apply_to_holdings INTEGER NOT NULL DEFAULT 1")
 
 
+def ensure_dividend_tables(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS dividend_events (
+            ticker TEXT NOT NULL,
+            ex_date TEXT NOT NULL,
+            pay_date TEXT,
+            amount REAL,
+            currency TEXT,
+            source TEXT,
+            fetched_at TEXT NOT NULL,
+            PRIMARY KEY (ticker, ex_date)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ticker_dividend_cache (
+            ticker TEXT PRIMARY KEY,
+            fetched_at TEXT NOT NULL,
+            status TEXT
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_dividend_events_pay_date
+        ON dividend_events(pay_date, ex_date)
+        """
+    )
+
+
 def ensure_market_index_tickers(conn: sqlite3.Connection) -> None:
     for ticker, meta in MARKET_INDEXES.items():
         conn.execute(
@@ -95,6 +127,7 @@ def initialize_schema() -> None:
         ensure_stats_cache_table(conn)
         ensure_technical_stats_cache_table(conn)
         ensure_transaction_columns(conn)
+        ensure_dividend_tables(conn)
         ensure_price_indexes(conn)
         ensure_market_index_tickers(conn)
         conn.commit()

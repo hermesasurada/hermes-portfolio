@@ -98,6 +98,12 @@ function earningsText(dateText) {
   if (!/^\d{4}-\d{2}-\d{2}/.test(text)) return "-";
   return text.slice(5, 10).replace("-", "/");
 }
+function shortDateText(dateText) {
+  if (!dateText) return "-";
+  const text = String(dateText);
+  if (!/^\d{4}-\d{2}-\d{2}/.test(text)) return "-";
+  return text.slice(2, 10).replaceAll("-", ".");
+}
 function numberText(v, digits = 2) {
   return v != null && Number.isFinite(Number(v)) ? Number(v).toLocaleString("ko-KR", { maximumFractionDigits: digits }) : "-";
 }
@@ -112,6 +118,22 @@ function signedPercentText(v, digits = 2) {
 function dividendYieldText(v) {
   if (v == null || !Number.isFinite(Number(v)) || Number(v) === 0) return "-";
   return `${fmt2.format(Number(v))}%`;
+}
+function dividendAmountText(v, currency) {
+  if (v == null || !Number.isFinite(Number(v))) return "-";
+  const digits = currency === "KRW" || currency === "JPY" ? 0 : 4;
+  return Number(v).toLocaleString("ko-KR", { maximumFractionDigits: digits });
+}
+function dividendMoneyText(v, currency) {
+  if (v == null || !Number.isFinite(Number(v))) return "-";
+  const digits = currency === "KRW" || currency === "JPY" ? 0 : 2;
+  return Number(v).toLocaleString("ko-KR", { maximumFractionDigits: digits });
+}
+function dividendFxText(v) {
+  return v != null && Number.isFinite(Number(v)) ? Number(v).toLocaleString("ko-KR", { maximumFractionDigits: 1 }) : "-";
+}
+function dividendManText(v) {
+  return v != null && Number.isFinite(Number(v)) ? Number(v / 10000).toLocaleString("ko-KR", { maximumFractionDigits: 1 }) : "-";
 }
 function intText(v) {
   return v != null && Number.isFinite(Number(v)) ? fmt.format(Math.round(Number(v))) : "-";

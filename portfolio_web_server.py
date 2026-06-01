@@ -16,6 +16,7 @@ from urllib.parse import parse_qs, urlparse
 from portfolio_core.charts import load_account_performance, load_price_chart
 from portfolio_core.constants import KOREAN_ETF_BRANDS, LOCAL_MARKET_SUFFIXES
 from portfolio_core.db import initialize_schema
+from portfolio_core.dividends import load_dividends
 from portfolio_core.paths import DB_PATH, LOGO_DIR
 from portfolio_core.portfolio import load_portfolio as load_portfolio_data
 from portfolio_core.stats import load_stats
@@ -198,6 +199,12 @@ class Handler(BaseHTTPRequestHandler):
                 for value in query.get("account_ids") or []:
                     account_ids.extend(part for part in value.split(",") if part)
                 self.send_json(load_account_performance(account_ids))
+                return
+            if path == "/api/dividends":
+                account_ids = []
+                for value in query.get("account_ids") or []:
+                    account_ids.extend(part for part in value.split(",") if part)
+                self.send_json(load_dividends(account_ids))
                 return
             if path == "/api/transactions":
                 account_id = (query.get("account_id") or [None])[0]
