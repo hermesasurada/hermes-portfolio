@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import re
+import urllib.request
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -12,6 +15,12 @@ from .tickers import normalize_yfinance_symbol, ticker_currency
 DIVIDEND_CACHE_HOURS = 24
 DIVIDEND_LOOKBACK_DAYS = 30
 DIVIDEND_LOOKAHEAD_DAYS = 365
+NASDAQ_HEADERS = {
+    "Accept": "application/json, text/plain, */*",
+    "Origin": "https://www.nasdaq.com",
+    "Referer": "https://www.nasdaq.com/",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
+}
 
 
 def _today() -> date:
@@ -42,6 +51,15 @@ def _parse_date(value: str | None) -> date | None:
         return None
 
 
+def _date_from_us_text(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value.strip(), "%m/%d/%Y").strftime("%Y-%m-%d")
+    except ValueError:
+        return None
+
+
 def _add_one_year(value: date) -> date:
     try:
         return value.replace(year=value.year + 1)
@@ -57,6 +75,14 @@ def _float_value(value: Any) -> float | None:
     return number if number > 0 else None
 
 
+def _amount_from_text(value: Any) -> float | None:
+    if value is None:
+        return None
+    text = str(value)
+    text = re.sub(r"[^0-9.\-]", "", text)
+    return _float_value(text)
+
+
 def _cache_due(fetched_at: str | None) -> bool:
     if not fetched_at:
         return True
@@ -65,6 +91,46 @@ def _cache_due(fetched_at: str | None) -> bool:
     except ValueError:
         return True
     return datetime.now(KST) - fetched > timedelta(hours=DIVIDEND_CACHE_HOURS)
+
+
+def _nasdaq_candidate(ticker: str) -> bool:
+    return ticker_currency(ticker) == "USD" and "." not in ticker
+
+
+def _nasdaq_attempt_due(ticker: str, status: str | None) -> bool:
+    return _nasdaq_candidate(ticker) and "nasdaq" not in (status or "")
+
+
+def _fetch_nasdaq_dividends(ticker: str) -> list[dict]:
+    url = f"https://api.nasdaq.com/api/quote/{ticker}/dividends?assetclass=stocks"
+    headers = {
+        **NASDAQ_HEADERS,
+        "Referer": f"https://www.nasdaq.com/market-activity/stocks/{ticker.lower()}/dividend-history",
+    }
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=12) as resp:
+        payload = json.loads(resp.read().decode("utf-8"))
+    rows = (((payload.get("data") or {}).get("dividends") or {}).get("rows") or [])
+    events = []
+    for row in rows:
+        ex_date = _date_from_us_text(row.get("exOrEffDate"))
+        amount = _amount_from_text(row.get("amount"))
+        if not ex_date or amount is None:
+            continue
+        dividend_type = str(row.get("type") or "").lower()
+        if dividend_type and "cash" not in dividend_type:
+            continue
+        events.append(
+            {
+                "ticker": ticker,
+                "ex_date": ex_date,
+                "pay_date": _date_from_us_text(row.get("paymentDate")),
+                "amount": amount,
+                "currency": row.get("currency") or "USD",
+                "source": "nasdaq",
+            }
+        )
+    return events
 
 
 def _fetch_yahoo_dividends(ticker: str) -> list[dict]:
@@ -115,6 +181,32 @@ def _fetch_yahoo_dividends(ticker: str) -> list[dict]:
     return list(events.values())
 
 
+def _fetch_dividends(ticker: str) -> tuple[list[dict], str]:
+    events: dict[str, dict] = {}
+    sources = []
+    try:
+        yahoo_events = _fetch_yahoo_dividends(ticker)
+        if yahoo_events:
+            sources.append("yahoo")
+        for event in yahoo_events:
+            if event.get("ex_date"):
+                events[event["ex_date"]] = event
+    except Exception:
+        sources.append("yahoo_error")
+
+    if _nasdaq_candidate(ticker):
+        try:
+            nasdaq_events = _fetch_nasdaq_dividends(ticker)
+            sources.append("nasdaq" if nasdaq_events else "nasdaq0")
+            for event in nasdaq_events:
+                if event.get("ex_date"):
+                    events[event["ex_date"]] = event
+        except Exception:
+            sources.append("nasdaq_error")
+
+    return list(events.values()), "+".join(sources) or "none"
+
+
 def refresh_dividend_events(tickers: list[str]) -> None:
     clean_tickers = sorted({ticker.strip().upper() for ticker in tickers if ticker and ticker.strip()})
     if not clean_tickers:
@@ -125,14 +217,18 @@ def refresh_dividend_events(tickers: list[str]) -> None:
         placeholders = ",".join("?" for _ in clean_tickers)
         rows = conn.execute(
             f"""
-            SELECT ticker, fetched_at
+            SELECT ticker, fetched_at, status
             FROM ticker_dividend_cache
             WHERE ticker IN ({placeholders})
             """,
             clean_tickers,
         ).fetchall()
         fetched = {row["ticker"]: row["fetched_at"] for row in rows}
-        due = [ticker for ticker in clean_tickers if _cache_due(fetched.get(ticker))]
+        statuses = {row["ticker"]: row["status"] for row in rows}
+        due = [
+            ticker for ticker in clean_tickers
+            if _cache_due(fetched.get(ticker)) or _nasdaq_attempt_due(ticker, statuses.get(ticker))
+        ]
         conn.commit()
 
     if not due:
@@ -141,12 +237,7 @@ def refresh_dividend_events(tickers: list[str]) -> None:
     with connect() as conn:
         ensure_dividend_tables(conn)
         for ticker in due:
-            status = "ok"
-            try:
-                events = _fetch_yahoo_dividends(ticker)
-            except Exception as exc:
-                events = []
-                status = f"error:{type(exc).__name__}"
+            events, status = _fetch_dividends(ticker)
             for event in events:
                 if not event.get("ex_date"):
                     continue
