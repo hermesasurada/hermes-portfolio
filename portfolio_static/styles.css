@@ -584,39 +584,24 @@ th:first-child, td:first-child { text-align: left; }
 }
 .dividend-list th,
 .dividend-list td {
-  padding: 5px 7px;
-  font-size: 12px;
+  font-size: 12.5px;
   white-space: nowrap;
-}
-.dividend-list th {
-  background: #f5f500;
-  color: #111827;
-}
-.dividend-list td:nth-child(10),
-.dividend-list td:nth-child(12),
-.dividend-list td:nth-child(13),
-.dividend-list td:nth-child(14),
-.dividend-list td:nth-child(15) {
-  background: #fffdd1;
 }
 .dividend-list .ticker-link {
   color: var(--ink);
   font-weight: 800;
 }
 .currency-code {
-  font-weight: 900;
+  color: var(--muted);
+  font-weight: 800;
 }
-.currency-code.usd { color: #1d4ed8; }
-.currency-code.eur { color: #c2410c; }
-.currency-code.krw { color: #111827; }
-.currency-code.jpy { color: #7c3aed; }
 .tax-rate,
 .fx-rate {
   color: var(--muted);
 }
 .net-dividend,
 .net-krw {
-  font-weight: 900;
+  font-weight: 800;
 }
 #detailTableWrap th:first-child,
 #detailTableWrap td:first-child { min-width: 210px; }
