@@ -80,7 +80,9 @@ function normalizePerformancePoints(points, rangeKey, bounds = null) {
 
 function performanceSeries(payload) {
   const portfolioRaw = payload?.points || [];
+  const accountSeries = payload?.account_series || [];
   const lastDate = portfolioRaw[portfolioRaw.length - 1]?.date
+    || accountSeries.flatMap(item => item.points || []).map(point => point.date).sort().at(-1)
     || Object.values(payload?.indexes || {}).flatMap(item => item.points || []).map(point => point.date).sort().at(-1);
   const bounds = lastDate ? chartRangeBounds([{ date: lastDate }], chartRange) : null;
   const series = [
@@ -92,6 +94,18 @@ function performanceSeries(payload) {
       primary: true,
     },
   ];
+  if (performanceDetailEnabled() && accountSeries.length > 1) {
+    accountSeries.forEach((account, index) => {
+      series.push({
+        key: `account-${account.id}`,
+        name: account.name || `계좌 ${index + 1}`,
+        color: chartCompareColors[(index + 1) % chartCompareColors.length],
+        points: normalizePerformancePoints(account.points || [], chartRange, bounds),
+        primary: false,
+        detail: true,
+      });
+    });
+  }
   const indexMeta = [
     ["SP500", "S&P 500", "#ea4335"],
     ["NASDAQ", "나스닥", "#fbbc04"],

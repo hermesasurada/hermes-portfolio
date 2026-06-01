@@ -116,6 +116,7 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
 
         holdings = [
             {
+                "account_id": str(row["account_id"]),
                 "ticker": row["ticker"],
                 "name": row["name"] or row["ticker"],
                 "qty": float(row["qty"] or 0),
@@ -171,6 +172,13 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
         if holding["ticker"] in priced_tickers
     ]
     tickers = sorted({holding["ticker"] for holding in holding_specs})
+    account_names = {
+        str(row["id"]): f"{row['member']} · {account_label(row['member'], row['account_type'], row['name'])}"
+        for row in account_rows
+    }
+    account_specs: dict[str, list[dict]] = {}
+    for holding in holding_specs:
+        account_specs.setdefault(holding["account_id"], []).append(holding)
 
     contributor_specs: dict[str, dict] = {}
     for holding in holding_specs:
@@ -189,6 +197,7 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
 
     latest_by_ticker: dict[str, float] = dict(first_prices)
     points = []
+    account_points: dict[str, list[dict]] = {account_id: [] for account_id in account_specs}
     for date, rows_iter in groupby(price_rows, key=lambda row: row["date"]):
         for row in rows_iter:
             latest_by_ticker[row["ticker"]] = float(row["close"])
@@ -207,6 +216,15 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
             )
             if value > 0:
                 points.append({"date": date, "value": value})
+        for account_id, specs in account_specs.items():
+            account_tickers = {spec["ticker"] for spec in specs}
+            if account_tickers and all(ticker in latest_by_ticker for ticker in account_tickers):
+                value = sum(
+                    spec["qty"] * latest_by_ticker[spec["ticker"]] * spec["rate"]
+                    for spec in specs
+                )
+                if value > 0:
+                    account_points[account_id].append({"date": date, "value": value})
 
     indexes: dict[str, dict] = {}
     for ticker, rows_iter in groupby(index_rows, key=lambda row: row["ticker"]):
@@ -230,6 +248,15 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
         ],
         "holdings_count": len(holding_specs),
         "points": points,
+        "account_series": [
+            {
+                "id": account_id,
+                "name": account_names.get(account_id, account_id),
+                "points": account_points[account_id],
+            }
+            for account_id in account_names
+            if len(account_points.get(account_id, [])) >= 2
+        ],
         "contributors": [
             {
                 "ticker": spec["ticker"],

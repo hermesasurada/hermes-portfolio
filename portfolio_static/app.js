@@ -67,6 +67,9 @@ function krwRate(row) {
 function fxAdjustedEnabled() {
   return document.getElementById("fxAdjustedToggle")?.checked || false;
 }
+function performanceDetailEnabled() {
+  return document.getElementById("performanceDetailToggle")?.checked || false;
+}
 function currencyFilterValue() {
   return document.getElementById("currencyFilter")?.value || "all";
 }
@@ -508,7 +511,8 @@ function sortRows(rows) {
 function syncFilterToggleControls() {
   [
     ["activeOnlyToggle", "activeOnlyControl"],
-    ["fxAdjustedToggle", "fxAdjustedControl"]
+    ["fxAdjustedToggle", "fxAdjustedControl"],
+    ["performanceDetailToggle", "performanceDetailControl"]
   ].forEach(([toggleId, controlId]) => {
     const toggle = document.getElementById(toggleId);
     const control = document.getElementById(controlId);
@@ -527,6 +531,7 @@ function syncDetailTabs() {
   document.getElementById("statsTableWrap").classList.toggle("hidden", showingChart || activeDetailTab !== "stats");
   document.getElementById("chartView").classList.toggle("hidden", !showingChart);
   document.getElementById("chartBack").classList.toggle("hidden", !showingChart);
+  document.getElementById("performanceDetailControl")?.classList.toggle("hidden", !performanceChartOpen);
   document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart);
   ["activeOnlyControl", "fxAdjustedControl", "currencyFilterControl", "rowCount", "accountTotal"].forEach(id => {
     document.getElementById(id)?.classList.toggle("hidden", showingChart);
@@ -1990,6 +1995,10 @@ document.getElementById("chartBack").addEventListener("click", closeChart);
 document.getElementById("performanceOpen").addEventListener("click", () => {
   history.pushState(null, "", "#performance");
   openPerformanceChart();
+});
+document.getElementById("performanceDetailToggle").addEventListener("change", () => {
+  syncFilterToggleControls();
+  if (performanceChartOpen) renderPerformanceChart(performancePayload);
 });
 document.getElementById("accountCollapseToggle").addEventListener("click", () => {
   mobileAccountsCollapsed = !mobileAccountsCollapsed;
