@@ -29,7 +29,7 @@ let watchLookupResult = null;
 let watchPending = [];
 let transactionRows = [];
 let transactionPage = 1;
-const transactionPageSize = 20;
+const transactionPageSize = 10;
 
 const chartRanges = [
   { key: "1m", label: "1개월", months: 1 },
@@ -2072,6 +2072,22 @@ document.getElementById("accountCollapseToggle").addEventListener("click", () =>
 document.getElementById("allocationCollapseToggle").addEventListener("click", () => {
   mobileAllocationCollapsed = !mobileAllocationCollapsed;
   syncMobileCollapsePanels();
+});
+// Make the whole panel header line a hit target for its collapse caret. Clicking
+// anywhere on the head fires the caret button (its handler stays the single
+// source of truth). Ignore clicks on the caret itself (its own handler already
+// ran) or on interactive children, and only act while the caret is visible
+// (mobile breakpoint — getComputedStyle display !== "none").
+[["accountPanel", ".mobile-panel-head", "accountCollapseToggle"],
+ ["allocationPanel", ".alloc-head", "allocationCollapseToggle"]].forEach(([panelId, headSel, btnId]) => {
+  const head = document.getElementById(panelId)?.querySelector(headSel);
+  const btn = document.getElementById(btnId);
+  if (!head || !btn) return;
+  head.addEventListener("click", (e) => {
+    if (e.target.closest(".mobile-collapse-toggle, a, input, label, .pill")) return;
+    if (getComputedStyle(btn).display === "none") return;  // desktop: caret hidden
+    btn.click();
+  });
 });
 document.getElementById("transactionToggle").addEventListener("click", () => {
   setTransactionsExpanded(!transactionsExpanded, true);

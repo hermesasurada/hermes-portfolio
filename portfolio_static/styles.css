@@ -752,11 +752,13 @@ tr:hover td { background: var(--surface-hover); }
   display: grid;
   gap: 2px;
   min-width: 0;
+  max-width: 220px;
   flex: 1 1 auto;
 }
 .ticker-link {
   height: auto;
   min-width: 0;
+  max-width: 100%;
   width: fit-content;
   padding: 0;
   border: 0;
@@ -767,6 +769,13 @@ tr:hover td { background: var(--surface-hover); }
   text-align: left;
   cursor: pointer;
   text-decoration: none;
+}
+/* 종목명/티커가 칸을 넘으면 …로 처리 */
+.asset-name, .ticker-symbol {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 .ticker-link:hover .asset-name {
   color: var(--accent-2);
@@ -1601,6 +1610,15 @@ tr:hover td { background: var(--surface-hover); }
     display: inline-flex;
     align-items: center;
     justify-content: center;
+  }
+  /* whole header line is the collapse hit target on mobile */
+  .mobile-collapse-panel .mobile-panel-head,
+  .allocation-panel .alloc-head {
+    cursor: pointer;
+  }
+  .mobile-collapse-panel .mobile-panel-head:hover,
+  .allocation-panel .alloc-head:hover {
+    background: var(--surface-2);
   }
   .mobile-collapse-panel.mobile-collapsed .mobile-collapse-body,
   .allocation-panel.mobile-collapsed .mobile-collapse-body {
