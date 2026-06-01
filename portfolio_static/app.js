@@ -24,7 +24,6 @@ let performancePayload = null;
 let performanceLoadInFlight = null;
 let performanceIndexes = { SP500: true, NASDAQ: true, KOSPI: true };
 let mobileAccountsCollapsed = false;
-let mobileAllocationCollapsed = true;
 let watchLookupResult = null;
 let watchPending = [];
 let transactionRows = [];
@@ -335,19 +334,11 @@ function renderPriceUpdated() {
 function syncMobileCollapsePanels() {
   const accountPanel = document.getElementById("accountPanel");
   const accountToggle = document.getElementById("accountCollapseToggle");
-  const allocationPanel = document.getElementById("allocationPanel");
-  const allocationToggle = document.getElementById("allocationCollapseToggle");
   accountPanel?.classList.toggle("mobile-collapsed", mobileAccountsCollapsed);
-  allocationPanel?.classList.toggle("mobile-collapsed", mobileAllocationCollapsed);
   if (accountToggle) {
     accountToggle.setAttribute("aria-expanded", String(!mobileAccountsCollapsed));
     accountToggle.setAttribute("aria-label", mobileAccountsCollapsed ? "계좌 펼치기" : "계좌 접기");
     accountToggle.title = mobileAccountsCollapsed ? "계좌 펼치기" : "계좌 접기";
-  }
-  if (allocationToggle) {
-    allocationToggle.setAttribute("aria-expanded", String(!mobileAllocationCollapsed));
-    allocationToggle.setAttribute("aria-label", mobileAllocationCollapsed ? "자산 배분 펼치기" : "자산 배분 접기");
-    allocationToggle.title = mobileAllocationCollapsed ? "자산 배분 펼치기" : "자산 배분 접기";
   }
 }
 
@@ -1740,69 +1731,6 @@ function showTradeError(err) {
   showTradeStatus(err.message || String(err), true);
 }
 
-const ALLOC_COLORS = [
-  "#1f4e79",
-  "#0f766e",
-  "#d98c2b",
-  "#7c3aed",
-  "#64748b",
-  "#b91c1c",
-  "#0369a1",
-  "#15803d",
-  "#a16207",
-];
-
-function renderAllocation(rows) {
-  const donut = document.getElementById("allocDonut");
-  const legend = document.getElementById("allocLegend");
-  const totalPill = document.getElementById("allocTotal");
-  if (!donut || !legend) return;
-
-  const buckets = new Map();
-  let total = 0;
-  rows.forEach(r => {
-    const value = Number(r.value_krw);
-    if (!Number.isFinite(value) || value <= 0) return;
-    const label = `${r.memberName || "-"} · ${r.accountName || "계좌"}`;
-    buckets.set(label, (buckets.get(label) || 0) + value);
-    total += value;
-  });
-
-  if (totalPill) totalPill.textContent = total > 0 ? krw(total) : "-";
-
-  if (!total) {
-    donut.style.background = "var(--surface-2)";
-    donut.classList.add("empty");
-    legend.innerHTML = `<li class="alloc-empty">표시할 보유 자산이 없습니다</li>`;
-    return;
-  }
-  donut.classList.remove("empty");
-
-  const entries = Array.from(buckets.entries())
-    .map(([label, value], index) => ({ label, value, color: ALLOC_COLORS[index % ALLOC_COLORS.length] }))
-    .sort((a, b) => b.value - a.value);
-
-  let acc = 0;
-  const stops = entries.map(cat => {
-    const start = (acc / total) * 100;
-    acc += cat.value;
-    const end = (acc / total) * 100;
-    return `${cat.color} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
-  });
-  donut.style.background = `conic-gradient(${stops.join(", ")})`;
-
-  legend.innerHTML = entries.map(cat => {
-    const pct = (cat.value / total) * 100;
-    return `
-      <li class="alloc-row">
-        <span class="alloc-swatch" style="background: ${cat.color}"></span>
-        <span class="alloc-label">${esc(cat.label)}</span>
-        <span class="alloc-pct">${fmt2.format(pct)}%</span>
-      </li>
-    `;
-  }).join("");
-}
-
 const THEME_KEY = "theme";
 const THEME_ORDER = ["auto", "light", "dark"];
 const THEME_META = {
@@ -1852,7 +1780,6 @@ function render() {
   renderAccounts();
   const rows = filteredRows();
   renderSummary(rows);
-  renderAllocation(filteredRows({ ignoreAggregate: true, ignoreCurrency: true }));
   renderTable();
   renderTradeControls();
   syncMobileCollapsePanels();
@@ -2069,17 +1996,12 @@ document.getElementById("accountCollapseToggle").addEventListener("click", () =>
   mobileAccountsCollapsed = !mobileAccountsCollapsed;
   syncMobileCollapsePanels();
 });
-document.getElementById("allocationCollapseToggle").addEventListener("click", () => {
-  mobileAllocationCollapsed = !mobileAllocationCollapsed;
-  syncMobileCollapsePanels();
-});
 // Make the whole panel header line a hit target for its collapse caret. Clicking
 // anywhere on the head fires the caret button (its handler stays the single
 // source of truth). Ignore clicks on the caret itself (its own handler already
 // ran) or on interactive children, and only act while the caret is visible
 // (mobile breakpoint — getComputedStyle display !== "none").
-[["accountPanel", ".mobile-panel-head", "accountCollapseToggle"],
- ["allocationPanel", ".alloc-head", "allocationCollapseToggle"]].forEach(([panelId, headSel, btnId]) => {
+[["accountPanel", ".mobile-panel-head", "accountCollapseToggle"]].forEach(([panelId, headSel, btnId]) => {
   const head = document.getElementById(panelId)?.querySelector(headSel);
   const btn = document.getElementById(btnId);
   if (!head || !btn) return;
