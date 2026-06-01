@@ -474,7 +474,7 @@ function filteredRows(options = {}) {
       current_price_krw: holdingUnitKrw(row),
       next_earnings_date: row.next_earnings_date || null
     }));
-  if (!options.ignoreAggregate && document.getElementById("aggregateToggle").checked) rows = aggregateRows(rows);
+  if (!options.ignoreAggregate) rows = aggregateRows(rows);
   const totalKrw = rows.reduce((sum, row) => sum + (Number(row.value_krw) || 0), 0);
   rows = rows.map(row => ({
     ...row,
@@ -507,7 +507,6 @@ function sortRows(rows) {
 
 function syncFilterToggleControls() {
   [
-    ["aggregateToggle", "aggregateControl"],
     ["activeOnlyToggle", "activeOnlyControl"],
     ["fxAdjustedToggle", "fxAdjustedControl"]
   ].forEach(([toggleId, controlId]) => {
@@ -529,7 +528,7 @@ function syncDetailTabs() {
   document.getElementById("chartView").classList.toggle("hidden", !showingChart);
   document.getElementById("chartBack").classList.toggle("hidden", !showingChart);
   document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart);
-  ["aggregateControl", "activeOnlyControl", "fxAdjustedControl", "currencyFilterControl", "rowCount", "accountTotal"].forEach(id => {
+  ["activeOnlyControl", "fxAdjustedControl", "currencyFilterControl", "rowCount", "accountTotal"].forEach(id => {
     document.getElementById(id)?.classList.toggle("hidden", showingChart);
   });
 }
@@ -2056,10 +2055,6 @@ document.getElementById("tradeForm").addEventListener("submit", async event => {
   } catch (err) {
     showTradeError(err);
   }
-});
-document.getElementById("aggregateToggle").addEventListener("change", () => {
-  syncFilterToggleControls();
-  render();
 });
 document.getElementById("activeOnlyToggle").addEventListener("change", () => {
   syncFilterToggleControls();
