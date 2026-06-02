@@ -15,6 +15,7 @@ from .tickers import is_us_stock_ticker, ticker_currency
 US_LIVE_CACHE_SECONDS = 600
 US_LIVE_QUOTE_CACHE: dict[tuple[str, str], dict] = {}
 US_LIVE_QUOTE_LOCK = threading.Lock()
+US_LIVE_FALLBACK_IN_FLIGHT: set[tuple[str, str]] = set()
 
 
 def latest_prices(conn: sqlite3.Connection) -> dict[str, dict]:
@@ -175,6 +176,76 @@ def regular_change_from_quote(quote_row: dict) -> dict:
     }
 
 
+def live_quote_item_from_row(
+    quote_row: dict,
+    include_extended: bool,
+    regular_hours: bool,
+    fetched_ts: float,
+) -> dict | None:
+    price, source = live_price_from_quote(quote_row, include_extended, regular_hours)
+    if price is None:
+        return None
+    return {
+        "price": price,
+        "source": source or "yf-live",
+        "market_state": quote_row.get("marketState"),
+        "fetched_ts": fetched_ts,
+        **regular_change_from_quote(quote_row),
+        **extended_change_from_quote(quote_row, regular_hours),
+    }
+
+
+def cache_us_live_quote(symbol: str, mode: str, item: dict) -> None:
+    with US_LIVE_QUOTE_LOCK:
+        US_LIVE_QUOTE_CACHE[(symbol, mode)] = item
+
+
+def schedule_us_live_fallback(symbols: list[str], mode: str, include_extended: bool, regular_hours: bool) -> None:
+    unique_symbols = sorted({symbol.upper() for symbol in symbols if symbol})
+    if not unique_symbols:
+        return
+    todo: list[str] = []
+    with US_LIVE_QUOTE_LOCK:
+        for symbol in unique_symbols:
+            key = (symbol, mode)
+            if key in US_LIVE_FALLBACK_IN_FLIGHT:
+                continue
+            US_LIVE_FALLBACK_IN_FLIGHT.add(key)
+            todo.append(symbol)
+    if not todo:
+        return
+    thread = threading.Thread(
+        target=fetch_us_live_fallback_worker,
+        args=(todo, mode, include_extended, regular_hours),
+        daemon=True,
+    )
+    thread.start()
+
+
+def fetch_us_live_fallback_worker(symbols: list[str], mode: str, include_extended: bool, regular_hours: bool) -> None:
+    updated = 0
+    try:
+        import yfinance as yf
+
+        for symbol in symbols:
+            try:
+                info = yf.Ticker(symbol).info or {}
+                item = live_quote_item_from_row(info, include_extended, regular_hours, datetime.now().timestamp())
+                if not item:
+                    continue
+                cache_us_live_quote(symbol, mode, item)
+                updated += 1
+            except Exception as exc:
+                logging.warning("[us-live] yfinance fallback failed for %s: %s", symbol, exc)
+        logging.info("[us-live] yfinance fallback refreshed %d/%d symbols", updated, len(symbols))
+    except Exception as exc:
+        logging.warning("[us-live] yfinance fallback worker failed: %s", exc)
+    finally:
+        with US_LIVE_QUOTE_LOCK:
+            for symbol in symbols:
+                US_LIVE_FALLBACK_IN_FLIGHT.discard((symbol, mode))
+
+
 def fetch_us_live_quotes(symbols: list[str], include_extended: bool, regular_hours: bool) -> dict[str, dict]:
     mode = "regular" if regular_hours else "extended"
     now_ts = datetime.now().timestamp()
@@ -195,29 +266,24 @@ def fetch_us_live_quotes(symbols: list[str], include_extended: bool, regular_hou
     if missing:
         try:
             quote_rows = yahoo_quote_batch(missing)
+            unresolved: list[str] = []
             for symbol in missing:
                 quote_row = quote_rows.get(symbol.upper(), {})
-                price, source = live_price_from_quote(quote_row, include_extended, regular_hours)
-                if price is None:
+                item = live_quote_item_from_row(quote_row, include_extended, regular_hours, now_ts)
+                if not item:
+                    unresolved.append(symbol)
                     continue
-                item = {
-                    "price": price,
-                    "source": source,
-                    "market_state": quote_row.get("marketState"),
-                    "fetched_ts": now_ts,
-                    **regular_change_from_quote(quote_row),
-                    **extended_change_from_quote(quote_row, regular_hours),
-                }
-                with US_LIVE_QUOTE_LOCK:
-                    US_LIVE_QUOTE_CACHE[(symbol, mode)] = item
+                cache_us_live_quote(symbol, mode, item)
                 fresh[symbol] = item
+            schedule_us_live_fallback(unresolved, mode, include_extended, regular_hours)
         except Exception as exc:
             logging.warning(
-                "[us-live] batch quote failed for %d symbols; using stale cache/db prices: %s",
+                "[us-live] batch quote failed for %d symbols; using stale cache/db prices and refreshing in background: %s",
                 len(missing),
                 exc,
             )
             fresh.update(stale)
+            schedule_us_live_fallback(missing, mode, include_extended, regular_hours)
     return fresh
 
 

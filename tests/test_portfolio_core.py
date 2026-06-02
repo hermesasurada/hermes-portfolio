@@ -369,6 +369,8 @@ def test_fetch_us_live_quotes_uses_stale_cache_when_batch_fails():
 
     original_batch = price_module.yahoo_quote_batch
     original_cache = dict(price_module.US_LIVE_QUOTE_CACHE)
+    original_schedule = price_module.schedule_us_live_fallback
+    scheduled = []
     stale_item = {
         "price": 123.0,
         "source": "yf-pre",
@@ -383,10 +385,13 @@ def test_fetch_us_live_quotes_uses_stale_cache_when_batch_fails():
         price_module.US_LIVE_QUOTE_CACHE.clear()
         price_module.US_LIVE_QUOTE_CACHE[("AAPL", "extended")] = stale_item
         price_module.yahoo_quote_batch = lambda symbols: (_ for _ in ()).throw(RuntimeError("blocked"))
+        price_module.schedule_us_live_fallback = lambda *args: scheduled.append(args)
         result = price_module.fetch_us_live_quotes(["AAPL"], include_extended=True, regular_hours=False)
         assert result["AAPL"] is stale_item
+        assert scheduled == [(["AAPL"], "extended", True, False)]
     finally:
         price_module.yahoo_quote_batch = original_batch
+        price_module.schedule_us_live_fallback = original_schedule
         price_module.US_LIVE_QUOTE_CACHE.clear()
         price_module.US_LIVE_QUOTE_CACHE.update(original_cache)
 
