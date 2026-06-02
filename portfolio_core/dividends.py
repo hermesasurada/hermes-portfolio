@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta
 from html import unescape
@@ -20,6 +21,10 @@ NASDAQ_HEADERS = {
     "Accept": "application/json, text/plain, */*",
     "Origin": "https://www.nasdaq.com",
     "Referer": "https://www.nasdaq.com/",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
+}
+SEIBRO_HEADERS = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
 }
 NASDAQ_PRESS_RELEASE_URLS = {
@@ -92,6 +97,18 @@ def _date_from_short_month_text(value: str | None) -> str | None:
     if text.lower() in {"n/a", "na", "-", "—"}:
         return None
     for fmt in ("%Y-%m-%d", "%b %d, %Y", "%B %d, %Y", "%d %b %Y", "%d %B %Y"):
+        try:
+            return datetime.strptime(text, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    return None
+
+
+def _date_from_kr_text(value: str | None) -> str | None:
+    if not value:
+        return None
+    text = value.strip()
+    for fmt in ("%Y/%m/%d", "%Y.%m.%d", "%Y-%m-%d"):
         try:
             return datetime.strptime(text, fmt).strftime("%Y-%m-%d")
         except ValueError:
@@ -179,6 +196,10 @@ def _stockanalysis_candidate(ticker: str) -> bool:
     return ticker_currency(ticker) == "USD" and "." not in ticker and ticker != "BTC"
 
 
+def _seibro_candidate(ticker: str) -> bool:
+    return ticker_currency(ticker) == "KRW" and ticker.upper().endswith(KOREAN_SUFFIXES)
+
+
 def _nasdaq_attempt_due(ticker: str, status: str | None) -> bool:
     status_text = status or ""
     if not _nasdaq_candidate(ticker):
@@ -194,6 +215,10 @@ def _stockanalysis_attempt_due(ticker: str, status: str | None) -> bool:
 
 def _dividendmax_attempt_due(ticker: str, status: str | None) -> bool:
     return bool(DIVIDENDMAX_URLS.get(ticker)) and "dividendmax" not in (status or "")
+
+
+def _seibro_attempt_due(ticker: str, status: str | None) -> bool:
+    return _seibro_candidate(ticker) and "seibro" not in (status or "")
 
 
 def _fetch_nasdaq_dividends(ticker: str) -> list[dict]:
@@ -223,6 +248,37 @@ def _fetch_nasdaq_dividends(ticker: str) -> list[dict]:
                 "amount": amount,
                 "currency": row.get("currency") or "USD",
                 "source": "nasdaq",
+            }
+        )
+    return events
+
+
+def _fetch_seibro_dividends(ticker: str, name: str | None = None) -> list[dict]:
+    code = ticker.split(".", 1)[0]
+    if not re.fullmatch(r"\d{6}", code) or not name:
+        return []
+    query = urllib.parse.urlencode({"shotn_isin": code, "txt_sch": name})
+    url = f"https://m.seibro.or.kr/cmuc/company/selectCompanySchedule.do?{query}"
+    html = _fetch_text(url, SEIBRO_HEADERS)
+    events = []
+    for row_match in re.finditer(r"<tr>\s*(.*?)\s*</tr>", html, re.DOTALL):
+        cells = [
+            unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", cell))).strip()
+            for cell in re.findall(r"<td[^>]*>(.*?)</td>", row_match.group(1), re.DOTALL)
+        ]
+        if len(cells) < 2 or cells[1] != "배당/분배":
+            continue
+        record_date = _date_from_kr_text(cells[0])
+        if not record_date:
+            continue
+        events.append(
+            {
+                "ticker": ticker,
+                "ex_date": record_date,
+                "pay_date": None,
+                "amount": None,
+                "currency": "KRW",
+                "source": "seibro",
             }
         )
     return events
@@ -388,18 +444,28 @@ def _fetch_yahoo_dividends(ticker: str) -> list[dict]:
     return list(events.values())
 
 
-def _fetch_dividends(ticker: str) -> tuple[list[dict], str]:
+def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], str]:
     events: dict[str, dict] = {}
     sources = []
-    try:
-        yahoo_events = _fetch_yahoo_dividends(ticker)
-        if yahoo_events:
-            sources.append("yahoo")
-        for event in yahoo_events:
-            if event.get("ex_date"):
-                events[event["ex_date"]] = event
-    except Exception:
-        sources.append("yahoo_error")
+    if _seibro_candidate(ticker):
+        try:
+            seibro_events = _fetch_seibro_dividends(ticker, name)
+            sources.append("seibro" if seibro_events else "seibro0")
+            for event in seibro_events:
+                if event.get("ex_date"):
+                    events[event["ex_date"]] = event
+        except Exception:
+            sources.append("seibro_error")
+    else:
+        try:
+            yahoo_events = _fetch_yahoo_dividends(ticker)
+            if yahoo_events:
+                sources.append("yahoo")
+            for event in yahoo_events:
+                if event.get("ex_date"):
+                    events[event["ex_date"]] = event
+        except Exception:
+            sources.append("yahoo_error")
 
     if _stockanalysis_candidate(ticker):
         try:
@@ -453,14 +519,25 @@ def refresh_dividend_events(tickers: list[str]) -> None:
         placeholders = ",".join("?" for _ in clean_tickers)
         rows = conn.execute(
             f"""
-            SELECT ticker, fetched_at, status
-            FROM ticker_dividend_cache
-            WHERE ticker IN ({placeholders})
+            SELECT c.ticker, c.fetched_at, c.status, tk.name
+            FROM ticker_dividend_cache c
+            LEFT JOIN tickers tk ON tk.ticker = c.ticker
+            WHERE c.ticker IN ({placeholders})
             """,
             clean_tickers,
         ).fetchall()
         fetched = {row["ticker"]: row["fetched_at"] for row in rows}
         statuses = {row["ticker"]: row["status"] for row in rows}
+        names = {row["ticker"]: row["name"] for row in rows}
+        for row in conn.execute(
+            f"""
+            SELECT ticker, name
+            FROM tickers
+            WHERE ticker IN ({placeholders})
+            """,
+            clean_tickers,
+        ).fetchall():
+            names[row["ticker"]] = row["name"]
         due = [
             ticker for ticker in clean_tickers
             if (
@@ -468,6 +545,7 @@ def refresh_dividend_events(tickers: list[str]) -> None:
                 or _stockanalysis_attempt_due(ticker, statuses.get(ticker))
                 or _nasdaq_attempt_due(ticker, statuses.get(ticker))
                 or _dividendmax_attempt_due(ticker, statuses.get(ticker))
+                or _seibro_attempt_due(ticker, statuses.get(ticker))
             )
         ]
         conn.commit()
@@ -478,7 +556,12 @@ def refresh_dividend_events(tickers: list[str]) -> None:
     with connect() as conn:
         ensure_dividend_tables(conn)
         for ticker in due:
-            events, status = _fetch_dividends(ticker)
+            events, status = _fetch_dividends(ticker, names.get(ticker))
+            if _seibro_candidate(ticker):
+                conn.execute(
+                    "DELETE FROM dividend_events WHERE ticker = ? AND source != 'seibro'",
+                    (ticker,),
+                )
             for event in events:
                 if not event.get("ex_date"):
                     continue
@@ -615,7 +698,7 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
             "currency": row["currency"] or ticker_currency(row["ticker"]),
         }
         for row in holding_rows
-        if row["ticker"] and float(row["qty"] or 0) > 0 and not str(row["ticker"]).upper().endswith(KOREAN_SUFFIXES)
+        if row["ticker"] and float(row["qty"] or 0) > 0
     ]
     tickers = sorted({row["ticker"] for row in holdings})
     refresh_dividend_events(tickers)
@@ -668,19 +751,17 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
     for event in dividend_events:
         currency = event["currency"] or ticker_currency(event["ticker"])
         amount = _float_value(event["amount"])
-        if amount is None:
-            continue
         rate = rates.get(currency, 1.0)
         tax_rate = _tax_rate(currency)
         for holding in holdings_by_ticker.get(event["ticker"], []):
             qty = holding["qty"]
-            gross = amount * qty
-            tax = gross * tax_rate / 100
-            net = gross - tax
-            net_krw = net * rate
+            gross = amount * qty if amount is not None else None
+            tax = gross * tax_rate / 100 if gross is not None else None
+            net = gross - tax if gross is not None and tax is not None else None
+            net_krw = net * rate if net is not None else None
             rows.append(
                 {
-                    "pay_date": event["pay_date"] or event["ex_date"],
+                    "pay_date": event["pay_date"],
                     "ex_date": event["ex_date"],
                     "member": holding["member"],
                     "account_id": holding["account_id"],
