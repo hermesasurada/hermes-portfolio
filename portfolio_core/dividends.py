@@ -4,6 +4,7 @@ import json
 import re
 import urllib.request
 from datetime import date, datetime, timedelta
+from html import unescape
 from typing import Any
 
 from .constants import FX_DEFAULT_RATES, KOREAN_SUFFIXES
@@ -25,6 +26,25 @@ NASDAQ_PRESS_RELEASE_URLS = {
     "DE": (
         "https://www.nasdaq.com/press-release/deere-company-announces-quarterly-dividend-2026-02-25",
     ),
+}
+STOCKANALYSIS_HEADERS = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
+}
+DIVIDENDMAX_HEADERS = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
+}
+DIVIDENDMAX_URLS = {
+    "DE": (
+        "https://www.dividendmax.com/united-states/nyse/financial-services/deere-and-co/dividends",
+    ),
+}
+CURRENCY_SYMBOLS = {
+    "$": "USD",
+    "€": "EUR",
+    "¥": "JPY",
+    "₩": "KRW",
 }
 
 
@@ -65,6 +85,20 @@ def _date_from_us_text(value: str | None) -> str | None:
         return None
 
 
+def _date_from_short_month_text(value: str | None) -> str | None:
+    if not value:
+        return None
+    text = value.strip()
+    if text.lower() in {"n/a", "na", "-", "—"}:
+        return None
+    for fmt in ("%Y-%m-%d", "%b %d, %Y", "%B %d, %Y", "%d %b %Y", "%d %B %Y"):
+        try:
+            return datetime.strptime(text, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    return None
+
+
 def _add_one_year(value: date) -> date:
     try:
         return value.replace(year=value.year + 1)
@@ -86,6 +120,17 @@ def _amount_from_text(value: Any) -> float | None:
     text = str(value)
     text = re.sub(r"[^0-9.\-]", "", text)
     return _float_value(text)
+
+
+def _currency_from_amount_text(value: Any, fallback: str) -> str:
+    text = str(value or "").strip()
+    return CURRENCY_SYMBOLS.get(text[:1], fallback)
+
+
+def _fetch_text(url: str, headers: dict[str, str]) -> str:
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=12) as resp:
+        return resp.read().decode("utf-8", "ignore")
 
 
 def _month_name_to_number(name: str) -> int | None:
@@ -130,6 +175,10 @@ def _nasdaq_candidate(ticker: str) -> bool:
     return ticker_currency(ticker) == "USD" and "." not in ticker
 
 
+def _stockanalysis_candidate(ticker: str) -> bool:
+    return ticker_currency(ticker) == "USD" and "." not in ticker and ticker != "BTC"
+
+
 def _nasdaq_attempt_due(ticker: str, status: str | None) -> bool:
     status_text = status or ""
     if not _nasdaq_candidate(ticker):
@@ -137,6 +186,14 @@ def _nasdaq_attempt_due(ticker: str, status: str | None) -> bool:
     if "nasdaq" not in status_text:
         return True
     return bool(NASDAQ_PRESS_RELEASE_URLS.get(ticker)) and "nasdaq_press" not in status_text
+
+
+def _stockanalysis_attempt_due(ticker: str, status: str | None) -> bool:
+    return _stockanalysis_candidate(ticker) and "stockanalysis" not in (status or "")
+
+
+def _dividendmax_attempt_due(ticker: str, status: str | None) -> bool:
+    return bool(DIVIDENDMAX_URLS.get(ticker)) and "dividendmax" not in (status or "")
 
 
 def _fetch_nasdaq_dividends(ticker: str) -> list[dict]:
@@ -168,6 +225,90 @@ def _fetch_nasdaq_dividends(ticker: str) -> list[dict]:
                 "source": "nasdaq",
             }
         )
+    return events
+
+
+def _stockanalysis_urls(ticker: str) -> tuple[str, ...]:
+    symbol = ticker.lower()
+    return (
+        f"https://stockanalysis.com/stocks/{symbol}/dividend/",
+        f"https://stockanalysis.com/etf/{symbol}/dividend/",
+    )
+
+
+def _js_string_field(text: str, key: str) -> str | None:
+    match = re.search(rf"{re.escape(key)}:\"((?:\\.|[^\"])*)\"", text)
+    if not match:
+        return None
+    return bytes(match.group(1), "utf-8").decode("unicode_escape")
+
+
+def _fetch_stockanalysis_dividends(ticker: str) -> list[dict]:
+    fallback_currency = ticker_currency(ticker)
+    html = ""
+    for url in _stockanalysis_urls(ticker):
+        try:
+            html = _fetch_text(url, STOCKANALYSIS_HEADERS)
+            if "history:[" in html:
+                break
+        except Exception:
+            continue
+    if "history:[" not in html:
+        return []
+
+    block_match = re.search(r"history:\[(.*?)\],chartData:", html, re.DOTALL)
+    if not block_match:
+        return []
+    events = []
+    for row_match in re.finditer(r"\{([^{}]+)\}", block_match.group(1)):
+        row = row_match.group(1)
+        ex_date = _date_from_short_month_text(_js_string_field(row, "dt"))
+        amount_text = _js_string_field(row, "amt")
+        amount = _amount_from_text(amount_text)
+        if not ex_date or amount is None:
+            continue
+        events.append(
+            {
+                "ticker": ticker,
+                "ex_date": ex_date,
+                "pay_date": _date_from_short_month_text(_js_string_field(row, "pay")),
+                "amount": amount,
+                "currency": _currency_from_amount_text(amount_text, fallback_currency),
+                "source": "stockanalysis",
+            }
+        )
+    return events
+
+
+def _fetch_dividendmax_dividends(ticker: str) -> list[dict]:
+    events = []
+    for url in DIVIDENDMAX_URLS.get(ticker, ()):
+        html = _fetch_text(url, DIVIDENDMAX_HEADERS)
+        for row_match in re.finditer(r"<tr class='mdc-data-table__row'>(.*?)</tr>", html, re.DOTALL):
+            cells = [
+                unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", cell))).strip()
+                for cell in re.findall(r"<td class='mdc-data-table__cell'>(.*?)</td>", row_match.group(1), re.DOTALL)
+            ]
+            if len(cells) < 8 or cells[0] not in {"Paid", "Declared"}:
+                continue
+            amount = _amount_from_text(cells[7])
+            if amount is None:
+                continue
+            if cells[7].lower().endswith("c"):
+                amount /= 100
+            ex_date = _date_from_short_month_text(cells[3])
+            if not ex_date:
+                continue
+            events.append(
+                {
+                    "ticker": ticker,
+                    "ex_date": ex_date,
+                    "pay_date": _date_from_short_month_text(cells[4]),
+                    "amount": amount,
+                    "currency": cells[5] or ticker_currency(ticker),
+                    "source": "dividendmax",
+                }
+            )
     return events
 
 
@@ -260,6 +401,16 @@ def _fetch_dividends(ticker: str) -> tuple[list[dict], str]:
     except Exception:
         sources.append("yahoo_error")
 
+    if _stockanalysis_candidate(ticker):
+        try:
+            stockanalysis_events = _fetch_stockanalysis_dividends(ticker)
+            sources.append("stockanalysis" if stockanalysis_events else "stockanalysis0")
+            for event in stockanalysis_events:
+                if event.get("ex_date"):
+                    events[event["ex_date"]] = event
+        except Exception:
+            sources.append("stockanalysis_error")
+
     if _nasdaq_candidate(ticker):
         try:
             nasdaq_events = _fetch_nasdaq_dividends(ticker)
@@ -278,6 +429,16 @@ def _fetch_dividends(ticker: str) -> tuple[list[dict], str]:
                     events[event["ex_date"]] = event
         except Exception:
             sources.append("nasdaq_press_error")
+
+    if DIVIDENDMAX_URLS.get(ticker):
+        try:
+            dividendmax_events = _fetch_dividendmax_dividends(ticker)
+            sources.append("dividendmax" if dividendmax_events else "dividendmax0")
+            for event in dividendmax_events:
+                if event.get("ex_date"):
+                    events[event["ex_date"]] = event
+        except Exception:
+            sources.append("dividendmax_error")
 
     return list(events.values()), "+".join(sources) or "none"
 
@@ -302,7 +463,12 @@ def refresh_dividend_events(tickers: list[str]) -> None:
         statuses = {row["ticker"]: row["status"] for row in rows}
         due = [
             ticker for ticker in clean_tickers
-            if _cache_due(fetched.get(ticker)) or _nasdaq_attempt_due(ticker, statuses.get(ticker))
+            if (
+                _cache_due(fetched.get(ticker))
+                or _stockanalysis_attempt_due(ticker, statuses.get(ticker))
+                or _nasdaq_attempt_due(ticker, statuses.get(ticker))
+                or _dividendmax_attempt_due(ticker, statuses.get(ticker))
+            )
         ]
         conn.commit()
 
