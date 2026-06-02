@@ -26,11 +26,18 @@
   --accent-soft-border: #9ccbc5;
   --track-off: #cbd5df;
   --track-off-border: #b8c3cf;
-  /* chart surfaces (kept light-on-card even in dark mode) */
+  /* chart surfaces */
   --chart-bg: #ffffff;
   --chart-grid: #e8eaed;
   --chart-axis: #5f6368;
   --chart-ink: #202124;
+  --chart-tooltip-bg: rgba(255, 255, 255, .97);
+  --chart-tooltip-border: #d5dbe3;
+  --chart-dot-fill: #ffffff;
+  --chart-label-halo: #ffffff;
+  --chart-hover-line: #9aa0a6;
+  --chart-selection-fill: rgba(31, 78, 121, .08);
+  --chart-shadow: drop-shadow(0 2px 6px rgba(60, 64, 67, .20));
   /* type scale */
   --fs-xs: 11px;
   --fs-sm: 12px;
@@ -77,6 +84,17 @@
     --track-off: #3a4654;
     --track-off-border: #45525f;
     --header-bg: rgba(14, 18, 23, 0.94);
+    --chart-bg: #111821;
+    --chart-grid: #25303d;
+    --chart-axis: #9aa6b5;
+    --chart-ink: #e6ebf2;
+    --chart-tooltip-bg: rgba(22, 28, 36, .97);
+    --chart-tooltip-border: #3a4654;
+    --chart-dot-fill: #111821;
+    --chart-label-halo: #111821;
+    --chart-hover-line: #64748b;
+    --chart-selection-fill: rgba(110, 168, 230, .14);
+    --chart-shadow: drop-shadow(0 8px 18px rgba(0, 0, 0, .35));
 }
 * { box-sizing: border-box; }
 body {
@@ -913,7 +931,7 @@ tr:hover td { background: var(--surface-hover); }
   pointer-events: none;
 }
 .chart-last-dot {
-  fill: #fff;
+  fill: var(--chart-dot-fill);
   stroke: var(--brand);
   stroke-width: 2;
 }
@@ -928,26 +946,26 @@ tr:hover td { background: var(--surface-hover); }
   pointer-events: none;
 }
 .chart-extreme circle {
-  fill: #fff;
+  fill: var(--chart-dot-fill);
   stroke-width: 2;
 }
 .chart-extreme text {
   font-size: 10.5px;
   font-weight: 800;
   paint-order: stroke;
-  stroke: #fff;
+  stroke: var(--chart-label-halo);
   stroke-width: 4px;
   stroke-linejoin: round;
 }
 .chart-extreme.high circle { stroke: var(--up); }
 .chart-extreme.high text {
   fill: var(--up);
-  stroke: #fff;
+  stroke: var(--chart-label-halo);
 }
 .chart-extreme.low circle { stroke: var(--down); }
 .chart-extreme.low text {
   fill: var(--down);
-  stroke: #fff;
+  stroke: var(--chart-label-halo);
 }
 .chart-ranges {
   display: flex;
@@ -983,7 +1001,7 @@ tr:hover td { background: var(--surface-hover); }
   pointer-events: none;
 }
 .chart-selection-range {
-  fill: rgba(26, 115, 232, .055);
+  fill: var(--chart-selection-fill);
 }
 .chart-selection-line {
   stroke: var(--chart-axis);
@@ -991,12 +1009,12 @@ tr:hover td { background: var(--surface-hover); }
   stroke-dasharray: 2.5 4;
 }
 .chart-selection-box {
-  fill: rgba(255, 255, 255, .96);
-  stroke: #dadce0;
-  filter: drop-shadow(0 2px 5px rgba(60, 64, 67, .18));
+  fill: var(--chart-tooltip-bg);
+  stroke: var(--chart-tooltip-border);
+  filter: var(--chart-shadow);
 }
 .chart-selection-tooltip {
-  fill: #3c4043;
+  fill: var(--chart-ink);
   font-size: 11px;
   font-weight: 700;
   text-anchor: middle;
@@ -1018,18 +1036,18 @@ tr:hover td { background: var(--surface-hover); }
   pointer-events: none;
 }
 .chart-hover-line {
-  stroke: #9aa0a6;
+  stroke: var(--chart-hover-line);
   stroke-width: 1;
 }
 .chart-hover-dot {
-  fill: #fff;
+  fill: var(--chart-dot-fill);
   stroke: var(--brand);
   stroke-width: 2;
 }
 .chart-tooltip-box {
-  fill: #fff;
-  stroke: #dadce0;
-  filter: drop-shadow(0 2px 6px rgba(60, 64, 67, .20));
+  fill: var(--chart-tooltip-bg);
+  stroke: var(--chart-tooltip-border);
+  filter: var(--chart-shadow);
 }
 .chart-tooltip {
   fill: var(--chart-ink);
@@ -1104,7 +1122,7 @@ tr:hover td { background: var(--surface-hover); }
   pointer-events: none;
 }
 .perf-hover-dot {
-  fill: var(--panel);
+  fill: var(--chart-dot-fill);
   stroke-width: 2;
   pointer-events: none;
 }
@@ -1170,9 +1188,9 @@ tr:hover td { background: var(--surface-hover); }
   pointer-events: none;
 }
 .trade-marker circle {
-  stroke: #fff;
+  stroke: var(--chart-label-halo);
   stroke-width: 2;
-  filter: drop-shadow(0 1px 3px rgba(60, 64, 67, .28));
+  filter: var(--chart-shadow);
   pointer-events: none;
 }
 .trade-marker.buy circle { fill: var(--buy); }
