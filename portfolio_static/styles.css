@@ -678,6 +678,7 @@ tr.dividend-month-row:hover td {
 .estimated-date {
   color: var(--muted);
   font-weight: 600;
+  font-style: italic;
 }
 .confirmed-date {
   color: var(--ink);
