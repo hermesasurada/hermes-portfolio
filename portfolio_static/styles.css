@@ -61,38 +61,38 @@
 }
 /* dark palette — JS sets data-theme to the resolved value (auto follows OS) */
 :root[data-theme="dark"] {
-    --bg: #0e1217;
-    --panel: #161c24;
-    --surface-2: #1f2733;
-    --surface-hover: #1c242e;
-    --zebra: #1a212bcc;
+    --bg: #151b23;
+    --panel: #1d2530;
+    --surface-2: #263241;
+    --surface-hover: #232d3a;
+    --zebra: #202a36cc;
     --ink: #e6ebf2;
     --muted: #9aa6b5;
-    --line: #2a333f;
+    --line: #344153;
     --accent: #2dd4bf;
     --accent-2: #6ea8e6;
     --brand: #6ea8e6;
-    --brand-soft: #1d2a3a;
+    --brand-soft: #24364b;
     --up: #ff6b6b;          /* dark-bg-safe 상승=빨강 */
     --down: #7aa2ff;        /* 하락=파랑 */
     --buy: #4ade80;
     --sell: #f87171;
     --warn: #e0a854;
     --focus: #6ea8e6;
-    --accent-soft: #163a37;
-    --accent-soft-border: #2f6f67;
-    --track-off: #3a4654;
-    --track-off-border: #45525f;
-    --header-bg: rgba(14, 18, 23, 0.94);
-    --chart-bg: #111821;
-    --chart-grid: #25303d;
+    --accent-soft: #1e4743;
+    --accent-soft-border: #3d7d75;
+    --track-off: #465466;
+    --track-off-border: #526174;
+    --header-bg: rgba(21, 27, 35, 0.94);
+    --chart-bg: #1b2430;
+    --chart-grid: #354253;
     --chart-axis: #9aa6b5;
     --chart-ink: #e6ebf2;
-    --chart-tooltip-bg: rgba(22, 28, 36, .97);
-    --chart-tooltip-border: #3a4654;
-    --chart-dot-fill: #111821;
-    --chart-label-halo: #111821;
-    --chart-hover-line: #64748b;
+    --chart-tooltip-bg: rgba(29, 37, 48, .97);
+    --chart-tooltip-border: #4a586b;
+    --chart-dot-fill: #1b2430;
+    --chart-label-halo: #1b2430;
+    --chart-hover-line: #7a8797;
     --chart-selection-fill: rgba(110, 168, 230, .14);
     --chart-shadow: drop-shadow(0 8px 18px rgba(0, 0, 0, .35));
 }
