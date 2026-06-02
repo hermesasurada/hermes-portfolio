@@ -14,7 +14,7 @@ from .dividend_schedule import consolidated_dividend_events, event_schedule_date
 from .paths import KST
 from .prices import latest_prices
 from .queries import clean_account_ids, load_holding_rows
-from .tickers import normalize_yfinance_symbol, ticker_currency
+from .tickers import account_label, normalize_yfinance_symbol, ticker_currency
 
 DIVIDEND_CACHE_HOURS = 24
 DIVIDEND_LOOKBACK_DAYS = 30
@@ -714,6 +714,7 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
                     "pay_date_estimated": bool(event.get("pay_date_estimated")),
                     "ex_date_estimated": bool(event.get("ex_date_estimated")),
                     "member": holding["member"],
+                    "target": f"{holding['member']} {account_label(holding['member'], holding['account_type'], holding['account_name'])}",
                     "account_id": holding["account_id"],
                     "ticker": event["ticker"],
                     "currency": currency,

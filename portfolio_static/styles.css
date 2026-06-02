@@ -615,25 +615,30 @@ th:first-child, td:first-child { text-align: left; }
   white-space: nowrap;
 }
 .dividend-list th:nth-child(1),
-.dividend-list td:nth-child(1),
-.dividend-list th:nth-child(2),
-.dividend-list td:nth-child(2) {
+.dividend-list td:nth-child(1) {
   text-align: center;
   width: 6.4%;
 }
 .dividend-list th:nth-child(3),
 .dividend-list td:nth-child(3) {
-  width: 6.2%;
+  width: 8.2%;
 }
 .dividend-list th:nth-child(4),
 .dividend-list td:nth-child(4) {
-  width: 8.2%;
-}
-.dividend-list th:nth-child(5),
-.dividend-list td:nth-child(5) {
   width: 22%;
 }
-.dividend-list td:nth-child(5) {
+.dividend-list td:nth-child(4) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dividend-list th:nth-child(2),
+.dividend-list td:nth-child(2) {
+  width: 18%;
+  text-align: left;
+}
+.dividend-target {
+  color: var(--ink);
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
 }
