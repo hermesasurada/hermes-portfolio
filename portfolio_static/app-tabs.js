@@ -112,13 +112,13 @@ async function loadDividendsForSelection() {
   dividendLoadKey = key;
   const accounts = visibleAccounts();
   const allAccounts = selectionMode === "all";
-  document.getElementById("dividendRows").innerHTML = `<tr><td colspan="11">배당 loading...</td></tr>`;
+  document.getElementById("dividendRows").innerHTML = `<tr><td colspan="12">배당 loading...</td></tr>`;
   dividendInFlight = apiFetchDividends(accounts.map(account => account.id), allAccounts);
   try {
     dividendData = await dividendInFlight;
     renderDividendTable();
   } catch (err) {
-    document.getElementById("dividendRows").innerHTML = `<tr><td colspan="11">${esc(err.message || String(err))}</td></tr>`;
+    document.getElementById("dividendRows").innerHTML = `<tr><td colspan="12">${esc(err.message || String(err))}</td></tr>`;
   } finally {
     dividendInFlight = null;
   }
@@ -131,11 +131,11 @@ function renderDividendTable() {
   }
   const rows = [...(dividendData.rows || [])];
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
-  const empty = `<tr><td colspan="11" class="flat">예정 배당 없음</td></tr>`;
+  const empty = `<tr><td colspan="12" class="flat">예정 배당 없음</td></tr>`;
   const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : ""}">${dividendDateText(value)}</span>`;
   document.getElementById("dividendRows").innerHTML = rows.length ? groupedDividendRows(rows).map(item => item.kind === "month" ? `
     <tr class="dividend-month-row">
-      <td colspan="11">
+      <td colspan="12">
         <div class="dividend-month-summary">
           <span>${esc(item.label)}</span>
           <strong>${dividendKrwText(item.total)}</strong>
@@ -147,6 +147,7 @@ function renderDividendTable() {
       <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
       <td>${dateCell(item.row.ex_date, item.row.ex_date_estimated)}</td>
       <td>${esc(item.row.member || "-")}</td>
+      <td class="dividend-ticker">${esc(item.row.ticker || "-")}</td>
       <td>${esc(item.row.name || item.row.ticker || "-")}</td>
       <td>${dividendAmountText(item.row.amount, item.row.currency)}</td>
       <td>${fmt2.format(Number(item.row.qty) || 0)}</td>

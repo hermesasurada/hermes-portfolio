@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from portfolio_core.fundamentals import normalize_pe, parse_number
+from portfolio_core.dividend_schedule import consolidated_dividend_events
 from portfolio_core.indicators import (
     performance_pct,
     price_near_target,
@@ -184,6 +185,42 @@ def test_recent_performance_keys():
         "one_month", "three_month", "six_month", "ytd",
         "one_year", "three_year", "five_year",
     }
+
+
+def test_seibro_record_date_converts_to_ex_and_estimated_pay_date():
+    import portfolio_core.dividend_schedule as schedule
+
+    original_today = schedule.today
+    try:
+        schedule.today = lambda: date(2026, 6, 2)
+        event_rows = [
+            {
+                "ticker": "005380.KS",
+                "ex_date": "2026-05-31",
+                "pay_date": None,
+                "amount": None,
+                "currency": "KRW",
+                "source": "seibro",
+            }
+        ]
+        history_rows = [
+            {
+                "ticker": "005380.KS",
+                "ex_date": "2025-05-29",
+                "pay_date": None,
+                "amount": 2500.0,
+                "currency": "KRW",
+                "source": "kr-history",
+            }
+        ]
+        events = consolidated_dividend_events(event_rows, history_rows)
+        hyundai = next(event for event in events if event["ticker"] == "005380.KS")
+        assert hyundai["ex_date"] == "2026-05-29"
+        assert hyundai["pay_date"] == "2026-06-30"
+        assert hyundai["pay_date_estimated"] is True
+        assert hyundai["amount"] == 2500.0
+    finally:
+        schedule.today = original_today
 
 
 # --- quote parsing: behaviour-preservation regression -----------------------
