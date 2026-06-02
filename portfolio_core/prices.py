@@ -158,6 +158,22 @@ def extended_change_from_quote(quote_row: dict, regular_hours: bool) -> dict:
     }
 
 
+def regular_change_from_quote(quote_row: dict) -> dict:
+    regular_price = quote_row.get("regularMarketPrice")
+    previous_close = quote_row.get("regularMarketPreviousClose")
+    if regular_price in (None, 0) or previous_close in (None, 0):
+        return {}
+    regular_price = float(regular_price)
+    previous_close = float(previous_close)
+    change = regular_price - previous_close
+    return {
+        "regular_price": regular_price,
+        "regular_previous_price": previous_close,
+        "regular_change": change,
+        "regular_change_pct": change / previous_close * 100,
+    }
+
+
 def fetch_us_live_quotes(symbols: list[str], include_extended: bool, regular_hours: bool) -> dict[str, dict]:
     mode = "regular" if regular_hours else "extended"
     now_ts = datetime.now().timestamp()
@@ -185,6 +201,7 @@ def fetch_us_live_quotes(symbols: list[str], include_extended: bool, regular_hou
                     "source": source,
                     "market_state": quote_row.get("marketState"),
                     "fetched_ts": now_ts,
+                    **regular_change_from_quote(quote_row),
                     **extended_change_from_quote(quote_row, regular_hours),
                 }
                 with US_LIVE_QUOTE_LOCK:
@@ -205,6 +222,7 @@ def fetch_us_live_quotes(symbols: list[str], include_extended: bool, regular_hou
                         "source": source or "yf-live",
                         "market_state": info.get("marketState"),
                         "fetched_ts": now_ts,
+                        **regular_change_from_quote(info),
                         **extended_change_from_quote(info, regular_hours),
                     }
                     with US_LIVE_QUOTE_LOCK:
@@ -237,6 +255,10 @@ def apply_us_live_prices(prices: dict[str, dict], ticker_rows: list[sqlite3.Row]
         current = prices.get(ticker)
         if current:
             for key in (
+                "regular_price",
+                "regular_previous_price",
+                "regular_change",
+                "regular_change_pct",
                 "extended_price",
                 "extended_base_price",
                 "extended_change",
@@ -255,6 +277,10 @@ def apply_us_live_prices(prices: dict[str, dict], ticker_rows: list[sqlite3.Row]
                 "market_state": live.get("market_state"),
                 "previous_price": None,
                 "previous_date": None,
+                "regular_price": live.get("regular_price"),
+                "regular_previous_price": live.get("regular_previous_price"),
+                "regular_change": live.get("regular_change"),
+                "regular_change_pct": live.get("regular_change_pct"),
                 "extended_price": live.get("extended_price"),
                 "extended_base_price": live.get("extended_base_price"),
                 "extended_change": live.get("extended_change"),

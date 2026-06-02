@@ -24,11 +24,13 @@ from portfolio_core.indicators import (
 )
 from portfolio_core.price_store import infer_category
 from portfolio_core.prices import (
+    apply_us_live_prices,
     extended_change_from_quote,
     extended_quote_pick,
     fx_previous_rates,
     fx_rates,
     live_price_from_quote,
+    regular_change_from_quote,
 )
 from portfolio_core.tickers import (
     account_kind,
@@ -238,6 +240,60 @@ def test_extended_quote_pick_and_change():
     assert extended_change_from_quote(pre, regular_hours=True) == {}
     # nothing to pick
     assert extended_quote_pick({"marketState": "REGULAR"}) == (None, None)
+
+
+def test_regular_change_from_quote_stays_separate_from_extended():
+    row = {
+        "marketState": "PRE",
+        "regularMarketPrice": 200.0,
+        "regularMarketPreviousClose": 199.0,
+        "preMarketPrice": 210.0,
+    }
+    regular = regular_change_from_quote(row)
+    extended = extended_change_from_quote(row, regular_hours=False)
+    assert round(regular["regular_change_pct"], 6) == round((200.0 - 199.0) / 199.0 * 100, 6)
+    assert round(extended["extended_change_pct"], 6) == 5.0
+
+
+def test_apply_us_live_prices_keeps_regular_change_when_extended_is_applied():
+    import portfolio_core.prices as price_module
+
+    original_fetch = price_module.fetch_us_live_quotes
+    try:
+        price_module.fetch_us_live_quotes = lambda symbols, include_extended, regular_hours: {
+            "AAPL": {
+                "price": 210.0,
+                "source": "yf-pre",
+                "market_state": "PRE",
+                "regular_price": 200.0,
+                "regular_previous_price": 199.0,
+                "regular_change": 1.0,
+                "regular_change_pct": (200.0 - 199.0) / 199.0 * 100,
+                "extended_price": 210.0,
+                "extended_base_price": 200.0,
+                "extended_change": 10.0,
+                "extended_change_pct": 5.0,
+                "extended_source": "yf-pre",
+            }
+        }
+        prices = {
+            "AAPL": {
+                "price": 199.0,
+                "date": "2026-06-01",
+                "source": "db",
+                "previous_price": 198.0,
+                "previous_date": "2026-05-29",
+            }
+        }
+        rows = [{"ticker": "AAPL", "currency": "USD"}]
+        meta = apply_us_live_prices(prices, rows, include_extended=True, regular_hours=False)
+        assert meta["live_count"] == 1
+        assert prices["AAPL"]["price"] == 210.0
+        assert prices["AAPL"]["regular_change_pct"] != prices["AAPL"]["extended_change_pct"]
+        assert round(prices["AAPL"]["regular_change_pct"], 6) == round((200.0 - 199.0) / 199.0 * 100, 6)
+        assert prices["AAPL"]["extended_change_pct"] == 5.0
+    finally:
+        price_module.fetch_us_live_quotes = original_fetch
 
 
 # --- scope rules (single source shared by validation + API) -----------------

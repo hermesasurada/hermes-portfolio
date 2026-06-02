@@ -171,8 +171,13 @@ function watchlistRowForAccount(tickerMeta, account) {
   const currentPrice = Number.isFinite(price) ? price : null;
   const previous = Number(tickerMeta.previous_price);
   const previousPrice = Number.isFinite(previous) ? previous : null;
-  const change = currentPrice != null && previousPrice ? currentPrice - previousPrice : null;
-  const changePct = change != null && previousPrice ? change / previousPrice * 100 : null;
+  const fallbackChange = currentPrice != null && previousPrice ? currentPrice - previousPrice : null;
+  const serverChange = Number(tickerMeta.change);
+  const serverChangePct = Number(tickerMeta.change_pct);
+  const change = Number.isFinite(serverChange) ? serverChange : fallbackChange;
+  const changePct = Number.isFinite(serverChangePct)
+    ? serverChangePct
+    : fallbackChange != null && previousPrice ? fallbackChange / previousPrice * 100 : null;
   const currency = tickerMeta.currency || "USD";
   const fxRate = Number(data?.fx?.[currency] || 1);
   const assetClass = tickerAssetClass(tickerMeta.ticker, tickerMeta.name, tickerMeta.category);
