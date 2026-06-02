@@ -15,6 +15,8 @@ from portfolio_core.collectors import (
     fetch_price,
     fetch_yahoo_earnings_date,
 )
+from portfolio_core.db import connect, ensure_dividend_tables
+from portfolio_core.dividends import refresh_dividend_events
 from portfolio_core.price_store import (
     CATEGORIES,
     earnings_update_due_tickers,
@@ -113,6 +115,39 @@ def collect_earnings_dates(
     return fetched, errors
 
 
+def load_dividend_tickers(tickers: list[str] | None = None) -> list[str]:
+    wanted = {ticker.strip().upper() for ticker in tickers or [] if ticker and ticker.strip()}
+    filter_sql = ""
+    params: list[object] = []
+    if wanted:
+        placeholders = ",".join("?" for _ in wanted)
+        filter_sql = f"AND UPPER(h.ticker) IN ({placeholders})"
+        params.extend(sorted(wanted))
+    with connect() as conn:
+        ensure_dividend_tables(conn)
+        rows = conn.execute(
+            f"""
+            SELECT DISTINCT UPPER(h.ticker) AS ticker
+            FROM holdings h
+            WHERE h.ticker IS NOT NULL
+              AND TRIM(h.ticker) <> ''
+              AND COALESCE(h.qty, 0) > 0
+              {filter_sql}
+            ORDER BY ticker
+            """,
+            params,
+        ).fetchall()
+    return [row["ticker"] for row in rows]
+
+
+def collect_dividend_events(tickers: list[str] | None = None) -> int:
+    dividend_tickers = load_dividend_tickers(tickers)
+    if not dividend_tickers:
+        return 0
+    refresh_dividend_events(dividend_tickers)
+    return len(dividend_tickers)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Collect portfolio prices into stock_history.db and price_cache.json.")
     parser.add_argument(
@@ -123,6 +158,7 @@ def main() -> int:
     parser.add_argument("--ticker", action="append", help="Limit to a ticker. Can be repeated.")
     parser.add_argument("--history-start", default="20250101", help="FDR start date for Korean stock history.")
     parser.add_argument("--skip-earnings", action="store_true", help="Do not update earnings dates.")
+    parser.add_argument("--skip-dividends", action="store_true", help="Do not update dividend event cache.")
     parser.add_argument("--force-earnings", action="store_true", help="Refresh earnings dates even if recently updated.")
     parser.add_argument("--earnings-max-age-hours", type=float, default=24, help="Refresh earnings dates older than this many hours.")
     args = parser.parse_args()
@@ -151,6 +187,10 @@ def main() -> int:
         updated_earnings = update_earnings_dates(earnings_entries)
         if updated_earnings:
             print(f"Updated {updated_earnings} earnings dates")
+    if not args.skip_dividends:
+        dividend_count = collect_dividend_events(args.ticker)
+        if dividend_count:
+            print(f"Checked dividend events for {dividend_count} held tickers")
 
     print(f"Updated {len(fetched)} tickers / {row_count} daily rows")
     all_errors = errors + [f"{ticker}:earnings" for ticker in earnings_errors]

@@ -169,6 +169,45 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(logo_path.read_bytes())
         return True
 
+    def query_values(self, query: dict[str, list[str]], key: str) -> list[str]:
+        values: list[str] = []
+        for value in query.get(key) or []:
+            values.extend(part for part in value.split(",") if part)
+        return values
+
+    def api_portfolio(self, query: dict[str, list[str]]) -> dict:
+        us_extended = (query.get("us_extended") or ["0"])[0] in {"1", "true", "yes", "on"}
+        return load_portfolio(us_extended=us_extended)
+
+    def api_stats(self, query: dict[str, list[str]]) -> dict:
+        return load_stats(self.query_values(query, "tickers"))
+
+    def api_chart(self, query: dict[str, list[str]]) -> dict:
+        ticker = (query.get("ticker") or [""])[0]
+        return load_price_chart(ticker)
+
+    def api_account_performance(self, query: dict[str, list[str]]) -> dict:
+        return load_account_performance(self.query_values(query, "account_ids"))
+
+    def api_dividends(self, query: dict[str, list[str]]) -> dict:
+        return load_dividends(self.query_values(query, "account_ids"))
+
+    def api_transactions(self, query: dict[str, list[str]]) -> dict:
+        account_id = (query.get("account_id") or [None])[0]
+        ticker = (query.get("ticker") or [None])[0]
+        return load_transactions(account_id, ticker, self.query_values(query, "account_ids"))
+
+    def api_watchlist_lookup(self, query: dict[str, list[str]]) -> dict:
+        q = (query.get("q") or [""])[0]
+        return {"ticker": lookup_ticker(q)}
+
+    def post_transactions(self) -> dict:
+        return add_transaction(self.read_json(), portfolio_loader=load_portfolio)
+
+    def post_watchlist(self) -> dict:
+        payload = self.read_json()
+        return add_watchlist_async(payload.get("tickers") or [])
+
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         path = parsed.path
@@ -180,43 +219,17 @@ class Handler(BaseHTTPRequestHandler):
             if path.startswith("/logos/"):
                 self.send_logo(Path(path).name)
                 return
-            if path == "/api/portfolio":
-                us_extended = (query.get("us_extended") or ["0"])[0] in {"1", "true", "yes", "on"}
-                self.send_json(load_portfolio(us_extended=us_extended))
-                return
-            if path == "/api/stats":
-                tickers = []
-                for value in query.get("tickers") or []:
-                    tickers.extend(part for part in value.split(",") if part)
-                self.send_json(load_stats(tickers))
-                return
-            if path == "/api/chart":
-                ticker = (query.get("ticker") or [""])[0]
-                self.send_json(load_price_chart(ticker))
-                return
-            if path == "/api/account-performance":
-                account_ids = []
-                for value in query.get("account_ids") or []:
-                    account_ids.extend(part for part in value.split(",") if part)
-                self.send_json(load_account_performance(account_ids))
-                return
-            if path == "/api/dividends":
-                account_ids = []
-                for value in query.get("account_ids") or []:
-                    account_ids.extend(part for part in value.split(",") if part)
-                self.send_json(load_dividends(account_ids))
-                return
-            if path == "/api/transactions":
-                account_id = (query.get("account_id") or [None])[0]
-                ticker = (query.get("ticker") or [None])[0]
-                account_ids = []
-                for value in query.get("account_ids") or []:
-                    account_ids.extend(part for part in value.split(",") if part)
-                self.send_json(load_transactions(account_id, ticker, account_ids))
-                return
-            if path == "/api/watchlist/lookup":
-                q = (query.get("q") or [""])[0]
-                self.send_json({"ticker": lookup_ticker(q)})
+            get_routes = {
+                "/api/portfolio": self.api_portfolio,
+                "/api/stats": self.api_stats,
+                "/api/chart": self.api_chart,
+                "/api/account-performance": self.api_account_performance,
+                "/api/dividends": self.api_dividends,
+                "/api/transactions": self.api_transactions,
+                "/api/watchlist/lookup": self.api_watchlist_lookup,
+            }
+            if path in get_routes:
+                self.send_json(get_routes[path](query))
                 return
             if path in {"/", "/index.html"}:
                 self.send_file(INDEX_HTML, "text/html; charset=utf-8")
@@ -231,12 +244,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         path = urlparse(self.path).path
         try:
-            if path == "/api/transactions":
-                self.send_json(add_transaction(self.read_json(), portfolio_loader=load_portfolio))
-                return
-            if path == "/api/watchlist":
-                payload = self.read_json()
-                self.send_json(add_watchlist_async(payload.get("tickers") or []))
+            post_routes = {
+                "/api/transactions": self.post_transactions,
+                "/api/watchlist": self.post_watchlist,
+            }
+            if path in post_routes:
+                self.send_json(post_routes[path]())
                 return
             self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
         except ValueError as exc:

@@ -1,0 +1,154 @@
+function statsRows(rows) {
+  return rows.map(row => {
+    const stats = statsData[row.ticker] || {};
+    const rsi = stats.rsi || {};
+    const bb = stats.bollinger_pband || {};
+    const perf = stats.performance || {};
+    const isEtf = (row.assetClass || row.asset_class) === "etf";
+    const marketCap = isEtf ? null : Number(stats.market_cap);
+    return {
+      ...row,
+      market_cap: marketCap,
+      market_cap_usd: toUsd(marketCap, row.currency),
+      dividend_yield: isEtf ? null : stats.dividend_yield,
+      next_earnings_date: stats.next_earnings_date || row.next_earnings_date || null,
+      rsi_day: rsi.day,
+      rsi_week: rsi.week,
+      rsi_month: rsi.month,
+      bb_day: bb.day,
+      bb_week: bb.week,
+      bb_month: bb.month,
+      trailing_pe: isEtf ? null : stats.trailing_pe,
+      forward_pe: isEtf ? null : stats.forward_pe,
+      perf_1m: perf.one_month,
+      perf_3m: perf.three_month,
+      perf_6m: perf.six_month,
+      perf_ytd: perf.ytd,
+      perf_1y: perf.one_year,
+      perf_3y: perf.three_year,
+      perf_5y: perf.five_year
+    };
+  });
+}
+
+function hasMissingTechnicalStats(stats) {
+  if (!stats) return true;
+  const rsi = stats.rsi || {};
+  const bb = stats.bollinger_pband || {};
+  return ["day", "week", "month"].some(key => !Number.isFinite(Number(rsi[key])) || !Number.isFinite(Number(bb[key])));
+}
+
+async function loadStatsForRows(rows) {
+  const tickers = Array.from(new Set(rows.map(row => row.ticker).filter(Boolean))).sort();
+  const missing = tickers.filter(ticker => !statsData[ticker] || (!statsFetchedTickers.has(ticker) && hasMissingTechnicalStats(statsData[ticker])));
+  const key = missing.join(",");
+  if (!missing.length || statsLoadKey === key || statsInFlight) return;
+  statsLoadKey = key;
+  document.getElementById("statsRows").innerHTML = `<tr><td colspan="18">통계 loading...</td></tr>`;
+  statsInFlight = (async () => {
+    const payload = await apiFetchStats(missing);
+    statsData = { ...statsData, ...(payload.stats || {}) };
+    missing.forEach(ticker => statsFetchedTickers.add(ticker));
+    renderStatsTable(rows);
+  })();
+  try {
+    await statsInFlight;
+  } catch (err) {
+    document.getElementById("statsRows").innerHTML = `<tr><td colspan="18">${esc(err.message || String(err))}</td></tr>`;
+  } finally {
+    statsInFlight = null;
+  }
+}
+
+function renderStatsTable(baseRows = null) {
+  const rows = statsRows(baseRows || filteredRows());
+  sortRows(rows);
+  const tickers = Array.from(new Set(rows.map(row => row.ticker).filter(Boolean))).sort();
+  if (tickers.some(ticker => !statsData[ticker] || (!statsFetchedTickers.has(ticker) && hasMissingTechnicalStats(statsData[ticker])))) loadStatsForRows(rows);
+  if (statsInFlight && !rows.some(row => statsData[row.ticker])) return;
+  document.getElementById("statsRows").innerHTML = rows.map(r => `
+    <tr>
+      <td>
+        <div class="ticker-cell">
+          ${logoMarkup(r)}
+          <span class="ticker-text">
+            <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
+              <span class="asset-name">${r.name}</span>
+              <span class="ticker-symbol">${r.ticker}</span>
+            </a>
+          </span>
+        </div>
+      </td>
+      <td>${marketCapMarkup(r)}</td>
+      <td>${dividendYieldText(r.dividend_yield)}</td>
+      <td>${indicatorText(r.rsi_day, "rsi")}</td>
+      <td>${indicatorText(r.rsi_week, "rsi")}</td>
+      <td>${indicatorText(r.rsi_month, "rsi")}</td>
+      <td>${indicatorText(r.bb_day, "bb")}</td>
+      <td>${indicatorText(r.bb_week, "bb")}</td>
+      <td>${indicatorText(r.bb_month, "bb")}</td>
+      <td>${peText(r.trailing_pe)}</td>
+      <td>${peText(r.forward_pe)}</td>
+      <td>${signedPercentText(r.perf_1m, 1)}</td>
+      <td>${signedPercentText(r.perf_3m, 0)}</td>
+      <td>${signedPercentText(r.perf_6m, 0)}</td>
+      <td>${signedPercentText(r.perf_ytd, 0)}</td>
+      <td>${signedPercentText(r.perf_1y, 0)}</td>
+      <td>${signedPercentText(r.perf_3y, 0)}</td>
+      <td>${signedPercentText(r.perf_5y, 0)}</td>
+    </tr>
+  `).join("");
+  bindChartLinks();
+}
+
+function dividendSelectionKey() {
+  if (selectionMode === "all") return "all";
+  return Array.from(selectedAccounts).sort((a, b) => String(a).localeCompare(String(b), "ko-KR", { numeric: true })).join(",");
+}
+
+async function loadDividendsForSelection() {
+  const key = dividendSelectionKey();
+  if (dividendInFlight || dividendLoadKey === key) return;
+  dividendLoadKey = key;
+  const accounts = visibleAccounts();
+  const allAccounts = selectionMode === "all";
+  document.getElementById("dividendRows").innerHTML = `<tr><td colspan="12">배당 loading...</td></tr>`;
+  dividendInFlight = apiFetchDividends(accounts.map(account => account.id), allAccounts);
+  try {
+    dividendData = await dividendInFlight;
+    renderDividendTable();
+  } catch (err) {
+    document.getElementById("dividendRows").innerHTML = `<tr><td colspan="12">${esc(err.message || String(err))}</td></tr>`;
+  } finally {
+    dividendInFlight = null;
+  }
+}
+
+function renderDividendTable() {
+  if (dividendLoadKey !== dividendSelectionKey() || !dividendData) {
+    loadDividendsForSelection();
+    return;
+  }
+  const rows = [...(dividendData.rows || [])];
+  sortRows(rows);
+  document.getElementById("rowCount").textContent = `${rows.length} rows`;
+  const empty = `<tr><td colspan="12" class="flat">예정 배당 없음</td></tr>`;
+  const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : ""}">${shortDateText(value)}</span>`;
+  document.getElementById("dividendRows").innerHTML = rows.length ? rows.map(r => `
+    <tr>
+      <td>${dateCell(r.pay_date, r.pay_date_estimated)}</td>
+      <td>${dateCell(r.ex_date, r.ex_date_estimated)}</td>
+      <td>${esc(r.member || "-")}</td>
+      <td class="dividend-ticker"><a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">${esc(r.ticker)}</a></td>
+      <td>${esc(r.name || r.ticker || "-")}</td>
+      <td>${dividendAmountText(r.amount, r.currency)}</td>
+      <td>${fmt2.format(Number(r.qty) || 0)}</td>
+      <td>${dividendMoneyText(r.gross, r.currency)}</td>
+      <td class="tax-rate">${numberText(r.tax_rate, 2)}</td>
+      <td class="net-dividend">${dividendMoneyText(r.net, r.currency)}</td>
+      <td class="fx-rate">${dividendFxText(r.fx_rate)}</td>
+      <td class="net-krw">${dividendKrwText(r.net_krw)}</td>
+    </tr>
+  `).join("") : empty;
+  bindChartLinks();
+}

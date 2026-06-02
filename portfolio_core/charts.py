@@ -5,6 +5,7 @@ from itertools import groupby
 from .constants import FX_DEFAULT_RATES, MARKET_INDEXES
 from .db import connect
 from .prices import latest_prices
+from .queries import account_filter_clause, clean_account_ids, load_holding_rows
 from .tickers import account_label, ticker_currency
 
 
@@ -78,13 +79,8 @@ def load_price_chart(ticker: str) -> dict:
 
 
 def load_account_performance(account_ids: list[str] | None = None) -> dict:
-    cleaned_account_ids = [int(value) for value in (account_ids or []) if str(value).strip()]
-    account_filter = ""
-    params: list[object] = []
-    if cleaned_account_ids:
-        placeholders = ",".join("?" for _ in cleaned_account_ids)
-        account_filter = f"WHERE a.id IN ({placeholders})"
-        params.extend(cleaned_account_ids)
+    cleaned_account_ids = clean_account_ids(account_ids)
+    account_filter, params = account_filter_clause(cleaned_account_ids)
 
     with connect() as conn:
         prices = latest_prices(conn)
@@ -97,22 +93,7 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
             """,
             params,
         ).fetchall()
-        holding_rows = conn.execute(
-            f"""
-            SELECT
-                h.account_id,
-                h.ticker,
-                h.qty,
-                COALESCE(h.currency, tk.currency, '') AS currency,
-                COALESCE(tk.name, h.ticker) AS name
-            FROM holdings h
-            JOIN accounts a ON a.id = h.account_id
-            LEFT JOIN tickers tk ON tk.ticker = h.ticker
-            {account_filter}
-            ORDER BY h.account_id, h.ticker
-            """,
-            params,
-        ).fetchall()
+        holding_rows = load_holding_rows(conn, cleaned_account_ids, positive_only=True)
 
         holdings = [
             {

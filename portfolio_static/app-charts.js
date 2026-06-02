@@ -1,51 +1,5 @@
-// Performance & price-chart rendering — extracted from app.js (#12).
-// Classic script loaded before app.js; shares the global scope (state and
-// helpers live in app.js and resolve at call time).
-
-function pctChartLabel(value) {
-  if (!Number.isFinite(value)) return "-";
-  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
-  return `${sign}${fmt2.format(Math.abs(value))}%`;
-}
-
-// (#6) vertical gridline cadence by selected range: 1m→주, 3y/5y→분기, 그 외→월
-function perfGridUnit(rangeKey) {
-  if (rangeKey === "1m") return "week";
-  if (rangeKey === "3y" || rangeKey === "5y") return "quarter";
-  return "month";
-}
-
-function perfVerticalGrid(minTime, maxTime, rangeKey) {
-  const unit = perfGridUnit(rangeKey);
-  const start = new Date(minTime);
-  let cursor;
-  if (unit === "week") {
-    cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-    cursor.setDate(cursor.getDate() - ((cursor.getDay() + 6) % 7)); // back to Monday
-    if (cursor.getTime() < minTime) cursor.setDate(cursor.getDate() + 7);
-  } else if (unit === "quarter") {
-    cursor = new Date(start.getFullYear(), Math.floor(start.getMonth() / 3) * 3, 1);
-    if (cursor.getTime() < minTime) cursor.setMonth(cursor.getMonth() + 3);
-  } else {
-    cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-    if (cursor.getTime() < minTime) cursor.setMonth(cursor.getMonth() + 1);
-  }
-  const lines = [];
-  let guard = 0;
-  while (cursor.getTime() <= maxTime && guard++ < 240) {
-    lines.push(cursor.getTime());
-    if (unit === "week") cursor.setDate(cursor.getDate() + 7);
-    else if (unit === "quarter") cursor.setMonth(cursor.getMonth() + 3);
-    else cursor.setMonth(cursor.getMonth() + 1);
-  }
-  return { unit, lines };
-}
-
-function perfGridLabel(time, unit) {
-  const d = new Date(time);
-  if (unit === "week") return `${d.getMonth() + 1}/${d.getDate()}`;
-  return `${String(d.getFullYear()).slice(2)}.${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
+// Performance chart rendering. Classic script loaded before app.js; shares
+// the global scope and resolves state/helpers at call time.
 
 function accountPerformanceTitle(payload) {
   const accounts = payload?.accounts || [];
