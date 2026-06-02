@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime, timedelta, timezone
 from typing import Iterable
 
 from .constants import FX_TICKERS, MARKET_INDEXES
-from .db import connect, ensure_ticker_metadata_columns
-from .paths import KST, PRICE_CACHE_PATH
+from .db import connect, ensure_collector_runs_table, ensure_ticker_metadata_columns
+from .paths import KST
 from .tickers import ticker_currency
 
 CATEGORIES = ("fx", "crypto", "overseas", "kr", "index")
@@ -102,27 +101,22 @@ def save_daily_prices(ticker: str, rows: Iterable[tuple[str, float]], source: st
     return len(clean_rows)
 
 
-def load_price_cache() -> dict:
-    if not PRICE_CACHE_PATH.exists():
-        return {"updated": "", "prices": {}}
-    try:
-        return json.loads(PRICE_CACHE_PATH.read_text())
-    except Exception:
-        return {"updated": "", "prices": {}}
-
-
-def save_price_cache(cache: dict) -> None:
-    PRICE_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    PRICE_CACHE_PATH.write_text(json.dumps(cache, indent=2, ensure_ascii=False) + "\n")
-
-
 def update_price_cache(entries: Iterable[tuple[str, float, str, str]]) -> None:
-    cache = load_price_cache()
-    prices = cache.setdefault("prices", {})
-    for ticker, price, currency, source in entries:
-        prices[ticker] = {"price": float(price), "currency": currency, "source": source}
-    cache["updated"] = datetime.now(timezone.utc).isoformat()
-    save_price_cache(cache)
+    clean_entries = list(entries)
+    with connect() as conn:
+        ensure_collector_runs_table(conn)
+        conn.execute(
+            """
+            INSERT INTO collector_runs (name, updated_at, item_count, meta_json)
+            VALUES ('price', ?, ?, NULL)
+            ON CONFLICT(name) DO UPDATE SET
+                updated_at = excluded.updated_at,
+                item_count = excluded.item_count,
+                meta_json = excluded.meta_json
+            """,
+            (datetime.now(timezone.utc).isoformat(), len(clean_entries)),
+        )
+        conn.commit()
 
 
 def update_earnings_dates(entries: Iterable[tuple[str, str | None]]) -> int:

@@ -20,7 +20,7 @@
 
 코드와 분리되어 `~/.hermes/data/` 에 보관됩니다 (`portfolio_core/paths.py`):
 - `~/.hermes/data/stock_history.db` — 가격/보유/거래 DB
-- `~/.hermes/data/portfolio_v2/` — 로고 캐시, price_cache.json, logo_fallbacks.json
+- `~/.hermes/data/portfolio_v2/` — 로고 캐시, logo_fallbacks.json
 
 ## 실행
 

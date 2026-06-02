@@ -149,7 +149,7 @@ def collect_dividend_events(tickers: list[str] | None = None) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Collect portfolio prices into stock_history.db and price_cache.json.")
+    parser = argparse.ArgumentParser(description="Collect portfolio prices into stock_history.db.")
     parser.add_argument(
         "--category",
         action="append",

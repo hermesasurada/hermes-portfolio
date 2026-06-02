@@ -67,6 +67,19 @@ def ensure_price_indexes(conn: sqlite3.Connection) -> None:
     )
 
 
+def ensure_collector_runs_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS collector_runs (
+            name TEXT PRIMARY KEY,
+            updated_at TEXT NOT NULL,
+            item_count INTEGER NOT NULL DEFAULT 0,
+            meta_json TEXT
+        )
+        """
+    )
+
+
 def ensure_transaction_columns(conn: sqlite3.Connection) -> None:
     columns = {row["name"] for row in conn.execute("PRAGMA table_info(transactions)").fetchall()}
     if "apply_to_holdings" not in columns:
@@ -129,5 +142,6 @@ def initialize_schema() -> None:
         ensure_transaction_columns(conn)
         ensure_dividend_tables(conn)
         ensure_price_indexes(conn)
+        ensure_collector_runs_table(conn)
         ensure_market_index_tickers(conn)
         conn.commit()

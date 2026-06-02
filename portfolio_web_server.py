@@ -111,7 +111,20 @@ class Handler(BaseHTTPRequestHandler):
     def request_elapsed(self) -> float:
         return time.perf_counter() - getattr(self, "_request_started_at", time.perf_counter())
 
+    def should_log_access(self, status: int | str) -> bool:
+        try:
+            status_code = int(status)
+        except (TypeError, ValueError):
+            status_code = 0
+        if status_code >= 400:
+            return True
+        if self.path.startswith(("/static/", "/logos/")):
+            return self.request_elapsed() >= 1.0
+        return True
+
     def log_access(self, status: int | str, body_len: int = 0) -> None:
+        if not self.should_log_access(status):
+            return
         logging.info(
             "%s %s %s %.3fs %dB client=%s",
             self.command,

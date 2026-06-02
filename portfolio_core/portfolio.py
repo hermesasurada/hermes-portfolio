@@ -5,17 +5,9 @@ from datetime import datetime
 
 from .db import connect
 from .paths import DB_PATH, KST
-from .prices import (
-    apply_us_live_prices,
-    fx_previous_rates,
-    fx_rates,
-    fx_updated_at,
-    latest_prices,
-    price_cache_updated_at,
-    price_updated_at,
-    us_market_status,
-)
+from .prices import fx_previous_rates, fx_rates, fx_updated_at, latest_prices, price_cache_updated_at, price_updated_at
 from .tickers import account_kind, account_label, account_scope, asset_class, ticker_currency, ticker_scope
+from .us_live_quotes import apply_us_live_prices, us_market_status
 
 
 def default_logo_hint(ticker: str, name: str) -> dict[str, str | None]:
@@ -43,6 +35,49 @@ def ensure_account(members: dict[str, dict], row) -> dict:
             "holdings": [],
         },
     )
+
+
+def price_view(
+    ticker: str,
+    currency: str,
+    prices: dict[str, dict],
+    rates: dict[str, float],
+    previous_rates: dict[str, float],
+) -> dict:
+    current = prices.get(ticker, {})
+    current_price = current.get("price")
+    previous_price = current.get("previous_price")
+    regular_price = current.get("regular_price")
+    regular_previous_price = current.get("regular_previous_price")
+    change = None
+    change_pct = None
+    change_krw_pct = None
+    if current_price is not None and previous_price not in (None, 0):
+        change = float(current_price) - float(previous_price)
+        change_pct = change / float(previous_price) * 100
+    if regular_price is not None and regular_previous_price not in (None, 0):
+        change_pct = (float(regular_price) - float(regular_previous_price)) / float(regular_previous_price) * 100
+
+    rate = rates.get(currency, 1.0)
+    previous_rate = previous_rates.get(currency, rate)
+    change_pct_price = regular_price if regular_price is not None else current_price
+    change_pct_previous = regular_previous_price if regular_previous_price is not None else previous_price
+    if change_pct_price is not None and change_pct_previous not in (None, 0) and previous_rate not in (None, 0):
+        previous_krw_price = float(change_pct_previous) * float(previous_rate)
+        current_krw_price = float(change_pct_price) * float(rate)
+        if currency != "KRW" and previous_krw_price:
+            change_krw_pct = (current_krw_price - previous_krw_price) / previous_krw_price * 100
+
+    return {
+        "price_record": current,
+        "current_price": current_price,
+        "previous_price": previous_price,
+        "change": change,
+        "change_pct": change_pct,
+        "change_krw_pct": change_krw_pct,
+        "fx_rate": rate,
+        "previous_fx_rate": previous_rate,
+    }
 
 
 def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str], dict[str, str | None]] | None = None) -> dict:
@@ -105,30 +140,12 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
 
     for row in rows:
         currency = row["currency"] or ticker_currency(row["ticker"])
-        current = prices.get(row["ticker"], {})
-        current_price = current.get("price")
-        previous_price = current.get("previous_price")
-        regular_price = current.get("regular_price")
-        regular_previous_price = current.get("regular_previous_price")
-        change = None
-        change_pct = None
-        change_krw_pct = None
-        if current_price is not None and previous_price not in (None, 0):
-            change = float(current_price) - float(previous_price)
-            change_pct = change / float(previous_price) * 100
-        if regular_price is not None and regular_previous_price not in (None, 0):
-            change_pct = (float(regular_price) - float(regular_previous_price)) / float(regular_previous_price) * 100
+        view = price_view(row["ticker"], currency, prices, rates, previous_rates)
+        current = view["price_record"]
+        current_price = view["current_price"]
         qty = float(row["qty"] or 0)
         value = qty * float(current_price) if current_price is not None else None
-        rate = rates.get(currency, 1.0)
-        previous_rate = previous_rates.get(currency, rate)
-        change_pct_price = regular_price if regular_price is not None else current_price
-        change_pct_previous = regular_previous_price if regular_previous_price is not None else previous_price
-        if change_pct_price is not None and change_pct_previous not in (None, 0) and previous_rate not in (None, 0):
-            previous_krw_price = float(change_pct_previous) * float(previous_rate)
-            current_krw_price = float(change_pct_price) * float(rate)
-            if currency != "KRW" and previous_krw_price:
-                change_krw_pct = (current_krw_price - previous_krw_price) / previous_krw_price * 100
+        rate = view["fx_rate"]
         value_krw = value * rate if value is not None else None
         name = row["holding_name"] or row["ticker"]
 
@@ -146,11 +163,11 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
             "asset_class": asset_class(row["ticker"], name),
             "logo": logo_hint(row["ticker"], name),
             "current_price": current_price,
-            "previous_price": previous_price,
+            "previous_price": view["previous_price"],
             "previous_date": current.get("previous_date"),
-            "change": change,
-            "change_pct": change_pct,
-            "change_krw_pct": change_krw_pct,
+            "change": view["change"],
+            "change_pct": view["change_pct"],
+            "change_krw_pct": view["change_krw_pct"],
             "extended_price": current.get("extended_price"),
             "extended_base_price": current.get("extended_base_price"),
             "extended_change": current.get("extended_change"),
@@ -158,7 +175,7 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
             "extended_source": current.get("extended_source"),
             "extended_market_state": current.get("extended_market_state"),
             "fx_rate": rate,
-            "previous_fx_rate": previous_rate,
+            "previous_fx_rate": view["previous_fx_rate"],
             "price_source": current.get("source"),
             "value": value,
             "value_krw": value_krw,
@@ -177,24 +194,10 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
 
     ticker_payload = []
     for row in ticker_rows:
-        ticker_price = prices.get(row["ticker"], {})
-        ticker_current_price = ticker_price.get("price")
-        ticker_previous_price = ticker_price.get("previous_price")
-        ticker_regular_price = ticker_price.get("regular_price")
-        ticker_regular_previous = ticker_price.get("regular_previous_price")
-        ticker_change = None
-        ticker_change_pct = None
-        if ticker_current_price is not None and ticker_previous_price not in (None, 0):
-            ticker_change = float(ticker_current_price) - float(ticker_previous_price)
-            ticker_change_pct = ticker_change / float(ticker_previous_price) * 100
-        if ticker_regular_price is not None and ticker_regular_previous not in (None, 0):
-            ticker_change_pct = (
-                (float(ticker_regular_price) - float(ticker_regular_previous))
-                / float(ticker_regular_previous)
-                * 100
-            )
         ticker_currency_value = row["currency"] or ticker_currency(row["ticker"])
         ticker_name = row["name"] or row["ticker"]
+        view = price_view(row["ticker"], ticker_currency_value, prices, rates, previous_rates)
+        ticker_price = view["price_record"]
         ticker_payload.append(
             {
                 "ticker": row["ticker"],
@@ -207,11 +210,11 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
                     row["category"],
                     ticker_currency_value,
                 ),
-                "current_price": ticker_current_price,
-                "previous_price": ticker_previous_price,
+                "current_price": view["current_price"],
+                "previous_price": view["previous_price"],
                 "previous_date": ticker_price.get("previous_date"),
-                "change": ticker_change,
-                "change_pct": ticker_change_pct,
+                "change": view["change"],
+                "change_pct": view["change_pct"],
                 "extended_change_pct": ticker_price.get("extended_change_pct"),
                 "next_earnings_date": row["next_earnings_date"],
                 "earnings_updated_at": row["earnings_updated_at"],

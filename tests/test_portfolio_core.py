@@ -24,12 +24,11 @@ from portfolio_core.indicators import (
     shift_months,
 )
 from portfolio_core.price_store import infer_category
-from portfolio_core.prices import (
+from portfolio_core.prices import fx_previous_rates, fx_rates
+from portfolio_core.us_live_quotes import (
     apply_us_live_prices,
     extended_change_from_quote,
     extended_quote_pick,
-    fx_previous_rates,
-    fx_rates,
     live_price_from_quote,
     regular_change_from_quote,
 )
@@ -324,7 +323,7 @@ def test_regular_change_from_quote_stays_separate_from_extended():
 
 
 def test_apply_us_live_prices_keeps_regular_change_when_extended_is_applied():
-    import portfolio_core.prices as price_module
+    import portfolio_core.us_live_quotes as price_module
 
     original_fetch = price_module.fetch_us_live_quotes
     try:
@@ -365,7 +364,7 @@ def test_apply_us_live_prices_keeps_regular_change_when_extended_is_applied():
 
 
 def test_fetch_us_live_quotes_uses_stale_cache_when_batch_fails():
-    import portfolio_core.prices as price_module
+    import portfolio_core.us_live_quotes as price_module
 
     original_batch = price_module.yahoo_quote_batch
     original_cache = dict(price_module.US_LIVE_QUOTE_CACHE)
