@@ -700,10 +700,11 @@ function renderDividendTable() {
   sortRows(rows);
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
   const empty = `<tr><td colspan="12" class="flat">예정 배당 없음</td></tr>`;
+  const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : ""}">${shortDateText(value)}</span>`;
   document.getElementById("dividendRows").innerHTML = rows.length ? rows.map(r => `
     <tr>
-      <td>${shortDateText(r.pay_date)}</td>
-      <td>${shortDateText(r.ex_date)}</td>
+      <td>${dateCell(r.pay_date, r.pay_date_estimated)}</td>
+      <td>${dateCell(r.ex_date, r.ex_date_estimated)}</td>
       <td>${esc(r.member || "-")}</td>
       <td class="dividend-ticker"><a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">${esc(r.ticker)}</a></td>
       <td>${esc(r.name || r.ticker || "-")}</td>

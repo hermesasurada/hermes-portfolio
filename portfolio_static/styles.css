@@ -595,6 +595,9 @@ th:first-child, td:first-child { text-align: left; }
 .fx-rate {
   color: var(--muted);
 }
+.estimated-date {
+  color: var(--muted);
+}
 .net-dividend,
 .net-krw {
   font-weight: 800;

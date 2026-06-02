@@ -221,6 +221,10 @@ def _seibro_attempt_due(ticker: str, status: str | None) -> bool:
     return _seibro_candidate(ticker) and "seibro" not in (status or "")
 
 
+def _kr_history_attempt_due(ticker: str, status: str | None) -> bool:
+    return _seibro_candidate(ticker) and "kr_history" not in (status or "")
+
+
 def _fetch_nasdaq_dividends(ticker: str) -> list[dict]:
     url = f"https://api.nasdaq.com/api/quote/{ticker}/dividends?assetclass=stocks"
     headers = {
@@ -456,6 +460,20 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
                     events[event["ex_date"]] = event
         except Exception:
             sources.append("seibro_error")
+        try:
+            history_events = [
+                event for event in _fetch_yahoo_dividends(ticker)
+                if event.get("source") == "yf-history" and event.get("amount") is not None
+            ]
+            sources.append("kr_history" if history_events else "kr_history0")
+            for event in history_events:
+                if event.get("ex_date"):
+                    events.setdefault(event["ex_date"], {
+                        **event,
+                        "source": "kr-history",
+                    })
+        except Exception:
+            sources.append("kr_history_error")
     else:
         try:
             yahoo_events = _fetch_yahoo_dividends(ticker)
@@ -546,6 +564,7 @@ def refresh_dividend_events(tickers: list[str]) -> None:
                 or _nasdaq_attempt_due(ticker, statuses.get(ticker))
                 or _dividendmax_attempt_due(ticker, statuses.get(ticker))
                 or _seibro_attempt_due(ticker, statuses.get(ticker))
+                or _kr_history_attempt_due(ticker, statuses.get(ticker))
             )
         ]
         conn.commit()
@@ -559,7 +578,7 @@ def refresh_dividend_events(tickers: list[str]) -> None:
             events, status = _fetch_dividends(ticker, names.get(ticker))
             if _seibro_candidate(ticker):
                 conn.execute(
-                    "DELETE FROM dividend_events WHERE ticker = ? AND source != 'seibro'",
+                    "DELETE FROM dividend_events WHERE ticker = ? AND source NOT IN ('seibro', 'kr-history')",
                     (ticker,),
                 )
             for event in events:
@@ -610,6 +629,71 @@ def _tax_rate(currency: str) -> float:
 
 def _event_schedule_date(event) -> date | None:
     return _parse_date(event["pay_date"] or event["ex_date"])
+
+
+def _same_period_key(value: date) -> tuple[int, int]:
+    return value.month, min(value.day, 28)
+
+
+def _closest_same_period_event(event, history_rows):
+    target = _event_schedule_date(event)
+    if not target:
+        return None
+    candidates = []
+    for row in history_rows:
+        if row["ticker"] != event["ticker"] or _float_value(row["amount"]) is None:
+            continue
+        row_date = _event_schedule_date(row)
+        if not row_date or row_date >= target:
+            continue
+        if row_date.month != target.month:
+            continue
+        year_distance = abs((target.year - 1) - row_date.year)
+        day_distance = abs(min(target.day, 28) - min(row_date.day, 28))
+        candidates.append((year_distance, day_distance, -row_date.toordinal(), row))
+    if not candidates:
+        return None
+    candidates.sort()
+    return candidates[0][3]
+
+
+def _consolidated_dividend_events(event_rows, history_rows) -> list[dict]:
+    grouped: dict[tuple[str, int, int], dict] = {}
+    for event in [*event_rows, *_estimated_events(history_rows, _today() - timedelta(days=DIVIDEND_LOOKBACK_DAYS), _today() + timedelta(days=DIVIDEND_LOOKAHEAD_DAYS), event_rows)]:
+        schedule_date = _event_schedule_date(event)
+        if not schedule_date:
+            continue
+        key = (event["ticker"], schedule_date.year, schedule_date.month)
+        current = grouped.get(key)
+        candidate = dict(event)
+        candidate_amount = _float_value(candidate.get("amount"))
+        if candidate_amount is None:
+            reference = _closest_same_period_event(candidate, history_rows)
+            if reference:
+                candidate["amount"] = reference["amount"]
+                candidate["currency"] = candidate["currency"] or reference["currency"]
+                candidate["pay_date"] = candidate["pay_date"] or candidate["ex_date"]
+                candidate["pay_date_estimated"] = True
+                candidate["source"] = f"{candidate['source']}+history"
+        if candidate.get("pay_date") is None and _float_value(candidate.get("amount")) is not None:
+            candidate["pay_date"] = candidate.get("ex_date")
+            candidate["pay_date_estimated"] = True
+        if str(candidate.get("source") or "").startswith("estimated-history"):
+            candidate["pay_date_estimated"] = True
+        if not current:
+            grouped[key] = candidate
+            continue
+        current_amount = _float_value(current.get("amount"))
+        next_amount = _float_value(candidate.get("amount"))
+        if current_amount is None and next_amount is not None:
+            current["amount"] = candidate["amount"]
+            current["currency"] = current["currency"] or candidate["currency"]
+            current["pay_date"] = current.get("pay_date") or candidate.get("pay_date")
+            current["pay_date_estimated"] = current.get("pay_date_estimated") or candidate.get("pay_date_estimated")
+            current["source"] = f"{current['source']}+history" if "history" not in str(current.get("source")) else current["source"]
+        if not current.get("ex_date") and candidate.get("ex_date"):
+            current["ex_date"] = candidate["ex_date"]
+    return list(grouped.values())
 
 
 def _estimated_events(history_rows, start: date, end: date, actual_rows) -> list[dict]:
@@ -747,7 +831,10 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
         "JPY": float(prices.get("JPYKRW", {}).get("price") or FX_DEFAULT_RATES["JPY"]),
     }
     rows = []
-    dividend_events = [*event_rows, *_estimated_events(history_rows, start, end, event_rows)]
+    dividend_events = [
+        event for event in _consolidated_dividend_events(event_rows, history_rows)
+        if start <= (_event_schedule_date(event) or start) <= end
+    ]
     for event in dividend_events:
         currency = event["currency"] or ticker_currency(event["ticker"])
         amount = _float_value(event["amount"])
@@ -763,6 +850,8 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
                 {
                     "pay_date": event["pay_date"],
                     "ex_date": event["ex_date"],
+                    "pay_date_estimated": bool(event.get("pay_date_estimated")),
+                    "ex_date_estimated": bool(event.get("ex_date_estimated")),
                     "member": holding["member"],
                     "account_id": holding["account_id"],
                     "ticker": event["ticker"],
