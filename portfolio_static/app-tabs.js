@@ -132,7 +132,7 @@ function renderDividendTable() {
   const rows = [...(dividendData.rows || [])];
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
   const empty = `<tr><td colspan="12" class="flat">예정 배당 없음</td></tr>`;
-  const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : ""}">${dividendDateText(value)}</span>`;
+  const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : "confirmed-date"}">${dividendDateText(value)}</span>`;
   document.getElementById("dividendRows").innerHTML = rows.length ? groupedDividendRows(rows).map(item => item.kind === "month" ? `
     <tr class="dividend-month-row">
       <td colspan="12">
@@ -165,7 +165,7 @@ function dividendDateText(dateText) {
   if (!dateText) return "-";
   const text = String(dateText);
   if (!/^\d{4}-\d{2}-\d{2}/.test(text)) return "-";
-  return text.slice(5, 10).replace("-", ".");
+  return text.slice(5, 10).replace("-", "/");
 }
 
 function dividendMonthKey(row) {
