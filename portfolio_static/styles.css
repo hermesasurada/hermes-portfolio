@@ -591,6 +591,26 @@ th:first-child, td:first-child { text-align: left; }
   color: var(--ink);
   font-weight: 800;
 }
+.dividend-month-row td,
+tbody tr.dividend-month-row:nth-child(even) td,
+tr.dividend-month-row:hover td {
+  background: var(--surface-2);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.dividend-month-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+.dividend-month-summary strong {
+  color: var(--accent-2);
+  font-size: 13px;
+}
 .tax-rate,
 .fx-rate {
   color: var(--muted);

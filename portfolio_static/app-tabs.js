@@ -130,25 +130,66 @@ function renderDividendTable() {
     return;
   }
   const rows = [...(dividendData.rows || [])];
-  sortRows(rows);
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
   const empty = `<tr><td colspan="12" class="flat">예정 배당 없음</td></tr>`;
   const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : ""}">${shortDateText(value)}</span>`;
-  document.getElementById("dividendRows").innerHTML = rows.length ? rows.map(r => `
+  document.getElementById("dividendRows").innerHTML = rows.length ? groupedDividendRows(rows).map(item => item.kind === "month" ? `
+    <tr class="dividend-month-row">
+      <td colspan="12">
+        <div class="dividend-month-summary">
+          <span>${esc(item.label)}</span>
+          <strong>${dividendKrwText(item.total)}</strong>
+        </div>
+      </td>
+    </tr>
+  ` : `
     <tr>
-      <td>${dateCell(r.pay_date, r.pay_date_estimated)}</td>
-      <td>${dateCell(r.ex_date, r.ex_date_estimated)}</td>
-      <td>${esc(r.member || "-")}</td>
-      <td class="dividend-ticker"><a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">${esc(r.ticker)}</a></td>
-      <td>${esc(r.name || r.ticker || "-")}</td>
-      <td>${dividendAmountText(r.amount, r.currency)}</td>
-      <td>${fmt2.format(Number(r.qty) || 0)}</td>
-      <td>${dividendMoneyText(r.gross, r.currency)}</td>
-      <td class="tax-rate">${numberText(r.tax_rate, 2)}</td>
-      <td class="net-dividend">${dividendMoneyText(r.net, r.currency)}</td>
-      <td class="fx-rate">${dividendFxText(r.fx_rate)}</td>
-      <td class="net-krw">${dividendKrwText(r.net_krw)}</td>
+      <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
+      <td>${dateCell(item.row.ex_date, item.row.ex_date_estimated)}</td>
+      <td>${esc(item.row.member || "-")}</td>
+      <td class="dividend-ticker"><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(item.row.ticker)}</a></td>
+      <td>${esc(item.row.name || item.row.ticker || "-")}</td>
+      <td>${dividendAmountText(item.row.amount, item.row.currency)}</td>
+      <td>${fmt2.format(Number(item.row.qty) || 0)}</td>
+      <td>${dividendMoneyText(item.row.gross, item.row.currency)}</td>
+      <td class="tax-rate">${numberText(item.row.tax_rate, 2)}</td>
+      <td class="net-dividend">${dividendMoneyText(item.row.net, item.row.currency)}</td>
+      <td class="fx-rate">${dividendFxText(item.row.fx_rate)}</td>
+      <td class="net-krw">${dividendKrwText(item.row.net_krw)}</td>
     </tr>
   `).join("") : empty;
   bindChartLinks();
+}
+
+function dividendMonthKey(row) {
+  const text = String(row.pay_date || row.ex_date || "");
+  return /^\d{4}-\d{2}/.test(text) ? text.slice(0, 7) : "unknown";
+}
+
+function dividendMonthLabel(key) {
+  if (key === "unknown") return "날짜 미정";
+  return `${key.slice(0, 4)}년 ${Number(key.slice(5, 7))}월`;
+}
+
+function groupedDividendRows(rows) {
+  const groups = new Map();
+  rows.forEach(row => {
+    const key = dividendMonthKey(row);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(row);
+  });
+  const monthDir = sortKey === "pay_date" ? sortDir : 1;
+  return Array.from(groups.entries())
+    .sort(([a], [b]) => a.localeCompare(b) * monthDir)
+    .flatMap(([key, monthRows]) => {
+      sortRows(monthRows);
+      const total = monthRows.reduce((sum, row) => {
+        const value = Number(row.net_krw);
+        return sum + (Number.isFinite(value) ? value : 0);
+      }, 0);
+      return [
+        { kind: "month", key, label: dividendMonthLabel(key), total },
+        ...monthRows.map(row => ({ kind: "row", row }))
+      ];
+    });
 }
