@@ -1238,6 +1238,9 @@ tr:hover td { background: var(--surface-hover); }
   align-items: center;
   gap: 8px;
 }
+.watch-actions {
+  flex-wrap: wrap;
+}
 .modal-head {
   justify-content: space-between;
 }
@@ -1269,6 +1272,19 @@ tr:hover td { background: var(--surface-hover); }
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
+}
+#watchAdd.watch-add-ready {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--on-accent);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .18);
+}
+.watch-hint {
+  flex: 1 1 180px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
 }
 .watch-pending {
   list-style: none;

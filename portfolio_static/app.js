@@ -1820,18 +1820,34 @@ function renderWatchPending() {
     </li>
   `).join("");
   apply.disabled = watchPending.length === 0;
+  apply.title = watchPending.length === 0 ? "검색 결과를 추가한 뒤 적용할 수 있습니다." : `${watchPending.length}개 종목 적용`;
   list.querySelectorAll("[data-watch-remove]").forEach(btn => {
     btn.addEventListener("click", () => {
       watchPending = watchPending.filter(item => item.ticker !== btn.dataset.watchRemove);
       renderWatchPending();
     });
   });
+  updateWatchHint();
 }
 
 function setWatchStatus(message, error = false) {
   const el = document.getElementById("watchStatus");
   el.textContent = message || "";
   el.classList.toggle("error", error);
+}
+
+function updateWatchHint() {
+  const hint = document.getElementById("watchHint");
+  if (!hint) return;
+  if (watchPending.length > 0) {
+    hint.textContent = `${watchPending.length}개 종목이 적용 대기 중입니다.`;
+    return;
+  }
+  if (watchLookupResult) {
+    hint.textContent = "검색 결과를 먼저 추가한 뒤 적용하세요.";
+    return;
+  }
+  hint.textContent = "검색 후 추가하면 적용할 수 있습니다.";
 }
 
 function renderWatchLookup(item = null) {
@@ -1841,10 +1857,17 @@ function renderWatchLookup(item = null) {
   if (!item) {
     result.textContent = "-";
     add.disabled = true;
+    add.textContent = "추가";
+    add.classList.remove("watch-add-ready");
+    updateWatchHint();
     return;
   }
+  const alreadyPending = watchPending.some(row => row.ticker === item.ticker);
   result.textContent = `${item.ticker} · ${item.name} · ${item.currency} · ${item.category}`;
-  add.disabled = watchPending.some(row => row.ticker === item.ticker);
+  add.disabled = alreadyPending;
+  add.textContent = alreadyPending ? "추가됨" : "추가하기";
+  add.classList.toggle("watch-add-ready", !alreadyPending);
+  updateWatchHint();
 }
 
 function initWatchlistControls() {
