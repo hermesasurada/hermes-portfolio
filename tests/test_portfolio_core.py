@@ -223,6 +223,37 @@ def test_seibro_record_date_converts_to_ex_and_estimated_pay_date():
         schedule.today = original_today
 
 
+def test_estimated_dividend_uses_latest_amount_not_same_period_amount():
+    import portfolio_core.dividend_schedule as schedule
+
+    original_today = schedule.today
+    try:
+        schedule.today = lambda: date(2026, 6, 2)
+        history_rows = [
+            {
+                "ticker": "NVDA",
+                "ex_date": "2025-09-11",
+                "pay_date": "2025-10-02",
+                "amount": 0.01,
+                "currency": "USD",
+                "source": "nasdaq",
+            },
+            {
+                "ticker": "NVDA",
+                "ex_date": "2026-06-04",
+                "pay_date": "2026-06-26",
+                "amount": 0.25,
+                "currency": "USD",
+                "source": "nasdaq",
+            },
+        ]
+        events = consolidated_dividend_events([], history_rows)
+        estimate = next(event for event in events if event["ticker"] == "NVDA" and event["pay_date"] == "2026-10-02")
+        assert estimate["amount"] == 0.25
+    finally:
+        schedule.today = original_today
+
+
 # --- quote parsing: behaviour-preservation regression -----------------------
 def _legacy_live_price(quote_row, include_extended, regular_hours):
     """Original (pre-refactor) live_price_from_quote logic, kept here as oracle."""

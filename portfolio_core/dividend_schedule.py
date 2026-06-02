@@ -184,6 +184,17 @@ def estimated_events(history_rows, start: date, end: date, actual_rows) -> list[
     estimates = []
     seen: set[tuple[str, str]] = set()
     today_value = today()
+    latest_amount_by_ticker: dict[str, tuple[date, float, str]] = {}
+    for row in history_rows:
+        row_date = event_schedule_date(row)
+        amount = float_value(row["amount"])
+        if not row_date or row_date > end or amount is None:
+            continue
+        ticker = row["ticker"]
+        current = latest_amount_by_ticker.get(ticker)
+        if current is None or row_date > current[0]:
+            latest_amount_by_ticker[ticker] = (row_date, amount, row["currency"])
+
     for event in history_rows:
         base_date = event_schedule_date(event)
         if not base_date or base_date > today_value:
@@ -196,9 +207,10 @@ def estimated_events(history_rows, start: date, end: date, actual_rows) -> list[
         key = (event["ticker"], estimated_pay_date.isoformat())
         if key in seen:
             continue
-        amount = float_value(event["amount"])
-        if amount is None:
+        latest = latest_amount_by_ticker.get(event["ticker"])
+        if latest is None:
             continue
+        _, amount, currency = latest
         seen.add(key)
         estimates.append(
             {
@@ -206,7 +218,7 @@ def estimated_events(history_rows, start: date, end: date, actual_rows) -> list[
                 "ex_date": None,
                 "pay_date": estimated_pay_date.isoformat(),
                 "amount": amount,
-                "currency": event["currency"],
+                "currency": currency,
                 "source": "estimated-history",
             }
         )
