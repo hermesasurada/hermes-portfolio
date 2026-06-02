@@ -9,6 +9,7 @@ import logging
 import math
 import mimetypes
 import time
+from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -107,13 +108,43 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args) -> None:
         print("[%s] %s" % (self.log_date_time_string(), fmt % args))
 
+    def request_elapsed(self) -> float:
+        return time.perf_counter() - getattr(self, "_request_started_at", time.perf_counter())
+
+    def log_access(self, status: int | str, body_len: int = 0) -> None:
+        logging.info(
+            "%s %s %s %.3fs %dB client=%s",
+            self.command,
+            self.path,
+            status,
+            self.request_elapsed(),
+            body_len,
+            self.client_address[0] if self.client_address else "-",
+        )
+
+    def log_client_abort(self, status: int | str, body_len: int = 0) -> None:
+        logging.warning(
+            "%s %s client-aborted %.3fs status=%s %dB client=%s",
+            self.command,
+            self.path,
+            self.request_elapsed(),
+            status,
+            body_len,
+            self.client_address[0] if self.client_address else "-",
+        )
+
     def send_bytes(self, body: bytes, content_type: str, status: int = 200) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.wfile.write(body)
+        except BrokenPipeError:
+            self.log_client_abort(status, len(body))
+            raise
+        self.log_access(status, len(body))
 
     def send_json(self, payload: dict, status: int = 200) -> None:
         self.send_bytes(
@@ -132,7 +163,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", cache_control)
         self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.wfile.write(body)
+        except BrokenPipeError:
+            self.log_client_abort(200, len(body))
+            raise
+        self.log_access(200, len(body))
         return True
 
     def read_json(self) -> dict:
@@ -166,7 +202,13 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(logo_path.stat().st_size))
         self.send_header("Cache-Control", "public, max-age=86400")
         self.end_headers()
-        self.wfile.write(logo_path.read_bytes())
+        body = logo_path.read_bytes()
+        try:
+            self.wfile.write(body)
+        except BrokenPipeError:
+            self.log_client_abort(200, len(body))
+            raise
+        self.log_access(200, len(body))
         return True
 
     def query_values(self, query: dict[str, list[str]], key: str) -> list[str]:
@@ -209,6 +251,7 @@ class Handler(BaseHTTPRequestHandler):
         return add_watchlist_async(payload.get("tickers") or [])
 
     def do_GET(self) -> None:
+        self._request_started_at = time.perf_counter()
         parsed = urlparse(self.path)
         path = parsed.path
         query = parse_qs(parsed.query)
@@ -235,13 +278,19 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_file(INDEX_HTML, "text/html; charset=utf-8")
                 return
             self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
+        except BrokenPipeError:
+            return
         except ValueError as exc:
             self.send_json({"error": str(exc)}, 400)
         except Exception:
             logging.exception("GET %s failed", self.path)
-            self.send_json({"error": "Internal server error"}, 500)
+            try:
+                self.send_json({"error": HTTPStatus.INTERNAL_SERVER_ERROR.phrase}, 500)
+            except BrokenPipeError:
+                return
 
     def do_POST(self) -> None:
+        self._request_started_at = time.perf_counter()
         path = urlparse(self.path).path
         try:
             post_routes = {
@@ -252,11 +301,16 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(post_routes[path]())
                 return
             self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
+        except BrokenPipeError:
+            return
         except ValueError as exc:
             self.send_json({"error": str(exc)}, 400)
         except Exception:
             logging.exception("POST %s failed", self.path)
-            self.send_json({"error": "Internal server error"}, 500)
+            try:
+                self.send_json({"error": HTTPStatus.INTERNAL_SERVER_ERROR.phrase}, 500)
+            except BrokenPipeError:
+                return
 
 
 def main() -> None:

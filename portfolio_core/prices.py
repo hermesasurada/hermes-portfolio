@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 import threading
 import urllib.request
@@ -178,6 +179,7 @@ def fetch_us_live_quotes(symbols: list[str], include_extended: bool, regular_hou
     mode = "regular" if regular_hours else "extended"
     now_ts = datetime.now().timestamp()
     fresh: dict[str, dict] = {}
+    stale: dict[str, dict] = {}
     missing: list[str] = []
     with US_LIVE_QUOTE_LOCK:
         for symbol in symbols:
@@ -186,6 +188,8 @@ def fetch_us_live_quotes(symbols: list[str], include_extended: bool, regular_hou
             if cached and now_ts - cached.get("fetched_ts", 0) < US_LIVE_CACHE_SECONDS:
                 fresh[symbol] = cached
             else:
+                if cached:
+                    stale[symbol] = cached
                 missing.append(symbol)
 
     if missing:
@@ -208,28 +212,12 @@ def fetch_us_live_quotes(symbols: list[str], include_extended: bool, regular_hou
                     US_LIVE_QUOTE_CACHE[(symbol, mode)] = item
                 fresh[symbol] = item
         except Exception as exc:
-            print(f"[us-live] batch quote failed: {exc}")
-            try:
-                import yfinance as yf
-
-                for symbol in missing:
-                    info = yf.Ticker(symbol).info or {}
-                    price, source = live_price_from_quote(info, include_extended, regular_hours)
-                    if price is None:
-                        continue
-                    item = {
-                        "price": price,
-                        "source": source or "yf-live",
-                        "market_state": info.get("marketState"),
-                        "fetched_ts": now_ts,
-                        **regular_change_from_quote(info),
-                        **extended_change_from_quote(info, regular_hours),
-                    }
-                    with US_LIVE_QUOTE_LOCK:
-                        US_LIVE_QUOTE_CACHE[(symbol, mode)] = item
-                    fresh[symbol] = item
-            except Exception as fallback_exc:
-                print(f"[us-live] yfinance fallback failed: {fallback_exc}")
+            logging.warning(
+                "[us-live] batch quote failed for %d symbols; using stale cache/db prices: %s",
+                len(missing),
+                exc,
+            )
+            fresh.update(stale)
     return fresh
 
 

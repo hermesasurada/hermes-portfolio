@@ -364,6 +364,33 @@ def test_apply_us_live_prices_keeps_regular_change_when_extended_is_applied():
         price_module.fetch_us_live_quotes = original_fetch
 
 
+def test_fetch_us_live_quotes_uses_stale_cache_when_batch_fails():
+    import portfolio_core.prices as price_module
+
+    original_batch = price_module.yahoo_quote_batch
+    original_cache = dict(price_module.US_LIVE_QUOTE_CACHE)
+    stale_item = {
+        "price": 123.0,
+        "source": "yf-pre",
+        "market_state": "PRE",
+        "fetched_ts": 1,
+        "extended_price": 123.0,
+        "extended_base_price": 120.0,
+        "extended_change": 3.0,
+        "extended_change_pct": 2.5,
+    }
+    try:
+        price_module.US_LIVE_QUOTE_CACHE.clear()
+        price_module.US_LIVE_QUOTE_CACHE[("AAPL", "extended")] = stale_item
+        price_module.yahoo_quote_batch = lambda symbols: (_ for _ in ()).throw(RuntimeError("blocked"))
+        result = price_module.fetch_us_live_quotes(["AAPL"], include_extended=True, regular_hours=False)
+        assert result["AAPL"] is stale_item
+    finally:
+        price_module.yahoo_quote_batch = original_batch
+        price_module.US_LIVE_QUOTE_CACHE.clear()
+        price_module.US_LIVE_QUOTE_CACHE.update(original_cache)
+
+
 # --- scope rules (single source shared by validation + API) -----------------
 def test_account_scope():
     assert account_scope("overseas") == "overseas"
