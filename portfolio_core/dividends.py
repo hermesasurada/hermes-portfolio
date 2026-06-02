@@ -123,6 +123,59 @@ def _add_one_year(value: date) -> date:
         return value.replace(year=value.year + 1, day=28)
 
 
+KR_MARKET_HOLIDAY_OVERRIDES = {
+    "2026-05-04",
+}
+
+
+def _kr_market_holidays(year: int) -> set[date]:
+    fixed_days = (
+        (1, 1),
+        (3, 1),
+        (5, 1),
+        (5, 5),
+        (6, 6),
+        (8, 15),
+        (10, 3),
+        (10, 9),
+        (12, 25),
+    )
+    holidays = {date(year, month, day) for month, day in fixed_days}
+    holidays.update(
+        parsed
+        for parsed in (_parse_date(value) for value in KR_MARKET_HOLIDAY_OVERRIDES)
+        if parsed and parsed.year == year
+    )
+    return holidays
+
+
+def _is_kr_business_day(value: date) -> bool:
+    return value.weekday() < 5 and value not in _kr_market_holidays(value.year)
+
+
+def _nth_kr_business_day(year: int, month: int, nth: int) -> date:
+    current = date(year, month, 1)
+    count = 0
+    while current.month == month:
+        if _is_kr_business_day(current):
+            count += 1
+            if count == nth:
+                return current
+        current += timedelta(days=1)
+    return date(year, month, 1)
+
+
+def _next_month(value: date) -> tuple[int, int]:
+    if value.month == 12:
+        return value.year + 1, 1
+    return value.year, value.month + 1
+
+
+def _estimated_kr_monthly_etf_pay_date(record_date: date) -> date:
+    year, month = _next_month(record_date)
+    return _nth_kr_business_day(year, month, 2)
+
+
 def _float_value(value: Any) -> float | None:
     try:
         number = float(value)
@@ -657,14 +710,36 @@ def _closest_same_period_event(event, history_rows):
     return candidates[0][3]
 
 
+def _monthly_distribution_tickers(history_rows) -> set[str]:
+    months_by_ticker: dict[str, set[tuple[int, int]]] = {}
+    cutoff = _today() - timedelta(days=550)
+    for row in history_rows:
+        if row["source"] != "kr-history" or _float_value(row["amount"]) is None:
+            continue
+        row_date = _event_schedule_date(row)
+        if not row_date or row_date < cutoff:
+            continue
+        months_by_ticker.setdefault(row["ticker"], set()).add((row_date.year, row_date.month))
+    return {ticker for ticker, months in months_by_ticker.items() if len(months) >= 8}
+
+
+def _apply_monthly_kr_pay_date(candidate: dict, monthly_tickers: set[str]) -> None:
+    if candidate.get("ticker") not in monthly_tickers:
+        return
+    source = str(candidate.get("source") or "")
+    if not any(marker in source for marker in ("kr-history", "estimated-history", "seibro+history")):
+        return
+    record_date = _parse_date(candidate.get("ex_date") or candidate.get("pay_date"))
+    if not record_date:
+        return
+    candidate["pay_date"] = _estimated_kr_monthly_etf_pay_date(record_date).isoformat()
+    candidate["pay_date_estimated"] = True
+
+
 def _consolidated_dividend_events(event_rows, history_rows) -> list[dict]:
     grouped: dict[tuple[str, int, int], dict] = {}
+    monthly_tickers = _monthly_distribution_tickers(history_rows)
     for event in [*event_rows, *_estimated_events(history_rows, _today() - timedelta(days=DIVIDEND_LOOKBACK_DAYS), _today() + timedelta(days=DIVIDEND_LOOKAHEAD_DAYS), event_rows)]:
-        schedule_date = _event_schedule_date(event)
-        if not schedule_date:
-            continue
-        key = (event["ticker"], schedule_date.year, schedule_date.month)
-        current = grouped.get(key)
         candidate = dict(event)
         candidate_amount = _float_value(candidate.get("amount"))
         if candidate_amount is None:
@@ -672,7 +747,6 @@ def _consolidated_dividend_events(event_rows, history_rows) -> list[dict]:
             if reference:
                 candidate["amount"] = reference["amount"]
                 candidate["currency"] = candidate["currency"] or reference["currency"]
-                candidate["pay_date"] = candidate["pay_date"] or candidate["ex_date"]
                 candidate["pay_date_estimated"] = True
                 candidate["source"] = f"{candidate['source']}+history"
         if candidate.get("pay_date") is None and _float_value(candidate.get("amount")) is not None:
@@ -680,6 +754,12 @@ def _consolidated_dividend_events(event_rows, history_rows) -> list[dict]:
             candidate["pay_date_estimated"] = True
         if str(candidate.get("source") or "").startswith("estimated-history"):
             candidate["pay_date_estimated"] = True
+        _apply_monthly_kr_pay_date(candidate, monthly_tickers)
+        schedule_date = _event_schedule_date(candidate)
+        if not schedule_date:
+            continue
+        key = (candidate["ticker"], schedule_date.year, schedule_date.month)
+        current = grouped.get(key)
         if not current:
             grouped[key] = candidate
             continue
