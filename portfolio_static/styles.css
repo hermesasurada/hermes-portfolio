@@ -653,7 +653,7 @@ th:first-child, td:first-child { text-align: left; }
 }
 .dividend-list th:nth-child(3),
 .dividend-list td:nth-child(3) {
-  width: 8.2%;
+  width: 6.4%;
 }
 .dividend-list th:nth-child(4),
 .dividend-list td:nth-child(4) {
@@ -755,6 +755,13 @@ tr.dividend-month-row:hover td {
 .net-dividend,
 .net-krw {
   font-weight: 800;
+  text-align: right;
+}
+.dividend-list th:nth-child(9),
+.dividend-list th:nth-child(11),
+.dividend-list td:nth-child(9),
+.dividend-list td:nth-child(11) {
+  text-align: right;
 }
 #detailTableWrap th:first-child,
 #detailTableWrap td:first-child { min-width: 210px; }
