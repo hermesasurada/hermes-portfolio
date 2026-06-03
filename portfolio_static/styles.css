@@ -530,8 +530,8 @@ main {
 }
 table { width: 100%; border-collapse: collapse; min-width: 660px; }
 table.stats-list {
-  width: max(100%, 1260px);
-  min-width: 1260px;
+  width: max(100%, 1364px);
+  min-width: 1364px;
   table-layout: fixed;
 }
 .stats-list th,
@@ -550,8 +550,12 @@ table.stats-list {
 .stats-list th:nth-child(2), .stats-list td:nth-child(2) { width: 118px; }
 .stats-list th:nth-child(3), .stats-list td:nth-child(3) { width: 66px; }
 .stats-list th:nth-child(n+4), .stats-list td:nth-child(n+4) { width: 62px; }
-.stats-list th:nth-child(n+4):nth-child(-n+9),
-.stats-list td:nth-child(n+4):nth-child(-n+9) {
+/* β, β″ (4,5번 컬럼) */
+.stats-list th:nth-child(4), .stats-list td:nth-child(4),
+.stats-list th:nth-child(5), .stats-list td:nth-child(5) { width: 52px; }
+/* RSI×3 + BB×3 (6~11번 컬럼) — 좁게 */
+.stats-list th:nth-child(n+6):nth-child(-n+11),
+.stats-list td:nth-child(n+6):nth-child(-n+11) {
   width: 44px;
   padding-left: 1px;
   padding-right: 1px;
@@ -1751,8 +1755,8 @@ tbody tr.index-row td:first-child::before {
     overflow-y: auto;
   }
   #statsTableWrap .stats-list {
-    width: 1260px;
-    min-width: 1260px;
+    width: 1364px;
+    min-width: 1364px;
   }
   #dividendTableWrap {
     padding: 0;

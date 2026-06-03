@@ -13,6 +13,8 @@ function statsRows(rows) {
       market_cap: marketCap,
       market_cap_usd: toUsd(marketCap, row.currency),
       dividend_yield: hideFundamentals ? null : stats.dividend_yield,
+      beta: stats.beta,
+      beta_adj: stats.beta_adj,
       next_earnings_date: stats.next_earnings_date || row.next_earnings_date || null,
       rsi_day: rsi.day,
       rsi_week: rsi.week,
@@ -46,7 +48,7 @@ async function loadStatsForRows(rows) {
   const key = missing.join(",");
   if (!missing.length || statsLoadKey === key || statsInFlight) return;
   statsLoadKey = key;
-  document.getElementById("statsRows").innerHTML = `<tr><td colspan="18">통계 loading...</td></tr>`;
+  document.getElementById("statsRows").innerHTML = `<tr><td colspan="20">통계 loading...</td></tr>`;
   statsInFlight = (async () => {
     const payload = await apiFetchStats(missing);
     statsData = { ...statsData, ...(payload.stats || {}) };
@@ -56,7 +58,7 @@ async function loadStatsForRows(rows) {
   try {
     await statsInFlight;
   } catch (err) {
-    document.getElementById("statsRows").innerHTML = `<tr><td colspan="18">${esc(err.message || String(err))}</td></tr>`;
+    document.getElementById("statsRows").innerHTML = `<tr><td colspan="20">${esc(err.message || String(err))}</td></tr>`;
   } finally {
     statsInFlight = null;
   }
@@ -83,6 +85,8 @@ function renderStatsTable(baseRows = null) {
       </td>
       <td>${marketCapMarkup(r)}</td>
       <td>${dividendYieldText(r.dividend_yield)}</td>
+      <td>${betaText(r.beta)}</td>
+      <td>${betaText(r.beta_adj)}</td>
       <td>${indicatorText(r.rsi_day, "rsi")}</td>
       <td>${indicatorText(r.rsi_week, "rsi")}</td>
       <td>${indicatorText(r.rsi_month, "rsi")}</td>

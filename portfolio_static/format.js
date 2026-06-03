@@ -144,6 +144,9 @@ function intText(v) {
 function peText(v) {
   return v != null && Number.isFinite(Number(v)) ? Number(v).toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : "-";
 }
+function betaText(v) {
+  return v != null && Number.isFinite(Number(v)) ? Number(v).toFixed(2) : "-";
+}
 function indicatorText(v, kind) {
   if (v == null || !Number.isFinite(Number(v))) return "-";
   const n = Number(v);
