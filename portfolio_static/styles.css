@@ -649,15 +649,15 @@ th:first-child, td:first-child { text-align: left; }
 .dividend-list th:nth-child(1),
 .dividend-list td:nth-child(1) {
   text-align: center;
-  width: 6.4%;
+  width: 6.2%;
 }
 .dividend-list th:nth-child(3),
 .dividend-list td:nth-child(3) {
-  width: 6.4%;
+  width: 5.6%;
 }
 .dividend-list th:nth-child(4),
 .dividend-list td:nth-child(4) {
-  width: 22%;
+  width: 21.4%;
 }
 .dividend-list td:nth-child(4) {
   overflow: hidden;
@@ -665,8 +665,16 @@ th:first-child, td:first-child { text-align: left; }
 }
 .dividend-list th:nth-child(2),
 .dividend-list td:nth-child(2) {
-  width: 18%;
+  width: 17.6%;
   text-align: left;
+}
+.dividend-list th:nth-child(9),
+.dividend-list td:nth-child(9) {
+  width: 8%;
+}
+.dividend-list th:nth-child(11),
+.dividend-list td:nth-child(11) {
+  width: 9.8%;
 }
 .dividend-target {
   color: var(--ink);
@@ -744,7 +752,7 @@ tr.dividend-month-row:hover td {
   color: var(--muted);
 }
 .estimated-date {
-  color: var(--muted);
+  color: color-mix(in srgb, var(--muted) 62%, var(--panel));
   font-weight: 600;
   font-style: italic;
 }
@@ -756,6 +764,8 @@ tr.dividend-month-row:hover td {
 .net-krw {
   font-weight: 800;
   text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 .dividend-list th:nth-child(9),
 .dividend-list th:nth-child(11),
