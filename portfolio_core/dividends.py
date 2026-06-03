@@ -28,7 +28,12 @@ def _float_value(value: Any) -> float | None:
     return number if number > 0 else None
 
 
-def _tax_rate(currency: str) -> float:
+TAX_FREE_ACCOUNT_TYPES = {"pension_kr", "retirement_kr"}
+
+
+def _tax_rate(currency: str, account_type: str | None = None) -> float:
+    if account_type in TAX_FREE_ACCOUNT_TYPES:
+        return 0.0
     if currency == "KRW":
         return 15.4
     if currency == "JPY":
@@ -114,8 +119,8 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
         currency = event["currency"] or ticker_currency(event["ticker"])
         amount = _float_value(event["amount"])
         rate = rates.get(currency, 1.0)
-        tax_rate = _tax_rate(currency)
         for holding in holdings_by_ticker.get(event["ticker"], []):
+            tax_rate = _tax_rate(currency, holding["account_type"])
             qty = holding["qty"]
             gross = amount * qty if amount is not None else None
             tax = gross * tax_rate / 100 if gross is not None else None

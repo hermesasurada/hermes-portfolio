@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from portfolio_core.fundamentals import normalize_pe, parse_number
+from portfolio_core.dividends import _tax_rate
 from portfolio_core.dividend_schedule import consolidated_dividend_events
 from portfolio_core.indicators import (
     performance_pct,
@@ -251,6 +252,13 @@ def test_estimated_dividend_uses_latest_amount_not_same_period_amount():
         assert estimate["amount"] == 0.25
     finally:
         schedule.today = original_today
+
+
+def test_pension_dividend_tax_rate_is_zero():
+    assert _tax_rate("KRW", "pension_kr") == 0.0
+    assert _tax_rate("USD", "retirement_kr") == 0.0
+    assert _tax_rate("KRW", "kr_individual") == 15.4
+    assert _tax_rate("USD", "overseas") == 15.0
 
 
 # --- quote parsing: behaviour-preservation regression -----------------------
