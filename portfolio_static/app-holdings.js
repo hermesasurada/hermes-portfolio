@@ -1,5 +1,5 @@
 function ensureTabSortKey(tab) {
-  const currentSet = tab === "stats" ? statsSortKeys : tab === "dividend" ? dividendSortKeys : detailSortKeys;
+  const currentSet = tab === "stats" ? new Set([...statsSortKeys, ...detailSortKeys]) : tab === "dividend" ? dividendSortKeys : detailSortKeys;
   const state = sortState[tab] || sortState.detail;
   if (currentSet.has(state.key)) return;
   state.key = tab === "dividend" ? "pay_date" : tab === "stats" ? "market_cap_usd" : "value_krw";
