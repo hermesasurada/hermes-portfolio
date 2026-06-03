@@ -5,12 +5,14 @@ function statsRows(rows) {
     const bb = stats.bollinger_pband || {};
     const perf = stats.performance || {};
     const isEtf = (row.assetClass || row.asset_class) === "etf";
-    const marketCap = isEtf ? null : Number(stats.market_cap);
+    const isIndex = (row.assetClass || row.asset_class) === "index";
+    const hideFundamentals = isEtf || isIndex;
+    const marketCap = hideFundamentals ? null : Number(stats.market_cap);
     return {
       ...row,
       market_cap: marketCap,
       market_cap_usd: toUsd(marketCap, row.currency),
-      dividend_yield: isEtf ? null : stats.dividend_yield,
+      dividend_yield: hideFundamentals ? null : stats.dividend_yield,
       next_earnings_date: stats.next_earnings_date || row.next_earnings_date || null,
       rsi_day: rsi.day,
       rsi_week: rsi.week,
@@ -18,8 +20,8 @@ function statsRows(rows) {
       bb_day: bb.day,
       bb_week: bb.week,
       bb_month: bb.month,
-      trailing_pe: isEtf ? null : stats.trailing_pe,
-      forward_pe: isEtf ? null : stats.forward_pe,
+      trailing_pe: hideFundamentals ? null : stats.trailing_pe,
+      forward_pe: hideFundamentals ? null : stats.forward_pe,
       perf_1m: perf.one_month,
       perf_3m: perf.three_month,
       perf_6m: perf.six_month,
@@ -61,8 +63,14 @@ async function loadStatsForRows(rows) {
 }
 
 function renderStatsTable(baseRows = null) {
-  const rows = statsRows(baseRows || filteredRows());
+  let rows = statsRows(baseRows || filteredRows());
+  const indexOrder = new Map(["SP500", "NASDAQ", "KOSPI"].map((ticker, index) => [ticker, index]));
+  const topIndexes = rows
+    .filter(row => indexOrder.has(String(row.ticker || "").toUpperCase()))
+    .sort((a, b) => indexOrder.get(String(a.ticker).toUpperCase()) - indexOrder.get(String(b.ticker).toUpperCase()));
+  rows = rows.filter(row => !indexOrder.has(String(row.ticker || "").toUpperCase()));
   sortRows(rows, "stats");
+  rows = topIndexes.concat(rows);
   const tickers = Array.from(new Set(rows.map(row => row.ticker).filter(Boolean))).sort();
   if (tickers.some(ticker => !statsData[ticker] || (!statsFetchedTickers.has(ticker) && hasMissingTechnicalStats(statsData[ticker])))) loadStatsForRows(rows);
   if (statsInFlight && !rows.some(row => statsData[row.ticker])) return;

@@ -277,6 +277,12 @@ document.getElementById("fxAdjustedToggle").addEventListener("change", () => {
   syncFilterToggleControls();
   render();
 });
+document.getElementById("showIndexesToggle").checked = storageGet(detailStorage.showIndexes) === "true";
+document.getElementById("showIndexesToggle").addEventListener("change", () => {
+  storageSet(detailStorage.showIndexes, String(document.getElementById("showIndexesToggle").checked));
+  syncFilterToggleControls();
+  render();
+});
 document.getElementById("currencyFilter").value = storageGet(detailStorage.currencyFilter) || "all";
 document.getElementById("currencyFilter").addEventListener("change", () => {
   storageSet(detailStorage.currencyFilter, currencyFilterValue());

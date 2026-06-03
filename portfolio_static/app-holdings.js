@@ -49,6 +49,9 @@ function krwRate(row) {
 function fxAdjustedEnabled() {
   return document.getElementById("fxAdjustedToggle")?.checked || false;
 }
+function showIndexesEnabled() {
+  return document.getElementById("showIndexesToggle")?.checked || false;
+}
 function performanceDetailEnabled() {
   return document.getElementById("performanceDetailToggle")?.checked || false;
 }
@@ -157,6 +160,7 @@ function watchlistRowForAccount(tickerMeta, account) {
     is_watchlist: true,
     ticker: tickerMeta.ticker,
     name: tickerMeta.name || tickerMeta.ticker,
+    category: tickerMeta.category || null,
     qty: null,
     avg_price: null,
     invested: null,
@@ -186,13 +190,20 @@ function watchlistRowForAccount(tickerMeta, account) {
 function watchlistRows() {
   const held = new Set(flattenHoldings().map(row => String(row.ticker || "").toUpperCase()));
   return (data?.tickers || [])
-    .filter(t => t.ticker && !held.has(String(t.ticker).toUpperCase()) && t.category !== "fx")
+    .filter(t => t.ticker && !held.has(String(t.ticker).toUpperCase()) && t.category !== "fx" && t.category !== "index")
     .flatMap(t => {
       const accounts = watchlistAccountsForTicker(t);
       if (selectionMode === "all") return [watchlistRowForAccount(t, accounts[0] || null)];
       const selectedMatches = accounts.filter(account => selectedAccounts.has(account.id));
       return selectedMatches.map(account => watchlistRowForAccount(t, account));
     });
+}
+function indexRows() {
+  const order = new Map(["SP500", "NASDAQ", "KOSPI"].map((ticker, index) => [ticker, index]));
+  return (data?.tickers || [])
+    .filter(t => t.ticker && t.category === "index")
+    .map(t => watchlistRowForAccount(t, null))
+    .sort((a, b) => (order.get(String(a.ticker).toUpperCase()) ?? 99) - (order.get(String(b.ticker).toUpperCase()) ?? 99));
 }
 function visibleAccounts() {
   const accounts = flattenAccounts();
@@ -472,13 +483,14 @@ function filteredRows(options = {}) {
   if (!options.ignoreAccount && selectionMode !== "all") rows = rows.filter(r => selectedAccounts.has(r.accountId));
   if (activeOnly) rows = rows.filter(r => (r.qty || 0) > 0);
   if (!options.ignoreCurrency && currencyFilter !== "all") rows = rows.filter(r => r.currency === currencyFilter);
-  rows = rows.map(row => ({
+  const enrichRows = sourceRows => sourceRows.map(row => ({
       ...row,
       display_change_pct: holdingChangePct(row, fxAdjusted),
       change_krw: holdingChangeKrw(row, fxAdjusted),
       current_price_krw: holdingUnitKrw(row),
       next_earnings_date: row.next_earnings_date || null
     }));
+  rows = enrichRows(rows);
   if (!options.ignoreAggregate) rows = aggregateRows(rows);
   const totalKrw = rows.reduce((sum, row) => sum + (Number(row.value_krw) || 0), 0);
   rows = rows.map(row => ({
@@ -494,6 +506,14 @@ function filteredRows(options = {}) {
     const bn = Number.isFinite(bv) ? bv : -Infinity;
     return (an - bn) * sortDir;
   });
+  if (showIndexesEnabled() && !options.ignoreIndexes) {
+    let indexes = indexRows();
+    if (!options.ignoreCurrency && currencyFilter !== "all") indexes = indexes.filter(r => r.currency === currencyFilter);
+    indexes = enrichRows(indexes);
+    if (!options.ignoreAggregate) indexes = aggregateRows(indexes);
+    const indexTickers = new Set(indexes.map(r => String(r.ticker || "").toUpperCase()));
+    rows = indexes.concat(rows.filter(r => !indexTickers.has(String(r.ticker || "").toUpperCase())));
+  }
   return rows;
 }
 
@@ -515,6 +535,7 @@ function syncFilterToggleControls() {
   [
     ["activeOnlyToggle", "activeOnlyControl"],
     ["fxAdjustedToggle", "fxAdjustedControl"],
+    ["showIndexesToggle", "showIndexesControl"],
     ["performanceDetailToggle", "performanceDetailControl"]
   ].forEach(([toggleId, controlId]) => {
     const toggle = document.getElementById(toggleId);
@@ -537,7 +558,7 @@ function syncDetailTabs() {
   document.getElementById("chartBack").classList.toggle("hidden", !showingChart);
   document.getElementById("performanceDetailControl")?.classList.toggle("hidden", !performanceChartOpen);
   document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart);
-  ["activeOnlyControl", "fxAdjustedControl", "currencyFilterControl", "rowCount", "accountTotal"].forEach(id => {
+  ["activeOnlyControl", "fxAdjustedControl", "showIndexesControl", "currencyFilterControl", "rowCount", "accountTotal"].forEach(id => {
     document.getElementById(id)?.classList.toggle("hidden", showingChart);
   });
 }
