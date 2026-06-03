@@ -604,7 +604,7 @@ function renderTable() {
   document.getElementById("holdings").innerHTML = rows.map(r => {
     const noPosition = !hasPosition(r);
     return `
-    <tr>
+    <tr class="${tableRowClass(r)}">
       <td>
         <div class="ticker-cell">
           ${logoMarkup(r)}

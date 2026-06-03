@@ -75,7 +75,7 @@ function renderStatsTable(baseRows = null) {
   if (tickers.some(ticker => !statsData[ticker] || (!statsFetchedTickers.has(ticker) && hasMissingTechnicalStats(statsData[ticker])))) loadStatsForRows(rows);
   if (statsInFlight && !rows.some(row => statsData[row.ticker])) return;
   document.getElementById("statsRows").innerHTML = rows.map(r => `
-    <tr>
+    <tr class="${tableRowClass(r)}">
       <td>
         <div class="ticker-cell">
           ${logoMarkup(r)}

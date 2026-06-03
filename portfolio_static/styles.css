@@ -6,6 +6,9 @@
   --surface-2: #eef1f5;     /* pills, table head, tab track */
   --surface-hover: #f7f9fb; /* row hover */
   --zebra: #fbfcfddb;       /* zebra stripe */
+  --index-row-bg: #eaf3ff;
+  --index-row-hover: #ddeeff;
+  --index-row-line: #1f4e79;
   --ink: #1d2530;
   --muted: #5b6675;         /* darkened for AA contrast */
   --line: #dde3ea;
@@ -66,6 +69,9 @@
     --surface-2: #263241;
     --surface-hover: #232d3a;
     --zebra: #202a36cc;
+    --index-row-bg: #23364d;
+    --index-row-hover: #29405d;
+    --index-row-line: #6ea8e6;
     --ink: #e6ebf2;
     --muted: #9aa6b5;
     --line: #344153;
@@ -723,6 +729,28 @@ tr.dividend-month-row:hover td {
 #detailTableWrap td:first-child { min-width: 210px; }
 tbody tr:nth-child(even) td { background: var(--zebra); }
 tr:hover td { background: var(--surface-hover); }
+tbody tr.index-row td,
+tbody tr.index-row:nth-child(even) td {
+  background: var(--index-row-bg);
+  font-weight: 700;
+}
+tbody tr.index-row:hover td {
+  background: var(--index-row-hover);
+}
+tbody tr.index-row td:first-child {
+  position: relative;
+  padding-left: 14px;
+}
+tbody tr.index-row td:first-child::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 7px;
+  bottom: 7px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--index-row-line);
+}
 .toolbar {
   display: flex;
   align-items: center;

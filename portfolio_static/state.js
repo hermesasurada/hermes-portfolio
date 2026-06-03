@@ -65,3 +65,11 @@ function storageSet(key, value) {
     // 자동갱신 자체는 저장소 없이도 현재 화면에서 동작한다.
   }
 }
+
+function isIndexRow(row) {
+  return (row?.category || row?.assetClass || row?.asset_class) === "index";
+}
+
+function tableRowClass(row) {
+  return isIndexRow(row) ? "index-row" : "";
+}
