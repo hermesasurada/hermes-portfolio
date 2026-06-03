@@ -483,6 +483,12 @@ function filteredRows(options = {}) {
   if (!options.ignoreAccount && selectionMode !== "all") rows = rows.filter(r => selectedAccounts.has(r.accountId));
   if (activeOnly) rows = rows.filter(r => (r.qty || 0) > 0);
   if (!options.ignoreCurrency && currencyFilter !== "all") rows = rows.filter(r => r.currency === currencyFilter);
+  if (showIndexesEnabled() && !options.ignoreIndexes) {
+    let indexes = indexRows();
+    if (!options.ignoreCurrency && currencyFilter !== "all") indexes = indexes.filter(r => r.currency === currencyFilter);
+    const indexTickers = new Set(indexes.map(r => String(r.ticker || "").toUpperCase()));
+    rows = rows.filter(r => !indexTickers.has(String(r.ticker || "").toUpperCase())).concat(indexes);
+  }
   const enrichRows = sourceRows => sourceRows.map(row => ({
       ...row,
       display_change_pct: holdingChangePct(row, fxAdjusted),
@@ -506,14 +512,6 @@ function filteredRows(options = {}) {
     const bn = Number.isFinite(bv) ? bv : -Infinity;
     return (an - bn) * sortDir;
   });
-  if (showIndexesEnabled() && !options.ignoreIndexes) {
-    let indexes = indexRows();
-    if (!options.ignoreCurrency && currencyFilter !== "all") indexes = indexes.filter(r => r.currency === currencyFilter);
-    indexes = enrichRows(indexes);
-    if (!options.ignoreAggregate) indexes = aggregateRows(indexes);
-    const indexTickers = new Set(indexes.map(r => String(r.ticker || "").toUpperCase()));
-    rows = indexes.concat(rows.filter(r => !indexTickers.has(String(r.ticker || "").toUpperCase())));
-  }
   return rows;
 }
 

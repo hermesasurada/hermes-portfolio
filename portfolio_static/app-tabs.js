@@ -63,14 +63,8 @@ async function loadStatsForRows(rows) {
 }
 
 function renderStatsTable(baseRows = null) {
-  let rows = statsRows(baseRows || filteredRows());
-  const indexOrder = new Map(["SP500", "NASDAQ", "KOSPI"].map((ticker, index) => [ticker, index]));
-  const topIndexes = rows
-    .filter(row => indexOrder.has(String(row.ticker || "").toUpperCase()))
-    .sort((a, b) => indexOrder.get(String(a.ticker).toUpperCase()) - indexOrder.get(String(b.ticker).toUpperCase()));
-  rows = rows.filter(row => !indexOrder.has(String(row.ticker || "").toUpperCase()));
+  const rows = statsRows(baseRows || filteredRows());
   sortRows(rows, "stats");
-  rows = topIndexes.concat(rows);
   const tickers = Array.from(new Set(rows.map(row => row.ticker).filter(Boolean))).sort();
   if (tickers.some(ticker => !statsData[ticker] || (!statsFetchedTickers.has(ticker) && hasMissingTechnicalStats(statsData[ticker])))) loadStatsForRows(rows);
   if (statsInFlight && !rows.some(row => statsData[row.ticker])) return;
