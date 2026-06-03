@@ -85,6 +85,9 @@ function holdingUnitKrw(row) {
   if (!Number.isFinite(price)) return null;
   return price * krwRate(row);
 }
+function hasPosition(row) {
+  return Number(row?.qty) > 0;
+}
 function accountChangeMarkup(stats) {
   if (!stats || !Number.isFinite(stats.change_krw) || !Number.isFinite(stats.previous_krw) || stats.previous_krw === 0) return "";
   const change = stats.change_krw;
@@ -229,15 +232,19 @@ function aggregateRows(rows) {
         change: r.change,
         change_pct: r.change_pct,
         current_price_krw: r.current_price_krw,
+        has_position: false,
         memberSet: new Set(),
         accountSet: new Set()
       });
     }
     const g = grouped.get(key);
-    g.qty += r.qty || 0;
-    g.value += r.value || 0;
-    g.value_krw += r.value_krw || 0;
-    g.change_krw += r.change_krw || 0;
+    if (hasPosition(r)) {
+      g.qty += r.qty || 0;
+      g.value += r.value || 0;
+      g.value_krw += r.value_krw || 0;
+      g.change_krw += r.change_krw || 0;
+      g.has_position = true;
+    }
     g.memberSet.add(r.memberName);
     g.accountSet.add(r.accountName);
   });
@@ -246,8 +253,16 @@ function aggregateRows(rows) {
     const accounts = Array.from(r.accountSet);
     delete r.memberSet;
     delete r.accountSet;
+    const positionFields = r.has_position ? {} : {
+      qty: null,
+      value: null,
+      value_krw: null,
+      change_krw: null,
+      weight_pct: null,
+    };
     return {
       ...r,
+      ...positionFields,
       memberName: members.length > 2 ? `${members.length}명` : members.join(", "),
       accountName: accounts.length > 2 ? `여러 계좌 ${accounts.length}개` : accounts.join(", ")
     };
@@ -561,7 +576,9 @@ function renderTable() {
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
   const total = rows.reduce((s, r) => s + (r.value_krw || 0), 0);
   document.getElementById("accountTotal").textContent = krw(total);
-  document.getElementById("holdings").innerHTML = rows.map(r => `
+  document.getElementById("holdings").innerHTML = rows.map(r => {
+    const noPosition = !hasPosition(r);
+    return `
     <tr>
       <td>
         <div class="ticker-cell">
@@ -576,17 +593,18 @@ function renderTable() {
       </td>
       <td>${changeMarkup(r)}</td>
       <td>${extendedChangeText(r) || "-"}</td>
-      <td>${r.is_watchlist ? "-" : changeKrwText(r.change_krw)}</td>
-      <td>${r.is_watchlist ? "-" : fmt2.format(r.qty)}</td>
+      <td>${noPosition ? "-" : changeKrwText(r.change_krw)}</td>
+      <td>${noPosition ? "-" : fmt2.format(r.qty)}</td>
       <td>${localCurrentPriceText(r)}</td>
       <td>${krwCurrentPriceText(r)}</td>
-      <td>${r.is_watchlist ? "-" : localValueText(r)}</td>
-      <td>${r.is_watchlist ? "-" : krwValueText(r)}</td>
-      <td>${r.is_watchlist ? "-" : weightText(r.weight_pct)}</td>
-      <td>${r.is_watchlist ? "-" : earningsText(r.next_earnings_date)}</td>
+      <td>${noPosition ? "-" : localValueText(r)}</td>
+      <td>${noPosition ? "-" : krwValueText(r)}</td>
+      <td>${noPosition ? "-" : weightText(r.weight_pct)}</td>
+      <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
       <td>${r.is_watchlist ? "-" : `<button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button>`}</td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
   document.querySelectorAll(".tx-pick").forEach(btn => {
     btn.addEventListener("click", () => {
       selectTradeTarget(btn.dataset.account, btn.dataset.ticker);
