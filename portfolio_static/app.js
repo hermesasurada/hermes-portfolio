@@ -1,8 +1,13 @@
 let data = null;
 let selectedAccounts = new Set();
 let selectionMode = "all";
-let sortKey = "value_krw";
-let sortDir = -1;
+let sortState = {
+  detail: { key: "value_krw", dir: -1 },
+  stats: { key: "market_cap_usd", dir: -1 },
+  dividend: { key: "pay_date", dir: 1 },
+};
+let sortKey = sortState.detail.key;
+let sortDir = sortState.detail.dir;
 let selectedTrade = { accountId: "", ticker: "" };
 let autoRefreshTimer = null;
 let usPriceTimer = null;
@@ -280,15 +285,13 @@ window.addEventListener("hashchange", syncChartRoute);
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     activeDetailTab = btn.dataset.tab || "detail";
-    ensureTabSortKey(activeDetailTab);
+    syncSortGlobals(activeDetailTab);
     renderTable();
   });
 });
 document.querySelectorAll("th[data-key]").forEach(th => {
   th.addEventListener("click", () => {
-    const key = th.dataset.key;
-    if (sortKey === key) sortDir *= -1;
-    else { sortKey = key; sortDir = defaultSortDir[key] || -1; }
+    setCurrentSort(th.dataset.key);
     renderTable();
   });
 });

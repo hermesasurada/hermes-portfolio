@@ -62,7 +62,7 @@ async function loadStatsForRows(rows) {
 
 function renderStatsTable(baseRows = null) {
   const rows = statsRows(baseRows || filteredRows());
-  sortRows(rows);
+  sortRows(rows, "stats");
   const tickers = Array.from(new Set(rows.map(row => row.ticker).filter(Boolean))).sort();
   if (tickers.some(ticker => !statsData[ticker] || (!statsFetchedTickers.has(ticker) && hasMissingTechnicalStats(statsData[ticker])))) loadStatsForRows(rows);
   if (statsInFlight && !rows.some(row => statsData[row.ticker])) return;
@@ -184,11 +184,12 @@ function groupedDividendRows(rows) {
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(row);
   });
-  const monthDir = sortKey === "pay_date" ? sortDir : 1;
+  const dividendSort = sortState.dividend || {};
+  const monthDir = dividendSort.key === "pay_date" ? dividendSort.dir : 1;
   return Array.from(groups.entries())
     .sort(([a], [b]) => a.localeCompare(b) * monthDir)
     .flatMap(([key, monthRows]) => {
-      sortRows(monthRows);
+      sortRows(monthRows, "dividend");
       const total = monthRows.reduce((sum, row) => {
         const value = Number(row.net_krw);
         return sum + (Number.isFinite(value) ? value : 0);

@@ -1,8 +1,27 @@
 function ensureTabSortKey(tab) {
   const currentSet = tab === "stats" ? statsSortKeys : tab === "dividend" ? dividendSortKeys : detailSortKeys;
-  if (currentSet.has(sortKey)) return;
-  sortKey = tab === "dividend" ? "pay_date" : tab === "stats" ? "market_cap_usd" : "value_krw";
-  sortDir = defaultSortDir[sortKey] || -1;
+  const state = sortState[tab] || sortState.detail;
+  if (currentSet.has(state.key)) return;
+  state.key = tab === "dividend" ? "pay_date" : tab === "stats" ? "market_cap_usd" : "value_krw";
+  state.dir = defaultSortDir[state.key] || -1;
+}
+
+function syncSortGlobals(tab = activeDetailTab) {
+  ensureTabSortKey(tab);
+  const state = sortState[tab] || sortState.detail;
+  sortKey = state.key;
+  sortDir = state.dir;
+}
+
+function setCurrentSort(key) {
+  syncSortGlobals(activeDetailTab);
+  const state = sortState[activeDetailTab] || sortState.detail;
+  if (state.key === key) state.dir *= -1;
+  else {
+    state.key = key;
+    state.dir = defaultSortDir[key] || -1;
+  }
+  syncSortGlobals(activeDetailTab);
 }
 
 function flattenAccounts() {
@@ -463,15 +482,16 @@ function filteredRows(options = {}) {
   return rows;
 }
 
-function sortRows(rows) {
+function sortRows(rows, tab = activeDetailTab) {
+  const state = sortState[tab] || sortState.detail;
   rows.sort((a, b) => {
-    const av = a[sortKey], bv = b[sortKey];
+    const av = a[state.key], bv = b[state.key];
     if (typeof av === "string" || typeof bv === "string") {
-      return String(av ?? "").localeCompare(String(bv ?? ""), "ko-KR", { numeric: true, sensitivity: "base" }) * sortDir;
+      return String(av ?? "").localeCompare(String(bv ?? ""), "ko-KR", { numeric: true, sensitivity: "base" }) * state.dir;
     }
     const an = av != null && Number.isFinite(Number(av)) ? Number(av) : -Infinity;
     const bn = bv != null && Number.isFinite(Number(bv)) ? Number(bv) : -Infinity;
-    return (an - bn) * sortDir;
+    return (an - bn) * state.dir;
   });
   return rows;
 }
@@ -527,6 +547,7 @@ function syncTransactionPanel() {
 }
 
 function renderTable() {
+  syncSortGlobals(activeDetailTab);
   syncTransactionPanel();
   const rows = filteredRows();
   const accounts = flattenAccounts();
