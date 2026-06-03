@@ -284,7 +284,12 @@ document.addEventListener("click", event => {
 window.addEventListener("hashchange", syncChartRoute);
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
-    activeDetailTab = btn.dataset.tab || "detail";
+    const previousTab = activeDetailTab;
+    const nextTab = btn.dataset.tab || "detail";
+    if (previousTab === "detail" && nextTab === "stats") {
+      sortState.stats = { ...sortState.detail };
+    }
+    activeDetailTab = nextTab;
     syncSortGlobals(activeDetailTab);
     renderTable();
   });
