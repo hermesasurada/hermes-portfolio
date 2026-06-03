@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=sticky-main-table-scroll">
+  <link rel="stylesheet" href="/static/styles.css?v=account-total-inline">
 </head>
 <body>
   <header>
@@ -71,6 +71,7 @@
         <div class="toolbar">
           <div class="title-tools">
             <strong id="tableTitle">전체</strong>
+            <span class="pill account-total-pill" id="accountTotal">-</span>
             <button class="ghost-btn hidden" id="chartBack" type="button">목록</button>
             <span class="filter-toggle-control hidden" id="performanceDetailControl">
               <label class="toggle-switch" for="performanceDetailToggle">
@@ -106,7 +107,6 @@
             </span>
             <span class="pill" id="rowCount">0 rows</span>
           </div>
-          <span class="pill" id="accountTotal">-</span>
         </div>
         <div class="table-wrap" id="detailTableWrap">
           <table>
@@ -384,7 +384,7 @@
   <script src="/static/chart-utils.js?v=refactor-chart-utils"></script>
   <script src="/static/app-tabs.js?v=tab-sort-state"></script>
   <script src="/static/app-charts.js?v=dividend-estimated-dates"></script>
-  <script src="/static/app-holdings.js?v=zero-qty-as-watch-row"></script>
+  <script src="/static/app-holdings.js?v=account-total-inline"></script>
   <script src="/static/app-line-chart.js?v=portfolio-refactor"></script>
   <script src="/static/app-transactions.js?v=portfolio-refactor"></script>
   <script src="/static/app-trade-controls.js?v=portfolio-refactor"></script>

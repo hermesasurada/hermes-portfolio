@@ -575,7 +575,11 @@ function renderTable() {
   }
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
   const total = rows.reduce((s, r) => s + (r.value_krw || 0), 0);
-  document.getElementById("accountTotal").textContent = krw(total);
+  const totalChange = rows.reduce((s, r) => {
+    const value = Number(r.change_krw);
+    return Number.isFinite(value) ? s + value : s;
+  }, 0);
+  document.getElementById("accountTotal").innerHTML = `<span>평가 ${krw(total)}</span><span class="account-total-change">${changeKrwText(totalChange)}</span>`;
   document.getElementById("holdings").innerHTML = rows.map(r => {
     const noPosition = !hasPosition(r);
     return `

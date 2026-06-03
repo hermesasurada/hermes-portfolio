@@ -738,6 +738,15 @@ tr:hover td { background: var(--surface-hover); }
   gap: 8px;
   flex-wrap: wrap;
 }
+.account-total-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 850;
+}
+.account-total-change .change-cell {
+  gap: 2px;
+}
 .detail-tabs {
   height: 30px;
   display: inline-flex;
