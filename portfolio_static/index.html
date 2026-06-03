@@ -14,14 +14,17 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=dividend-target-account">
+  <link rel="stylesheet" href="/static/styles.css?v=data-help-modal">
 </head>
 <body>
   <header>
     <div class="bar">
       <div>
         <h1><a class="home-link" href="/">Portfolio v2</a></h1>
-        <div class="fx-top" id="fxTop">환율 loading...</div>
+        <div class="fx-line">
+          <div class="fx-top" id="fxTop">환율 loading...</div>
+          <button class="help-icon-btn" id="dataHelpOpen" type="button" aria-label="수집 도움말" title="수집 도움말">?</button>
+        </div>
       </div>
       <div class="controls">
         <div class="auto-refresh-control">
@@ -313,6 +316,68 @@
       <div class="status" id="chartRangeStatus"></div>
     </form>
   </dialog>
+  <dialog class="watch-modal help-modal" id="dataHelpModal">
+    <form method="dialog" class="modal-card help-card">
+      <div class="modal-head">
+        <strong>데이터 수집 도움말</strong>
+        <button class="ghost-btn" id="dataHelpClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <div class="help-summary">
+        <span>기준 시간: KST</span>
+        <span>저장소: stock_history.db</span>
+        <span>화면 조회: DB 캐시 우선</span>
+      </div>
+      <div class="help-grid">
+        <section class="help-block">
+          <h3>가격/환율</h3>
+          <dl>
+            <dt>해외/환율/지수</dt>
+            <dd>평일 10분 주기. 토요일 00~07시에도 미국 금요일 장 마감분 보정 수집.</dd>
+            <dt>한국 종목</dt>
+            <dd>평일 08~19시 10분 주기, 20:00 1회 추가 수집.</dd>
+            <dt>출처</dt>
+            <dd>Yahoo Finance(yfinance, 환율/해외/미국 지수), FinanceDataReader(한국 종목/KOSPI), Upbit(BTC).</dd>
+          </dl>
+        </section>
+        <section class="help-block">
+          <h3>미국 실시간/연장</h3>
+          <dl>
+            <dt>정규장</dt>
+            <dd>Yahoo quote API의 regularMarketPrice를 10분 캐시로 반영.</dd>
+            <dt>장외</dt>
+            <dd>연장 토글이 켜진 경우 preMarketPrice/postMarketPrice를 잔고와 평가액에 반영.</dd>
+            <dt>연장 컬럼</dt>
+            <dd>정규가 대비 프리/애프터 가격의 변동률만 별도 표시.</dd>
+          </dl>
+        </section>
+        <section class="help-block">
+          <h3>통계 지표</h3>
+          <dl>
+            <dt>RSI/BB/성과</dt>
+            <dd>가격 수집 직후 daily_prices 기준으로 계산해 DB 캐시에 저장. 일/주/월 RSI, BB와 1개월~5년 성과를 포함.</dd>
+            <dt>펀더멘털</dt>
+            <dd>해외는 yfinance info, 한국 개별주는 Naver Stock API. ETF는 시가총액/배당율/P/E 표시에서 제외.</dd>
+            <dt>실적일</dt>
+            <dd>해외는 Yahoo calendar, 한국 개별주는 Investing.com. 24시간 이상 지난 항목만 재조회.</dd>
+          </dl>
+        </section>
+        <section class="help-block">
+          <h3>배당</h3>
+          <dl>
+            <dt>범위</dt>
+            <dd>최근 30일~향후 1년, 현재 보유 종목 기준.</dd>
+            <dt>주기</dt>
+            <dd>배당 이벤트 캐시는 24시간 기준. 가격 수집 작업에서 함께 점검.</dd>
+            <dt>출처</dt>
+            <dd>Nasdaq, StockAnalysis, DividendMax, Yahoo 배당 캘린더/이력, SEIBRO/한국 배당 이력.</dd>
+          </dl>
+        </section>
+      </div>
+      <div class="help-note">
+        통계 탭은 실시간 외부 조회를 하지 않고 DB 캐시를 읽습니다. 신규 관리종목 적용 시 과거 가격, 통계지표, 실적일, 로고를 별도로 채웁니다.
+      </div>
+    </form>
+  </dialog>
   <script src="/static/state.js?v=dividend-estimated-dates"></script>
   <script src="/static/format.js?v=dividend-estimated-dates"></script>
   <script src="/static/api.js?v=dividend-estimated-dates"></script>
@@ -324,6 +389,6 @@
   <script src="/static/app-transactions.js?v=portfolio-refactor"></script>
   <script src="/static/app-trade-controls.js?v=portfolio-refactor"></script>
   <script src="/static/app-watchlist.js?v=portfolio-refactor"></script>
-  <script src="/static/app.js?v=stats-inherit-detail-sort"></script>
+  <script src="/static/app.js?v=data-help-modal"></script>
 </body>
 </html>

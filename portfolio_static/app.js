@@ -101,6 +101,15 @@ function initThemeControl() {
   }
 }
 
+function initDataHelpModal() {
+  const modal = document.getElementById("dataHelpModal");
+  const open = document.getElementById("dataHelpOpen");
+  const close = document.getElementById("dataHelpClose");
+  if (!modal || !open || !close) return;
+  open.addEventListener("click", () => modal.showModal());
+  close.addEventListener("click", () => modal.close());
+}
+
 function render() {
   renderAccounts();
   const rows = filteredRows();
@@ -303,6 +312,7 @@ document.querySelectorAll("th[data-key]").forEach(th => {
 initAutoRefreshControls();
 initUsPriceControls();
 initThemeControl();
+initDataHelpModal();
 initWatchlistControls();
 initChartRangeModal();
 initTradeSideToggle();

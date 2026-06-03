@@ -153,6 +153,30 @@ h1 { margin: 0 0 4px; font-size: 24px; letter-spacing: 0; }
   font-weight: 600;
   line-height: 1.35;
 }
+.fx-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.help-icon-btn {
+  width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+.help-icon-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--panel);
+}
 .controls {
   display: flex;
   gap: 8px;
@@ -1248,6 +1272,9 @@ tr:hover td { background: var(--surface-hover); }
   border-radius: var(--radius);
   background: transparent;
 }
+.help-modal {
+  width: min(860px, calc(100vw - 28px));
+}
 .watch-modal::backdrop {
   background: rgba(15, 23, 42, .34);
 }
@@ -1276,6 +1303,68 @@ tr:hover td { background: var(--surface-hover); }
 }
 .modal-head strong {
   font-size: 16px;
+}
+.help-card {
+  gap: 14px;
+}
+.help-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.help-summary span {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.help-block {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.help-block h3 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 800;
+}
+.help-block dl {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 7px 10px;
+  margin: 0;
+}
+.help-block dt {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+.help-block dd {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+.help-note {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
 }
 .watch-search input {
   flex: 1 1 auto;
@@ -1591,5 +1680,14 @@ tr:hover td { background: var(--surface-hover); }
   }
   .chart-empty {
     min-height: 300px;
+  }
+  .help-grid {
+    grid-template-columns: 1fr;
+  }
+  .help-block dl {
+    grid-template-columns: 74px minmax(0, 1fr);
+  }
+  .help-modal {
+    width: calc(100vw - 16px);
   }
 }
