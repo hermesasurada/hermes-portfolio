@@ -21,6 +21,7 @@ let statsFetchedTickers = new Set();
 let dividendData = null;
 let dividendLoadKey = "";
 let dividendInFlight = null;
+let collapsedDividendMonths = new Set();
 let chartTicker = null;
 let chartLoadInFlight = null;
 let chartPayload = null;

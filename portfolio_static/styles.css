@@ -689,6 +689,9 @@ tr.dividend-month-row:hover td {
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
+.dividend-month-row {
+  cursor: pointer;
+}
 .dividend-month-summary {
   display: flex;
   align-items: center;
@@ -697,6 +700,34 @@ tr.dividend-month-row:hover td {
   color: var(--ink);
   font-size: 13px;
   font-weight: 800;
+}
+.dividend-month-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+.dividend-month-toggle::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+.dividend-month-row.collapsed .dividend-month-toggle::before {
+  transform: rotate(-45deg) translate(-1px, -1px);
+}
+.dividend-month-row:hover .dividend-month-toggle {
+  background: var(--panel);
+  color: var(--ink);
 }
 .dividend-month-summary strong {
   display: inline-flex;

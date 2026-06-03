@@ -135,16 +135,21 @@ function renderDividendTable() {
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
   const empty = `<tr><td colspan="11" class="flat">예정 배당 없음</td></tr>`;
   const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : "confirmed-date"}">${dividendDateText(value)}</span>`;
-  document.getElementById("dividendRows").innerHTML = rows.length ? groupedDividendRows(rows).map(item => item.kind === "month" ? `
-    <tr class="dividend-month-row">
+  document.getElementById("dividendRows").innerHTML = rows.length ? groupedDividendRows(rows).map(item => {
+    const collapsed = item.kind === "month" && collapsedDividendMonths.has(item.key);
+    if (item.kind === "month") return `
+    <tr class="dividend-month-row ${collapsed ? "collapsed" : ""}" data-month="${esc(item.key)}">
       <td colspan="11">
         <div class="dividend-month-summary">
+          <button class="dividend-month-toggle" type="button" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${collapsed ? "월별 배당 펼치기" : "월별 배당 접기"}"></button>
           <span>${esc(item.label)}</span>
           <strong>${dividendKrwText(item.total)}</strong>
         </div>
       </td>
     </tr>
-  ` : `
+  `;
+    if (collapsedDividendMonths.has(item.monthKey)) return "";
+    return `
     <tr>
       <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
       <td class="dividend-target">${esc(item.row.target || item.row.member || "-")}</td>
@@ -158,7 +163,18 @@ function renderDividendTable() {
       <td class="fx-rate">${dividendFxText(item.row.fx_rate)}</td>
       <td class="net-krw">${dividendKrwText(item.row.net_krw)}</td>
     </tr>
-  `).join("") : empty;
+  `;
+  }).join("") : empty;
+  document.querySelectorAll(".dividend-month-row").forEach(row => {
+    row.addEventListener("click", event => {
+      if (event.target.closest("a")) return;
+      const key = row.dataset.month;
+      if (!key) return;
+      if (collapsedDividendMonths.has(key)) collapsedDividendMonths.delete(key);
+      else collapsedDividendMonths.add(key);
+      renderDividendTable();
+    });
+  });
   bindChartLinks();
 }
 
@@ -198,7 +214,7 @@ function groupedDividendRows(rows) {
       }, 0);
       return [
         { kind: "month", key, label: dividendMonthLabel(key), total },
-        ...monthRows.map(row => ({ kind: "row", row }))
+        ...monthRows.map(row => ({ kind: "row", monthKey: key, row }))
       ];
     });
 }
