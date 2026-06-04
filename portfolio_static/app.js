@@ -302,8 +302,13 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     const previousTab = activeDetailTab;
     const nextTab = btn.dataset.tab || "detail";
-    if (previousTab === "detail" && nextTab === "stats") {
-      sortState.stats = { ...sortState.detail };
+    // 세부내역 ↔ 통계: 정렬순서를 양방향으로 이어받음 (대상 탭에 존재하는 정렬키일 때만)
+    const detailStats = (previousTab === "detail" && nextTab === "stats")
+      || (previousTab === "stats" && nextTab === "detail");
+    const carry = sortState[previousTab];
+    if (detailStats && carry) {
+      const targetKeys = nextTab === "stats" ? new Set([...statsSortKeys, ...detailSortKeys]) : detailSortKeys;
+      if (targetKeys.has(carry.key)) sortState[nextTab] = { ...carry };
     }
     activeDetailTab = nextTab;
     syncSortGlobals(activeDetailTab);
