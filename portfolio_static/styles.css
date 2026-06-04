@@ -1074,14 +1074,21 @@ tbody tr.index-row td:first-child::before {
 .cstat-k { font-size: 10.5px; color: var(--muted); font-weight: 700; white-space: nowrap; }
 .cstat-v { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* 기술 지표: RSI·BB를 한 표(일/주/월 정렬)로 */
-.cstat-matrix { border-collapse: collapse; width: 100%; max-width: 280px; }
+.cstat-matrix { border-collapse: collapse; width: 100%; min-width: 0; max-width: 300px; table-layout: auto; }
+/* 전역 table/th 규칙(min-width:660·sticky·48px·배경) 무력화 */
 .cstat-matrix th, .cstat-matrix td {
+  position: static;
+  height: auto;
+  background: transparent;
+  box-shadow: none;
+  border: 0;
   padding: 8px 4px;
   text-align: center;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 .cstat-matrix thead th { font-size: 10.5px; color: var(--muted); font-weight: 700; padding-top: 0; }
-.cstat-matrix tbody th { text-align: left; color: var(--muted); font-weight: 800; font-size: 12px; white-space: nowrap; }
+.cstat-matrix tbody th { text-align: left; color: var(--muted); font-weight: 800; font-size: 12px; }
 .cstat-matrix tbody td { font-size: 15px; font-weight: 800; }
 .cstat-matrix tbody tr + tr th, .cstat-matrix tbody tr + tr td { border-top: 1px solid var(--line); }
 .chart-stat-loading { grid-column: 1 / -1; color: var(--muted); font-size: 12px; padding: 0 2px; }
