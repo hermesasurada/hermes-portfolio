@@ -263,6 +263,72 @@ function renderChartIdentity(payload) {
   document.getElementById("chartName").textContent = row.name || row.ticker || "";
 }
 
+function chartStatGroups(ticker, currency) {
+  const s = statsData[ticker] || {};
+  const rsi = s.rsi || {};
+  const bb = s.bollinger_pband || {};
+  const perf = s.performance || {};
+  const mcap = Number.isFinite(Number(s.market_cap)) ? marketCapText(s.market_cap, currency) : "-";
+  return [
+    { group: "기본", items: [
+      ["시가총액", mcap],
+      ["배당율", dividendYieldText(s.dividend_yield)],
+      ["β", betaText(s.beta)],
+      ["β″", betaText(s.beta_adj)],
+      ["P/E (t)", peText(s.trailing_pe)],
+      ["P/E (f)", peText(s.forward_pe)],
+      ["실적일", earningsText(s.next_earnings_date)],
+    ] },
+    { group: "RSI", items: [
+      ["일", indicatorText(rsi.day, "rsi")],
+      ["주", indicatorText(rsi.week, "rsi")],
+      ["월", indicatorText(rsi.month, "rsi")],
+    ] },
+    { group: "볼린저 %B", items: [
+      ["일", indicatorText(bb.day, "bb")],
+      ["주", indicatorText(bb.week, "bb")],
+      ["월", indicatorText(bb.month, "bb")],
+    ] },
+    { group: "기간 수익률", items: [
+      ["1개월", signedPercentText(perf.one_month, 1)],
+      ["3개월", signedPercentText(perf.three_month, 0)],
+      ["6개월", signedPercentText(perf.six_month, 0)],
+      ["YTD", signedPercentText(perf.ytd, 0)],
+      ["1년", signedPercentText(perf.one_year, 0)],
+      ["3년", signedPercentText(perf.three_year, 0)],
+      ["5년", signedPercentText(perf.five_year, 0)],
+    ] },
+  ];
+}
+
+function renderChartStats(payload) {
+  const el = document.getElementById("chartStats");
+  if (!el) return;
+  const ticker = String(payload?.ticker || "").toUpperCase();
+  if (!ticker) { el.innerHTML = ""; return; }
+  const loaded = Boolean(statsData[ticker]);
+  const html = chartStatGroups(ticker, payload?.currency).map(group => `
+    <div class="chart-stat-group">
+      <h4>${esc(group.group)}</h4>
+      <div class="chart-stat-items">
+        ${group.items.map(([label, value]) => `<div class="chart-stat"><span class="chart-stat-label">${esc(label)}</span><span class="chart-stat-value">${value}</span></div>`).join("")}
+      </div>
+    </div>
+  `).join("");
+  el.innerHTML = loaded ? html : `${html}<div class="chart-stat-loading">통계 불러오는 중…</div>`;
+}
+
+function ensureChartStats(ticker) {
+  const clean = String(ticker || "").toUpperCase();
+  if (!clean || statsData[clean]) return;
+  apiFetchStats([clean]).then(payload => {
+    statsData = { ...statsData, ...(payload.stats || {}) };
+    if (chartTicker === clean && !performanceChartOpen && !chartComparePayloads.length) {
+      renderChartStats(chartPayload || { ticker: clean });
+    }
+  }).catch(() => {});
+}
+
 function bindLineChartControls(payload) {
   document.querySelectorAll(".chart-range-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -445,6 +511,8 @@ function bindCompareHover(series, geometry) {
 function renderCompareLineChart(payload) {
   const series = chartCompareSeries(payload);
   renderChartIdentity(payload);
+  const statsEl = document.getElementById("chartStats");
+  if (statsEl) statsEl.innerHTML = "";   // 비교 모드에선 단일 종목 통계 숨김
   if (series.length < 2 || !series[0]?.points.length) {
     document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">비교 차트 데이터 없음</div>${renderChartCompareControls()}${renderChartRangeButtons()}`;
     bindChartCompareControls(payload);
@@ -728,6 +796,8 @@ function renderLineChart(payload) {
     document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">차트 데이터 없음</div>${renderChartCompareControls()}${renderChartRangeButtons()}`;
     bindChartCompareControls(payload);
     bindLineChartControls(payload);
+    renderChartStats(payload);
+    ensureChartStats(payload.ticker);
     return;
   }
 
@@ -854,4 +924,6 @@ function renderLineChart(payload) {
   bindChartInteractions(points, payload, { width, height, pad, plotW, plotH, xFor, yFor });
   bindChartCompareControls(payload);
   bindLineChartControls(payload);
+  renderChartStats(payload);
+  ensureChartStats(payload.ticker);
 }

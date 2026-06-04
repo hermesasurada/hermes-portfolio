@@ -1002,27 +1002,34 @@ tbody tr.index-row td:first-child::before {
   gap: 12px;
   margin-bottom: 6px;
 }
-.chart-title-line {
+.chart-identity {
   min-width: 0;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  white-space: nowrap;
+  gap: 12px;
 }
 .chart-icon-slot {
   display: inline-flex;
   align-items: center;
 }
 .chart-icon-slot .asset-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  font-size: 15px;
+}
+.chart-id-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
 }
 .chart-head strong {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 15px;
+  white-space: nowrap;
+  font-size: 19px;
+  font-weight: 800;
   line-height: 1.2;
 }
 .chart-head span {
@@ -1031,10 +1038,39 @@ tbody tr.index-row td:first-child::before {
   font-weight: 800;
 }
 #chartTicker {
-  color: var(--ink);
-  font-size: 13px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+/* 차트 하단 통계 지표 패널 */
+.chart-stats {
+  display: grid;
+  gap: 14px;
+  padding: 14px 14px 4px;
+}
+.chart-stat-group h4 {
+  margin: 0 0 7px;
+  font-size: 12px;
+  color: var(--muted);
   font-weight: 800;
 }
+.chart-stat-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+.chart-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.chart-stat-label { font-size: 11px; color: var(--muted); font-weight: 700; }
+.chart-stat-value { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.chart-stat-loading { color: var(--muted); font-size: 12px; padding: 0 2px; }
 .chart-icon-slot .asset-icon { color: var(--accent); }
 .chart-meta {
   display: inline-flex;
@@ -1791,7 +1827,7 @@ tbody tr.index-row td:first-child::before {
     align-items: flex-start;
     display: grid;
   }
-  .chart-title-line { white-space: normal; }
+  .chart-identity { white-space: normal; }
   .chart-meta {
     justify-content: flex-start;
     flex-wrap: wrap;
