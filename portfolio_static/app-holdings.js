@@ -603,16 +603,14 @@ function renderTable() {
     const noPosition = !hasPosition(r);
     return `
     <tr class="${tableRowClass(r)}">
+      <td class="logo-cell">${logoMarkup(r)}</td>
       <td>
-        <div class="ticker-cell">
-          ${logoMarkup(r)}
-          <span class="ticker-text">
-            <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
-              <span class="asset-name">${r.name}</span>
-              <span class="ticker-symbol">${r.ticker}</span>
-            </a>
-          </span>
-        </div>
+        <span class="ticker-text">
+          <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
+            <span class="asset-name">${r.name}</span>
+            <span class="ticker-symbol">${r.ticker}</span>
+          </a>
+        </span>
       </td>
       <td>${changeMarkup(r)}</td>
       <td>${extendedChangeText(r) || "-"}</td>

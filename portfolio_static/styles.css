@@ -530,8 +530,8 @@ main {
 }
 table { width: 100%; border-collapse: collapse; min-width: 660px; }
 table.stats-list {
-  width: max(100%, 1364px);
-  min-width: 1364px;
+  width: max(100%, 1394px);
+  min-width: 1394px;
   table-layout: fixed;
 }
 .stats-list th,
@@ -546,20 +546,25 @@ table.stats-list {
   text-align: center;
   vertical-align: middle;
 }
-.stats-list th:nth-child(1), .stats-list td:nth-child(1) { width: 170px; }
-.stats-list th:nth-child(2), .stats-list td:nth-child(2) { width: 118px; }
-.stats-list th:nth-child(3), .stats-list td:nth-child(3) { width: 66px; }
-.stats-list th:nth-child(n+4), .stats-list td:nth-child(n+4) { width: 62px; }
-/* β, β″ (4,5번 컬럼) */
-.stats-list th:nth-child(4), .stats-list td:nth-child(4),
-.stats-list th:nth-child(5), .stats-list td:nth-child(5) { width: 52px; }
-/* RSI×3 + BB×3 (6~11번 컬럼) — 좁게 */
-.stats-list th:nth-child(n+6):nth-child(-n+11),
-.stats-list td:nth-child(n+6):nth-child(-n+11) {
+.stats-list th:nth-child(1), .stats-list td:nth-child(1) { width: 40px; }    /* 로고 (틀고정) */
+.stats-list th:nth-child(2), .stats-list td:nth-child(2) { width: 160px; }   /* 종목명 */
+.stats-list th:nth-child(3), .stats-list td:nth-child(3) { width: 118px; }   /* 시가총액 */
+.stats-list th:nth-child(4), .stats-list td:nth-child(4) { width: 66px; }    /* 배당율 */
+.stats-list th:nth-child(n+5), .stats-list td:nth-child(n+5) { width: 62px; }
+/* β, β″ (5,6번 컬럼) */
+.stats-list th:nth-child(5), .stats-list td:nth-child(5),
+.stats-list th:nth-child(6), .stats-list td:nth-child(6) { width: 52px; }
+/* RSI×3 + BB×3 (7~12번 컬럼) — 좁게 */
+.stats-list th:nth-child(n+7):nth-child(-n+12),
+.stats-list td:nth-child(n+7):nth-child(-n+12) {
   width: 44px;
   padding-left: 1px;
   padding-right: 1px;
 }
+/* 로고 셀: 가운데, 종목명 셀: 좌측 정렬 */
+.logo-cell { text-align: center; padding-left: 4px; padding-right: 4px; }
+.stats-list td:nth-child(2) { text-align: left; }
+#detailTableWrap th:nth-child(2), #detailTableWrap td:nth-child(2) { text-align: left; }
 .stats-list .indicator-head {
   line-height: 1.05;
   white-space: normal;
@@ -778,7 +783,9 @@ tr.dividend-month-row:hover td {
   text-align: right;
 }
 #detailTableWrap th:first-child,
-#detailTableWrap td:first-child { min-width: 210px; }
+#detailTableWrap td:first-child { min-width: 40px; width: 40px; }   /* 로고 (틀고정) */
+#detailTableWrap th:nth-child(2),
+#detailTableWrap td:nth-child(2) { min-width: 180px; }              /* 종목명 */
 tbody tr:nth-child(even) td { background: var(--zebra); }
 tr:hover td { background: var(--surface-hover); }
 tbody tr.index-row td,
@@ -1755,8 +1762,8 @@ tbody tr.index-row td:first-child::before {
     overflow-y: auto;
   }
   #statsTableWrap .stats-list {
-    width: 1364px;
-    min-width: 1364px;
+    width: 1394px;
+    min-width: 1394px;
   }
   /* 가로스크롤 시 종목명(첫 컬럼) 좌측 틀고정 (불투명 배경 필수 — zebra는 반투명) */
   #detailTableWrap td:first-child,
