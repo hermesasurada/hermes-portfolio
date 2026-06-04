@@ -457,7 +457,7 @@ function renderCompareLineChart(payload) {
   const values = allPoints.map(point => point.close);
   const scale = niceChartScale([...values, 0]);
   const width = 980;
-  const height = 350;
+  const height = 420;
   const pad = { top: 28, right: 108, bottom: 34, left: 52 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
@@ -749,7 +749,7 @@ function renderLineChart(payload) {
   `;
 
   const width = 980;
-  const height = 340;
+  const height = 408;
   const pad = { top: 28, right: 58, bottom: 32, left: 14 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;

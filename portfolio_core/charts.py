@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from datetime import datetime
 from itertools import groupby
 
 from .constants import FX_DEFAULT_RATES, MARKET_INDEXES
 from .db import connect
+from .paths import US_EASTERN
 from .prices import latest_prices
 from .queries import account_filter_clause, clean_account_ids, load_holding_rows
-from .tickers import account_label, ticker_currency
+from .tickers import account_label, is_us_stock_ticker, ticker_currency
+from .us_live_quotes import fetch_us_live_quotes, us_market_status
 
 
 def load_price_chart(ticker: str) -> dict:
@@ -52,16 +55,20 @@ def load_price_chart(ticker: str) -> dict:
             (clean_ticker,),
         ).fetchall()
 
+    currency = meta["currency"] if meta and meta["currency"] else ticker_currency(clean_ticker)
+    points = [
+        {"date": row["date"], "close": float(row["close"])}
+        for row in rows
+        if row["date"] and row["close"] is not None
+    ]
+    _append_live_chart_point(clean_ticker, currency, points)
+
     return {
         "ticker": clean_ticker,
         "name": (meta["name"] if meta and meta["name"] else clean_ticker),
-        "currency": (meta["currency"] if meta and meta["currency"] else ticker_currency(clean_ticker)),
+        "currency": currency,
         "category": (meta["category"] if meta else None),
-        "points": [
-            {"date": row["date"], "close": float(row["close"])}
-            for row in rows
-            if row["date"] and row["close"] is not None
-        ],
+        "points": points,
         "transactions": [
             {
                 "date": row["trade_date"],
@@ -76,6 +83,33 @@ def load_price_chart(ticker: str) -> dict:
             if row["trade_date"] and row["side"] in {"BUY", "SELL"}
         ],
     }
+
+
+def _append_live_chart_point(ticker: str, currency: str, points: list[dict]) -> None:
+    """US 종목이면 야후 라이브쿼트(정규장=실시간, 장외=연장가)를 차트 마지막 점으로 추가.
+    포트폴리오 로드가 채워둔 600s 캐시를 재사용하므로 추가 네트워크는 대부분 없음."""
+    if not is_us_stock_ticker(ticker, currency):
+        return
+    try:
+        regular = bool(us_market_status().get("is_regular"))
+        quotes = fetch_us_live_quotes([ticker], include_extended=not regular, regular_hours=regular)
+        quote = quotes.get(ticker) or quotes.get(ticker.upper())
+        if not quote:
+            return
+        extended_price = quote.get("extended_price")
+        live_price = quote.get("price")
+        today = datetime.now(US_EASTERN).strftime("%Y-%m-%d")
+        last_close = points[-1]["close"] if points else None
+        if not regular and extended_price is not None:
+            value, extended = float(extended_price), True       # 장외(프리/애프터) 가격
+        elif regular and live_price is not None:
+            value, extended = float(live_price), False           # 정규장 실시간
+        else:
+            return
+        if last_close is None or abs(value - last_close) > 1e-9:
+            points.append({"date": today, "close": value, "live": True, "extended": extended})
+    except Exception as exc:  # noqa: BLE001 — best-effort live overlay
+        print(f"[chart] live point failed for {ticker}: {exc}")
 
 
 def load_account_performance(account_ids: list[str] | None = None) -> dict:

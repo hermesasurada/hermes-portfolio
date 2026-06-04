@@ -195,7 +195,7 @@ function renderPerformanceChart(payload) {
   const max = scale.max;
   const width = 980;
   const isMobileChart = Boolean(window.matchMedia?.("(max-width: 980px)")?.matches);
-  const height = isMobileChart ? 720 : 360;
+  const height = isMobileChart ? 864 : 432;
   const pad = { top: 26, right: 104, bottom: 34, left: 56 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;

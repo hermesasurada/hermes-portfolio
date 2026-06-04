@@ -1048,7 +1048,7 @@ tbody tr.index-row td:first-child::before {
 }
 .chart-canvas {
   width: 100%;
-  min-height: 340px;
+  min-height: 408px;
   border: 0;
   border-radius: 0;
   background: var(--chart-bg);
@@ -1058,7 +1058,7 @@ tbody tr.index-row td:first-child::before {
   display: block;
   width: 100%;
   height: auto;
-  min-height: 300px;
+  min-height: 360px;
 }
 .chart-bg { fill: var(--chart-bg); }
 .chart-grid {
@@ -1355,7 +1355,7 @@ tbody tr.index-row td:first-child::before {
   pointer-events: none;
 }
 .chart-empty {
-  min-height: 360px;
+  min-height: 432px;
   display: grid;
   place-items: center;
   color: var(--muted);
@@ -1822,7 +1822,7 @@ tbody tr.index-row td:first-child::before {
     display: none;
   }
   .chart-empty {
-    min-height: 300px;
+    min-height: 360px;
   }
   .help-grid {
     grid-template-columns: 1fr;
