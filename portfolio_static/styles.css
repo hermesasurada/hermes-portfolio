@@ -523,6 +523,38 @@ main {
 }
 .group-head.partial .group-action { color: var(--warn); }
 .table-wrap { overflow: auto; }
+/* 스크롤바를 테마색에 맞춰 은은하게 (OS 기본 스크롤바가 주변과 동떨어져 보이는 문제) */
+.table-wrap,
+#statsTableWrap,
+#dividendTableWrap,
+.tx-wrap {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.table-wrap::-webkit-scrollbar,
+#statsTableWrap::-webkit-scrollbar,
+#dividendTableWrap::-webkit-scrollbar,
+.tx-wrap::-webkit-scrollbar { width: 11px; height: 11px; }
+.table-wrap::-webkit-scrollbar-track,
+#statsTableWrap::-webkit-scrollbar-track,
+#dividendTableWrap::-webkit-scrollbar-track,
+.tx-wrap::-webkit-scrollbar-track { background: transparent; }
+.table-wrap::-webkit-scrollbar-thumb,
+#statsTableWrap::-webkit-scrollbar-thumb,
+#dividendTableWrap::-webkit-scrollbar-thumb,
+.tx-wrap::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border: 3px solid var(--panel);
+  border-radius: 999px;
+}
+.table-wrap::-webkit-scrollbar-thumb:hover,
+#statsTableWrap::-webkit-scrollbar-thumb:hover,
+#dividendTableWrap::-webkit-scrollbar-thumb:hover,
+.tx-wrap::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+.table-wrap::-webkit-scrollbar-corner,
+#statsTableWrap::-webkit-scrollbar-corner,
+#dividendTableWrap::-webkit-scrollbar-corner,
+.tx-wrap::-webkit-scrollbar-corner { background: transparent; }
 #statsTableWrap {
   padding: 0;
   overflow-x: auto;
