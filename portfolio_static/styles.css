@@ -1042,35 +1042,49 @@ tbody tr.index-row td:first-child::before {
   font-size: 12.5px;
   font-weight: 700;
 }
-/* 차트 하단 통계 지표 패널 */
+/* 차트 하단 통계 지표 패널 — 3섹션 반응형 */
 .chart-stats {
   display: grid;
-  gap: 14px;
-  padding: 14px 14px 4px;
+  grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
+  gap: 16px 30px;
+  padding: 18px 16px 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
 }
-.chart-stat-group h4 {
-  margin: 0 0 7px;
-  font-size: 12px;
+.cstat-block { min-width: 0; }
+.cstat-block h4 {
+  margin: 0 0 11px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+  letter-spacing: .04em;
   color: var(--muted);
   font-weight: 800;
-}
-.chart-stat-items {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
-  gap: 8px;
-}
-.chart-stat {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-2);
+  align-items: baseline;
+  gap: 7px;
 }
-.chart-stat-label { font-size: 11px; color: var(--muted); font-weight: 700; }
-.chart-stat-value { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.chart-stat-loading { color: var(--muted); font-size: 12px; padding: 0 2px; }
+.cstat-block h4 .cstat-sub { font-size: 10px; font-weight: 700; opacity: .75; letter-spacing: 0; }
+.cstat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 13px 16px;
+}
+.cstat { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cstat-k { font-size: 10.5px; color: var(--muted); font-weight: 700; white-space: nowrap; }
+.cstat-v { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 기술 지표: RSI·BB를 한 표(일/주/월 정렬)로 */
+.cstat-matrix { border-collapse: collapse; width: 100%; max-width: 280px; }
+.cstat-matrix th, .cstat-matrix td {
+  padding: 8px 4px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.cstat-matrix thead th { font-size: 10.5px; color: var(--muted); font-weight: 700; padding-top: 0; }
+.cstat-matrix tbody th { text-align: left; color: var(--muted); font-weight: 800; font-size: 12px; white-space: nowrap; }
+.cstat-matrix tbody td { font-size: 15px; font-weight: 800; }
+.cstat-matrix tbody tr + tr th, .cstat-matrix tbody tr + tr td { border-top: 1px solid var(--line); }
+.chart-stat-loading { grid-column: 1 / -1; color: var(--muted); font-size: 12px; padding: 0 2px; }
 .chart-icon-slot .asset-icon { color: var(--accent); }
 .chart-meta {
   display: inline-flex;

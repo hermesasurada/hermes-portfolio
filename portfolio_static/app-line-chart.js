@@ -263,59 +263,59 @@ function renderChartIdentity(payload) {
   document.getElementById("chartName").textContent = row.name || row.ticker || "";
 }
 
-function chartStatGroups(ticker, currency) {
-  const s = statsData[ticker] || {};
-  const rsi = s.rsi || {};
-  const bb = s.bollinger_pband || {};
-  const perf = s.performance || {};
-  const mcap = Number.isFinite(Number(s.market_cap)) ? marketCapText(s.market_cap, currency) : "-";
-  return [
-    { group: "기본", items: [
-      ["시가총액", mcap],
-      ["배당율", dividendYieldText(s.dividend_yield)],
-      ["β", betaText(s.beta)],
-      ["β″", betaText(s.beta_adj)],
-      ["P/E (t)", peText(s.trailing_pe)],
-      ["P/E (f)", peText(s.forward_pe)],
-      ["실적일", earningsText(s.next_earnings_date)],
-    ] },
-    { group: "RSI", items: [
-      ["일", indicatorText(rsi.day, "rsi")],
-      ["주", indicatorText(rsi.week, "rsi")],
-      ["월", indicatorText(rsi.month, "rsi")],
-    ] },
-    { group: "볼린저 %B", items: [
-      ["일", indicatorText(bb.day, "bb")],
-      ["주", indicatorText(bb.week, "bb")],
-      ["월", indicatorText(bb.month, "bb")],
-    ] },
-    { group: "기간 수익률", items: [
-      ["1개월", signedPercentText(perf.one_month, 1)],
-      ["3개월", signedPercentText(perf.three_month, 0)],
-      ["6개월", signedPercentText(perf.six_month, 0)],
-      ["YTD", signedPercentText(perf.ytd, 0)],
-      ["1년", signedPercentText(perf.one_year, 0)],
-      ["3년", signedPercentText(perf.three_year, 0)],
-      ["5년", signedPercentText(perf.five_year, 0)],
-    ] },
-  ];
-}
-
 function renderChartStats(payload) {
   const el = document.getElementById("chartStats");
   if (!el) return;
   const ticker = String(payload?.ticker || "").toUpperCase();
   if (!ticker) { el.innerHTML = ""; return; }
+  const s = statsData[ticker] || {};
+  const rsi = s.rsi || {};
+  const bb = s.bollinger_pband || {};
+  const perf = s.performance || {};
   const loaded = Boolean(statsData[ticker]);
-  const html = chartStatGroups(ticker, payload?.currency).map(group => `
-    <div class="chart-stat-group">
-      <h4>${esc(group.group)}</h4>
-      <div class="chart-stat-items">
-        ${group.items.map(([label, value]) => `<div class="chart-stat"><span class="chart-stat-label">${esc(label)}</span><span class="chart-stat-value">${value}</span></div>`).join("")}
-      </div>
+  const mcap = Number.isFinite(Number(s.market_cap)) ? marketCapText(s.market_cap, payload?.currency) : "-";
+
+  const tile = ([label, value]) => `<div class="cstat"><span class="cstat-k">${esc(label)}</span><span class="cstat-v">${value}</span></div>`;
+  const basic = [
+    ["시가총액", mcap],
+    ["배당", dividendYieldText(s.dividend_yield)],
+    ["β", betaText(s.beta)],
+    ["β″", betaText(s.beta_adj)],
+    ["P/E", peText(s.trailing_pe)],
+    ["선행 P/E", peText(s.forward_pe)],
+    ["실적일", earningsText(s.next_earnings_date)],
+  ];
+  const perfItems = [
+    ["1개월", signedPercentText(perf.one_month, 1)],
+    ["3개월", signedPercentText(perf.three_month, 0)],
+    ["6개월", signedPercentText(perf.six_month, 0)],
+    ["YTD", signedPercentText(perf.ytd, 0)],
+    ["1년", signedPercentText(perf.one_year, 0)],
+    ["3년", signedPercentText(perf.three_year, 0)],
+    ["5년", signedPercentText(perf.five_year, 0)],
+  ];
+
+  el.innerHTML = `
+    <div class="cstat-block">
+      <h4>기본 지표</h4>
+      <div class="cstat-grid">${basic.map(tile).join("")}</div>
     </div>
-  `).join("");
-  el.innerHTML = loaded ? html : `${html}<div class="chart-stat-loading">통계 불러오는 중…</div>`;
+    <div class="cstat-block">
+      <h4>기술 지표 <span class="cstat-sub">일 · 주 · 월</span></h4>
+      <table class="cstat-matrix">
+        <thead><tr><th scope="col"></th><th scope="col">일</th><th scope="col">주</th><th scope="col">월</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">RSI</th><td>${indicatorText(rsi.day, "rsi")}</td><td>${indicatorText(rsi.week, "rsi")}</td><td>${indicatorText(rsi.month, "rsi")}</td></tr>
+          <tr><th scope="row">BB %B</th><td>${indicatorText(bb.day, "bb")}</td><td>${indicatorText(bb.week, "bb")}</td><td>${indicatorText(bb.month, "bb")}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cstat-block">
+      <h4>기간 수익률</h4>
+      <div class="cstat-grid cstat-grid-perf">${perfItems.map(tile).join("")}</div>
+    </div>
+    ${loaded ? "" : `<div class="chart-stat-loading">통계 불러오는 중…</div>`}
+  `;
 }
 
 function ensureChartStats(ticker) {
