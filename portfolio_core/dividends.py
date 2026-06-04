@@ -44,7 +44,7 @@ def _tax_rate(currency: str, account_type: str | None = None) -> float:
 def load_dividends(account_ids: list[str] | None = None) -> dict:
     cleaned_account_ids = clean_account_ids(account_ids)
 
-    start = _today() - timedelta(days=DIVIDEND_LOOKBACK_DAYS)
+    start = _today().replace(day=1)   # 이번 달 1일부터
     end = _today() + timedelta(days=DIVIDEND_LOOKAHEAD_DAYS)
 
     with connect() as conn:
