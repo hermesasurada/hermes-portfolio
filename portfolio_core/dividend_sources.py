@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import time
 import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta
 from html import unescape
+from pathlib import Path
 from typing import Any
 
 from .constants import KOREAN_SUFFIXES
@@ -177,6 +180,87 @@ def _cache_due(fetched_at: str | None) -> bool:
     except ValueError:
         return True
     return datetime.now(KST) - fetched > timedelta(hours=DIVIDEND_CACHE_HOURS)
+
+
+# ── Polygon.io (미국 배당 권위 소스) ────────────────────────────────────────
+# 무료 티어 분당 5콜 제한이라 호출을 자체 스로틀링한다. 선언일·기준일·미래
+# 확정분까지 제공해 yahoo/stockanalysis/nasdaq 조합보다 풍부.
+POLYGON_ENV_PATH = Path.home() / ".hermes" / "polygon.env"
+POLYGON_MAX_PER_MIN = 5
+POLYGON_DIVIDENDS_URL = "https://api.polygon.io/v3/reference/dividends"
+_polygon_key_cache: str | None = None
+_polygon_call_times: list[float] = []
+
+
+def _polygon_api_key() -> str | None:
+    global _polygon_key_cache
+    if _polygon_key_cache is not None:
+        return _polygon_key_cache or None
+    key = os.environ.get("POLYGON_API_KEY", "").strip()
+    if not key and POLYGON_ENV_PATH.exists():
+        try:
+            for line in POLYGON_ENV_PATH.read_text().splitlines():
+                line = line.strip()
+                if line.startswith("POLYGON_API_KEY="):
+                    key = line.split("=", 1)[1].strip()
+                    break
+        except Exception:
+            key = ""
+    _polygon_key_cache = key
+    return key or None
+
+
+def _polygon_throttle() -> None:
+    """분당 POLYGON_MAX_PER_MIN 콜을 넘지 않도록 필요한 만큼 대기 (배치 전용)."""
+    now = time.monotonic()
+    while _polygon_call_times and now - _polygon_call_times[0] >= 60:
+        _polygon_call_times.pop(0)
+    if len(_polygon_call_times) >= POLYGON_MAX_PER_MIN:
+        wait = 60 - (now - _polygon_call_times[0]) + 0.5
+        if wait > 0:
+            time.sleep(wait)
+        now = time.monotonic()
+        while _polygon_call_times and now - _polygon_call_times[0] >= 60:
+            _polygon_call_times.pop(0)
+    _polygon_call_times.append(time.monotonic())
+
+
+def _polygon_candidate(ticker: str) -> bool:
+    return ticker_currency(ticker) == "USD" and "." not in ticker and ticker != "BTC"
+
+
+def _polygon_attempt_due(ticker: str, status: str | None) -> bool:
+    return bool(_polygon_api_key()) and _polygon_candidate(ticker) and "polygon" not in (status or "")
+
+
+def _fetch_polygon_dividends(ticker: str) -> list[dict]:
+    key = _polygon_api_key()
+    if not key:
+        return []
+    params = urllib.parse.urlencode({"ticker": ticker, "limit": 1000, "apiKey": key})
+    req = urllib.request.Request(
+        f"{POLYGON_DIVIDENDS_URL}?{params}",
+        headers={"Accept": "application/json", "User-Agent": "portfolio-dividends/1.0"},
+    )
+    _polygon_throttle()
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    events = []
+    for row in data.get("results", []):
+        ex_date = row.get("ex_dividend_date")
+        if not ex_date:
+            continue
+        events.append({
+            "ticker": ticker,
+            "ex_date": ex_date,
+            "pay_date": row.get("pay_date"),
+            "declaration_date": row.get("declaration_date"),
+            "record_date": row.get("record_date"),
+            "amount": _float_value(row.get("cash_amount")),
+            "currency": row.get("currency") or "USD",
+            "source": "polygon",
+        })
+    return events
 
 
 def _nasdaq_candidate(ticker: str) -> bool:
@@ -514,5 +598,17 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
                     events[event["ex_date"]] = event
         except Exception:
             sources.append("dividendmax_error")
+
+    # Polygon: 권위 소스이므로 마지막에 같은 ex_date를 덮어써 선언일/기준일/미래
+    # 확정분까지 채운다. (분당 5콜 스로틀은 _fetch_polygon_dividends 내부 처리)
+    if _polygon_candidate(ticker) and _polygon_api_key():
+        try:
+            polygon_events = _fetch_polygon_dividends(ticker)
+            sources.append("polygon" if polygon_events else "polygon0")
+            for event in polygon_events:
+                if event.get("ex_date"):
+                    events[event["ex_date"]] = event
+        except Exception:
+            sources.append("polygon_error")
 
     return list(events.values()), "+".join(sources) or "none"

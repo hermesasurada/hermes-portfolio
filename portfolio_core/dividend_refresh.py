@@ -8,6 +8,7 @@ from .dividend_sources import (
     _kr_history_attempt_due,
     _nasdaq_attempt_due,
     _now_text,
+    _polygon_attempt_due,
     _seibro_attempt_due,
     _seibro_candidate,
     _stockanalysis_attempt_due,
@@ -52,6 +53,7 @@ def refresh_dividend_events(tickers: list[str]) -> None:
                 or _dividendmax_attempt_due(ticker, statuses.get(ticker))
                 or _seibro_attempt_due(ticker, statuses.get(ticker))
                 or _kr_history_attempt_due(ticker, statuses.get(ticker))
+                or _polygon_attempt_due(ticker, statuses.get(ticker))
             )
         ]
         conn.commit()
@@ -74,12 +76,15 @@ def refresh_dividend_events(tickers: list[str]) -> None:
                 conn.execute(
                     """
                     INSERT INTO dividend_events
-                      (ticker, ex_date, pay_date, amount, currency, source, fetched_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                      (ticker, ex_date, pay_date, amount, currency, source, fetched_at,
+                       declaration_date, record_date)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(ticker, ex_date) DO UPDATE SET
                         pay_date = COALESCE(excluded.pay_date, dividend_events.pay_date),
                         amount = COALESCE(excluded.amount, dividend_events.amount),
                         currency = COALESCE(excluded.currency, dividend_events.currency),
+                        declaration_date = COALESCE(excluded.declaration_date, dividend_events.declaration_date),
+                        record_date = COALESCE(excluded.record_date, dividend_events.record_date),
                         source = excluded.source,
                         fetched_at = excluded.fetched_at
                     """,
@@ -91,6 +96,8 @@ def refresh_dividend_events(tickers: list[str]) -> None:
                         event.get("currency") or ticker_currency(ticker),
                         event.get("source") or "yf",
                         now,
+                        event.get("declaration_date"),
+                        event.get("record_date"),
                     ),
                 )
             conn.execute(

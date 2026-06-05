@@ -110,6 +110,11 @@ def ensure_dividend_tables(conn: sqlite3.Connection) -> None:
         )
         """
     )
+    # Polygon 소스용 선언일/기준일 컬럼 보강 (기존 DB 마이그레이션)
+    dividend_columns = {row["name"] for row in conn.execute("PRAGMA table_info(dividend_events)").fetchall()}
+    for column in ("declaration_date", "record_date"):
+        if column not in dividend_columns:
+            conn.execute(f"ALTER TABLE dividend_events ADD COLUMN {column} TEXT")
     conn.execute(
         """
         CREATE INDEX IF NOT EXISTS idx_dividend_events_pay_date
