@@ -315,9 +315,10 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     renderTable();
   });
 });
-document.querySelectorAll("th[data-key]").forEach(th => {
-  th.addEventListener("click", () => {
-    setCurrentSort(th.dataset.key);
+// th[data-key] 헤더 + .name-head 안의 티커/종목 미니 정렬 라벨
+document.querySelectorAll("th[data-key], .name-head .sort-mini[data-key]").forEach(el => {
+  el.addEventListener("click", () => {
+    setCurrentSort(el.dataset.key);
     renderTable();
   });
 });

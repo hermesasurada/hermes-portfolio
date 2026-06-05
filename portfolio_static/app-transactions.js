@@ -1,7 +1,7 @@
 function updateSortHeaders() {
-  document.querySelectorAll("th[data-key]").forEach(th => {
-    th.classList.toggle("sort-desc", th.dataset.key === sortKey && sortDir < 0);
-    th.classList.toggle("sort-asc", th.dataset.key === sortKey && sortDir > 0);
+  document.querySelectorAll("th[data-key], .name-head .sort-mini[data-key]").forEach(el => {
+    el.classList.toggle("sort-desc", el.dataset.key === sortKey && sortDir < 0);
+    el.classList.toggle("sort-asc", el.dataset.key === sortKey && sortDir > 0);
   });
 }
 
