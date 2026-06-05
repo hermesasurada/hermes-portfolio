@@ -562,8 +562,8 @@ main {
 }
 table { width: 100%; border-collapse: collapse; min-width: 660px; }
 table.stats-list {
-  width: max(100%, 1394px);
-  min-width: 1394px;
+  width: max(100%, 1520px);
+  min-width: 1520px;
   table-layout: fixed;
 }
 .stats-list th,
@@ -578,21 +578,27 @@ table.stats-list {
   text-align: center;
   vertical-align: middle;
 }
+/* 23컬럼: 로고·종목·시총·배당율·52주高대비·β·β″·RSI×3·BB×3·P/E(t,f)·P/B·기간수익률×7 */
 .stats-list th:nth-child(1), .stats-list td:nth-child(1) { width: 40px; }    /* 로고 (틀고정) */
 .stats-list th:nth-child(2), .stats-list td:nth-child(2) { width: 160px; }   /* 종목명 (티커·종목 헤더 동거) */
 .stats-list th:nth-child(3), .stats-list td:nth-child(3) { width: 118px; }   /* 시가총액 */
 .stats-list th:nth-child(4), .stats-list td:nth-child(4) { width: 66px; }    /* 배당율 */
-.stats-list th:nth-child(n+5), .stats-list td:nth-child(n+5) { width: 62px; }
-/* β, β″ (5,6번 컬럼) */
-.stats-list th:nth-child(5), .stats-list td:nth-child(5),
-.stats-list th:nth-child(6), .stats-list td:nth-child(6) { width: 52px; }
-/* RSI×3 + BB×3 (7~12번 컬럼) — 좁게 */
-.stats-list th:nth-child(n+7):nth-child(-n+12),
-.stats-list td:nth-child(n+7):nth-child(-n+12) {
+.stats-list th:nth-child(5), .stats-list td:nth-child(5) { width: 64px; }    /* 52주高 대비 */
+.stats-list th:nth-child(n+6), .stats-list td:nth-child(n+6) { width: 62px; }
+/* β, β″ (6,7번 컬럼) */
+.stats-list th:nth-child(6), .stats-list td:nth-child(6),
+.stats-list th:nth-child(7), .stats-list td:nth-child(7) { width: 52px; }
+/* RSI×3 + BB×3 (8~13번 컬럼) — 좁게 */
+.stats-list th:nth-child(n+8):nth-child(-n+13),
+.stats-list td:nth-child(n+8):nth-child(-n+13) {
   width: 44px;
   padding-left: 1px;
   padding-right: 1px;
 }
+/* P/E(t), P/E(f) (14,15) / P/B (16) */
+.stats-list th:nth-child(14), .stats-list td:nth-child(14),
+.stats-list th:nth-child(15), .stats-list td:nth-child(15) { width: 62px; }
+.stats-list th:nth-child(16), .stats-list td:nth-child(16) { width: 56px; }
 /* 로고 셀: 가운데, 종목명 셀: 좌측 정렬 */
 .logo-cell { text-align: center; padding-left: 4px; padding-right: 4px; }
 .stats-list td:nth-child(2) { text-align: left; }

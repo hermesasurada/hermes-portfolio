@@ -16,6 +16,20 @@ def placeholders(items: list[str]) -> str:
     return ",".join("?" for _ in items)
 
 
+TRADING_DAYS_52W = 252
+
+
+def high_52w_drawdown(daily: list[float]) -> float | None:
+    """현재가의 52주(~252거래일) 최고점 대비 하락폭(%). 고점이면 0, 아래면 음수."""
+    window = [c for c in daily[-TRADING_DAYS_52W:] if c is not None and c > 0]
+    if len(window) < 2:
+        return None
+    peak = max(window)
+    if peak <= 0:
+        return None
+    return round((window[-1] / peak - 1) * 100, 2)
+
+
 def calculate_technical_stats(rows: list[sqlite3.Row]) -> dict:
     daily = [float(row["close"]) for row in rows]
     weekly = resample_last(rows, "week")
@@ -32,6 +46,7 @@ def calculate_technical_stats(rows: list[sqlite3.Row]) -> dict:
             "month": bollinger_pband(monthly),
         },
         "performance": recent_performance(rows),
+        "drawdown_52w": high_52w_drawdown(daily),
     }
 
 

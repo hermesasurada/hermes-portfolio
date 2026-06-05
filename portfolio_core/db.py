@@ -41,6 +41,8 @@ def ensure_stats_cache_table(conn: sqlite3.Connection) -> None:
     columns = {row["name"] for row in conn.execute("PRAGMA table_info(ticker_stats_cache)").fetchall()}
     if "next_earnings_date" not in columns:
         conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN next_earnings_date TEXT")
+    if "price_to_book" not in columns:
+        conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN price_to_book REAL")
 
 
 def ensure_technical_stats_cache_table(conn: sqlite3.Connection) -> None:

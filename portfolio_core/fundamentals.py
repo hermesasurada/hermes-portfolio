@@ -31,7 +31,7 @@ def stats_cache_expires_today() -> bool:
 def load_stats_cache_item(conn: sqlite3.Connection, ticker: str, now_ts: float, fresh_only: bool = True) -> dict | None:
     row = conn.execute(
         """
-        SELECT version, fetched_ts, source, market_cap, dividend_yield, trailing_pe, forward_pe, next_earnings_date
+        SELECT version, fetched_ts, source, market_cap, dividend_yield, trailing_pe, forward_pe, price_to_book, next_earnings_date
         FROM ticker_stats_cache
         WHERE ticker = ?
         """,
@@ -50,6 +50,7 @@ def load_stats_cache_item(conn: sqlite3.Connection, ticker: str, now_ts: float, 
         "dividend_yield": finite_number(row["dividend_yield"]),
         "trailing_pe": normalize_pe(row["trailing_pe"]),
         "forward_pe": normalize_pe(row["forward_pe"]),
+        "price_to_book": normalize_pe(row["price_to_book"]),
         "next_earnings_date": row["next_earnings_date"],
     }
 
@@ -58,8 +59,8 @@ def save_stats_cache_item(conn: sqlite3.Connection, ticker: str, source: str, da
     conn.execute(
         """
         INSERT INTO ticker_stats_cache
-          (ticker, version, fetched_ts, fetched_at, source, market_cap, dividend_yield, trailing_pe, forward_pe, next_earnings_date, raw_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (ticker, version, fetched_ts, fetched_at, source, market_cap, dividend_yield, trailing_pe, forward_pe, price_to_book, next_earnings_date, raw_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(ticker) DO UPDATE SET
           version = excluded.version,
           fetched_ts = excluded.fetched_ts,
@@ -69,6 +70,7 @@ def save_stats_cache_item(conn: sqlite3.Connection, ticker: str, source: str, da
           dividend_yield = excluded.dividend_yield,
           trailing_pe = excluded.trailing_pe,
           forward_pe = excluded.forward_pe,
+          price_to_book = excluded.price_to_book,
           next_earnings_date = excluded.next_earnings_date,
           raw_json = excluded.raw_json
         """,
@@ -82,6 +84,7 @@ def save_stats_cache_item(conn: sqlite3.Connection, ticker: str, source: str, da
             finite_number(data.get("dividend_yield")),
             normalize_pe(data.get("trailing_pe")),
             normalize_pe(data.get("forward_pe")),
+            normalize_pe(data.get("price_to_book")),
             data.get("next_earnings_date"),
             json.dumps(raw or {}, ensure_ascii=False, default=str),
         ),
@@ -184,6 +187,7 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
                         "dividend_yield": finite_number(dividend_yield),
                         "trailing_pe": normalize_pe(info.get("trailingPE")),
                         "forward_pe": normalize_pe(info.get("forwardPE")),
+                        "price_to_book": normalize_pe(info.get("priceToBook")),
                         "next_earnings_date": earnings_by_ticker.get(ticker),
                     }
                     source = "yfinance"

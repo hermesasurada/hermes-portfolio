@@ -24,6 +24,8 @@ function statsRows(rows) {
       bb_month: bb.month,
       trailing_pe: hideFundamentals ? null : stats.trailing_pe,
       forward_pe: hideFundamentals ? null : stats.forward_pe,
+      price_to_book: hideFundamentals ? null : stats.price_to_book,
+      drawdown_52w: stats.drawdown_52w,
       perf_1m: perf.one_month,
       perf_3m: perf.three_month,
       perf_6m: perf.six_month,
@@ -48,7 +50,7 @@ async function loadStatsForRows(rows) {
   const key = missing.join(",");
   if (!missing.length || statsLoadKey === key || statsInFlight) return;
   statsLoadKey = key;
-  document.getElementById("statsRows").innerHTML = `<tr><td colspan="21">통계 loading...</td></tr>`;
+  document.getElementById("statsRows").innerHTML = `<tr><td colspan="23">통계 loading...</td></tr>`;
   statsInFlight = (async () => {
     const payload = await apiFetchStats(missing);
     statsData = { ...statsData, ...(payload.stats || {}) };
@@ -58,7 +60,7 @@ async function loadStatsForRows(rows) {
   try {
     await statsInFlight;
   } catch (err) {
-    document.getElementById("statsRows").innerHTML = `<tr><td colspan="21">${esc(err.message || String(err))}</td></tr>`;
+    document.getElementById("statsRows").innerHTML = `<tr><td colspan="23">${esc(err.message || String(err))}</td></tr>`;
   } finally {
     statsInFlight = null;
   }
@@ -83,6 +85,7 @@ function renderStatsTable(baseRows = null) {
       </td>
       <td>${marketCapMarkup(r)}</td>
       <td>${dividendYieldText(r.dividend_yield)}</td>
+      <td>${signedPercentText(r.drawdown_52w, 1)}</td>
       <td>${betaText(r.beta)}</td>
       <td>${betaText(r.beta_adj)}</td>
       <td>${indicatorText(r.rsi_day, "rsi")}</td>
@@ -93,6 +96,7 @@ function renderStatsTable(baseRows = null) {
       <td>${indicatorText(r.bb_month, "bb")}</td>
       <td>${peText(r.trailing_pe)}</td>
       <td>${peText(r.forward_pe)}</td>
+      <td>${peText(r.price_to_book)}</td>
       <td>${signedPercentText(r.perf_1m, 1)}</td>
       <td>${signedPercentText(r.perf_3m, 0)}</td>
       <td>${signedPercentText(r.perf_6m, 0)}</td>
