@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from portfolio_core.collectors import (
     CollectedPrice,
+    fetch_history_rows,
     fetch_investing_kr_earnings_date,
     fetch_price,
     fetch_yahoo_earnings_date,
@@ -20,6 +21,7 @@ from portfolio_core.dividends import refresh_dividend_events
 from portfolio_core.price_store import (
     CATEGORIES,
     earnings_update_due_tickers,
+    history_backfill_status,
     load_watch,
     load_ticker_profiles,
     save_daily_prices,
@@ -30,6 +32,44 @@ from portfolio_core.technical_stats import refresh_technical_stats_cache
 from portfolio_core.tickers import asset_class
 
 KR_EARNINGS_DELAY_SECONDS = 0.8
+# 신규 보유 종목 과거 이력 자동 백필: 이력이 이 행수 미만이고 아직 백필한 적
+# 없으면 1회 전체 이력을 받아 채운다. (stock 보유 카테고리 한정)
+HISTORY_BACKFILL_MIN_ROWS = 60
+HISTORY_BACKFILL_CATEGORIES = ("overseas", "kr")
+
+
+def backfill_new_tickers(categories: list[str], tickers: list[str] | None) -> tuple[int, list[str]]:
+    target_categories = [c for c in categories if c in HISTORY_BACKFILL_CATEGORIES]
+    if not target_categories:
+        return 0, []
+    watch = load_watch(categories=target_categories, tickers=tickers)
+    category_of: dict[str, str] = {}
+    for category in target_categories:
+        for ticker in watch.get(category, []):
+            category_of.setdefault(ticker, category)
+    if not category_of:
+        return 0, []
+    status = history_backfill_status(category_of.keys())
+    rows_saved = 0
+    backfilled: list[str] = []
+    for ticker, category in category_of.items():
+        count, already = status.get(ticker, (0, False))
+        if already or count >= HISTORY_BACKFILL_MIN_ROWS:
+            continue
+        try:
+            rows = fetch_history_rows(category, ticker)
+        except Exception as exc:
+            print(f"  x {ticker} backfill: {exc}")
+            continue
+        if not rows:
+            continue
+        source = "fdr-backfill" if category == "kr" else "yf-backfill"
+        saved = save_daily_prices(ticker, rows, source)
+        if saved:
+            rows_saved += saved
+            backfilled.append(ticker)
+            print(f"  ↺ backfilled {ticker}: {saved} history rows")
+    return rows_saved, backfilled
 
 
 def parse_categories(values: list[str] | None) -> list[str]:
@@ -173,7 +213,14 @@ def main() -> int:
         cache_entries.append((item.ticker, item.price, item.currency, item.source))
     if cache_entries:
         update_price_cache(cache_entries)
-    technical_updated = refresh_technical_stats_cache(item.ticker for item in fetched)
+
+    backfill_count, backfilled = backfill_new_tickers(categories, args.ticker)
+    if backfill_count:
+        row_count += backfill_count
+        print(f"Backfilled {len(backfilled)} new tickers / {backfill_count} history rows")
+
+    technical_tickers = {item.ticker for item in fetched} | set(backfilled)
+    technical_updated = refresh_technical_stats_cache(technical_tickers)
     if technical_updated:
         print(f"Updated {technical_updated} technical stats")
     earnings_errors: list[str] = []

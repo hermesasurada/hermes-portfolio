@@ -101,6 +101,31 @@ def save_daily_prices(ticker: str, rows: Iterable[tuple[str, float]], source: st
     return len(clean_rows)
 
 
+def history_backfill_status(tickers: Iterable[str]) -> dict[str, tuple[int, bool]]:
+    """{ticker: (보유 일별 행수, 백필을 이미 시도했는지)}.
+
+    source LIKE '%backfill%' 행이 있으면 이미 1회 백필한 것으로 보고 재백필을 막는다
+    (멱등성). 행이 아예 없는 종목은 결과에서 빠지므로 호출부에서 (0, False) 처리.
+    """
+    clean = [str(t) for t in tickers if t]
+    if not clean:
+        return {}
+    placeholders = ",".join("?" for _ in clean)
+    with connect() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT ticker,
+                   COUNT(date) AS n,
+                   SUM(CASE WHEN source LIKE '%backfill%' THEN 1 ELSE 0 END) AS backfilled
+            FROM daily_prices
+            WHERE ticker IN ({placeholders})
+            GROUP BY ticker
+            """,
+            clean,
+        ).fetchall()
+    return {row["ticker"]: (int(row["n"] or 0), bool(row["backfilled"])) for row in rows}
+
+
 def update_price_cache(entries: Iterable[tuple[str, float, str, str]]) -> None:
     clean_entries = list(entries)
     with connect() as conn:

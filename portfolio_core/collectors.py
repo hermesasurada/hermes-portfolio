@@ -58,6 +58,41 @@ def fetch_kr_price(ticker: str, history_start: str = "20250101") -> CollectedPri
     return CollectedPrice(ticker, price, "KRW", "fdr", price_date, recent)
 
 
+def fetch_history_rows(category: str, ticker: str, period: str = "10y") -> list[tuple[str, float]]:
+    """장기 일별 종가 — 신규 보유 종목의 과거 이력 1회 백필용.
+
+    일일 수집기는 해외 7일치 / KR history_start 이후만 받으므로, 새로 추가된
+    종목은 RSI·볼린저·베타·기간수익률 계산에 필요한 과거가 비어버린다. 이 함수로
+    가능한 전체 이력을 받아 채운다. (stock 보유 카테고리 overseas/kr 전용)
+    """
+    if category == "kr":
+        from FinanceDataReader import DataReader as fdr
+
+        code = ticker.replace(".KS", "").replace(".KQ", "")
+        df = fdr(code, "20150101")
+        if df is None or df.empty or "Close" not in df:
+            return []
+        df = df.dropna(subset=["Close"])
+        return [
+            (date.strftime("%Y-%m-%d"), float(row["Close"]))
+            for date, row in df.iterrows()
+            if row["Close"] and row["Close"] > 0
+        ]
+
+    import yfinance as yf
+
+    symbol = normalize_yfinance_symbol(ticker) or ticker
+    hist = yf.Ticker(symbol).history(period=period, auto_adjust=False)
+    if hist is None or hist.empty or "Close" not in hist:
+        return []
+    closes = hist["Close"].dropna()
+    return [
+        (date.strftime("%Y-%m-%d"), float(price))
+        for date, price in closes.items()
+        if price == price and price > 0
+    ]
+
+
 def fetch_yahoo_price(ticker: str, cache_ticker: str | None = None, currency: str | None = None) -> CollectedPrice | None:
     import yfinance as yf
 
