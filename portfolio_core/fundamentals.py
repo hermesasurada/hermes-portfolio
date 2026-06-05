@@ -132,6 +132,7 @@ def fetch_naver_fundamentals(ticker: str) -> tuple[dict, dict]:
         "dividend_yield": dividend_yield,
         "trailing_pe": normalize_pe(parse_number(obj.get("per"))),
         "forward_pe": normalize_pe(parse_number(obj.get("estimatedPer"))),
+        "price_to_book": normalize_pe(parse_number(obj.get("pbr"))),  # PBR = P/B
         "next_earnings_date": None,
     }, obj
 
