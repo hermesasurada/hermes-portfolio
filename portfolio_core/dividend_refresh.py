@@ -8,6 +8,7 @@ from .dividend_sources import (
     _kr_history_attempt_due,
     _nasdaq_attempt_due,
     _now_text,
+    _opendart_attempt_due,
     _polygon_attempt_due,
     _seibro_attempt_due,
     _seibro_candidate,
@@ -54,6 +55,7 @@ def refresh_dividend_events(tickers: list[str]) -> None:
                 or _seibro_attempt_due(ticker, statuses.get(ticker))
                 or _kr_history_attempt_due(ticker, statuses.get(ticker))
                 or _polygon_attempt_due(ticker, statuses.get(ticker))
+                or _opendart_attempt_due(ticker, statuses.get(ticker))
             )
         ]
         conn.commit()
@@ -65,11 +67,11 @@ def refresh_dividend_events(tickers: list[str]) -> None:
         ensure_dividend_tables(conn)
         for ticker in due:
             events, status = _fetch_dividends(ticker, names.get(ticker))
-            if _seibro_candidate(ticker):
-                conn.execute(
-                    "DELETE FROM dividend_events WHERE ticker = ? AND source NOT IN ('seibro', 'kr-history')",
-                    (ticker,),
-                )
+            # KR은 소스별 ex_date 관례가 달라(opendart=기준일-1영업일, seibro=배당락일,
+            # yf=ex) 근접 중복이 누적된다. _fetch_dividends가 이미 중복 억제한 완전한
+            # 병합본을 주므로, 정상 수집된 경우 기존 이벤트를 통째로 교체한다.
+            if _seibro_candidate(ticker) and events:
+                conn.execute("DELETE FROM dividend_events WHERE ticker = ?", (ticker,))
             for event in events:
                 if not event.get("ex_date"):
                     continue

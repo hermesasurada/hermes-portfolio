@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .constants import KOREAN_SUFFIXES
+from .opendart_dividends import fetch_opendart_dividends, is_opendart_candidate
 from .paths import KST
 from .tickers import normalize_yfinance_symbol, ticker_currency
 
@@ -296,6 +297,10 @@ def _seibro_attempt_due(ticker: str, status: str | None) -> bool:
     return _seibro_candidate(ticker) and "seibro" not in (status or "")
 
 
+def _opendart_attempt_due(ticker: str, status: str | None) -> bool:
+    return is_opendart_candidate(ticker) and "opendart" not in (status or "")
+
+
 def _kr_history_attempt_due(ticker: str, status: str | None) -> bool:
     return _seibro_candidate(ticker) and "kr_history" not in (status or "")
 
@@ -527,12 +532,40 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
     events: dict[str, dict] = {}
     sources = []
     if _seibro_candidate(ticker):
+        # OpenDART(현금배당결정 공시) = 한국 배당 권위 소스. 확정 주당배당금·
+        # 배당기준일·지급예정일을 먼저 깔고(미래 확정분 포함), SEIBRO/yfinance는
+        # OpenDART와 ±4일 내 겹치지 않는 ex_date만 보강(중복 방지).
+        opendart_ex_dates: list[date] = []
+        if is_opendart_candidate(ticker):
+            try:
+                opendart_events = fetch_opendart_dividends(ticker)
+                sources.append("opendart" if opendart_events else "opendart0")
+                for event in opendart_events:
+                    if event.get("ex_date"):
+                        events[event["ex_date"]] = event
+                        try:
+                            opendart_ex_dates.append(date.fromisoformat(event["ex_date"]))
+                        except ValueError:
+                            pass
+            except Exception:
+                sources.append("opendart_error")
+
+        def _near_opendart(ex_date_text: str) -> bool:
+            if not opendart_ex_dates:
+                return False
+            try:
+                d = date.fromisoformat(ex_date_text)
+            except ValueError:
+                return False
+            return any(abs((d - od).days) <= 4 for od in opendart_ex_dates)
+
         try:
             seibro_events = _fetch_seibro_dividends(ticker, name)
             sources.append("seibro" if seibro_events else "seibro0")
             for event in seibro_events:
-                if event.get("ex_date"):
-                    events[event["ex_date"]] = event
+                ex = event.get("ex_date")
+                if ex and not _near_opendart(ex):
+                    events.setdefault(ex, event)
         except Exception:
             sources.append("seibro_error")
         try:
@@ -542,8 +575,9 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
             ]
             sources.append("kr_history" if history_events else "kr_history0")
             for event in history_events:
-                if event.get("ex_date"):
-                    events.setdefault(event["ex_date"], {
+                ex = event.get("ex_date")
+                if ex and not _near_opendart(ex):
+                    events.setdefault(ex, {
                         **event,
                         "source": "kr-history",
                     })
