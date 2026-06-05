@@ -14,6 +14,7 @@ from .tickers import is_korean_stock_ticker, normalize_yfinance_symbol
 
 STATS_CACHE_SECONDS = 30 * 60
 STATS_CACHE_VERSION = 7
+PB_SANITY_MAX = 300  # P/B가 이 값 초과면 데이터 오류로 간주(공란)
 
 
 def finite_number(value) -> float | None:
@@ -183,12 +184,22 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
                     dividend_yield = info.get("dividendYield")
                     if dividend_yield is None:
                         dividend_yield = info.get("trailingAnnualDividendYield")
+                    # yfinance는 거래통화 != 재무통화(ADR·해외기업)일 때 주당순자산
+                    # (bookValue)을 잘못 환산해 P/B가 비현실적으로 폭발한다
+                    # (예: ASML 1500, TSM 65). 통화 불일치/이상치는 신뢰 불가 → 공란.
+                    price_to_book = normalize_pe(info.get("priceToBook"))
+                    trading_ccy = info.get("currency")
+                    financial_ccy = info.get("financialCurrency")
+                    if price_to_book is not None and trading_ccy and financial_ccy and trading_ccy != financial_ccy:
+                        price_to_book = None
+                    if price_to_book is not None and price_to_book > PB_SANITY_MAX:
+                        price_to_book = None
                     data = {
                         "market_cap": finite_number(info.get("marketCap")),
                         "dividend_yield": finite_number(dividend_yield),
                         "trailing_pe": normalize_pe(info.get("trailingPE")),
                         "forward_pe": normalize_pe(info.get("forwardPE")),
-                        "price_to_book": normalize_pe(info.get("priceToBook")),
+                        "price_to_book": price_to_book,
                         "next_earnings_date": earnings_by_ticker.get(ticker),
                     }
                     source = "yfinance"
