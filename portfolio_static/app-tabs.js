@@ -48,7 +48,7 @@ async function loadStatsForRows(rows) {
   const key = missing.join(",");
   if (!missing.length || statsLoadKey === key || statsInFlight) return;
   statsLoadKey = key;
-  document.getElementById("statsRows").innerHTML = `<tr><td colspan="21">통계 loading...</td></tr>`;
+  document.getElementById("statsRows").innerHTML = `<tr><td colspan="22">통계 loading...</td></tr>`;
   statsInFlight = (async () => {
     const payload = await apiFetchStats(missing);
     statsData = { ...statsData, ...(payload.stats || {}) };
@@ -58,7 +58,7 @@ async function loadStatsForRows(rows) {
   try {
     await statsInFlight;
   } catch (err) {
-    document.getElementById("statsRows").innerHTML = `<tr><td colspan="21">${esc(err.message || String(err))}</td></tr>`;
+    document.getElementById("statsRows").innerHTML = `<tr><td colspan="22">${esc(err.message || String(err))}</td></tr>`;
   } finally {
     statsInFlight = null;
   }
@@ -73,7 +73,7 @@ function renderStatsTable(baseRows = null) {
   document.getElementById("statsRows").innerHTML = rows.map(r => `
     <tr class="${tableRowClass(r)}">
       <td class="logo-cell">${logoMarkup(r)}</td>
-      <td>
+      <td colspan="2">
         <span class="ticker-text">
           <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
             <span class="asset-name">${r.name}</span>

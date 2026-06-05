@@ -578,25 +578,30 @@ table.stats-list {
   text-align: center;
   vertical-align: middle;
 }
-.stats-list th:nth-child(1), .stats-list td:nth-child(1) { width: 40px; }    /* 로고 (틀고정) */
-.stats-list th:nth-child(2), .stats-list td:nth-child(2) { width: 160px; }   /* 종목명 */
-.stats-list th:nth-child(3), .stats-list td:nth-child(3) { width: 118px; }   /* 시가총액 */
-.stats-list th:nth-child(4), .stats-list td:nth-child(4) { width: 66px; }    /* 배당율 */
-.stats-list th:nth-child(n+5), .stats-list td:nth-child(n+5) { width: 62px; }
-/* β, β″ (5,6번 컬럼) */
-.stats-list th:nth-child(5), .stats-list td:nth-child(5),
-.stats-list th:nth-child(6), .stats-list td:nth-child(6) { width: 52px; }
-/* RSI×3 + BB×3 (7~12번 컬럼) — 좁게 */
-.stats-list th:nth-child(n+7):nth-child(-n+12),
-.stats-list td:nth-child(n+7):nth-child(-n+12) {
+/* table-layout:fixed → 컬럼 폭은 thead(th) 기준. 헤더는 티커/종목 분리(22칸),
+   본문은 종목 데이터가 colspan=2로 한 칸 유지(21칸)이라 td는 한 칸씩 앞당겨짐. */
+.stats-list th:nth-child(1) { width: 40px; }     /* 로고 (틀고정) */
+.stats-list th:nth-child(2) { width: 58px; }     /* 티커 (헤더) */
+.stats-list th:nth-child(3) { width: 102px; }    /* 종목 (헤더) — 데이터는 2~3 colspan */
+.stats-list th:nth-child(4) { width: 118px; }    /* 시가총액 */
+.stats-list th:nth-child(5) { width: 66px; }     /* 배당율 */
+.stats-list th:nth-child(6),
+.stats-list th:nth-child(7) { width: 52px; }     /* β, β″ */
+.stats-list th:nth-child(n+14) { width: 62px; }  /* P/E(t), P/E(f), 기간수익률 */
+/* RSI×3 + BB×3 — 헤더는 8~13번, 본문(colspan 보정)은 7~12번 */
+.stats-list th:nth-child(n+8):nth-child(-n+13) {
   width: 44px;
+  padding-left: 1px;
+  padding-right: 1px;
+}
+.stats-list td:nth-child(n+7):nth-child(-n+12) {
   padding-left: 1px;
   padding-right: 1px;
 }
 /* 로고 셀: 가운데, 종목명 셀: 좌측 정렬 */
 .logo-cell { text-align: center; padding-left: 4px; padding-right: 4px; }
 .stats-list td:nth-child(2) { text-align: left; }
-#detailTableWrap th:nth-child(2), #detailTableWrap td:nth-child(2) { text-align: left; }
+#detailTableWrap th:nth-child(2), #detailTableWrap th:nth-child(3), #detailTableWrap td:nth-child(2) { text-align: left; }
 .stats-list .indicator-head {
   line-height: 1.05;
   white-space: normal;

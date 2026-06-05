@@ -17,6 +17,7 @@ from urllib.parse import parse_qs, urlparse
 from portfolio_core.charts import load_account_performance, load_price_chart
 from portfolio_core.constants import KOREAN_ETF_BRANDS, LOCAL_MARKET_SUFFIXES
 from portfolio_core.db import initialize_schema
+from portfolio_core.logos import is_dark_logo
 from portfolio_core.dividends import load_dividends
 from portfolio_core.paths import DB_PATH, LOGO_DIR
 from portfolio_core.portfolio import load_portfolio as load_portfolio_data
@@ -66,14 +67,15 @@ def logo_url(ticker: str) -> str | None:
     return url
 
 
-def logo_hint(ticker: str, name: str) -> dict[str, str | None]:
+def logo_hint(ticker: str, name: str) -> dict[str, str | bool | None]:
     cls = asset_class(ticker, name)
     upper_name = (name or ticker).upper()
+    dark = is_dark_logo(ticker)
     if cls == "crypto":
-        return {"kind": "crypto", "text": "₿", "url": logo_url(ticker)}
+        return {"kind": "crypto", "text": "₿", "url": logo_url(ticker), "dark": dark}
     for brand in KOREAN_ETF_BRANDS:
         if brand in upper_name:
-            return {"kind": "etf", "text": brand[:2], "url": logo_url(ticker)}
+            return {"kind": "etf", "text": brand[:2], "url": logo_url(ticker), "dark": dark}
     clean_ticker = ticker.replace(".KS", "").replace(".KQ", "")
     if ticker.endswith(LOCAL_MARKET_SUFFIXES):
         text = badge_text(ticker, name)
@@ -83,6 +85,7 @@ def logo_hint(ticker: str, name: str) -> dict[str, str | None]:
         "kind": cls,
         "text": text,
         "url": logo_url(ticker),
+        "dark": dark,
     }
 
 

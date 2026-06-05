@@ -36,6 +36,27 @@ def logo_stem(ticker: str) -> str:
     return "".join(ch if ch.isalnum() else "_" for ch in ticker.upper())
 
 
+# 흰색/연한 로고(흰 배경 카드에서 안 보이는 것) 목록. detect_dark_logos.py 가
+# 자동 생성. 프런트엔드는 이 목록의 로고에 brightness(0) 반전을 적용한다.
+DARK_LOGO_PATH = LOGO_DIR.parent / "logo_dark.json"
+_dark_logo_cache: set[str] | None = None
+
+
+def dark_logo_stems() -> set[str]:
+    global _dark_logo_cache
+    if _dark_logo_cache is None:
+        try:
+            data = json.loads(DARK_LOGO_PATH.read_text()) if DARK_LOGO_PATH.exists() else []
+            _dark_logo_cache = {str(stem) for stem in data}
+        except Exception:
+            _dark_logo_cache = set()
+    return _dark_logo_cache
+
+
+def is_dark_logo(ticker: str) -> bool:
+    return logo_stem(ticker) in dark_logo_stems()
+
+
 def existing_logo_path(ticker: str, logo_dir: Path = LOGO_DIR) -> Path | None:
     stem = logo_stem(ticker)
     for ext in ("png", "svg"):

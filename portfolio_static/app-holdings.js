@@ -604,7 +604,7 @@ function renderTable() {
     return `
     <tr class="${tableRowClass(r)}">
       <td class="logo-cell">${logoMarkup(r)}</td>
-      <td>
+      <td colspan="2">
         <span class="ticker-text">
           <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
             <span class="asset-name">${r.name}</span>

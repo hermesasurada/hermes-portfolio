@@ -198,7 +198,8 @@ function marketCapMarkup(row) {
 function logoMarkup(row) {
   const text = row.logo?.text || row.ticker.slice(0, 2).toUpperCase();
   const url = row.logo?.url;
-  const darkLogo = ["PLTR", "ASML", "DIS"].includes(row.ticker) ? " dark-logo" : "";
+  // 흰색/연한 로고는 서버가 logo.dark 플래그로 표시 (detect_dark_logos.py 자동 감지)
+  const darkLogo = row.logo?.dark ? " dark-logo" : "";
   if (url) {
     return `<span class="asset-icon has-image" title="${row.name}"><span class="fallback-text">${text}</span><img class="${darkLogo.trim()}" src="${url}" alt="" referrerpolicy="no-referrer" onerror="this.parentElement.classList.remove('has-image');this.remove()"></span>`;
   }
