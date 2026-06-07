@@ -46,6 +46,10 @@ function apiLookupTicker(query) {
   return fetchJson(`/api/watchlist/lookup?q=${encodeURIComponent(query || "")}`);
 }
 
+function apiFetchTickerDirectory() {
+  return fetchJson("/api/tickers");
+}
+
 function apiAddWatchlist(tickers) {
   return fetchJson("/api/watchlist", {
     method: "POST",

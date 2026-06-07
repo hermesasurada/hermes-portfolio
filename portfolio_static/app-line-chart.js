@@ -32,7 +32,7 @@ function chartRangeStartDate(points, rangeKey) {
   if (!lastDateText) return null;
   const lastDate = new Date(`${lastDateText}T00:00:00`);
   if (Number.isNaN(lastDate.getTime())) return null;
-  if (rangeKey === "all") return null;   // 전체(상장기간): 시작 제한 없음
+  if (rangeKey === "all" || rangeKey === "cmax") return null;   // 전체/최대: 시작 제한 없음
   if (rangeKey === "ytd") {
     return new Date(lastDate.getFullYear(), 0, 1);
   }
@@ -115,6 +115,30 @@ function logChartScale(values, desiredTicks = 5) {
   return { min, max, ticks, log: true };
 }
 
+// 비교 차트 로그 스케일: %는 음수가 될 수 있어 (1+%/100) 비율을 로그축에 올린다.
+const COMPARE_LOG_NICE_RATIOS = [
+  0.05, 0.1, 0.2, 0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75,
+  2, 2.5, 3, 4, 5, 7.5, 10, 15, 20, 30, 50, 100, 200, 500,
+];
+function compareLogScale(ratios) {
+  const clean = ratios.filter(value => Number.isFinite(value) && value > 0);
+  if (clean.length < 1) return { min: 0.5, max: 2, ticks: [0.5, 1, 2], log: true };
+  const lo = Math.min(...clean);
+  const hi = Math.max(...clean);
+  const pad = Math.max((Math.log10(hi) - Math.log10(lo)) * 0.06, 0.02);
+  const min = Math.pow(10, Math.log10(lo) - pad);
+  const max = Math.pow(10, Math.log10(hi) + pad);
+  let ticks = COMPARE_LOG_NICE_RATIOS.filter(value => value >= min && value <= max);
+  if (min <= 1 && max >= 1 && !ticks.includes(1)) ticks.push(1);
+  ticks.sort((a, b) => a - b);
+  if (ticks.length > 8) {
+    const step = Math.ceil(ticks.length / 7);
+    ticks = ticks.filter((_, index) => index % step === 0 || ticks[index] === 1);
+  }
+  if (ticks.length < 2) ticks = [min, Math.sqrt(min * max), max];
+  return { min, max, ticks, log: true };
+}
+
 function transactionsForChart(payload, points) {
   const start = points[0]?.date;
   const end = points[points.length - 1]?.date;
@@ -187,11 +211,18 @@ function chartExtremes(values) {
 }
 
 function renderChartRangeButtons() {
+  // 비교 모드: '전체' 대신 공통기간 '최대' 노출 (상장일 차이로 못 쓰는 구간 제외)
+  const isCompare = chartComparePayloads.length > 0;
+  const ranges = isCompare ? chartRanges.filter(range => range.key !== "all") : chartRanges;
+  const maxBtn = isCompare
+    ? `<button class="chart-range-btn ${chartRange === "cmax" ? "active" : ""}" type="button" data-chart-range="cmax">최대</button>`
+    : "";
   return `
     <div class="chart-ranges" role="group" aria-label="차트 기간">
-      ${chartRanges.map(range => `
+      ${ranges.map(range => `
         <button class="chart-range-btn ${range.key === chartRange ? "active" : ""}" type="button" data-chart-range="${range.key}">${range.label}</button>
       `).join("")}
+      ${maxBtn}
       <button class="chart-range-btn ${chartRange === "custom" ? "active" : ""}" type="button" data-chart-custom>직접설정</button>
     </div>
   `;
@@ -381,18 +412,34 @@ function tickerDisplayName(ticker) {
 }
 
 function chartCompareSeries(payload) {
-  return [payload, ...chartComparePayloads].map((item, index) => {
-    const rawPoints = (item.points || [])
-      .filter(point => point.date && Number.isFinite(Number(point.close)))
-      .map(point => ({ date: point.date, value: Number(point.close) }));
-    const filtered = filterChartPoints(rawPoints.map(point => ({ date: point.date, close: point.value })), chartRange)
-      .map(point => ({
-        date: point.date,
-        value: Number(point.close),
-        time: new Date(`${point.date}T00:00:00`).getTime(),
-      }));
-    if (filtered.length < 2) return null;
-    const base = filtered.find(point => point.value > 0)?.value;
+  // 종목별 양수 가격 시계열
+  const raw = [payload, ...chartComparePayloads].map((item, index) => {
+    const pts = (item.points || [])
+      .filter(point => point.date && Number.isFinite(Number(point.close)) && Number(point.close) > 0)
+      .map(point => ({ date: point.date, value: Number(point.close), time: new Date(`${point.date}T00:00:00`).getTime() }));
+    return { item, index, pts };
+  }).filter(entry => entry.pts.length >= 2);
+  if (!raw.length) return [];
+
+  // 상장일 차이 보정: 모든 종목이 데이터를 갖는 공통 시작 = 가장 늦은 최초가용일
+  const commonStartTime = Math.max(...raw.map(entry => entry.pts[0].time));
+  const mainRangePoints = raw[0].pts.map(point => ({ date: point.date, close: point.value }));
+  let startTime = commonStartTime;
+  let endTime = Infinity;
+  if (chartRange === "custom") {
+    const bounds = chartRangeBounds(mainRangePoints, "custom");
+    if (bounds.startDate) startTime = Math.max(commonStartTime, bounds.startDate.getTime());
+    if (bounds.endDate) endTime = bounds.endDate.getTime();
+  } else if (chartRange !== "cmax" && chartRange !== "all") {
+    const sd = chartRangeStartDate(mainRangePoints, chartRange);
+    if (sd) startTime = Math.max(commonStartTime, sd.getTime());
+  }
+  // chartRange가 'cmax'/'all'이면 startTime = commonStartTime (전체 공통기간)
+
+  return raw.map(({ item, index, pts }) => {
+    const windowed = pts.filter(point => point.time >= startTime && point.time <= endTime);
+    if (windowed.length < 2) return null;
+    const base = windowed[0].value;
     if (!base) return null;
     return {
       key: String(item.ticker || `compare-${index}`).toUpperCase(),
@@ -402,31 +449,47 @@ function chartCompareSeries(payload) {
       logo: chartLogoRow(item).logo,
       color: chartCompareColors[index % chartCompareColors.length],
       primary: index === 0,
-      points: filtered.map(point => ({
-        ...point,                                   // value = 원주가 유지
-        close: (point.value / base - 1) * 100,      // close = 기준일 대비 %
+      points: windowed.map(point => ({
+        date: point.date,
+        time: point.time,
+        value: point.value,                          // 원주가
+        close: (point.value / base - 1) * 100,       // 공통 기준일 대비 %
       })),
     };
   }).filter(Boolean);
 }
 
 function renderChartCompareControls() {
+  // 추가된 비교 종목은 상단 범례에서 표시·삭제 (여기는 검색·추가만)
   return `
     <div class="chart-compare-panel">
       <div class="chart-compare-add">
-        <input id="chartCompareInput" placeholder="티커 직접 입력" autocomplete="off" spellcheck="false">
+        <input id="chartCompareInput" placeholder="비교 종목 검색 (티커·종목명)" autocomplete="off" spellcheck="false" list="compareTickerOptions">
+        <datalist id="compareTickerOptions"></datalist>
         <button class="ghost-btn" id="chartCompareAdd" type="button">추가</button>
-      </div>
-      <div class="chart-compare-list">
-        ${chartComparePayloads.map(item => `
-          <span class="compare-chip">
-            ${esc(item.ticker)} · ${esc(item.name || item.ticker)}
-            <button type="button" data-compare-remove="${esc(item.ticker)}" aria-label="${esc(item.ticker)} 삭제">&times;</button>
-          </span>
-        `).join("") || `<span class="compare-empty">비교 종목 없음</span>`}
       </div>
     </div>
   `;
+}
+
+let compareTickerDirectoryCache = null;
+async function populateCompareDatalist() {
+  const list = document.getElementById("compareTickerOptions");
+  if (!list) return;
+  try {
+    if (!compareTickerDirectoryCache) {
+      const payload = await apiFetchTickerDirectory();
+      compareTickerDirectoryCache = payload.tickers || [];
+    }
+  } catch {
+    compareTickerDirectoryCache = compareTickerDirectoryCache || [];
+  }
+  // 이미 비교에 추가됐거나 메인인 종목은 제외
+  const used = new Set([String(chartTicker || "").toUpperCase(), ...chartComparePayloads.map(item => String(item.ticker || "").toUpperCase())]);
+  list.innerHTML = compareTickerDirectoryCache
+    .filter(item => !used.has(String(item.ticker || "").toUpperCase()))
+    .map(item => `<option value="${esc(item.ticker)}">${esc(item.ticker)} · ${esc(item.name)}</option>`)
+    .join("");
 }
 
 function bindChartCompareControls(payload) {
@@ -440,6 +503,7 @@ function bindChartCompareControls(payload) {
         addChartCompareTicker(input.value);
       }
     });
+    populateCompareDatalist();
   }
   document.querySelectorAll("[data-compare-remove]").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -545,7 +609,7 @@ function bindCompareHover(series, geometry) {
 function renderCompareLineChart(payload) {
   const series = chartCompareSeries(payload);
   renderChartIdentity(payload);
-  syncChartLogToggle(false);   // 비교 차트는 로그 미적용
+  syncChartLogToggle(true);   // 비교 차트도 로그 지원 (비율 기준)
   const statsEl = document.getElementById("chartStats");
   if (statsEl) statsEl.innerHTML = "";   // 비교 모드에선 단일 종목 통계 숨김
   if (series.length < 2 || !series[0]?.points.length) {
@@ -558,7 +622,9 @@ function renderCompareLineChart(payload) {
   const minTime = Math.min(...allPoints.map(point => point.time));
   const maxTime = Math.max(...allPoints.map(point => point.time));
   const values = allPoints.map(point => point.close);
-  const scale = niceChartScale([...values, 0]);
+  const useLog = Boolean(chartLogScale);   // 비교 %는 (1+%/100) 비율로 로그축에 매핑
+  const ratioOf = pct => 1 + pct / 100;
+  const scale = useLog ? compareLogScale(values.map(ratioOf)) : niceChartScale([...values, 0]);
   const width = 980;
   const height = 420;
   const pad = { top: 28, right: 108, bottom: 34, left: 52 };
@@ -567,8 +633,13 @@ function renderCompareLineChart(payload) {
   const min = scale.min;
   const max = scale.max;
   const range = max - min || 1;
+  const logMin = useLog ? Math.log10(min) : 0;
+  const logSpan = useLog ? ((Math.log10(max) - logMin) || 1) : 1;
   const xForTime = time => pad.left + (maxTime === minTime ? 0 : (time - minTime) / (maxTime - minTime) * plotW);
-  const yFor = value => pad.top + (max - value) / range * plotH;
+  // 입력은 항상 %(close). 로그 모드면 비율로 변환해 매핑.
+  const yFor = pct => useLog
+    ? pad.top + (Math.log10(max) - Math.log10(ratioOf(pct))) / logSpan * plotH
+    : pad.top + (max - pct) / range * plotH;
   const clampY = value => Math.max(pad.top + 4, Math.min(pad.top + plotH - 2, value));
   const pathFor = points => points.map((point, index) => `${index === 0 ? "M" : "L"}${xForTime(point.time).toFixed(2)},${yFor(point.close).toFixed(2)}`).join(" ");
   const main = series[0];
@@ -580,7 +651,10 @@ function renderCompareLineChart(payload) {
     <span>비교 ${chartComparePayloads.length}개</span>
     <span class="${cls}">${pctChartLabel(last.close)}</span>
   `;
-  const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
+  const yTicks = scale.ticks.map(tick => {
+    const pct = useLog ? (tick - 1) * 100 : tick;   // 로그 틱은 비율 → %로 환산
+    return { value: pct, y: yFor(pct) };
+  });
   const vGrid = perfVerticalGrid(minTime, maxTime, chartRange);
   const labelEvery = Math.max(1, Math.ceil(vGrid.lines.length / 8));
   const endLabels = series
@@ -593,7 +667,7 @@ function renderCompareLineChart(payload) {
   for (let i = 1; i < endLabels.length; i++) {
     if (endLabels[i].y - endLabels[i - 1].y < minGap) endLabels[i].y = endLabels[i - 1].y + minGap;
   }
-  const legend = series.map(item => `<span class="perf-legend-item" style="color:${item.color}"><i style="background:${item.color}"></i>${esc(item.ticker || item.name)}</span>`).join("");
+  const legend = series.map(item => `<span class="perf-legend-item ${item.primary ? "" : "removable"}" style="color:${item.color}"><i style="background:${item.color}"></i><span class="pl-name">${esc(item.ticker || item.name)}</span>${item.primary ? "" : `<button class="legend-remove" type="button" data-compare-remove="${esc(item.ticker)}" aria-label="${esc(item.ticker)} 비교 삭제" title="비교 삭제">&times;</button>`}</span>`).join("");
   document.getElementById("chartCanvas").innerHTML = `
     <div class="perf-chart-top">
       <div class="perf-legend">${legend}</div>

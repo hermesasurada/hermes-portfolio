@@ -16,7 +16,8 @@ from urllib.parse import parse_qs, urlparse
 
 from portfolio_core.charts import load_account_performance, load_price_chart
 from portfolio_core.constants import KOREAN_ETF_BRANDS, LOCAL_MARKET_SUFFIXES
-from portfolio_core.db import initialize_schema
+from portfolio_core.db import connect, initialize_schema
+from portfolio_core.queries import load_ticker_directory
 from portfolio_core.logos import is_dark_logo
 from portfolio_core.dividends import load_dividends
 from portfolio_core.paths import DB_PATH, LOGO_DIR
@@ -245,6 +246,11 @@ class Handler(BaseHTTPRequestHandler):
         # 종목별 등락폭만 내부 DB에서 계산 (외부 호출 없음). ?tickers=A,B 로 선택 조회.
         return load_ticker_changes(self.query_values(query, "tickers") or None)
 
+    def api_tickers(self, query: dict[str, list[str]]) -> dict:
+        # DB 등록 종목 목록 (비교 검색 자동완성용). DB 전용.
+        with connect() as conn:
+            return {"tickers": load_ticker_directory(conn)}
+
     def api_chart(self, query: dict[str, list[str]]) -> dict:
         ticker = (query.get("ticker") or [""])[0]
         return load_price_chart(ticker)
@@ -287,6 +293,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/portfolio": self.api_portfolio,
                 "/api/stats": self.api_stats,
                 "/api/changes": self.api_changes,
+                "/api/tickers": self.api_tickers,
                 "/api/chart": self.api_chart,
                 "/api/account-performance": self.api_account_performance,
                 "/api/dividends": self.api_dividends,

@@ -1415,7 +1415,23 @@ tbody tr.index-row td:first-child::before {
   height: 4px;
   border-radius: 999px;
   display: inline-block;
+  flex: 0 0 auto;
 }
+.perf-legend-item .legend-remove {
+  display: none;
+  margin-left: 1px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 1px;
+  opacity: .65;
+}
+.perf-legend-item.removable:hover { border-color: currentColor; }
+.perf-legend-item.removable:hover .legend-remove { display: inline-flex; }
+.perf-legend-item .legend-remove:hover { opacity: 1; }
 .perf-index-toggle {
   height: 26px;
   padding: 0 9px;

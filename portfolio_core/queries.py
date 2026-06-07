@@ -8,6 +8,19 @@ def clean_account_ids(account_ids: Iterable[str] | None) -> list[int]:
     return [int(value) for value in (account_ids or []) if str(value).strip()]
 
 
+def load_ticker_directory(conn: sqlite3.Connection) -> list[dict]:
+    """DB에 등록된 전체 종목(티커·이름) — 비교 검색 자동완성용. DB 전용."""
+    rows = conn.execute(
+        """
+        SELECT ticker, name
+        FROM tickers
+        WHERE ticker IS NOT NULL AND TRIM(ticker) <> ''
+        ORDER BY ticker
+        """
+    ).fetchall()
+    return [{"ticker": row["ticker"], "name": row["name"] or row["ticker"]} for row in rows]
+
+
 def account_filter_clause(account_ids: list[int], alias: str = "a") -> tuple[str, list[object]]:
     if not account_ids:
         return "", []
