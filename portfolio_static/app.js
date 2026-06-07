@@ -26,6 +26,7 @@ let chartTicker = null;
 let chartLoadInFlight = null;
 let chartPayload = null;
 let chartRange = "6m";
+let chartLogScale = false;
 let chartCustomRange = { start: "", end: "" };
 let chartComparePayloads = [];
 let performanceChartOpen = false;
@@ -287,6 +288,7 @@ const positionFilterLabels = { held: "보유", unheld: "미보유", all: "전체
     render();
   });
 })();
+chartLogScale = storageGet(detailStorage.chartLogScale) === "true";
 document.getElementById("fxAdjustedToggle").checked = storageGet(detailStorage.fxAdjusted) === "true";
 document.getElementById("fxAdjustedToggle").addEventListener("change", () => {
   storageSet(detailStorage.fxAdjusted, String(document.getElementById("fxAdjustedToggle").checked));

@@ -9,7 +9,8 @@ const detailStorage = {
   fxAdjusted: "portfolio.detail.fxAdjusted",
   showIndexes: "portfolio.detail.showIndexes",
   currencyFilter: "portfolio.detail.currencyFilter",
-  positionFilter: "portfolio.detail.positionFilter"
+  positionFilter: "portfolio.detail.positionFilter",
+  chartLogScale: "portfolio.chart.logScale"
 };
 const defaultSortDir = {
   name: 1,

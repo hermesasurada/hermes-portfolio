@@ -92,6 +92,28 @@ function niceChartScale(values, desiredTicks = 5) {
   return { min, max, ticks };
 }
 
+function logChartScale(values, desiredTicks = 5) {
+  const clean = values.filter(value => Number.isFinite(value) && value > 0);
+  if (clean.length < 1) return niceChartScale(values, desiredTicks);
+  const rawMin = Math.min(...clean);
+  const rawMax = Math.max(...clean);
+  const lMin = Math.log10(rawMin);
+  const lMax = Math.log10(rawMax);
+  const pad = Math.max((lMax - lMin) * 0.06, 0.01);
+  const min = Math.pow(10, lMin - pad);
+  const max = Math.pow(10, lMax + pad);
+  // 1·2·5 ×10^n 위치의 nice 로그 틱
+  const ticks = [];
+  for (let decade = Math.floor(Math.log10(min)); decade <= Math.ceil(Math.log10(max)); decade += 1) {
+    for (const mult of [1, 2, 5]) {
+      const value = mult * Math.pow(10, decade);
+      if (value >= min && value <= max) ticks.push(value);
+    }
+  }
+  if (ticks.length < 2) return { min, max, ticks: [min, Math.sqrt(min * max), max], log: true };
+  return { min, max, ticks, log: true };
+}
+
 function transactionsForChart(payload, points) {
   const start = points[0]?.date;
   const end = points[points.length - 1]?.date;
@@ -164,12 +186,15 @@ function chartExtremes(values) {
 }
 
 function renderChartRangeButtons() {
+  // 로그 스케일 토글은 단일 종목 가격 차트에서만 (비교·성과 차트는 비율/음수라 부적합)
+  const showLog = !chartComparePayloads.length && !performanceChartOpen;
   return `
     <div class="chart-ranges" role="group" aria-label="차트 기간">
       ${chartRanges.map(range => `
         <button class="chart-range-btn ${range.key === chartRange ? "active" : ""}" type="button" data-chart-range="${range.key}">${range.label}</button>
       `).join("")}
       <button class="chart-range-btn ${chartRange === "custom" ? "active" : ""}" type="button" data-chart-custom>직접설정</button>
+      ${showLog ? `<button class="chart-range-btn chart-log-btn ${chartLogScale ? "active" : ""}" type="button" data-chart-log title="로그 스케일 전환" aria-pressed="${chartLogScale}">로그</button>` : ""}
     </div>
   `;
 }
@@ -332,6 +357,12 @@ function ensureChartStats(ticker) {
 function bindLineChartControls(payload) {
   document.querySelectorAll(".chart-range-btn").forEach(btn => {
     btn.addEventListener("click", () => {
+      if (btn.dataset.chartLog != null) {
+        chartLogScale = !chartLogScale;
+        storageSet(detailStorage.chartLogScale, String(chartLogScale));
+        renderLineChart(payload);
+        return;
+      }
       if (btn.dataset.chartCustom != null) {
         openChartRangeModal();
         return;
@@ -803,7 +834,9 @@ function renderLineChart(payload) {
 
   const values = points.map(point => Number(point.close));
   const markerValues = chartTransactions.map(tx => tx.price);
-  const scale = niceChartScale([...values, ...markerValues]);
+  // 로그 스케일은 모든 값이 양수일 때만 적용 (아니면 선형 폴백)
+  const useLog = chartLogScale && [...values, ...markerValues].every(value => value > 0);
+  const scale = useLog ? logChartScale([...values, ...markerValues]) : niceChartScale([...values, ...markerValues]);
   const min = scale.min;
   const max = scale.max;
   const first = values[0];
@@ -824,8 +857,12 @@ function renderLineChart(payload) {
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const range = max - min || Math.max(1, Math.abs(max));
+  const logMax = useLog ? Math.log10(max) : 0;
+  const logSpan = useLog ? ((Math.log10(max) - Math.log10(min)) || 1) : 1;
   const xFor = index => pad.left + (points.length === 1 ? 0 : index / (points.length - 1) * plotW);
-  const yFor = value => pad.top + (max - value) / range * plotH;
+  const yFor = useLog
+    ? (value => pad.top + (logMax - Math.log10(value)) / logSpan * plotH)
+    : (value => pad.top + (max - value) / range * plotH);
   const line = points.map((point, index) => `${index === 0 ? "M" : "L"}${xFor(index).toFixed(2)},${yFor(Number(point.close)).toFixed(2)}`).join(" ");
   const area = `${line} L${pad.left + plotW},${pad.top + plotH} L${pad.left},${pad.top + plotH} Z`;
   const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
