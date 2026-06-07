@@ -268,10 +268,25 @@ document.getElementById("tradeForm").addEventListener("submit", async event => {
     showTradeError(err);
   }
 });
-document.getElementById("activeOnlyToggle").addEventListener("change", () => {
-  syncFilterToggleControls();
-  render();
-});
+// 보유 필터: 보유 → 미보유 → 전체 순환 버튼
+const positionFilterStates = ["held", "unheld", "all"];
+const positionFilterLabels = { held: "보유", unheld: "미보유", all: "전체" };
+(() => {
+  const btn = document.getElementById("positionFilterBtn");
+  if (!btn) return;
+  const saved = storageGet(detailStorage.positionFilter);
+  const initial = positionFilterStates.includes(saved) ? saved : "held";
+  btn.dataset.state = initial;
+  btn.textContent = positionFilterLabels[initial];
+  btn.addEventListener("click", () => {
+    const next = positionFilterStates[(positionFilterStates.indexOf(btn.dataset.state) + 1) % positionFilterStates.length];
+    btn.dataset.state = next;
+    btn.textContent = positionFilterLabels[next];
+    storageSet(detailStorage.positionFilter, next);
+    syncFilterToggleControls();
+    render();
+  });
+})();
 document.getElementById("fxAdjustedToggle").checked = storageGet(detailStorage.fxAdjusted) === "true";
 document.getElementById("fxAdjustedToggle").addEventListener("change", () => {
   storageSet(detailStorage.fxAdjusted, String(document.getElementById("fxAdjustedToggle").checked));

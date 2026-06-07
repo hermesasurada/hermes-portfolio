@@ -58,6 +58,9 @@ function performanceDetailEnabled() {
 function currencyFilterValue() {
   return document.getElementById("currencyFilter")?.value || "all";
 }
+function positionFilterValue() {
+  return document.getElementById("positionFilterBtn")?.dataset.state || "held";
+}
 function holdingChangePct(row, fxAdjusted = fxAdjustedEnabled()) {
   if (fxAdjusted && row.currency !== "KRW" && Number.isFinite(row.change_krw_pct)) return row.change_krw_pct;
   return Number.isFinite(row.change_pct) ? row.change_pct : null;
@@ -475,13 +478,14 @@ function renderAccounts() {
 }
 
 function filteredRows(options = {}) {
-  const activeOnly = document.getElementById("activeOnlyToggle").checked;
+  const positionFilter = positionFilterValue();   // "held" | "unheld" | "all"
   const currencyFilter = currencyFilterValue();
   let rows = flattenHoldings();
-  if (!activeOnly) rows = rows.concat(watchlistRows());
+  if (positionFilter !== "held") rows = rows.concat(watchlistRows());
   const fxAdjusted = fxAdjustedEnabled();
   if (!options.ignoreAccount && selectionMode !== "all") rows = rows.filter(r => selectedAccounts.has(r.accountId));
-  if (activeOnly) rows = rows.filter(r => (r.qty || 0) > 0);
+  if (positionFilter === "held") rows = rows.filter(r => (r.qty || 0) > 0);
+  else if (positionFilter === "unheld") rows = rows.filter(r => !((r.qty || 0) > 0));
   if (!options.ignoreCurrency && currencyFilter !== "all") rows = rows.filter(r => r.currency === currencyFilter);
   if (showIndexesEnabled() && !options.ignoreIndexes) {
     let indexes = indexRows();
@@ -531,7 +535,6 @@ function sortRows(rows, tab = activeDetailTab) {
 
 function syncFilterToggleControls() {
   [
-    ["activeOnlyToggle", "activeOnlyControl"],
     ["fxAdjustedToggle", "fxAdjustedControl"],
     ["showIndexesToggle", "showIndexesControl"],
     ["performanceDetailToggle", "performanceDetailControl"]
@@ -556,7 +559,7 @@ function syncDetailTabs() {
   document.getElementById("chartBack").classList.toggle("hidden", !showingChart);
   document.getElementById("performanceDetailControl")?.classList.toggle("hidden", !performanceChartOpen);
   document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart);
-  ["activeOnlyControl", "fxAdjustedControl", "showIndexesControl", "currencyFilterControl", "rowCount", "accountTotal"].forEach(id => {
+  ["positionFilterBtn", "fxAdjustedControl", "showIndexesControl", "currencyFilterControl", "rowCount", "accountTotal"].forEach(id => {
     document.getElementById(id)?.classList.toggle("hidden", showingChart);
   });
 }

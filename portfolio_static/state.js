@@ -8,7 +8,8 @@ const usPriceStorage = {
 const detailStorage = {
   fxAdjusted: "portfolio.detail.fxAdjusted",
   showIndexes: "portfolio.detail.showIndexes",
-  currencyFilter: "portfolio.detail.currencyFilter"
+  currencyFilter: "portfolio.detail.currencyFilter",
+  positionFilter: "portfolio.detail.positionFilter"
 };
 const defaultSortDir = {
   name: 1,
