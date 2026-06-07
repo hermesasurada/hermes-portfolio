@@ -591,7 +591,7 @@ function renderCompareLineChart(payload) {
   for (let i = 1; i < endLabels.length; i++) {
     if (endLabels[i].y - endLabels[i - 1].y < minGap) endLabels[i].y = endLabels[i - 1].y + minGap;
   }
-  const legend = series.map(item => `<span class="perf-legend-item"><i style="background:${item.color}"></i>${esc(item.ticker || item.name)}</span>`).join("");
+  const legend = series.map(item => `<span class="perf-legend-item" style="color:${item.color}"><i style="background:${item.color}"></i>${esc(item.ticker || item.name)}</span>`).join("");
   document.getElementById("chartCanvas").innerHTML = `
     <div class="perf-chart-top">
       <div class="perf-legend">${legend}</div>

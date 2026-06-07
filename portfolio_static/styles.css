@@ -1264,6 +1264,11 @@ tbody tr.index-row td:first-child::before {
   fill: var(--chart-axis);
   font-size: 10px;
   font-weight: 600;
+  /* 그리드선 위에서도 또렷하게 — 배경색 외곽선(헤일로) */
+  paint-order: stroke;
+  stroke: var(--chart-bg);
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
 }
 .chart-y-label { text-anchor: end; }
 .chart-extreme {
@@ -1395,14 +1400,18 @@ tbody tr.index-row td:first-child::before {
 .perf-legend-item {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  color: var(--muted);
+  gap: 6px;
+  color: var(--muted);   /* JS가 선 색으로 인라인 오버라이드 (기업명=선 색) */
   font-size: 12px;
   font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);   /* 칩 배경으로 컬러 텍스트 대비 확보 */
+  border: 1px solid var(--line);
 }
 .perf-legend-item i {
-  width: 18px;
-  height: 3px;
+  width: 16px;
+  height: 4px;
   border-radius: 999px;
   display: inline-block;
 }
@@ -1440,10 +1449,15 @@ tbody tr.index-row td:first-child::before {
   opacity: .45;
 }
 .perf-end-label {
-  font-size: 9.5px;
-  font-weight: var(--fw-strong);
+  font-size: 10.5px;
+  font-weight: 900;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
+  /* 컬러 % 라벨이 어떤 배경에서도 읽히도록 배경색 외곽선 */
+  paint-order: stroke;
+  stroke: var(--chart-bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 .perf-hover-dot {
   fill: var(--chart-dot-fill);
