@@ -362,7 +362,8 @@ function syncMobileCollapsePanels() {
 }
 
 function renderAccounts() {
-  const rows = filteredRows({ ignoreAccount: true, ignoreAggregate: true, ignoreCurrency: true });
+  // 계좌현황(평가액)은 보유분 기준으로 고정 — 보유/미보유/전체 필터에 영향받지 않음
+  const rows = filteredRows({ ignoreAccount: true, ignoreAggregate: true, ignoreCurrency: true, positionFilter: "held" });
   const byAccount = new Map();
   rows.forEach(r => {
     const current = byAccount.get(r.accountId) || { value_krw: 0, change_krw: 0, previous_krw: 0, count: 0 };
@@ -478,7 +479,7 @@ function renderAccounts() {
 }
 
 function filteredRows(options = {}) {
-  const positionFilter = positionFilterValue();   // "held" | "unheld" | "all"
+  const positionFilter = options.positionFilter || positionFilterValue();   // "held" | "unheld" | "all"
   const currencyFilter = currencyFilterValue();
   let rows = flattenHoldings();
   if (positionFilter !== "held") rows = rows.concat(watchlistRows());
