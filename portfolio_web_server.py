@@ -21,6 +21,7 @@ from portfolio_core.logos import is_dark_logo
 from portfolio_core.dividends import load_dividends
 from portfolio_core.paths import DB_PATH, LOGO_DIR
 from portfolio_core.portfolio import load_portfolio as load_portfolio_data
+from portfolio_core.prices import load_ticker_changes
 from portfolio_core.stats import load_stats
 from portfolio_core.tickers import asset_class
 from portfolio_core.transactions import add_transaction, load_transactions
@@ -240,6 +241,10 @@ class Handler(BaseHTTPRequestHandler):
     def api_stats(self, query: dict[str, list[str]]) -> dict:
         return load_stats(self.query_values(query, "tickers"))
 
+    def api_changes(self, query: dict[str, list[str]]) -> dict:
+        # 종목별 등락폭만 내부 DB에서 계산 (외부 호출 없음). ?tickers=A,B 로 선택 조회.
+        return load_ticker_changes(self.query_values(query, "tickers") or None)
+
     def api_chart(self, query: dict[str, list[str]]) -> dict:
         ticker = (query.get("ticker") or [""])[0]
         return load_price_chart(ticker)
@@ -281,6 +286,7 @@ class Handler(BaseHTTPRequestHandler):
             get_routes = {
                 "/api/portfolio": self.api_portfolio,
                 "/api/stats": self.api_stats,
+                "/api/changes": self.api_changes,
                 "/api/chart": self.api_chart,
                 "/api/account-performance": self.api_account_performance,
                 "/api/dividends": self.api_dividends,

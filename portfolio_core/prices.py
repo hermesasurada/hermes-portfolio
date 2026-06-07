@@ -120,3 +120,33 @@ def price_cache_updated_at() -> str | None:
         return dt.astimezone(KST).strftime("%Y-%m-%d %H:%M KST")
     except ValueError:
         return raw
+
+
+def load_ticker_changes(tickers: list[str] | None = None) -> dict:
+    """종목별 등락폭만 내부 DB(daily_prices)에서 계산해 반환. 외부 호출 없음.
+
+    change_pct = (현재가 − 직전 종가) / 직전 종가 × 100. (직전가는 latest_prices가
+    동일가 연속일을 건너뛰고 잡아줌.) tickers 미지정 시 daily_prices 전체.
+    """
+    wanted = {str(t).strip().upper() for t in tickers if str(t).strip()} if tickers else None
+    with connect() as conn:
+        prices = latest_prices(conn)
+    changes: dict[str, dict] = {}
+    for ticker, info in prices.items():
+        if wanted is not None and ticker.upper() not in wanted:
+            continue
+        price = info.get("price")
+        previous = info.get("previous_price")
+        change = None
+        change_pct = None
+        if price is not None and previous not in (None, 0):
+            change = float(price) - float(previous)
+            change_pct = change / float(previous) * 100
+        changes[ticker] = {
+            "price": price,
+            "previous_price": previous,
+            "change": round(change, 6) if change is not None else None,
+            "change_pct": round(change_pct, 4) if change_pct is not None else None,
+            "date": info.get("date"),
+        }
+    return {"updated": price_updated_at(prices), "changes": changes}
