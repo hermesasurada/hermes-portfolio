@@ -398,11 +398,13 @@ function chartCompareSeries(payload) {
       key: String(item.ticker || `compare-${index}`).toUpperCase(),
       ticker: String(item.ticker || "").toUpperCase(),
       name: item.name || item.ticker,
+      currency: item.currency || "USD",
+      logo: chartLogoRow(item).logo,
       color: chartCompareColors[index % chartCompareColors.length],
       primary: index === 0,
       points: filtered.map(point => ({
-        ...point,
-        close: (point.value / base - 1) * 100,
+        ...point,                                   // value = 원주가 유지
+        close: (point.value / base - 1) * 100,      // close = 기준일 대비 %
       })),
     };
   }).filter(Boolean);
@@ -474,29 +476,16 @@ async function addChartCompareTicker(value) {
 
 function bindCompareHover(series, geometry) {
   const svg = document.querySelector("#chartCanvas svg");
+  const canvas = document.getElementById("chartCanvas");
   const hoverLayer = document.getElementById("chartHoverLayer");
   const hoverGroup = document.getElementById("chartHoverGroup");
   const hoverLine = document.getElementById("chartHoverLine");
-  const tooltip = document.getElementById("chartTooltip");
-  const tooltipBox = document.getElementById("chartTooltipBox");
-  if (!svg || !hoverLayer || !hoverGroup || !hoverLine || !tooltip || !tooltipBox) return;
+  const tooltip = document.getElementById("compareTooltip");
+  if (!svg || !canvas || !hoverLayer || !hoverGroup || !hoverLine || !tooltip) return;
   const nearest = (points, targetTime) => points.reduce((best, point) => {
     const distance = Math.abs(point.time - targetTime);
     return !best || distance < best.distance ? { point, distance } : best;
   }, null)?.point;
-  const updateTooltipBox = () => {
-    let bbox = tooltip.getBBox();
-    let x = Number(tooltip.getAttribute("x") || 0);
-    if (bbox.x + bbox.width > geometry.width - 8) x -= bbox.x + bbox.width - (geometry.width - 8);
-    if (bbox.x < 8) x += 8 - bbox.x;
-    tooltip.setAttribute("x", x.toFixed(2));
-    tooltip.querySelectorAll("tspan").forEach(tspan => tspan.setAttribute("x", x.toFixed(2)));
-    bbox = tooltip.getBBox();
-    tooltipBox.setAttribute("x", (bbox.x - 8).toFixed(2));
-    tooltipBox.setAttribute("y", (bbox.y - 6).toFixed(2));
-    tooltipBox.setAttribute("width", (bbox.width + 16).toFixed(2));
-    tooltipBox.setAttribute("height", (bbox.height + 12).toFixed(2));
-  };
   const showPoint = clientX => {
     const rect = svg.getBoundingClientRect();
     const svgX = (clientX - rect.left) / rect.width * geometry.width;
@@ -516,28 +505,41 @@ function bindCompareHover(series, geometry) {
       dot.setAttribute("cy", geometry.yFor(point.close).toFixed(2));
       dot.style.display = "";
     });
-    tooltip.textContent = "";
-    const tx = x > geometry.width - 250 ? x - 176 : x + 14;
-    [
-      chartFullDateLabel(dateText),
-      ...series.map(item => {
-        const point = nearest(item.points, targetTime);
-        return `${item.ticker || item.name} ${pctChartLabel(point?.close)}`;
-      }),
-    ].forEach((line, index) => {
-      const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-      tspan.setAttribute("x", tx.toFixed(2));
-      tspan.setAttribute("dy", index === 0 ? "0" : "11");
-      tspan.textContent = line;
-      tooltip.appendChild(tspan);
-    });
-    tooltip.setAttribute("x", tx.toFixed(2));
-    tooltip.setAttribute("y", geometry.pad.top + 14);
-    updateTooltipBox();
+    // HTML 툴팁: 로고 + 기업명(선 색) + 등락% + 주가
+    const rows = series.map(item => {
+      const point = nearest(item.points, targetTime);
+      if (!point) return "";
+      const logo = item.logo;
+      const logoHtml = logo && logo.url
+        ? `<img class="ct-logo${logo.dark ? " dark-logo" : ""}" src="${esc(logo.url)}" alt="">`
+        : `<span class="ct-logo ct-logo-dot" style="background:${item.color}"></span>`;
+      const pctCls = point.close > 0 ? "up" : point.close < 0 ? "down" : "flat";
+      return `<div class="ct-row">
+        ${logoHtml}
+        <span class="ct-name" style="color:${item.color}">${esc(item.ticker || item.name)}</span>
+        <span class="ct-pct ${pctCls}">${esc(pctChartLabel(point.close))}</span>
+        <span class="ct-price">${chartMoney(point.value, item.currency)}</span>
+      </div>`;
+    }).join("");
+    tooltip.innerHTML = `<div class="ct-date">${esc(chartFullDateLabel(dateText))}</div>${rows}`;
+    tooltip.classList.remove("hidden");
+    // 위치: 호버선 옆, 우측 가장자리에선 좌측으로 플립 (canvas 기준 px)
+    const canvasRect = canvas.getBoundingClientRect();
+    const lineClientX = rect.left + (x / geometry.width) * rect.width;
+    const tipW = tooltip.offsetWidth;
+    let leftPx = (lineClientX - canvasRect.left) + 14;
+    if (leftPx + tipW > canvasRect.width - 6) leftPx = (lineClientX - canvasRect.left) - tipW - 14;
+    if (leftPx < 6) leftPx = 6;
+    const topPx = (rect.top - canvasRect.top) + (geometry.pad.top / geometry.height) * rect.height + 4;
+    tooltip.style.left = `${leftPx.toFixed(0)}px`;
+    tooltip.style.top = `${Math.max(4, topPx).toFixed(0)}px`;
   };
   hoverLayer.addEventListener("pointermove", event => showPoint(event.clientX));
   hoverLayer.addEventListener("pointerenter", event => showPoint(event.clientX));
-  hoverLayer.addEventListener("pointerleave", () => hoverGroup.classList.add("hidden"));
+  hoverLayer.addEventListener("pointerleave", () => {
+    hoverGroup.classList.add("hidden");
+    tooltip.classList.add("hidden");
+  });
 }
 
 function renderCompareLineChart(payload) {
@@ -620,10 +622,9 @@ function renderCompareLineChart(payload) {
       <g id="chartHoverGroup" class="chart-hover hidden">
         <line id="chartHoverLine" class="chart-hover-line" x1="0" x2="0" y1="${pad.top}" y2="${pad.top + plotH}"></line>
         ${series.map(item => `<circle id="compareDot-${item.key}" class="perf-hover-dot" r="3.6" cx="0" cy="0" style="stroke:${item.color}"></circle>`).join("")}
-        <rect id="chartTooltipBox" class="chart-tooltip-box" x="0" y="0" width="0" height="0" rx="6"></rect>
-        <text id="chartTooltip" class="chart-tooltip perf-tooltip" x="0" y="0">-</text>
       </g>
     </svg>
+    <div id="compareTooltip" class="compare-tooltip hidden" aria-hidden="true"></div>
     ${renderChartCompareControls()}
     ${renderChartRangeButtons()}
   `;
