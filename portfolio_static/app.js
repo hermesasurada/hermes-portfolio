@@ -48,6 +48,7 @@ const chartRanges = [
   { key: "ytd", label: "YTD", ytd: true },
   { key: "3y", label: "3년", months: 36 },
   { key: "5y", label: "5년", months: 60 },
+  { key: "all", label: "전체", all: true },
 ];
 const chartCompareLimit = 10;
 const chartCompareColors = ["var(--brand)", "#ea4335", "#34a853", "#fbbc04", "#9333ea", "#06b6d4", "#f97316", "#64748b", "#be123c", "#16a34a", "#7c3aed"];
@@ -289,6 +290,11 @@ const positionFilterLabels = { held: "보유", unheld: "미보유", all: "전체
   });
 })();
 chartLogScale = storageGet(detailStorage.chartLogScale) === "true";
+document.getElementById("chartLogToggle")?.addEventListener("click", () => {
+  chartLogScale = !chartLogScale;
+  storageSet(detailStorage.chartLogScale, String(chartLogScale));
+  if (chartPayload) renderLineChart(chartPayload);
+});
 document.getElementById("fxAdjustedToggle").checked = storageGet(detailStorage.fxAdjusted) === "true";
 document.getElementById("fxAdjustedToggle").addEventListener("change", () => {
   storageSet(detailStorage.fxAdjusted, String(document.getElementById("fxAdjustedToggle").checked));

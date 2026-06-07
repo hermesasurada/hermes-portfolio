@@ -32,6 +32,7 @@ function chartRangeStartDate(points, rangeKey) {
   if (!lastDateText) return null;
   const lastDate = new Date(`${lastDateText}T00:00:00`);
   if (Number.isNaN(lastDate.getTime())) return null;
+  if (rangeKey === "all") return null;   // 전체(상장기간): 시작 제한 없음
   if (rangeKey === "ytd") {
     return new Date(lastDate.getFullYear(), 0, 1);
   }
@@ -186,17 +187,23 @@ function chartExtremes(values) {
 }
 
 function renderChartRangeButtons() {
-  // 로그 스케일 토글은 단일 종목 가격 차트에서만 (비교·성과 차트는 비율/음수라 부적합)
-  const showLog = !chartComparePayloads.length && !performanceChartOpen;
   return `
     <div class="chart-ranges" role="group" aria-label="차트 기간">
       ${chartRanges.map(range => `
         <button class="chart-range-btn ${range.key === chartRange ? "active" : ""}" type="button" data-chart-range="${range.key}">${range.label}</button>
       `).join("")}
       <button class="chart-range-btn ${chartRange === "custom" ? "active" : ""}" type="button" data-chart-custom>직접설정</button>
-      ${showLog ? `<button class="chart-range-btn chart-log-btn ${chartLogScale ? "active" : ""}" type="button" data-chart-log title="로그 스케일 전환" aria-pressed="${chartLogScale}">로그</button>` : ""}
     </div>
   `;
+}
+
+// 우측 상단 로그 스케일 토글: 단일 가격 차트에서만 노출
+function syncChartLogToggle(visible) {
+  const btn = document.getElementById("chartLogToggle");
+  if (!btn) return;
+  btn.classList.toggle("hidden", !visible);
+  btn.classList.toggle("active", chartLogScale);
+  btn.setAttribute("aria-pressed", String(chartLogScale));
 }
 
 function chartPointDatesForModal() {
@@ -357,12 +364,6 @@ function ensureChartStats(ticker) {
 function bindLineChartControls(payload) {
   document.querySelectorAll(".chart-range-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      if (btn.dataset.chartLog != null) {
-        chartLogScale = !chartLogScale;
-        storageSet(detailStorage.chartLogScale, String(chartLogScale));
-        renderLineChart(payload);
-        return;
-      }
       if (btn.dataset.chartCustom != null) {
         openChartRangeModal();
         return;
@@ -542,6 +543,7 @@ function bindCompareHover(series, geometry) {
 function renderCompareLineChart(payload) {
   const series = chartCompareSeries(payload);
   renderChartIdentity(payload);
+  syncChartLogToggle(false);   // 비교 차트는 로그 미적용
   const statsEl = document.getElementById("chartStats");
   if (statsEl) statsEl.innerHTML = "";   // 비교 모드에선 단일 종목 통계 숨김
   if (series.length < 2 || !series[0]?.points.length) {
@@ -823,6 +825,7 @@ function renderLineChart(payload) {
   const chartTransactions = transactionsForChart(payload, points);
   renderChartIdentity(payload);
   if (points.length < 2) {
+    syncChartLogToggle(false);
     document.getElementById("chartMeta").textContent = `${points.length} points`;
     document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">차트 데이터 없음</div>${renderChartCompareControls()}${renderChartRangeButtons()}`;
     bindChartCompareControls(payload);
@@ -831,6 +834,7 @@ function renderLineChart(payload) {
     ensureChartStats(payload.ticker);
     return;
   }
+  syncChartLogToggle(true);
 
   const values = points.map(point => Number(point.close));
   const markerValues = chartTransactions.map(tx => tx.price);

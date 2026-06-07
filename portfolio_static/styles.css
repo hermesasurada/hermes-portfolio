@@ -1093,6 +1093,36 @@ tbody tr.index-row td:first-child::before {
   align-items: center;
   gap: 12px;
 }
+.chart-head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+.chart-log-toggle {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.chart-log-toggle:hover {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.chart-log-toggle.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--on-accent);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, .18);
+}
 .chart-icon-slot {
   display: inline-flex;
   align-items: center;

@@ -175,6 +175,7 @@ function bindPerformanceHover(series, geometry) {
 function renderPerformanceChart(payload) {
   performancePayload = payload;
   const series = performanceSeries(payload);
+  if (typeof syncChartLogToggle === "function") syncChartLogToggle(false);   // 성과 차트는 로그 미적용
   document.getElementById("chartIcon").innerHTML = `<span class="asset-icon">%</span>`;
   document.getElementById("chartTicker").textContent = "성과";
   document.getElementById("chartName").textContent = accountPerformanceTitle(payload);
