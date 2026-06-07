@@ -22,12 +22,12 @@ def normalize_hydration_ticker(value: str) -> str:
     return ticker
 
 
-def history_start_years(years: int = 5) -> str:
+def history_start_years(years: int = 10) -> str:
     today = date.today()
     return f"{today.year - years:04d}{today.month:02d}{today.day:02d}"
 
 
-def fetch_history_rows(ticker: str, years: int = 5) -> tuple[list[tuple[str, float]], str]:
+def fetch_history_rows(ticker: str, years: int = 10) -> tuple[list[tuple[str, float]], str]:
     category = infer_category(ticker)
     start = history_start_years(years)
     if category == "kr":
@@ -55,7 +55,7 @@ def fetch_history_rows(ticker: str, years: int = 5) -> tuple[list[tuple[str, flo
     return rows, source
 
 
-def hydrate_ticker(ticker: str, years: int = 5) -> dict:
+def hydrate_ticker(ticker: str, years: int = 10) -> dict:
     ticker = normalize_hydration_ticker(ticker)
     result = {"ticker": ticker, "history_rows": 0, "stats": False, "earnings": None, "logo": None, "error": None}
     with connect() as conn:
@@ -107,7 +107,7 @@ def estimate_hydration_minutes(count: int) -> int:
     return max(1, math.ceil(count * 0.6))
 
 
-def deficient_tickers(years: int = 5) -> list[str]:
+def deficient_tickers(years: int = 10) -> list[str]:
     cutoff = f"{date.today().year - years:04d}-{date.today().month:02d}-{date.today().day:02d}"
     with connect() as conn:
         rows = conn.execute(
@@ -129,6 +129,6 @@ def deficient_tickers(years: int = 5) -> list[str]:
     return [row["ticker"] for row in rows]
 
 
-def hydrate_deficient_tickers(years: int = 5) -> dict:
+def hydrate_deficient_tickers(years: int = 10) -> dict:
     tickers = deficient_tickers(years=years)
     return {"tickers": tickers, "hydration": [hydrate_ticker(ticker, years=years) for ticker in tickers]}

@@ -139,6 +139,27 @@ function compareLogScale(ratios) {
   return { min, max, ticks, log: true };
 }
 
+// 좌표 배열 → 부드러운 곡선 path (Catmull-Rom → 베지어, 약한 텐션). 점이 조밀하면
+// 거의 직선, 드물면 모서리를 둥글게. 가격 차트라 과도한 오버슈트를 피해 텐션은 작게.
+function smoothLinePath(pts) {
+  if (!pts.length) return "";
+  if (pts.length < 3) return pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ");
+  const t = 0.16;
+  let d = `M${pts[0].x.toFixed(2)},${pts[0].y.toFixed(2)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] || p2;
+    const c1x = p1.x + (p2.x - p0.x) * t;
+    const c1y = p1.y + (p2.y - p0.y) * t;
+    const c2x = p2.x - (p3.x - p1.x) * t;
+    const c2y = p2.y - (p3.y - p1.y) * t;
+    d += ` C${c1x.toFixed(2)},${c1y.toFixed(2)} ${c2x.toFixed(2)},${c2y.toFixed(2)} ${p2.x.toFixed(2)},${p2.y.toFixed(2)}`;
+  }
+  return d;
+}
+
 function transactionsForChart(payload, points) {
   const start = points[0]?.date;
   const end = points[points.length - 1]?.date;
@@ -641,7 +662,7 @@ function renderCompareLineChart(payload) {
     ? pad.top + (Math.log10(max) - Math.log10(ratioOf(pct))) / logSpan * plotH
     : pad.top + (max - pct) / range * plotH;
   const clampY = value => Math.max(pad.top + 4, Math.min(pad.top + plotH - 2, value));
-  const pathFor = points => points.map((point, index) => `${index === 0 ? "M" : "L"}${xForTime(point.time).toFixed(2)},${yFor(point.close).toFixed(2)}`).join(" ");
+  const pathFor = points => smoothLinePath(points.map(point => ({ x: xForTime(point.time), y: yFor(point.close) })));
   const main = series[0];
   const first = main.points[0];
   const last = main.points[main.points.length - 1];
@@ -942,7 +963,7 @@ function renderLineChart(payload) {
   const yFor = useLog
     ? (value => pad.top + (logMax - Math.log10(value)) / logSpan * plotH)
     : (value => pad.top + (max - value) / range * plotH);
-  const line = points.map((point, index) => `${index === 0 ? "M" : "L"}${xFor(index).toFixed(2)},${yFor(Number(point.close)).toFixed(2)}`).join(" ");
+  const line = smoothLinePath(points.map((point, index) => ({ x: xFor(index), y: yFor(Number(point.close)) })));
   const area = `${line} L${pad.left + plotW},${pad.top + plotH} L${pad.left},${pad.top + plotH} Z`;
   const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
   const vGrid = indexedChartVerticalGrid(points, xFor, chartRange);

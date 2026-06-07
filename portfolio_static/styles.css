@@ -1418,8 +1418,9 @@ tbody tr.index-row td:first-child::before {
   flex: 0 0 auto;
 }
 .perf-legend-item .legend-remove {
-  display: none;
-  margin-left: 1px;
+  display: inline-flex;          /* 항상 자리 차지 → hover 시 레이아웃 밀림 없음 */
+  align-items: center;
+  margin-left: 2px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -1427,10 +1428,12 @@ tbody tr.index-row td:first-child::before {
   line-height: 1;
   cursor: pointer;
   padding: 0 1px;
-  opacity: .65;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
 }
 .perf-legend-item.removable:hover { border-color: currentColor; }
-.perf-legend-item.removable:hover .legend-remove { display: inline-flex; }
+.perf-legend-item.removable:hover .legend-remove { opacity: .7; pointer-events: auto; }
 .perf-legend-item .legend-remove:hover { opacity: 1; }
 .perf-index-toggle {
   height: 26px;
