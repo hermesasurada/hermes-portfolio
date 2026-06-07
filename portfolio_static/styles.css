@@ -1327,6 +1327,20 @@ tbody tr.index-row td:first-child::before {
   color: var(--on-accent);
   box-shadow: 0 1px 3px rgba(15, 23, 42, .18);
 }
+.chart-range-btn.disabled,
+.chart-range-btn:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+  background: var(--panel);
+  border-color: var(--line);
+  color: var(--muted);
+  box-shadow: none;
+}
+.chart-range-btn:disabled:hover {
+  background: var(--panel);
+  border-color: var(--line);
+  color: var(--muted);
+}
 .chart-selection {
   pointer-events: none;
 }
@@ -1399,6 +1413,7 @@ tbody tr.index-row td:first-child::before {
   flex-wrap: wrap;
 }
 .perf-legend-item {
+  position: relative;   /* 삭제 X 절대배치 기준 */
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1417,24 +1432,30 @@ tbody tr.index-row td:first-child::before {
   display: inline-block;
   flex: 0 0 auto;
 }
+/* 삭제 X: 절대배치 오버레이 → removable 칩도 primary와 동일 크기(자리 차지 안 함) */
 .perf-legend-item .legend-remove {
-  display: inline-flex;          /* 항상 자리 차지 → hover 시 레이아웃 밀림 없음 */
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: flex;
   align-items: center;
-  margin-left: 2px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font-size: 15px;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: var(--chart-tooltip-bg);
+  color: var(--ink);
+  font-size: 11px;
   line-height: 1;
   cursor: pointer;
-  padding: 0 1px;
   opacity: 0;
   pointer-events: none;
   transition: opacity .12s ease;
 }
-.perf-legend-item.removable:hover { border-color: currentColor; }
-.perf-legend-item.removable:hover .legend-remove { opacity: .7; pointer-events: auto; }
-.perf-legend-item .legend-remove:hover { opacity: 1; }
+.perf-legend-item.removable:hover .legend-remove { opacity: 1; pointer-events: auto; }
+.perf-legend-item .legend-remove:hover { background: var(--line); }
 .perf-index-toggle {
   height: 26px;
   padding: 0 9px;

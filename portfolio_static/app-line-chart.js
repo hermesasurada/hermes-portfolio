@@ -235,14 +235,17 @@ function renderChartRangeButtons() {
   // 비교 모드: '전체' 대신 공통기간 '최대' 노출 (상장일 차이로 못 쓰는 구간 제외)
   const isCompare = chartComparePayloads.length > 0;
   const ranges = isCompare ? chartRanges.filter(range => range.key !== "all") : chartRanges;
+  // 비교 모드: 공통 가용기간보다 긴 기간(예: 상장 5년 미만 종목과 비교 시 '5년')은 비활성화
+  const availMonths = isCompare ? compareAvailableMonths() : Infinity;
   const maxBtn = isCompare
     ? `<button class="chart-range-btn ${chartRange === "cmax" ? "active" : ""}" type="button" data-chart-range="cmax">최대</button>`
     : "";
   return `
     <div class="chart-ranges" role="group" aria-label="차트 기간">
-      ${ranges.map(range => `
-        <button class="chart-range-btn ${range.key === chartRange ? "active" : ""}" type="button" data-chart-range="${range.key}">${range.label}</button>
-      `).join("")}
+      ${ranges.map(range => {
+        const disabled = isCompare && range.months && range.months > availMonths + 0.5;
+        return `<button class="chart-range-btn ${range.key === chartRange ? "active" : ""}${disabled ? " disabled" : ""}" type="button" data-chart-range="${range.key}"${disabled ? " disabled" : ""}>${range.label}</button>`;
+      }).join("")}
       ${maxBtn}
       <button class="chart-range-btn ${chartRange === "custom" ? "active" : ""}" type="button" data-chart-custom>직접설정</button>
     </div>
@@ -430,6 +433,23 @@ function tickerDisplayName(ticker) {
   const key = String(ticker || "").toUpperCase();
   const meta = findTickerMeta(key);
   return meta?.name || key;
+}
+
+// 비교 대상(메인+추가) 전 종목이 데이터를 갖는 공통 시작 시각 (가장 늦은 최초가용일).
+// 비교 모드에서 이보다 긴 기간 옵션은 사용 불가 → 비활성화 판정에 사용.
+function compareCommonStartTime() {
+  const payloads = [chartPayload, ...chartComparePayloads].filter(Boolean);
+  const starts = payloads.map(item => {
+    const pts = (item.points || []).filter(point => point.date && Number.isFinite(Number(point.close)) && Number(point.close) > 0);
+    return pts.length ? new Date(`${pts[0].date}T00:00:00`).getTime() : null;
+  }).filter(value => value != null);
+  return starts.length ? Math.max(...starts) : null;
+}
+
+function compareAvailableMonths() {
+  const start = compareCommonStartTime();
+  if (!start) return Infinity;
+  return (Date.now() - start) / (1000 * 60 * 60 * 24 * 30.44);
 }
 
 function chartCompareSeries(payload) {
@@ -628,6 +648,9 @@ function bindCompareHover(series, geometry) {
 }
 
 function renderCompareLineChart(payload) {
+  // 선택된 기간이 공통 가용기간을 초과하면 '최대'로 자동 보정 (해당 버튼은 비활성)
+  const currentRange = chartRanges.find(range => range.key === chartRange);
+  if (currentRange && currentRange.months && currentRange.months > compareAvailableMonths() + 0.5) chartRange = "cmax";
   const series = chartCompareSeries(payload);
   renderChartIdentity(payload);
   syncChartLogToggle(true);   // 비교 차트도 로그 지원 (비율 기준)
