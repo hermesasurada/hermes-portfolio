@@ -173,13 +173,19 @@ def normalize_seibro_record_date(candidate: dict) -> None:
         candidate["pay_date_estimated"] = True
 
 
+ESTIMATE_DEDUP_WINDOW_DAYS = 45   # 확정 배당과 ±45일 내 추정은 같은 분기로 보고 제외
+
+
 def estimated_events(history_rows, start: date, end: date, actual_rows) -> list[dict]:
-    actual_months: set[tuple[str, int, int]] = set()
+    # 확정 이벤트의 실제 날짜 목록(종목별). 추정 지급일이 확정분과 ±45일 내면
+    # 같은 분기 배당으로 보고 추정을 만들지 않는다(연도별로 지급월이 6월↔7월처럼
+    # 경계를 넘나드는 경우까지 잡기 위해 월 단위가 아닌 날짜 근접으로 판정).
+    actual_dates_by_ticker: dict[str, list[date]] = {}
     for event in actual_rows:
         for text in (event["pay_date"], event["ex_date"]):
             actual_date = parse_date(text)
             if actual_date:
-                actual_months.add((event["ticker"], actual_date.year, actual_date.month))
+                actual_dates_by_ticker.setdefault(event["ticker"], []).append(actual_date)
 
     estimates = []
     seen: set[tuple[str, str]] = set()
@@ -202,7 +208,8 @@ def estimated_events(history_rows, start: date, end: date, actual_rows) -> list[
         estimated_pay_date = add_one_year(base_date)
         if estimated_pay_date < start or estimated_pay_date > end:
             continue
-        if (event["ticker"], estimated_pay_date.year, estimated_pay_date.month) in actual_months:
+        actual_dates = actual_dates_by_ticker.get(event["ticker"], [])
+        if any(abs((estimated_pay_date - actual_date).days) <= ESTIMATE_DEDUP_WINDOW_DAYS for actual_date in actual_dates):
             continue
         key = (event["ticker"], estimated_pay_date.isoformat())
         if key in seen:
