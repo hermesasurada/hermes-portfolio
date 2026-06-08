@@ -1712,6 +1712,53 @@ tbody tr.index-row td:first-child::before {
   font-size: 11px;
   font-weight: 800;
 }
+.diagnostics-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  padding: 10px 12px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.diagnostics-box.has-issue {
+  border-color: var(--warn);
+  background: var(--brand-soft);
+}
+.diag-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.diag-key {
+  flex: 0 0 110px;
+  color: var(--muted);
+  font-weight: 800;
+}
+.diag-val {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  color: var(--ink);
+  font-weight: 700;
+}
+.diag-ok { color: var(--buy); font-weight: 800; }
+.diag-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.diag-chip.bad { background: rgba(193, 18, 31, .12); color: var(--sell); }
+.diag-chip.warn { background: rgba(153, 92, 0, .14); color: var(--warn); }
+.diag-note {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+}
 .help-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

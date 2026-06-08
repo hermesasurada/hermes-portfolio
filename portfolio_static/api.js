@@ -66,6 +66,10 @@ function apiFetchTickerDirectory() {
   return fetchJson("/api/tickers");
 }
 
+function apiFetchDiagnostics() {
+  return fetchJson("/api/diagnostics");
+}
+
 function apiAddWatchlist(tickers) {
   return fetchJson("/api/watchlist", {
     method: "POST",

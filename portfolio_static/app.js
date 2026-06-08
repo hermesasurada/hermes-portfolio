@@ -105,12 +105,39 @@ function initThemeControl() {
   }
 }
 
+function renderDiagnostics(diag) {
+  const box = document.getElementById("diagnosticsBox");
+  if (!box) return;
+  const chips = (items, cls) => items.map(t => `<span class="diag-chip ${cls}">${esc(t)}</span>`).join("");
+  const divErrors = (diag.dividend_errors || []).map(d => d.ticker);
+  const stale = (diag.stale_prices || []).map(d => `${d.ticker}(${(d.last_date || "").slice(5)})`);
+  const run = diag.price_run;
+  const runText = run?.updated_at
+    ? `${new Date(run.updated_at).toLocaleString("ko-KR", { dateStyle: "short", timeStyle: "short" })} · ${run.item_count}종목`
+    : "기록 없음";
+  const ok = divErrors.length === 0 && stale.length === 0;
+  box.innerHTML = `
+    <div class="diag-row"><span class="diag-key">마지막 가격 수집</span><span class="diag-val">${esc(runText)}</span></div>
+    <div class="diag-row"><span class="diag-key">배당 수집 실패</span><span class="diag-val">${divErrors.length ? chips(divErrors, "bad") : '<span class="diag-ok">없음</span>'}</span></div>
+    <div class="diag-row"><span class="diag-key">가격 지연(4일+)</span><span class="diag-val">${stale.length ? chips(stale, "warn") : '<span class="diag-ok">없음</span>'}</span></div>
+    ${ok ? "" : '<div class="diag-note">실패/지연 종목은 다음 수집에서 자동 재시도됩니다. 계속되면 티커 유효성·소스 상태를 확인하세요.</div>'}
+  `;
+  box.classList.toggle("has-issue", !ok);
+}
+
 function initDataHelpModal() {
   const modal = document.getElementById("dataHelpModal");
   const open = document.getElementById("dataHelpOpen");
   const close = document.getElementById("dataHelpClose");
   if (!modal || !open || !close) return;
-  open.addEventListener("click", () => modal.showModal());
+  open.addEventListener("click", () => {
+    modal.showModal();
+    const box = document.getElementById("diagnosticsBox");
+    if (box) box.textContent = "수집 상태 확인 중…";
+    apiFetchDiagnostics().then(renderDiagnostics).catch(() => {
+      if (box) box.textContent = "수집 상태를 불러오지 못했습니다.";
+    });
+  });
   close.addEventListener("click", () => modal.close());
 }
 

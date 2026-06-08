@@ -17,7 +17,7 @@ from urllib.parse import parse_qs, urlparse
 from portfolio_core.charts import load_account_performance, load_price_chart
 from portfolio_core.constants import KOREAN_ETF_BRANDS, LOCAL_MARKET_SUFFIXES
 from portfolio_core.db import connect, initialize_schema
-from portfolio_core.queries import load_ticker_directory
+from portfolio_core.queries import load_collection_diagnostics, load_ticker_directory
 from portfolio_core.logos import is_dark_logo
 from portfolio_core.dividends import load_dividends
 from portfolio_core.paths import DB_PATH, LOGO_DIR
@@ -251,6 +251,11 @@ class Handler(BaseHTTPRequestHandler):
         with connect() as conn:
             return {"tickers": load_ticker_directory(conn)}
 
+    def api_diagnostics(self, query: dict[str, list[str]]) -> dict:
+        # 수집 상태 진단 (실패/지연 노출). DB 전용.
+        with connect() as conn:
+            return load_collection_diagnostics(conn)
+
     def api_chart(self, query: dict[str, list[str]]) -> dict:
         ticker = (query.get("ticker") or [""])[0]
         return load_price_chart(ticker)
@@ -300,6 +305,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/stats": self.api_stats,
                 "/api/changes": self.api_changes,
                 "/api/tickers": self.api_tickers,
+                "/api/diagnostics": self.api_diagnostics,
                 "/api/chart": self.api_chart,
                 "/api/account-performance": self.api_account_performance,
                 "/api/dividends": self.api_dividends,
