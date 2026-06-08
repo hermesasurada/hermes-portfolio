@@ -540,8 +540,7 @@ function renderLineChart(payload) {
       <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
       ${markers.map(marker => `
         <g class="trade-marker ${marker.cls}" data-x="${marker.x.toFixed(2)}" data-y="${marker.y.toFixed(2)}" data-tooltip="${esc(marker.tooltip)}" tabindex="0" role="img" aria-label="${esc(marker.tooltip)}">
-          <circle cx="${marker.x.toFixed(2)}" cy="${marker.y.toFixed(2)}" r="8"></circle>
-          <text x="${marker.x.toFixed(2)}" y="${(marker.y + 4).toFixed(2)}">${marker.label}</text>
+          <circle cx="${marker.x.toFixed(2)}" cy="${marker.y.toFixed(2)}" r="5"></circle>
         </g>
       `).join("")}
       <circle class="chart-last-dot" cx="${xFor(points.length - 1).toFixed(2)}" cy="${yFor(last).toFixed(2)}" r="4"></circle>

@@ -1638,15 +1638,8 @@ tbody tr.index-row td:first-child::before {
   filter: var(--chart-shadow);
   pointer-events: none;
 }
-.trade-marker.buy circle { fill: var(--buy); }
-.trade-marker.sell circle { fill: var(--sell); }
-.trade-marker text {
-  fill: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  text-anchor: middle;
-  pointer-events: none;
-}
+.trade-marker.buy circle { fill: var(--up); }    /* 매수 = 빨강 */
+.trade-marker.sell circle { fill: var(--down); }  /* 매도 = 파랑 */
 .chart-empty {
   min-height: 432px;
   display: grid;
