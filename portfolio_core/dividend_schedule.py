@@ -4,6 +4,7 @@ import math
 from datetime import date, datetime, timedelta
 from typing import Any
 
+from .dates import parse_iso_date
 from .paths import KST
 
 DIVIDEND_LOOKBACK_DAYS = 30
@@ -18,12 +19,7 @@ def today() -> date:
 
 
 def parse_date(value: str | None) -> date | None:
-    if not value:
-        return None
-    try:
-        return datetime.strptime(value[:10], "%Y-%m-%d").date()
-    except ValueError:
-        return None
+    return parse_iso_date(value)
 
 
 def float_value(value: Any) -> float | None:

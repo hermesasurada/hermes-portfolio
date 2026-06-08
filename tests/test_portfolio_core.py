@@ -9,12 +9,13 @@ layer where the original parse_number regression slipped through unnoticed.
 from __future__ import annotations
 
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from portfolio_core.fundamentals import normalize_pe, parse_number
+from portfolio_core.dates import parse_iso_date, to_iso_text
 from portfolio_core.dividends import _tax_rate
 from portfolio_core.dividend_schedule import consolidated_dividend_events
 from portfolio_core.indicators import (
@@ -444,6 +445,17 @@ def test_logo_stem_and_candidates():
     assert logo_stem("AAPL") == "AAPL"
     assert candidate_symbols("BTC") == ["BTC", "BTCUSD", "BTC-USD"]
     assert candidate_symbols("005930.KS") == ["005930.KS", "005930"]
+
+
+def test_date_helpers():
+    assert parse_iso_date("2026-06-08T00:00:00") == date(2026, 6, 8)
+    assert parse_iso_date("not-a-date") is None
+    assert parse_iso_date(None) is None
+    assert to_iso_text(date(2026, 6, 8)) == "2026-06-08"
+    assert to_iso_text(datetime(2026, 6, 8, 9, 30)) == "2026-06-08"
+    assert to_iso_text("2026-06-08 extra") == "2026-06-08"
+    assert to_iso_text(None) is None
+    assert to_iso_text("short") is None
 
 
 # --- runner -----------------------------------------------------------------

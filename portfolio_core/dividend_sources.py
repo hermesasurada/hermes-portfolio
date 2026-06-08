@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .constants import KOREAN_SUFFIXES
+from .dates import parse_iso_date, to_iso_text
 from .opendart_dividends import fetch_opendart_dividends, is_opendart_candidate
 from .paths import KST
 from .tickers import normalize_yfinance_symbol, ticker_currency
@@ -63,24 +64,9 @@ def _now_text() -> str:
     return datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _date_text(value: Any) -> str | None:
-    if value is None:
-        return None
-    if hasattr(value, "date") and not isinstance(value, date):
-        value = value.date()
-    if hasattr(value, "isoformat"):
-        return value.isoformat()[:10]
-    text = str(value)
-    return text[:10] if len(text) >= 10 else None
-
-
-def _parse_date(value: str | None) -> date | None:
-    if not value:
-        return None
-    try:
-        return datetime.strptime(value[:10], "%Y-%m-%d").date()
-    except ValueError:
-        return None
+# 공용 헬퍼 위임 (중복 제거). 사이트별 포맷 파서는 아래에 그대로 둔다.
+_date_text = to_iso_text
+_parse_date = parse_iso_date
 
 
 def _date_from_us_text(value: str | None) -> str | None:
