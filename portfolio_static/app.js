@@ -270,20 +270,28 @@ document.getElementById("tradeForm").addEventListener("submit", async event => {
     showTradeError(err);
   }
 });
-// 보유 필터: 보유 → 미보유 → 전체 순환 버튼
+// 보유 필터: 세 상태를 항상 노출하고 원하는 상태를 바로 선택한다.
 const positionFilterStates = ["held", "unheld", "all"];
-const positionFilterLabels = { held: "보유", unheld: "미보유", all: "전체" };
 (() => {
-  const btn = document.getElementById("positionFilterBtn");
-  if (!btn) return;
+  const control = document.getElementById("positionFilterBtn");
+  if (!control) return;
   const saved = storageGet(detailStorage.positionFilter);
   const initial = positionFilterStates.includes(saved) ? saved : "held";
-  btn.dataset.state = initial;
-  btn.textContent = positionFilterLabels[initial];
-  btn.addEventListener("click", () => {
-    const next = positionFilterStates[(positionFilterStates.indexOf(btn.dataset.state) + 1) % positionFilterStates.length];
-    btn.dataset.state = next;
-    btn.textContent = positionFilterLabels[next];
+  const selectPositionFilter = state => {
+    if (!positionFilterStates.includes(state)) return;
+    control.dataset.state = state;
+    control.querySelectorAll("[data-position-state]").forEach(btn => {
+      const selected = btn.dataset.positionState === state;
+      btn.classList.toggle("active", selected);
+      btn.setAttribute("aria-pressed", String(selected));
+    });
+  };
+  selectPositionFilter(initial);
+  control.addEventListener("click", event => {
+    const btn = event.target.closest?.("[data-position-state]");
+    if (!btn) return;
+    const next = btn.dataset.positionState;
+    selectPositionFilter(next);
     storageSet(detailStorage.positionFilter, next);
     syncFilterToggleControls();
     render();
