@@ -163,6 +163,8 @@ function renderPerformanceChart(payload) {
   performancePayload = payload;
   const series = performanceSeries(payload);
   if (typeof syncChartLogToggle === "function") syncChartLogToggle(false);   // 성과 차트는 로그 미적용
+  const statsEl = document.getElementById("chartStats");
+  if (statsEl) statsEl.innerHTML = "";   // 성과 차트엔 종목별 지표 패널 숨김
   document.getElementById("chartIcon").innerHTML = `<span class="asset-icon">%</span>`;
   document.getElementById("chartTicker").textContent = "성과";
   document.getElementById("chartName").textContent = accountPerformanceTitle(payload);
