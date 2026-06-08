@@ -168,6 +168,7 @@ function renderPerformanceChart(payload) {
   document.getElementById("chartIcon").innerHTML = `<span class="asset-icon">%</span>`;
   document.getElementById("chartTicker").textContent = "성과";
   document.getElementById("chartName").textContent = accountPerformanceTitle(payload);
+  if (typeof clearChartExternalLinks === "function") clearChartExternalLinks();
 
   if (!series.length || !series[0]?.points.length) {
     document.getElementById("chartMeta").textContent = `${payload?.holdings_count || 0}개 종목`;
@@ -291,6 +292,7 @@ async function openPerformanceChart() {
   document.getElementById("chartIcon").innerHTML = `<span class="asset-icon">%</span>`;
   document.getElementById("chartTicker").textContent = "성과";
   document.getElementById("chartName").textContent = "계좌 퍼포먼스";
+  if (typeof clearChartExternalLinks === "function") clearChartExternalLinks();
   document.getElementById("chartMeta").textContent = "loading...";
   document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">loading...</div>`;
   const accounts = visibleAccounts();

@@ -217,6 +217,7 @@ function renderCompareLineChart(payload) {
   if (currentRange && currentRange.months && currentRange.months > compareAvailableMonths() + 0.5) chartRange = "cmax";
   const series = chartCompareSeries(payload);
   renderChartIdentity(payload);
+  clearChartExternalLinks();   // 비교 모드에선 단일 종목 바로가기 숨김
   syncChartLogToggle(true);   // 비교 차트도 로그 지원 (비율 기준)
   const statsEl = document.getElementById("chartStats");
   if (statsEl) statsEl.innerHTML = "";   // 비교 모드에선 단일 종목 통계 숨김

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "portfolio-preview",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["portfolio_web_server.py", "--host", "127.0.0.1", "--port", "8770"],
+      "port": 8770
+    }
+  ]
+}

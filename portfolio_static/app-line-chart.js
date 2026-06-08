@@ -117,11 +117,60 @@ function chartLogoRow(payload) {
   };
 }
 
+const KR_ETF_ISSUERS = [
+  { brand: "KODEX", label: "삼성 KODEX", url: "https://www.samsungfund.com/etf/main.do" },
+  { brand: "TIGER", label: "미래에셋 TIGER", url: "https://www.tigeretf.com/" },
+  { brand: "ACE", label: "한국투자 ACE", url: "https://www.aceetf.co.kr/" },
+  { brand: "SOL", label: "신한 SOL", url: "https://www.soletf.com/" },
+];
+
+function isKoreanTicker(ticker) {
+  return /\.(KS|KQ)$/i.test(String(ticker || ""));
+}
+
+function koreanTickerCode(ticker) {
+  const match = String(ticker || "").match(/^([0-9A-Za-z]{6})\.(KS|KQ)$/);
+  return match ? match[1].toUpperCase() : null;
+}
+
+function renderChartExternalLinks(payload) {
+  const el = document.getElementById("chartLinks");
+  if (!el) return;
+  el.innerHTML = "";
+  const ticker = String(payload?.ticker || "").toUpperCase();
+  const code = koreanTickerCode(ticker);
+  if (!code) return;
+  const name = String(payload?.name || "");
+  const links = [];
+  links.push({
+    label: "네이버 증권",
+    url: `https://finance.naver.com/item/main.naver?code=${code}`,
+  });
+  const issuer = KR_ETF_ISSUERS.find(it =>
+    name.toUpperCase().includes(it.brand)
+  );
+  if (issuer) {
+    links.push({ label: issuer.label, url: issuer.url });
+  }
+  el.innerHTML = links
+    .map(
+      link =>
+        `<a class="chart-link-btn" href="${esc(link.url)}" target="_blank" rel="noopener noreferrer">${esc(link.label)}</a>`
+    )
+    .join("");
+}
+
+function clearChartExternalLinks() {
+  const el = document.getElementById("chartLinks");
+  if (el) el.innerHTML = "";
+}
+
 function renderChartIdentity(payload) {
   const row = chartLogoRow(payload);
   document.getElementById("chartIcon").innerHTML = logoMarkup(row);
   document.getElementById("chartTicker").textContent = row.ticker || "";
   document.getElementById("chartName").textContent = row.name || row.ticker || "";
+  renderChartExternalLinks(row);
 }
 
 function renderChartStats(payload) {
