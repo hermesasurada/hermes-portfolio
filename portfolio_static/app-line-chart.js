@@ -362,44 +362,65 @@ function renderChartStats(payload) {
   const loaded = Boolean(statsData[ticker]);
   const mcap = Number.isFinite(Number(s.market_cap)) ? marketCapText(s.market_cap, payload?.currency) : "-";
 
-  const tile = ([label, value]) => `<div class="cstat"><span class="cstat-k">${esc(label)}</span><span class="cstat-v">${value}</span></div>`;
-  const basic = [
-    ["시가총액", mcap],
-    ["배당", dividendYieldText(s.dividend_yield)],
-    ["β", betaText(s.beta)],
-    ["β″", betaText(s.beta_adj)],
-    ["P/E", peText(s.trailing_pe)],
-    ["선행 P/E", peText(s.forward_pe)],
-    ["실적일", earningsText(s.next_earnings_date)],
-  ];
-  const perfItems = [
-    ["1개월", signedPercentText(perf.one_month, 1)],
-    ["3개월", signedPercentText(perf.three_month, 0)],
-    ["6개월", signedPercentText(perf.six_month, 0)],
-    ["YTD", signedPercentText(perf.ytd, 0)],
-    ["1년", signedPercentText(perf.one_year, 0)],
-    ["3년", signedPercentText(perf.three_year, 0)],
-    ["5년", signedPercentText(perf.five_year, 0)],
+  const percent = (value, digits = 1) => {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return "-";
+    const cls = number > 0 ? "cstat-positive" : number < 0 ? "cstat-negative" : "";
+    return `<span class="${cls}">${number.toLocaleString("ko-KR", {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    })}%</span>`;
+  };
+  const indicator = (value, kind) => {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return "-";
+    let cls = "";
+    if (kind === "rsi") cls = number >= 70 ? "cstat-negative" : number <= 30 ? "cstat-cold" : "";
+    if (kind === "bb") cls = number >= 100 ? "cstat-negative" : number <= 0 ? "cstat-cold" : "";
+    return `<span class="${cls}">${Math.round(number).toLocaleString("ko-KR")}</span>`;
+  };
+  const row = ([label, value]) => `
+    <div class="cstat-row">
+      <span class="cstat-k">${esc(label)}</span>
+      <span class="cstat-v">${value}</span>
+    </div>
+  `;
+  const columns = [
+    [
+      ["시가총액", mcap],
+      ["배당수익률", dividendYieldText(s.dividend_yield)],
+      ["P/E (t)", peText(s.trailing_pe)],
+      ["P/E (f)", peText(s.forward_pe)],
+      ["P/B", peText(s.price_to_book)],
+      ["실적일", earningsText(s.next_earnings_date)],
+    ],
+    [
+      ["RSI (일)", indicator(rsi.day, "rsi")],
+      ["RSI (주)", indicator(rsi.week, "rsi")],
+      ["RSI (월)", indicator(rsi.month, "rsi")],
+      ["BB (일)", indicator(bb.day, "bb")],
+      ["BB (주)", indicator(bb.week, "bb")],
+      ["BB (월)", indicator(bb.month, "bb")],
+    ],
+    [
+      ["1개월", percent(perf.one_month)],
+      ["3개월", percent(perf.three_month, 0)],
+      ["6개월", percent(perf.six_month, 0)],
+      ["YTD", percent(perf.ytd, 0)],
+      ["1년", percent(perf.one_year, 0)],
+      ["3년", percent(perf.three_year, 0)],
+    ],
+    [
+      ["5년", percent(perf.five_year, 0)],
+      ["52주 고점 대비", percent(s.drawdown_52w)],
+      ["β", betaText(s.beta)],
+      ["β″", betaText(s.beta_adj)],
+    ],
   ];
 
   el.innerHTML = `
-    <div class="cstat-block">
-      <h4>기본 지표</h4>
-      <div class="cstat-grid">${basic.map(tile).join("")}</div>
-    </div>
-    <div class="cstat-block">
-      <h4>기술 지표 <span class="cstat-sub">일 · 주 · 월</span></h4>
-      <table class="cstat-matrix">
-        <thead><tr><th scope="col"></th><th scope="col">일</th><th scope="col">주</th><th scope="col">월</th></tr></thead>
-        <tbody>
-          <tr><th scope="row">RSI</th><td>${indicatorText(rsi.day, "rsi")}</td><td>${indicatorText(rsi.week, "rsi")}</td><td>${indicatorText(rsi.month, "rsi")}</td></tr>
-          <tr><th scope="row">BB %B</th><td>${indicatorText(bb.day, "bb")}</td><td>${indicatorText(bb.week, "bb")}</td><td>${indicatorText(bb.month, "bb")}</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="cstat-block">
-      <h4>기간 수익률</h4>
-      <div class="cstat-grid cstat-grid-perf">${perfItems.map(tile).join("")}</div>
+    <div class="cstat-board">
+      ${columns.map(items => `<div class="cstat-column">${items.map(row).join("")}</div>`).join("")}
     </div>
     ${loaded ? "" : `<div class="chart-stat-loading">통계 불러오는 중…</div>`}
   `;
