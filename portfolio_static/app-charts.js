@@ -95,32 +95,19 @@ function renderPerformanceControls() {
 }
 
 function bindPerformanceHover(series, geometry) {
+  // 비교 차트와 동일한 HTML 오버레이 툴팁 사용(색상 이름 + %). 단, 로고·주가는 제외.
   const svg = document.querySelector("#chartCanvas svg");
+  const canvas = document.getElementById("chartCanvas");
   const hoverLayer = document.getElementById("chartHoverLayer");
   const hoverGroup = document.getElementById("chartHoverGroup");
   const hoverLine = document.getElementById("chartHoverLine");
-  const tooltip = document.getElementById("chartTooltip");
-  const tooltipBox = document.getElementById("chartTooltipBox");
-  if (!svg || !hoverLayer || !hoverGroup || !hoverLine || !tooltip || !tooltipBox) return;
+  const tooltip = document.getElementById("compareTooltip");
+  if (!svg || !canvas || !hoverLayer || !hoverGroup || !hoverLine || !tooltip) return;
 
   const nearest = (points, targetTime) => points.reduce((best, point) => {
     const distance = Math.abs(point.time - targetTime);
     return !best || distance < best.distance ? { point, distance } : best;
   }, null)?.point;
-
-  const updateTooltipBox = () => {
-    let bbox = tooltip.getBBox();
-    let x = Number(tooltip.getAttribute("x") || 0);
-    if (bbox.x + bbox.width > geometry.width - 8) x -= bbox.x + bbox.width - (geometry.width - 8);
-    if (bbox.x < 8) x += 8 - bbox.x;
-    tooltip.setAttribute("x", x.toFixed(2));
-    tooltip.querySelectorAll("tspan").forEach(tspan => tspan.setAttribute("x", x.toFixed(2)));
-    bbox = tooltip.getBBox();
-    tooltipBox.setAttribute("x", (bbox.x - 9).toFixed(2));
-    tooltipBox.setAttribute("y", (bbox.y - 7).toFixed(2));
-    tooltipBox.setAttribute("width", (bbox.width + 18).toFixed(2));
-    tooltipBox.setAttribute("height", (bbox.height + 14).toFixed(2));
-  };
 
   const showPoint = clientX => {
     const rect = svg.getBoundingClientRect();
@@ -128,13 +115,11 @@ function bindPerformanceHover(series, geometry) {
     const ratio = Math.min(1, Math.max(0, (svgX - geometry.pad.left) / geometry.plotW));
     const targetTime = geometry.minTime + ratio * (geometry.maxTime - geometry.minTime);
     const x = geometry.xForTime(targetTime);
-    const portfolioPoint = nearest(series[0]?.points || [], targetTime);
-    const y = portfolioPoint ? geometry.yFor(portfolioPoint.close) : geometry.pad.top;
-    const dateText = portfolioPoint?.date || new Date(targetTime).toISOString().slice(0, 10);
+    const mainPoint = nearest(series[0]?.points || [], targetTime);
+    const dateText = mainPoint?.date || new Date(targetTime).toISOString().slice(0, 10);
     hoverGroup.classList.remove("hidden");
     hoverLine.setAttribute("x1", x.toFixed(2));
     hoverLine.setAttribute("x2", x.toFixed(2));
-    // place a dot on each line at the hovered date (from-start performance point)
     series.forEach(item => {
       const dot = document.getElementById(`perfDot-${item.key}`);
       if (!dot) return;
@@ -147,29 +132,31 @@ function bindPerformanceHover(series, geometry) {
         dot.style.display = "none";
       }
     });
-    tooltip.textContent = "";
-    const tx = x > geometry.width - 250 ? x - 176 : x + 14;
-    [
-      chartFullDateLabel(dateText),
-      ...series.map(item => {
-        const point = nearest(item.points, targetTime);
-        return `${item.name} ${pctChartLabel(point?.close)}`;
-      }),
-    ].forEach((line, index) => {
-      const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-      tspan.setAttribute("x", tx.toFixed(2));
-      tspan.setAttribute("dy", index === 0 ? "0" : "11");
-      tspan.textContent = line;
-      tooltip.appendChild(tspan);
-    });
-    tooltip.setAttribute("x", tx.toFixed(2));
-    tooltip.setAttribute("y", (y < geometry.pad.top + geometry.plotH / 2 ? y + 42 : y - 62).toFixed(2));
-    updateTooltipBox();
+    const rows = series.map(item => {
+      const point = nearest(item.points, targetTime);
+      if (!point) return "";
+      const cls = point.close > 0 ? "up" : point.close < 0 ? "down" : "flat";
+      return `<div class="ct-row simple"><span class="ct-name" style="color:${item.color}">${esc(item.name)}</span><span class="ct-pct ${cls}">${esc(pctChartLabel(point.close))}</span></div>`;
+    }).join("");
+    tooltip.innerHTML = `<div class="ct-date">${esc(chartFullDateLabel(dateText))}</div>${rows}`;
+    tooltip.classList.remove("hidden");
+    const canvasRect = canvas.getBoundingClientRect();
+    const lineClientX = rect.left + (x / geometry.width) * rect.width;
+    const tipW = tooltip.offsetWidth;
+    let leftPx = (lineClientX - canvasRect.left) + 14;
+    if (leftPx + tipW > canvasRect.width - 6) leftPx = (lineClientX - canvasRect.left) - tipW - 14;
+    if (leftPx < 6) leftPx = 6;
+    const topPx = (rect.top - canvasRect.top) + (geometry.pad.top / geometry.height) * rect.height + 4;
+    tooltip.style.left = `${leftPx.toFixed(0)}px`;
+    tooltip.style.top = `${Math.max(4, topPx).toFixed(0)}px`;
   };
 
   hoverLayer.addEventListener("pointermove", event => showPoint(event.clientX));
   hoverLayer.addEventListener("pointerenter", event => showPoint(event.clientX));
-  hoverLayer.addEventListener("pointerleave", () => hoverGroup.classList.add("hidden"));
+  hoverLayer.addEventListener("pointerleave", () => {
+    hoverGroup.classList.add("hidden");
+    tooltip.classList.add("hidden");
+  });
 }
 
 function renderPerformanceChart(payload) {
@@ -264,10 +251,9 @@ function renderPerformanceChart(payload) {
       <g id="chartHoverGroup" class="chart-hover hidden">
         <line id="chartHoverLine" class="chart-hover-line" x1="0" x2="0" y1="${pad.top}" y2="${pad.top + plotH}"></line>
         ${series.map(item => `<circle id="perfDot-${item.key}" class="perf-hover-dot" r="3.6" cx="0" cy="0" style="stroke:${item.color}"></circle>`).join("")}
-        <rect id="chartTooltipBox" class="chart-tooltip-box" x="0" y="0" width="0" height="0" rx="6"></rect>
-        <text id="chartTooltip" class="chart-tooltip perf-tooltip" x="0" y="0">-</text>
       </g>
     </svg>
+    <div id="compareTooltip" class="compare-tooltip hidden" aria-hidden="true"></div>
     ${renderChartRangeButtons()}
   `;
   bindPerformanceHover(series, { width, height, pad, plotW, plotH, minTime, maxTime, xForTime, yFor });

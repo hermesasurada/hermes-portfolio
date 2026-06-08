@@ -1549,6 +1549,12 @@ tbody tr.index-row td:first-child::before {
   column-gap: 8px;
   line-height: 1.75;
 }
+/* 로고·주가 없는 행(성과 차트): 이름 + % 만 */
+.compare-tooltip .ct-row.simple {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
 .compare-tooltip .ct-logo {
   width: 18px;
   height: 18px;
