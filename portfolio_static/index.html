@@ -232,7 +232,7 @@
         </div>
         <div class="field">
           <label for="tradeName">종목명</label>
-          <input id="tradeName">
+          <input id="tradeName" readonly tabindex="-1" title="티커에 따라 자동 입력됩니다" placeholder="티커 입력 시 자동">
         </div>
         <div class="field">
           <label>유형</label>
@@ -281,6 +281,7 @@
               <th>단가</th>
               <th>금액</th>
               <th>현재대비</th>
+              <th class="tx-actions-head">관리</th>
             </tr>
           </thead>
           <tbody id="transactions"></tbody>

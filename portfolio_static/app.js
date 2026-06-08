@@ -38,6 +38,7 @@ let watchLookupResult = null;
 let watchPending = [];
 let transactionRows = [];
 let transactionPage = 1;
+let editingTxId = null;
 const transactionPageSize = 10;
 
 const chartRanges = [
@@ -240,6 +241,7 @@ document.getElementById("tradeTicker").addEventListener("change", () => {
   selectedTrade.ticker = document.getElementById("tradeTicker").value.trim().toUpperCase();
   document.getElementById("tradeTicker").value = selectedTrade.ticker;
   applyTradeHoldingDefaults(true);
+  resolveTradeName();   // 티커→종목명 자동완성 (DB에 없으면 lookup)
   loadTransactions().catch(showTradeError);
 });
 document.getElementById("tradeForm").addEventListener("submit", async event => {

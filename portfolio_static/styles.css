@@ -1860,6 +1860,46 @@ tbody tr.index-row td:first-child::before {
   padding: 0 7px;
   font-size: 12px;
 }
+#tradeName[readonly] {
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: default;
+}
+/* 거래내역 행 관리(수정/삭제) */
+.tx-actions-head { text-align: center; }
+.tx-list td.tx-actions { white-space: nowrap; text-align: center; }
+.tx-action-btn {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  border-radius: 6px;
+  height: 24px;
+  min-width: 24px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+.tx-action-btn + .tx-action-btn { margin-left: 4px; }
+.tx-action-btn:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
+.tx-action-btn.tx-del:hover { border-color: var(--sell); color: var(--sell); background: transparent; }
+.tx-action-btn.tx-save { border-color: var(--brand); background: var(--brand); color: var(--on-accent); }
+.tx-edit-input {
+  width: 100%;
+  max-width: 116px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 12px;
+}
+.tx-editing td { background: var(--brand-soft); }
 .segmented {
   height: 32px;
   display: inline-flex;

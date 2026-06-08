@@ -222,3 +222,42 @@ def add_transaction(payload: dict, portfolio_loader: Callable[[], dict] | None =
         "portfolio": (portfolio_loader or load_portfolio)(),
         "transactions": load_transactions(str(account_id))["transactions"],
     }
+
+
+def update_transaction(payload: dict) -> dict:
+    """거래내역(원장) 레코드만 수정. 보유(holdings)는 거래의 순수 투영이 아니므로
+    재계산하지 않는다(과거 거래 일부만 입력되는 설계). 티커·계좌·종목명은 식별자라
+    고정하고, 거래일·유형·수량·단가·메모만 수정한다."""
+    tx_id = int(payload.get("id") or 0)
+    if not tx_id:
+        raise ValueError("거래 id가 필요합니다.")
+    with connect() as conn:
+        row = conn.execute("SELECT * FROM transactions WHERE id = ?", (tx_id,)).fetchone()
+        if not row:
+            raise ValueError("존재하지 않는 거래입니다.")
+        trade_date = parse_trade_date(payload.get("trade_date") or row["trade_date"])
+        side = str(payload.get("side") or row["side"]).strip().upper()
+        if side not in {"BUY", "SELL"}:
+            raise ValueError("거래 유형은 BUY 또는 SELL이어야 합니다.")
+        qty = positive_float(payload["qty"], "수량") if payload.get("qty") not in (None, "") else float(row["qty"])
+        price = positive_float(payload["price"], "단가") if payload.get("price") not in (None, "") else float(row["price"])
+        note = str(payload["note"] if payload.get("note") is not None else (row["note"] or "")).strip()
+        conn.execute(
+            "UPDATE transactions SET trade_date = ?, side = ?, qty = ?, price = ?, note = ? WHERE id = ?",
+            (trade_date, side, qty, price, note, tx_id),
+        )
+        conn.commit()
+    return {"ok": True, "id": tx_id}
+
+
+def delete_transaction(payload: dict) -> dict:
+    """거래내역 물리 삭제(hard delete). 보유는 건드리지 않음."""
+    tx_id = int(payload.get("id") or 0)
+    if not tx_id:
+        raise ValueError("거래 id가 필요합니다.")
+    with connect() as conn:
+        cursor = conn.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
+        conn.commit()
+    if cursor.rowcount == 0:
+        raise ValueError("존재하지 않는 거래입니다.")
+    return {"ok": True, "id": tx_id}

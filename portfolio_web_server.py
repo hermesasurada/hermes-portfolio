@@ -25,7 +25,7 @@ from portfolio_core.portfolio import load_portfolio as load_portfolio_data
 from portfolio_core.prices import load_ticker_changes
 from portfolio_core.stats import load_stats
 from portfolio_core.tickers import asset_class
-from portfolio_core.transactions import add_transaction, load_transactions
+from portfolio_core.transactions import add_transaction, delete_transaction, load_transactions, update_transaction
 from portfolio_core.watchlist import add_watchlist_async, lookup_ticker
 
 
@@ -273,6 +273,12 @@ class Handler(BaseHTTPRequestHandler):
     def post_transactions(self) -> dict:
         return add_transaction(self.read_json(), portfolio_loader=load_portfolio)
 
+    def post_transaction_update(self) -> dict:
+        return update_transaction(self.read_json())
+
+    def post_transaction_delete(self) -> dict:
+        return delete_transaction(self.read_json())
+
     def post_watchlist(self) -> dict:
         payload = self.read_json()
         return add_watchlist_async(payload.get("tickers") or [])
@@ -324,6 +330,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             post_routes = {
                 "/api/transactions": self.post_transactions,
+                "/api/transactions/update": self.post_transaction_update,
+                "/api/transactions/delete": self.post_transaction_delete,
                 "/api/watchlist": self.post_watchlist,
             }
             if path in post_routes:

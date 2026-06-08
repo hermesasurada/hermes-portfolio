@@ -42,6 +42,22 @@ function apiSaveTransaction(payload) {
   });
 }
 
+function apiUpdateTransaction(payload) {
+  return fetchJson("/api/transactions/update", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+function apiDeleteTransaction(id) {
+  return fetchJson("/api/transactions/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+}
+
 function apiLookupTicker(query) {
   return fetchJson(`/api/watchlist/lookup?q=${encodeURIComponent(query || "")}`);
 }
