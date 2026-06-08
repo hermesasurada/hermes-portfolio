@@ -1354,6 +1354,45 @@ tbody tr.index-row td:first-child::before {
   border-color: var(--line);
   color: var(--muted);
 }
+/* 매수/매도 마커 표시 토글 (직접설정 옆) */
+.chart-marker-toggles {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+.chart-range-btn.marker-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 0 12px;
+}
+.chart-range-btn.marker-toggle i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+.chart-range-btn.marker-toggle.buy i { background: var(--up); }
+.chart-range-btn.marker-toggle.sell i { background: var(--down); }
+/* 켜짐: 패널 배경 + 색상 테두리(브랜드 채움 대신) */
+.chart-range-btn.marker-toggle.active {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: none;
+}
+.chart-range-btn.marker-toggle.buy.active { border-color: var(--up); }
+.chart-range-btn.marker-toggle.sell.active { border-color: var(--down); }
+.chart-range-btn.marker-toggle.buy.active:hover,
+.chart-range-btn.marker-toggle.sell.active:hover { color: var(--ink); }
+/* 꺼짐: 흐리게 + 빈 점 */
+.chart-range-btn.marker-toggle:not(.active) { opacity: .55; }
+.chart-range-btn.marker-toggle:not(.active) i {
+  background: transparent;
+  border: 1.5px solid currentColor;
+}
 .chart-selection {
   pointer-events: none;
 }

@@ -16,6 +16,12 @@ function renderChartRangeButtons() {
       }).join("")}
       ${maxBtn}
       <button class="chart-range-btn ${chartRange === "custom" ? "active" : ""}" type="button" data-chart-custom>직접설정</button>
+      ${(!isCompare && !performanceChartOpen) ? `
+        <span class="chart-marker-toggles" role="group" aria-label="거래 마커 표시">
+          <button class="chart-range-btn marker-toggle buy ${chartShowBuys ? "active" : ""}" type="button" data-marker-toggle="buy" aria-pressed="${chartShowBuys}"><i></i>매수</button>
+          <button class="chart-range-btn marker-toggle sell ${chartShowSells ? "active" : ""}" type="button" data-marker-toggle="sell" aria-pressed="${chartShowSells}"><i></i>매도</button>
+        </span>
+      ` : ""}
     </div>
   `;
 }
@@ -208,6 +214,17 @@ function ensureChartStats(ticker) {
 function bindLineChartControls(payload) {
   document.querySelectorAll(".chart-range-btn").forEach(btn => {
     btn.addEventListener("click", () => {
+      if (btn.dataset.markerToggle != null) {
+        if (btn.dataset.markerToggle === "buy") {
+          chartShowBuys = !chartShowBuys;
+          storageSet(detailStorage.chartShowBuys, String(chartShowBuys));
+        } else {
+          chartShowSells = !chartShowSells;
+          storageSet(detailStorage.chartShowSells, String(chartShowSells));
+        }
+        renderLineChart(payload);
+        return;
+      }
       if (btn.dataset.chartCustom != null) {
         openChartRangeModal();
         return;
@@ -415,7 +432,9 @@ function renderLineChart(payload) {
   }
   const allPoints = (payload.points || []).filter(point => Number.isFinite(Number(point.close)));
   const points = filterChartPoints(allPoints, chartRange);
-  const chartTransactions = transactionsForChart(payload, points);
+  // 매수/매도 마커 표시 토글 반영 (꺼진 쪽은 마커·스케일에서 제외)
+  const chartTransactions = transactionsForChart(payload, points)
+    .filter(tx => (tx.side === "BUY" ? chartShowBuys : chartShowSells));
   renderChartIdentity(payload);
   if (points.length < 2) {
     syncChartLogToggle(false);

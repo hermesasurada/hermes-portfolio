@@ -27,6 +27,8 @@ let chartLoadInFlight = null;
 let chartPayload = null;
 let chartRange = "6m";
 let chartLogScale = false;
+let chartShowBuys = true;
+let chartShowSells = true;
 let chartCustomRange = { start: "", end: "" };
 let chartComparePayloads = [];
 let performanceChartOpen = false;
@@ -327,6 +329,8 @@ const positionFilterStates = ["held", "unheld", "all"];
   });
 })();
 chartLogScale = storageGet(detailStorage.chartLogScale) === "true";
+chartShowBuys = storageGet(detailStorage.chartShowBuys) !== "false";   // 기본 ON
+chartShowSells = storageGet(detailStorage.chartShowSells) !== "false"; // 기본 ON
 document.getElementById("chartLogToggle")?.addEventListener("click", () => {
   chartLogScale = !chartLogScale;
   storageSet(detailStorage.chartLogScale, String(chartLogScale));
