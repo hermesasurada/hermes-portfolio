@@ -1330,12 +1330,13 @@ tbody tr.index-row td:first-child::before {
 }
 .chart-rsi-zone {
   pointer-events: none;
+  opacity: .18;
 }
 .chart-rsi-zone.overbought {
-  fill: url(#rsiOverboughtFill);
+  fill: var(--up);
 }
 .chart-rsi-zone.oversold {
-  fill: url(#rsiOversoldFill);
+  fill: var(--down);
 }
 .chart-rsi-line {
   fill: none;

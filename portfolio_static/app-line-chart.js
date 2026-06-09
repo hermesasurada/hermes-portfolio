@@ -666,14 +666,6 @@ function renderLineChart(payload) {
           <stop offset="72%" stop-color="var(--brand)" stop-opacity=".045"></stop>
           <stop offset="100%" stop-color="var(--brand)" stop-opacity="0"></stop>
         </linearGradient>
-        <linearGradient id="rsiOverboughtFill" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stop-color="var(--up)" stop-opacity=".28"></stop>
-          <stop offset="100%" stop-color="var(--up)" stop-opacity=".06"></stop>
-        </linearGradient>
-        <linearGradient id="rsiOversoldFill" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stop-color="var(--down)" stop-opacity=".06"></stop>
-          <stop offset="100%" stop-color="var(--down)" stop-opacity=".28"></stop>
-        </linearGradient>
       </defs>
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
       <rect class="chart-plot-border" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
