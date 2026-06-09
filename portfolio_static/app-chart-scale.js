@@ -68,6 +68,26 @@ function filterChartPoints(points, rangeKey) {
   return filtered.length >= 2 ? filtered : points.slice(-Math.min(points.length, 2));
 }
 
+function chartIntervalKey(dateText, interval) {
+  if (interval === "month") return String(dateText || "").slice(0, 7);
+  if (interval !== "week") return String(dateText || "");
+  const date = new Date(`${dateText}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return String(dateText || "");
+  const daysFromMonday = (date.getUTCDay() + 6) % 7;
+  date.setUTCDate(date.getUTCDate() - daysFromMonday);
+  return date.toISOString().slice(0, 10);
+}
+
+function aggregateChartPoints(points, interval = chartInterval) {
+  const clean = (points || []).filter(point => point?.date);
+  if (interval === "day") return clean;
+  const grouped = new Map();
+  clean.forEach(point => {
+    grouped.set(chartIntervalKey(point.date, interval), point);
+  });
+  return Array.from(grouped.values());
+}
+
 function niceChartStep(rawStep) {
   if (!Number.isFinite(rawStep) || rawStep <= 0) return 1;
   const power = Math.pow(10, Math.floor(Math.log10(rawStep)));
@@ -231,4 +251,3 @@ function chartExtremes(values) {
     { kind: "low", label: "저점", index: lowIndex, value: values[lowIndex] },
   ].filter((item, index, items) => index === 0 || item.index !== items[0].index);
 }
-

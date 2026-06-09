@@ -1098,6 +1098,16 @@ tbody tr.index-row td:first-child::before {
   gap: 10px;
   flex: 0 0 auto;
 }
+.chart-interval-control {
+  height: 30px;
+  padding: 2px;
+}
+.chart-interval-control .seg-btn {
+  height: 24px;
+  min-width: 34px;
+  padding: 0 9px;
+  font-size: 12px;
+}
 .chart-log-toggle {
   height: 28px;
   padding: 0 12px;

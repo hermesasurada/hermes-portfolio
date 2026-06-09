@@ -26,6 +26,7 @@ let chartTicker = null;
 let chartLoadInFlight = null;
 let chartPayload = null;
 let chartRange = "6m";
+let chartInterval = "day";
 let chartLogScale = false;
 let chartShowBuys = true;
 let chartShowSells = true;
@@ -329,6 +330,9 @@ const positionFilterStates = ["held", "unheld", "all"];
   });
 })();
 chartLogScale = storageGet(detailStorage.chartLogScale) === "true";
+chartInterval = ["day", "week", "month"].includes(storageGet(detailStorage.chartInterval))
+  ? storageGet(detailStorage.chartInterval)
+  : "day";
 chartShowBuys = storageGet(detailStorage.chartShowBuys) !== "false";   // 기본 ON
 chartShowSells = storageGet(detailStorage.chartShowSells) !== "false"; // 기본 ON
 document.getElementById("fxAdjustedToggle").checked = storageGet(detailStorage.fxAdjusted) === "true";
@@ -387,6 +391,7 @@ initThemeControl();
 initDataHelpModal();
 initWatchlistControls();
 initChartRangeModal();
+initChartIntervalControl();
 initTradeSideToggle();
 initTradeApplyToggle();
 setTransactionsExpanded(false);

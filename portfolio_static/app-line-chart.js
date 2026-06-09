@@ -18,13 +18,40 @@ function renderChartRangeButtons() {
       <button class="chart-range-btn ${chartRange === "custom" ? "active" : ""}" type="button" data-chart-custom>직접설정</button>
       ${(!isCompare && !performanceChartOpen) ? `
         <span class="chart-marker-toggles" role="group" aria-label="거래 마커 표시">
-          <button class="chart-range-btn marker-toggle buy ${chartShowBuys ? "active" : ""}" type="button" data-marker-toggle="buy" aria-pressed="${chartShowBuys}"><i></i>매수</button>
-          <button class="chart-range-btn marker-toggle sell ${chartShowSells ? "active" : ""}" type="button" data-marker-toggle="sell" aria-pressed="${chartShowSells}"><i></i>매도</button>
+          <button class="chart-range-btn marker-toggle buy ${chartShowBuys ? "active" : ""}" type="button" data-marker-toggle="buy" aria-pressed="${chartShowBuys}" ${chartInterval === "day" ? "" : `disabled title="일 단위에서만 표시"`}><i></i>매수</button>
+          <button class="chart-range-btn marker-toggle sell ${chartShowSells ? "active" : ""}" type="button" data-marker-toggle="sell" aria-pressed="${chartShowSells}" ${chartInterval === "day" ? "" : `disabled title="일 단위에서만 표시"`}><i></i>매도</button>
         </span>
       ` : ""}
       ${!performanceChartOpen ? `<button class="chart-range-btn chart-log-toggle ${chartLogScale ? "active" : ""}" type="button" data-chart-log aria-pressed="${chartLogScale}">로그</button>` : ""}
     </div>
   `;
+}
+
+function syncChartIntervalControl() {
+  const control = document.getElementById("chartIntervalControl");
+  if (!control) return;
+  control.classList.toggle("hidden", !chartTicker || performanceChartOpen);
+  control.querySelectorAll("[data-chart-interval]").forEach(btn => {
+    const active = btn.dataset.chartInterval === chartInterval;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function initChartIntervalControl() {
+  const control = document.getElementById("chartIntervalControl");
+  if (!control) return;
+  syncChartIntervalControl();
+  control.addEventListener("click", event => {
+    const btn = event.target.closest?.("[data-chart-interval]");
+    if (!btn) return;
+    const interval = btn.dataset.chartInterval;
+    if (!["day", "week", "month"].includes(interval) || interval === chartInterval) return;
+    chartInterval = interval;
+    storageSet(detailStorage.chartInterval, chartInterval);
+    syncChartIntervalControl();
+    if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
+  });
 }
 
 function syncChartLogToggle(visible) {
@@ -558,15 +585,18 @@ function bindChartInteractions(points, payload, geometry) {
 }
 
 function renderLineChart(payload) {
+  syncChartIntervalControl();
   if (chartComparePayloads.length) {
     renderCompareLineChart(payload);
     return;
   }
-  const allPoints = (payload.points || []).filter(point => Number.isFinite(Number(point.close)));
+  const allPoints = aggregateChartPoints(payload.points || [])
+    .filter(point => Number.isFinite(Number(point.close)));
   const points = filterChartPoints(allPoints, chartRange);
   // 매수/매도 마커 표시 토글 반영 (꺼진 쪽은 마커·스케일에서 제외)
-  const chartTransactions = transactionsForChart(payload, points)
-    .filter(tx => (tx.side === "BUY" ? chartShowBuys : chartShowSells));
+  const chartTransactions = chartInterval === "day"
+    ? transactionsForChart(payload, points).filter(tx => (tx.side === "BUY" ? chartShowBuys : chartShowSells))
+    : [];
   renderChartIdentity(payload);
   if (points.length < 2) {
     syncChartLogToggle(false);

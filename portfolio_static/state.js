@@ -10,6 +10,7 @@ const detailStorage = {
   showIndexes: "portfolio.detail.showIndexes",
   currencyFilter: "portfolio.detail.currencyFilter",
   positionFilter: "portfolio.detail.positionFilter",
+  chartInterval: "portfolio.chart.interval",
   chartLogScale: "portfolio.chart.logScale",
   chartShowBuys: "portfolio.chart.showBuys",
   chartShowSells: "portfolio.chart.showSells"

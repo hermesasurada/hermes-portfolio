@@ -4,7 +4,8 @@
 function compareCommonStartTime() {
   const payloads = [chartPayload, ...chartComparePayloads].filter(Boolean);
   const starts = payloads.map(item => {
-    const pts = (item.points || []).filter(point => point.date && Number.isFinite(Number(point.close)) && Number(point.close) > 0);
+    const pts = aggregateChartPoints(item.points || [])
+      .filter(point => point.date && Number.isFinite(Number(point.close)) && Number(point.close) > 0);
     return pts.length ? new Date(`${pts[0].date}T00:00:00`).getTime() : null;
   }).filter(value => value != null);
   return starts.length ? Math.max(...starts) : null;
@@ -19,7 +20,7 @@ function compareAvailableMonths() {
 function chartCompareSeries(payload) {
   // 종목별 양수 가격 시계열
   const raw = [payload, ...chartComparePayloads].map((item, index) => {
-    const pts = (item.points || [])
+    const pts = aggregateChartPoints(item.points || [])
       .filter(point => point.date && Number.isFinite(Number(point.close)) && Number(point.close) > 0)
       .map(point => ({ date: point.date, value: Number(point.close), time: new Date(`${point.date}T00:00:00`).getTime() }));
     return { item, index, pts };
