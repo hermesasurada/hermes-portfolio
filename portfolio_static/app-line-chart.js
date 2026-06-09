@@ -337,6 +337,8 @@ function bindChartInteractions(points, payload, geometry) {
   function showMarker(marker) {
     const x = Number(marker.dataset.x);
     const y = Number(marker.dataset.y);
+    const hoverRsiDot = document.getElementById("chartHoverRsiDot");
+    hoverRsiDot?.classList.add("hidden");
     const tooltipY = y < geometry.pad.top + geometry.plotH / 2 ? y + 42 : y - 58;
     hoverGroup.classList.remove("hidden");
     hoverLine.setAttribute("x1", x.toFixed(2));
@@ -367,6 +369,8 @@ function bindChartInteractions(points, payload, geometry) {
     const point = points[index];
     const x = geometry.xFor(index);
     const y = geometry.yFor(Number(point.close));
+    const rsiValue = Number(point.rsi);
+    const hoverRsiDot = document.getElementById("chartHoverRsiDot");
     const tooltipX = x > geometry.width - 250 ? x - 188 : x + 12;
     const tooltipY = y < geometry.pad.top + geometry.plotH / 2 ? y + 42 : y - 58;
     hoverGroup.classList.remove("hidden");
@@ -374,9 +378,16 @@ function bindChartInteractions(points, payload, geometry) {
     hoverLine.setAttribute("x2", x.toFixed(2));
     hoverDot.setAttribute("cx", x.toFixed(2));
     hoverDot.setAttribute("cy", y.toFixed(2));
+    if (hoverRsiDot && Number.isFinite(rsiValue) && geometry.rsiYFor) {
+      hoverRsiDot.classList.remove("hidden");
+      hoverRsiDot.setAttribute("cx", x.toFixed(2));
+      hoverRsiDot.setAttribute("cy", geometry.rsiYFor(rsiValue).toFixed(2));
+    } else {
+      hoverRsiDot?.classList.add("hidden");
+    }
     tooltip.setAttribute("x", tooltipX.toFixed(2));
     tooltip.setAttribute("y", tooltipY.toFixed(2));
-    tooltip.textContent = `${chartFullDateLabel(point.date)} · ${chartMoney(Number(point.close), payload.currency)}`;
+    tooltip.textContent = `${chartFullDateLabel(point.date)} · ${chartMoney(Number(point.close), payload.currency)}${Number.isFinite(rsiValue) ? ` · RSI ${rsiValue.toFixed(1)}` : ""}`;
     updateTooltipBox();
   }
 
@@ -532,10 +543,15 @@ function renderLineChart(payload) {
   document.getElementById("chartMeta").textContent = "";
 
   const width = 980;
-  const height = 408;
+  const compactChart = window.matchMedia?.("(max-width: 980px)")?.matches;
+  const height = compactChart ? 900 : 530;
   const pad = { top: 28, right: 58, bottom: 32, left: 14 };
   const plotW = width - pad.left - pad.right;
-  const plotH = height - pad.top - pad.bottom;
+  const rsiGap = compactChart ? 24 : 18;
+  const rsiH = compactChart ? 180 : 96;
+  const plotH = height - pad.top - pad.bottom - rsiGap - rsiH;
+  const rsiTop = pad.top + plotH + rsiGap;
+  const rsiBottom = rsiTop + rsiH;
   const range = max - min || Math.max(1, Math.abs(max));
   const logMax = useLog ? Math.log10(max) : 0;
   const logSpan = useLog ? ((Math.log10(max) - Math.log10(min)) || 1) : 1;
@@ -543,8 +559,15 @@ function renderLineChart(payload) {
   const yFor = useLog
     ? (value => pad.top + (logMax - Math.log10(value)) / logSpan * plotH)
     : (value => pad.top + (max - value) / range * plotH);
+  const rsiYFor = value => rsiTop + (100 - Math.max(0, Math.min(100, value))) / 100 * rsiH;
   const line = smoothLinePath(points.map((point, index) => ({ x: xFor(index), y: yFor(Number(point.close)) })));
   const area = `${line} L${pad.left + plotW},${pad.top + plotH} L${pad.left},${pad.top + plotH} Z`;
+  const rsiLine = smoothLinePath(
+    points
+      .map((point, index) => ({ x: xFor(index), y: rsiYFor(Number(point.rsi)), value: Number(point.rsi) }))
+      .filter(point => Number.isFinite(point.value))
+  );
+  const rsiGuides = [30, 50, 70].map(value => ({ value, y: rsiYFor(value) }));
   const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
   const vGrid = indexedChartVerticalGrid(points, xFor, chartRange);
   const labelEvery = Math.max(1, Math.ceil(vGrid.ticks.length / 8));
@@ -584,7 +607,7 @@ function renderLineChart(payload) {
   });
 
   document.getElementById("chartCanvas").innerHTML = `
-    <svg class="line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(payload.name)} 종가 차트">
+    <svg class="line-chart single-price-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(payload.name)} 종가 및 RSI 차트">
       <defs>
         <linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stop-color="var(--brand)" stop-opacity=".18"></stop>
@@ -594,12 +617,14 @@ function renderLineChart(payload) {
       </defs>
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
       <rect class="chart-plot-border" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
+      <rect class="chart-rsi-border" x="${pad.left}" y="${rsiTop}" width="${plotW}" height="${rsiH}"></rect>
       ${yTicks.map(tick => `
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
         <text class="chart-y-label" x="${width - 6}" y="${(tick.y + 4).toFixed(2)}">${esc(chartMoney(tick.value, payload.currency))}</text>
       `).join("")}
       ${vGrid.ticks.map(tick => `
         <line class="chart-grid perf-vgrid" x1="${tick.x.toFixed(2)}" x2="${tick.x.toFixed(2)}" y1="${pad.top}" y2="${(pad.top + plotH).toFixed(2)}"></line>
+        <line class="chart-grid perf-vgrid" x1="${tick.x.toFixed(2)}" x2="${tick.x.toFixed(2)}" y1="${rsiTop}" y2="${rsiBottom}"></line>
       `).join("")}
       ${vGrid.ticks.map((tick, index) => {
         if (index % labelEvery !== 0) return "";
@@ -608,6 +633,12 @@ function renderLineChart(payload) {
       }).join("")}
       <path class="chart-area" d="${area}"></path>
       <path class="chart-line" d="${line}"></path>
+      ${rsiGuides.map(guide => `
+        <line class="chart-rsi-guide level-${guide.value}" x1="${pad.left}" x2="${pad.left + plotW}" y1="${guide.y.toFixed(2)}" y2="${guide.y.toFixed(2)}"></line>
+        <text class="chart-rsi-axis" x="${width - 6}" y="${(guide.y + 4).toFixed(2)}">${guide.value}</text>
+      `).join("")}
+      <text class="chart-rsi-title" x="${pad.left + 7}" y="${rsiTop + 14}">RSI (14)</text>
+      ${rsiLine ? `<path class="chart-rsi-line" d="${rsiLine}"></path>` : ""}
       ${extremes.map(item => `
         <g class="chart-extreme ${item.kind}">
           <circle cx="${item.x.toFixed(2)}" cy="${item.y.toFixed(2)}" r="4"></circle>
@@ -616,12 +647,12 @@ function renderLineChart(payload) {
       `).join("")}
       <g id="chartSelectionGroup" class="chart-selection hidden">
         <rect id="chartSelectionRect" class="chart-selection-range" x="0" y="${pad.top}" width="0" height="${plotH}"></rect>
-        <line id="chartSelectionStartLine" class="chart-selection-line" x1="0" x2="0" y1="${pad.top}" y2="${pad.top + plotH}"></line>
-        <line id="chartSelectionEndLine" class="chart-selection-line" x1="0" x2="0" y1="${pad.top}" y2="${pad.top + plotH}"></line>
+        <line id="chartSelectionStartLine" class="chart-selection-line" x1="0" x2="0" y1="${pad.top}" y2="${rsiBottom}"></line>
+        <line id="chartSelectionEndLine" class="chart-selection-line" x1="0" x2="0" y1="${pad.top}" y2="${rsiBottom}"></line>
         <rect id="chartSelectionTooltipBox" class="chart-selection-box" x="0" y="0" width="0" height="0" rx="5"></rect>
         <text id="chartSelectionTooltip" class="chart-selection-tooltip" x="0" y="0"></text>
       </g>
-      <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
+      <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${rsiBottom - pad.top}"></rect>
       ${markers.map(marker => `
         <g class="trade-marker ${marker.cls}" data-x="${marker.x.toFixed(2)}" data-y="${marker.y.toFixed(2)}" data-tooltip="${esc(marker.tooltip)}" tabindex="0" role="img" aria-label="${esc(marker.tooltip)}">
           <circle cx="${marker.x.toFixed(2)}" cy="${marker.y.toFixed(2)}" r="5"></circle>
@@ -629,8 +660,9 @@ function renderLineChart(payload) {
       `).join("")}
       <circle class="chart-last-dot" cx="${xFor(points.length - 1).toFixed(2)}" cy="${yFor(last).toFixed(2)}" r="4"></circle>
       <g id="chartHoverGroup" class="chart-hover hidden">
-        <line id="chartHoverLine" class="chart-hover-line" x1="0" x2="0" y1="${pad.top}" y2="${pad.top + plotH}"></line>
+        <line id="chartHoverLine" class="chart-hover-line" x1="0" x2="0" y1="${pad.top}" y2="${rsiBottom}"></line>
         <circle id="chartHoverDot" class="chart-hover-dot" cx="0" cy="0" r="4"></circle>
+        <circle id="chartHoverRsiDot" class="chart-hover-rsi-dot hidden" cx="0" cy="0" r="3.5"></circle>
         <rect id="chartTooltipBox" class="chart-tooltip-box" x="0" y="0" width="0" height="0" rx="6"></rect>
         <text id="chartTooltip" class="chart-tooltip" x="0" y="0">-</text>
       </g>
@@ -638,7 +670,7 @@ function renderLineChart(payload) {
     ${renderChartCompareControls()}
     ${renderChartRangeButtons()}
   `;
-  bindChartInteractions(points, payload, { width, height, pad, plotW, plotH, xFor, yFor });
+  bindChartInteractions(points, payload, { width, height, pad, plotW, plotH, xFor, yFor, rsiYFor });
   bindChartCompareControls(payload);
   bindLineChartControls(payload);
   renderChartStats(payload);

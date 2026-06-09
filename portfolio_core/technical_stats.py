@@ -5,11 +5,12 @@ import sqlite3
 from datetime import datetime
 from typing import Iterable
 
-from .db import connect, ensure_technical_stats_cache_table
-from .indicators import bollinger_pband, recent_performance, resample_last, rsi_value, technical_indicators_available
+from .db import connect, ensure_daily_technical_indicators_table, ensure_technical_stats_cache_table
+from .indicators import bollinger_pband, recent_performance, resample_last, rsi_series, rsi_value, technical_indicators_available
 from .paths import KST
 
 TECHNICAL_CACHE_VERSION = 1
+DAILY_RSI_REFRESH_ROWS = 90
 
 
 def placeholders(items: list[str]) -> str:
@@ -30,13 +31,17 @@ def high_52w_drawdown(daily: list[float]) -> float | None:
     return round((window[-1] / peak - 1) * 100, 2)
 
 
-def calculate_technical_stats(rows: list[sqlite3.Row]) -> dict:
+def calculate_technical_stats(rows: list[sqlite3.Row], daily_rsi: list[float | None] | None = None) -> dict:
     daily = [float(row["close"]) for row in rows]
     weekly = resample_last(rows, "week")
     monthly = resample_last(rows, "month")
+    latest_daily_rsi = next(
+        (value for value in reversed(daily_rsi or []) if value is not None),
+        None,
+    )
     return {
         "rsi": {
-            "day": rsi_value(daily),
+            "day": latest_daily_rsi if daily_rsi is not None else rsi_value(daily),
             "week": rsi_value(weekly),
             "month": rsi_value(monthly),
         },
@@ -48,6 +53,52 @@ def calculate_technical_stats(rows: list[sqlite3.Row]) -> dict:
         "performance": recent_performance(rows),
         "drawdown_52w": high_52w_drawdown(daily),
     }
+
+
+def upsert_daily_rsi(
+    conn: sqlite3.Connection,
+    ticker: str,
+    rows: list[sqlite3.Row],
+    values: list[float | None],
+    computed_at: str,
+) -> None:
+    existing_rows = conn.execute(
+        """
+        SELECT date, rsi_14
+        FROM daily_technical_indicators
+        WHERE ticker = ?
+        ORDER BY date DESC
+        LIMIT ?
+        """,
+        (ticker, DAILY_RSI_REFRESH_ROWS),
+    ).fetchall()
+    existing = {
+        row["date"]: float(row["rsi_14"])
+        for row in existing_rows
+        if row["rsi_14"] is not None
+    }
+    start = 0 if not existing_rows else max(0, len(rows) - DAILY_RSI_REFRESH_ROWS)
+    entries = [
+        (ticker, row["date"], value, computed_at)
+        for row, value in zip(rows[start:], values[start:])
+        if value is not None
+        and (
+            row["date"] not in existing
+            or abs(existing[row["date"]] - value) > 0.0000001
+        )
+    ]
+    if not entries:
+        return
+    conn.executemany(
+        """
+        INSERT INTO daily_technical_indicators (ticker, date, rsi_14, computed_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(ticker, date) DO UPDATE SET
+          rsi_14 = excluded.rsi_14,
+          computed_at = excluded.computed_at
+        """,
+        entries,
+    )
 
 
 def normalize_tickers(tickers: Iterable[str]) -> list[str]:
@@ -97,6 +148,7 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
         return 0
     with connect() as conn:
         ensure_technical_stats_cache_table(conn)
+        ensure_daily_technical_indicators_table(conn)
         grouped: dict[str, list[sqlite3.Row]] = {ticker: [] for ticker in clean_tickers}
         rows = conn.execute(
             f"""
@@ -113,7 +165,9 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
         updated = 0
         for ticker in clean_tickers:
             price_rows = grouped.get(ticker, [])
-            payload = calculate_technical_stats(price_rows)
+            daily_rsi = rsi_series([float(row["close"]) for row in price_rows])
+            payload = calculate_technical_stats(price_rows, daily_rsi)
+            upsert_daily_rsi(conn, ticker, price_rows, daily_rsi, now_text)
             conn.execute(
                 """
                 INSERT INTO ticker_technical_stats_cache

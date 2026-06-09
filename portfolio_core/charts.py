@@ -4,7 +4,7 @@ from datetime import datetime
 from itertools import groupby
 
 from .constants import FX_DEFAULT_RATES, MARKET_INDEXES
-from .db import connect
+from .db import connect, ensure_daily_technical_indicators_table
 from .paths import US_EASTERN
 from .prices import latest_prices
 from .queries import account_filter_clause, clean_account_ids, load_holding_rows
@@ -18,6 +18,7 @@ def load_price_chart(ticker: str) -> dict:
         raise ValueError("ticker is required")
 
     with connect() as conn:
+        ensure_daily_technical_indicators_table(conn)
         meta = conn.execute(
             """
             SELECT ticker, name, currency, category
@@ -28,10 +29,12 @@ def load_price_chart(ticker: str) -> dict:
         ).fetchone()
         rows = conn.execute(
             """
-            SELECT date, close
-            FROM daily_prices
-            WHERE ticker = ? AND close IS NOT NULL
-            ORDER BY date
+            SELECT p.date, p.close, i.rsi_14
+            FROM daily_prices p
+            LEFT JOIN daily_technical_indicators i
+              ON i.ticker = p.ticker AND i.date = p.date
+            WHERE p.ticker = ? AND p.close IS NOT NULL
+            ORDER BY p.date
             """,
             (clean_ticker,),
         ).fetchall()
@@ -56,11 +59,14 @@ def load_price_chart(ticker: str) -> dict:
         ).fetchall()
 
     currency = meta["currency"] if meta and meta["currency"] else ticker_currency(clean_ticker)
-    points = [
-        {"date": row["date"], "close": float(row["close"])}
-        for row in rows
-        if row["date"] and row["close"] is not None
-    ]
+    points = []
+    for row in rows:
+        if not row["date"] or row["close"] is None:
+            continue
+        point = {"date": row["date"], "close": float(row["close"])}
+        if row["rsi_14"] is not None:
+            point["rsi"] = float(row["rsi_14"])
+        points.append(point)
     _append_live_chart_point(clean_ticker, currency, points)
 
     return {

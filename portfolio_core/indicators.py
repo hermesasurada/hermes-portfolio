@@ -29,17 +29,26 @@ def last_number(series) -> float | None:
 
 
 def rsi_value(values: list[float], period: int = 14) -> float | None:
+    series = rsi_series(values, period)
+    return next((value for value in reversed(series) if value is not None), None)
+
+
+def rsi_series(values: list[float], period: int = 14) -> list[float | None]:
     if len(values) <= period:
-        return None
+        return [None] * len(values)
     try:
         import pandas as pd
         from ta.momentum import RSIIndicator
 
         close = pd.Series(values, dtype="float64")
-        return last_number(RSIIndicator(close=close, window=period).rsi())
+        result = RSIIndicator(close=close, window=period).rsi()
+        return [
+            None if value != value else float(value)
+            for value in result
+        ]
     except Exception as exc:
         print(f"[stats] RSI failed: {exc}")
-        return None
+        return [None] * len(values)
 
 
 def bollinger_pband(values: list[float], period: int = 20, deviations: float = 2.0) -> float | None:
