@@ -1976,9 +1976,30 @@ tbody tr.index-row td:first-child::before {
   font-weight: 800;
   vertical-align: 1px;
 }
+.history-final {
+  display: inline-flex;
+  margin-left: 4px;
+  padding: 1px 4px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  vertical-align: 1px;
+}
+.history-amount,
+.history-estimate {
+  display: block;
+}
+.history-estimate {
+  margin-top: 2px;
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+}
 .dividend-history-summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   overflow: hidden;
@@ -1994,6 +2015,9 @@ tbody tr.index-row td:first-child::before {
 .dividend-history-summary > div:last-child {
   border-right: 0;
 }
+.dividend-history-summary > div:nth-child(3n) {
+  border-right: 0;
+}
 .dividend-history-summary span {
   color: var(--muted);
   font-size: 10px;
@@ -2004,6 +2028,12 @@ tbody tr.index-row td:first-child::before {
   font-size: 13px;
   font-weight: 800;
   white-space: nowrap;
+}
+.dividend-history-summary strong small {
+  margin-left: 3px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
 }
 .dividend-history-note,
 .dividend-history-empty {
@@ -2496,8 +2526,17 @@ tbody tr.index-row td:first-child::before {
   .dividend-history-summary > div:nth-child(2) {
     border-right: 0;
   }
-  .dividend-history-summary > div:nth-child(-n + 2) {
+  .dividend-history-summary > div:nth-child(3n) {
+    border-right: 1px solid var(--line);
+  }
+  .dividend-history-summary > div:nth-child(even) {
+    border-right: 0;
+  }
+  .dividend-history-summary > div:nth-child(-n + 6) {
     border-bottom: 1px solid var(--line);
+  }
+  .dividend-history-summary > div:nth-last-child(-n + 2) {
+    border-bottom: 0;
   }
   .dividend-history-table th,
   .dividend-history-table td {

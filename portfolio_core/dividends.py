@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+from statistics import median
 from typing import Any
 
-from .constants import FX_DEFAULT_RATES
+from .constants import FX_DEFAULT_RATES, KOREAN_SUFFIXES
 from .db import connect, ensure_dividend_tables
 from .dividend_refresh import refresh_dividend_events
 from .dividend_schedule import consolidated_dividend_events, event_schedule_date
@@ -50,7 +51,7 @@ def _annual_growth(current: float, previous: float | None) -> float | None:
 
 def _annual_cagr(
     totals: dict[int, float],
-    payment_counts: dict[int, int],
+    complete_years: set[int],
     end_year: int,
     years: int,
 ) -> float | None:
@@ -61,10 +62,102 @@ def _annual_cagr(
         or end_value is None
         or start_value <= 0
         or end_value <= 0
-        or payment_counts.get(end_year - years) != payment_counts.get(end_year)
+        or any(year not in complete_years for year in range(end_year - years, end_year + 1))
     ):
         return None
     return ((end_value / start_value) ** (1 / years) - 1) * 100
+
+
+def _history_date(value: str | None) -> date | None:
+    try:
+        return date.fromisoformat(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _dividend_attribution(event: Any, ticker: str) -> tuple[date | None, int | None, bool]:
+    entitlement_date = (
+        _history_date(event["record_date"])
+        or _history_date(event["ex_date"])
+        or _history_date(event["pay_date"])
+    )
+    if entitlement_date is None:
+        return None, None, False
+
+    declaration_date = _history_date(event["declaration_date"])
+    is_korean = ticker.upper().endswith(KOREAN_SUFFIXES)
+    is_final = is_korean and entitlement_date.month == 12
+    attributed_year = entitlement_date.year
+    # 결산배당 기준일을 다음 해로 옮긴 한국 기업: 연초 이사회 결의 + 1~3월
+    # 기준일이면 직전 사업연도 결산배당으로 귀속한다.
+    if (
+        is_korean
+        and entitlement_date.month <= 3
+        and declaration_date is not None
+        and declaration_date.year == entitlement_date.year
+        and declaration_date.month <= 2
+    ):
+        attributed_year -= 1
+        is_final = True
+    return entitlement_date, attributed_year, is_final
+
+
+def _dividend_frequency(events: list[dict], completed_counts: dict[int, int], current_year: int) -> int:
+    recent_dates = sorted(event["date"] for event in events if event["year"] >= current_year - 3)
+    intervals = [
+        (right - left).days
+        for left, right in zip(recent_dates, recent_dates[1:])
+        if 14 <= (right - left).days <= 400
+    ]
+    interval_hint = None
+    if intervals:
+        typical_days = median(intervals)
+        interval_hint = 12 if typical_days <= 45 else 4 if typical_days <= 120 else 2 if typical_days <= 220 else 1
+
+    recent_counts = [
+        count
+        for year, count in completed_counts.items()
+        if current_year - 3 <= year < current_year and count > 0
+    ]
+    count_hint = max(recent_counts, default=0)
+    count_hint = 12 if count_hint >= 8 else 4 if count_hint >= 3 else 2 if count_hint == 2 else 1 if count_hint else None
+    return max(interval_hint or 1, count_hint or 1)
+
+
+def _frequency_label(frequency: int) -> str:
+    return {12: "월배당", 4: "분기배당", 2: "반기배당", 1: "연배당"}.get(frequency, "비정기")
+
+
+def _same_period_reference(events: list[dict], current: dict) -> dict | None:
+    candidates = [
+        event
+        for event in events
+        if event["date"] < current["date"] and 250 <= (current["date"] - event["date"]).days <= 470
+    ]
+    if not candidates:
+        return None
+    return min(candidates, key=lambda event: abs((current["date"] - event["date"]).days - 365))
+
+
+def _current_year_estimate(events: list[dict], frequency: int, current_year: int) -> float | None:
+    current_events = [event for event in events if event["year"] == current_year]
+    if not current_events:
+        return None
+    actual = sum(event["amount"] for event in current_events)
+    missing = max(0, frequency - len(current_events))
+    if missing == 0:
+        return actual
+
+    latest = current_events[-1]
+    reference = _same_period_reference(events, latest)
+    previous_events = [event for event in events if event["year"] == current_year - 1]
+    if reference and len(previous_events) >= frequency and reference in previous_events:
+        ratio = latest["amount"] / reference["amount"] if reference["amount"] > 0 else 1.0
+        reference_index = previous_events.index(reference)
+        remaining = previous_events[reference_index + 1:reference_index + 1 + missing]
+        if len(remaining) == missing:
+            return actual + sum(event["amount"] * ratio for event in remaining)
+    return actual + missing * latest["amount"]
 
 
 def load_dividend_history(ticker: str) -> dict:
@@ -83,74 +176,110 @@ def load_dividend_history(ticker: str) -> dict:
             raise ValueError("unknown ticker")
         event_rows = conn.execute(
             """
-            SELECT ex_date, pay_date, amount, currency, source
+            SELECT ex_date, record_date, pay_date, declaration_date, amount, currency, source
             FROM dividend_events
             WHERE ticker = ?
               AND amount IS NOT NULL
               AND amount > 0
-              AND date(COALESCE(pay_date, ex_date)) >= ?
-              AND date(COALESCE(pay_date, ex_date)) <= ?
-            ORDER BY date(COALESCE(pay_date, ex_date))
+              AND date(COALESCE(record_date, ex_date, pay_date)) >= ?
+              AND date(COALESCE(record_date, ex_date, pay_date)) <= ?
+            ORDER BY date(COALESCE(record_date, ex_date, pay_date))
             """,
             (ticker_row["ticker"], f"{DIVIDEND_HISTORY_START_YEAR}-01-01", today.isoformat()),
         ).fetchall()
 
-    annual: dict[int, dict] = {}
+    events = []
+    final_dividend_count = 0
     for event in event_rows:
-        schedule_text = event["pay_date"] or event["ex_date"]
-        try:
-            schedule_date = date.fromisoformat(schedule_text)
-        except (TypeError, ValueError):
+        entitlement_date, attributed_year, is_final = _dividend_attribution(event, ticker_row["ticker"])
+        if entitlement_date is None or attributed_year is None:
             continue
-        year_row = annual.setdefault(
-            schedule_date.year,
-            {"amount": 0.0, "payments": 0, "last_date": schedule_text, "sources": set()},
+        final_dividend_count += int(is_final)
+        events.append(
+            {
+                "date": entitlement_date,
+                "year": attributed_year,
+                "amount": float(event["amount"]),
+                "source": event["source"],
+                "declaration_date": _history_date(event["declaration_date"]),
+                "is_final": is_final,
+            }
         )
-        year_row["amount"] += float(event["amount"])
+
+    annual: dict[int, dict] = {}
+    for event in events:
+        year_row = annual.setdefault(
+            event["year"],
+            {"amount": 0.0, "payments": 0, "last_date": event["date"], "sources": set(), "final": False},
+        )
+        year_row["amount"] += event["amount"]
         year_row["payments"] += 1
-        year_row["last_date"] = max(year_row["last_date"], schedule_text)
+        year_row["last_date"] = max(year_row["last_date"], event["date"])
+        year_row["final"] = year_row["final"] or event["is_final"]
         if event["source"]:
             year_row["sources"].add(event["source"])
 
     totals = {year: row["amount"] for year, row in annual.items()}
     payment_counts = {year: row["payments"] for year, row in annual.items()}
+    frequency = _dividend_frequency(events, payment_counts, today.year)
+    complete_years = {
+        year for year, count in payment_counts.items()
+        if year < today.year and count >= frequency
+    }
+    current_estimate = _current_year_estimate(events, frequency, today.year)
     rows = []
     for year in sorted(annual, reverse=True):
         row = annual[year]
+        previous_complete = year - 1 in complete_years
+        complete = year in complete_years
+        current_ytd = year == today.year
+        estimated_amount = current_estimate if current_ytd else None
         rows.append(
             {
                 "year": year,
                 "amount": row["amount"],
                 "growth_pct": (
                     None
-                    if year == today.year or payment_counts.get(year) != payment_counts.get(year - 1)
+                    if not complete or not previous_complete
                     else _annual_growth(row["amount"], totals.get(year - 1))
                 ),
                 "payments": row["payments"],
-                "last_date": row["last_date"],
-                "current_ytd": year == today.year,
+                "expected_payments": frequency,
+                "complete": complete,
+                "estimated_amount": estimated_amount,
+                "last_date": row["last_date"].isoformat(),
+                "current_ytd": current_ytd,
+                "final_dividend": row["final"],
                 "sources": sorted(row["sources"]),
             }
         )
 
-    completed_years = sorted(year for year in totals if year < today.year)
+    completed_years = sorted(complete_years)
     latest_completed = completed_years[-1] if completed_years else None
     latest_growth = (
         _annual_growth(totals[latest_completed], totals.get(latest_completed - 1))
+        if latest_completed is not None and latest_completed - 1 in complete_years
+        else None
+    )
+    cagr_3y = _annual_cagr(totals, complete_years, latest_completed, 3) if latest_completed is not None else None
+    cagr_5y = _annual_cagr(totals, complete_years, latest_completed, 5) if latest_completed is not None else None
+
+    last_raise_pct = None
+    last_raise_date = None
+    for index, current in enumerate(events):
+        reference = _same_period_reference(events, current)
+        previous = events[index - 1] if index > 0 else None
         if (
-            latest_completed is not None
-            and payment_counts.get(latest_completed) == payment_counts.get(latest_completed - 1)
-        )
-        else None
-    )
-    cagr_3y = _annual_cagr(totals, payment_counts, latest_completed, 3) if latest_completed is not None else None
-    cagr_5y = _annual_cagr(totals, payment_counts, latest_completed, 5) if latest_completed is not None else None
-    estimate_rate = cagr_3y if cagr_3y is not None else latest_growth
-    next_estimate = (
-        totals[latest_completed] * (1 + estimate_rate / 100)
-        if latest_completed is not None and estimate_rate is not None and estimate_rate > -100
-        else None
-    )
+            reference
+            and previous
+            and current["amount"] > reference["amount"]
+            and reference["amount"] > 0
+            and abs(current["amount"] - previous["amount"]) > 1e-12
+        ):
+            last_raise_pct = _annual_growth(current["amount"], reference["amount"])
+            last_raise_date = (current["declaration_date"] or current["date"]).isoformat()
+    latest_completed_total = totals.get(latest_completed) if latest_completed is not None else None
+    annualized_run_rate = current_estimate if current_estimate is not None else latest_completed_total
     return {
         "ticker": ticker_row["ticker"],
         "name": ticker_row["name"] or ticker_row["ticker"],
@@ -162,8 +291,12 @@ def load_dividend_history(ticker: str) -> dict:
             "latest_growth_pct": latest_growth,
             "cagr_3y": cagr_3y,
             "cagr_5y": cagr_5y,
-            "next_year": latest_completed + 1 if latest_completed is not None else None,
-            "next_estimate": next_estimate,
+            "frequency": frequency,
+            "frequency_label": _frequency_label(frequency),
+            "annualized_run_rate": annualized_run_rate,
+            "last_raise_pct": last_raise_pct,
+            "last_raise_date": last_raise_date,
+            "final_dividend_adjusted": final_dividend_count > 0,
         },
     }
 

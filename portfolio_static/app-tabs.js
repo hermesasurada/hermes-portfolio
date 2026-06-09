@@ -211,30 +211,47 @@ function renderDividendHistory(payload) {
     return;
   }
   const summaryItems = [
+    ["지급주기", esc(summary.frequency_label || "-")],
+    [
+      "최근 인상",
+      summary.last_raise_pct == null
+        ? "-"
+        : `${dividendHistoryPercent(summary.last_raise_pct)} <small>${shortDateText(summary.last_raise_date)}</small>`,
+    ],
     ["최근 성장률", dividendHistoryPercent(summary.latest_growth_pct)],
     ["3년 CAGR", dividendHistoryPercent(summary.cagr_3y)],
     ["5년 CAGR", dividendHistoryPercent(summary.cagr_5y)],
-    [`${summary.next_year || "다음해"} 예상`, dividendHistoryEstimate(summary.next_estimate, payload.currency)],
+    ["최근 배당 연환산", dividendHistoryEstimate(summary.annualized_run_rate, payload.currency)],
+    ["결산배당 귀속", summary.final_dividend_adjusted ? "반영" : "해당 없음"],
   ];
   body.innerHTML = `
     <div class="dividend-history-table-wrap">
       <table class="dividend-history-table">
         <thead>
           <tr>
-            <th>연도</th>
-            <th>주당배당금</th>
+            <th>귀속연도</th>
+            <th>연간배당</th>
             <th>성장률</th>
             <th>횟수</th>
-            <th>최근 일자</th>
+            <th>최근 기준일</th>
           </tr>
         </thead>
         <tbody>
           ${rows.map(row => `
             <tr>
-              <td><strong>${row.year}</strong>${row.current_ytd ? `<span class="history-ytd">YTD</span>` : ""}</td>
-              <td>${dividendAmountText(row.amount, payload.currency)}</td>
+              <td>
+                <strong>${row.year}</strong>
+                ${row.current_ytd ? `<span class="history-ytd">YTD</span>` : ""}
+                ${row.final_dividend ? `<span class="history-final">결산</span>` : ""}
+              </td>
+              <td>
+                <span class="history-amount">${dividendAmountText(row.amount, payload.currency)}</span>
+                ${row.estimated_amount != null && row.estimated_amount > row.amount
+                  ? `<span class="history-estimate">예상 ${dividendHistoryEstimate(row.estimated_amount, payload.currency)}</span>`
+                  : ""}
+              </td>
               <td>${row.current_ytd ? "-" : dividendHistoryPercent(row.growth_pct)}</td>
-              <td>${fmt.format(Number(row.payments) || 0)}</td>
+              <td>${fmt.format(Number(row.payments) || 0)}${row.expected_payments ? `/${fmt.format(row.expected_payments)}` : ""}</td>
               <td>${dividendDateText(row.last_date)}</td>
             </tr>
           `).join("")}
@@ -250,7 +267,8 @@ function renderDividendHistory(payload) {
       `).join("")}
     </div>
     <div class="dividend-history-note">
-      연간 합계는 ${payload.start_year || 2010}년 이후 DB 원본 주당배당금 기준입니다. 현재 연도는 오늘까지의 YTD이며 액면분할은 별도 보정하지 않습니다.
+      배당기준일(없으면 배당락일) 기준으로 귀속합니다. 한국 결산배당은 연초 결의 여부를 반영해 직전 사업연도로 조정하며,
+      성장률은 추정 지급주기를 충족한 완결연도끼리만 계산합니다. 현재 연도 예상은 최근 회차 배당금과 남은 주기 기준이며 액면분할은 별도 보정하지 않습니다.
     </div>
   `;
 }

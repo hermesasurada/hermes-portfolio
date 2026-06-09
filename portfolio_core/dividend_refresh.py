@@ -22,7 +22,7 @@ DIVIDEND_HISTORY_START = date(2010, 1, 1)
 
 
 def _in_retention_window(event: dict) -> bool:
-    schedule_text = event.get("pay_date") or event.get("ex_date")
+    schedule_text = event.get("record_date") or event.get("ex_date") or event.get("pay_date")
     try:
         return date.fromisoformat(str(schedule_text)) >= DIVIDEND_HISTORY_START
     except (TypeError, ValueError):
