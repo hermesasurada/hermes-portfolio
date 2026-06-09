@@ -200,26 +200,6 @@ function dividendHistoryFullDate(dateText) {
   return text.slice(0, 10).replace(/-/g, ".");
 }
 
-const DIVIDEND_SOURCE_LABELS = {
-  polygon: "Polygon",
-  yahoo: "Yahoo",
-  "yahoo-finance": "Yahoo",
-  "kr-history": "Yahoo",
-  yfinance: "yfinance",
-  stockanalysis: "StockAnalysis",
-  nasdaq: "Nasdaq",
-  seibro: "세이브로",
-  opendart: "OpenDART",
-  estimate: "추정",
-  estimated: "추정",
-};
-
-function dividendSourceLabel(source) {
-  const key = String(source || "").trim().toLowerCase();
-  if (!key) return "-";
-  return DIVIDEND_SOURCE_LABELS[key] || source;
-}
-
 function dividendHistoryEstimate(value, currency) {
   const number = Number(value);
   if (!Number.isFinite(number)) return "-";
@@ -237,19 +217,25 @@ function renderDividendHistory(payload) {
     body.innerHTML = `<div class="dividend-history-empty">${payload.start_year || 2010}년 이후 배당이력 없음</div>`;
     return;
   }
-  const summaryItems = [
-    ["지급주기", esc(summary.frequency_label || "-")],
+  const summaryColumns = [
     [
-      "최근 인상",
-      summary.last_raise_pct == null
-        ? "-"
-        : `${dividendHistoryPercent(summary.last_raise_pct)} <small>${shortDateText(summary.last_raise_date)}</small>`,
+      ["지급주기", esc(summary.frequency_label || "-")],
+      ["결산배당 귀속", summary.final_dividend_adjusted ? "반영" : "해당 없음"],
+      ["최근 배당 연환산", dividendHistoryEstimate(summary.annualized_run_rate, payload.currency)],
     ],
-    ["최근 성장률", dividendHistoryPercent(summary.latest_growth_pct)],
-    ["3년 CAGR", dividendHistoryPercent(summary.cagr_3y)],
-    ["5년 CAGR", dividendHistoryPercent(summary.cagr_5y)],
-    ["최근 배당 연환산", dividendHistoryEstimate(summary.annualized_run_rate, payload.currency)],
-    ["결산배당 귀속", summary.final_dividend_adjusted ? "반영" : "해당 없음"],
+    [
+      ["최근 성장률", dividendHistoryPercent(summary.latest_growth_pct)],
+      [
+        "최근 인상",
+        summary.last_raise_pct == null
+          ? "-"
+          : `${dividendHistoryPercent(summary.last_raise_pct)} <small>${shortDateText(summary.last_raise_date)}</small>`,
+      ],
+    ],
+    [
+      ["3년 CAGR", dividendHistoryPercent(summary.cagr_3y)],
+      ["5년 CAGR", dividendHistoryPercent(summary.cagr_5y)],
+    ],
   ];
   body.innerHTML = `
     <div class="dividend-history-table-wrap">
@@ -263,7 +249,6 @@ function renderDividendHistory(payload) {
             <th>기준일</th>
             <th>지급일</th>
             <th>주당배당금</th>
-            <th>구분</th>
           </tr>
         </thead>
         <tbody>
@@ -300,24 +285,22 @@ function renderDividendHistory(payload) {
                 ${index === 0 ? `${yearCell}${amountCell}${growthCell}${countCell}` : ""}
                 <td class="history-detail-date">${detail ? dividendHistoryFullDate(detail.entitlement_date) : "-"}</td>
                 <td class="history-detail-date">${detail ? dividendHistoryFullDate(detail.pay_date) : "-"}</td>
-                <td class="history-detail-amount">${detail ? dividendAmountText(detail.amount, payload.currency) : "-"}</td>
-                <td class="history-source-cell">
-                  ${detail && detail.is_final ? `<span class="history-final">결산</span>` : ""}
-                  <span class="history-source">${detail ? esc(dividendSourceLabel(detail.source)) : "-"}</span>
-                </td>
+                <td class="history-detail-amount">${detail ? dividendAmountText(detail.amount, payload.currency) : "-"}${detail && detail.is_final ? ` <span class="history-final">결산</span>` : ""}</td>
               </tr>
             `).join("");
           }).join("")}
         </tbody>
       </table>
     </div>
-    <div class="dividend-history-summary">
-      ${summaryItems.map(([label, value]) => `
-        <div>
-          <span>${label}</span>
-          <strong>${value}</strong>
-        </div>
-      `).join("")}
+    <div class="chart-stats dividend-history-stats">
+      <div class="cstat-board">
+        ${summaryColumns.map(items => `<div class="cstat-column">${items.map(([label, value]) => `
+          <div class="cstat-row">
+            <span class="cstat-k">${esc(label)}</span>
+            <span class="cstat-v">${value}</span>
+          </div>
+        `).join("")}</div>`).join("")}
+      </div>
     </div>
   `;
 }
