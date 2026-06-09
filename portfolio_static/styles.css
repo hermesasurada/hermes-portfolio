@@ -564,6 +564,7 @@ main {
 .table-wrap,
 #statsTableWrap,
 #dividendTableWrap,
+.dividend-history-table-wrap,
 .tx-wrap {
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
@@ -571,14 +572,17 @@ main {
 .table-wrap::-webkit-scrollbar,
 #statsTableWrap::-webkit-scrollbar,
 #dividendTableWrap::-webkit-scrollbar,
+.dividend-history-table-wrap::-webkit-scrollbar,
 .tx-wrap::-webkit-scrollbar { width: 11px; height: 11px; }
 .table-wrap::-webkit-scrollbar-track,
 #statsTableWrap::-webkit-scrollbar-track,
 #dividendTableWrap::-webkit-scrollbar-track,
+.dividend-history-table-wrap::-webkit-scrollbar-track,
 .tx-wrap::-webkit-scrollbar-track { background: transparent; }
 .table-wrap::-webkit-scrollbar-thumb,
 #statsTableWrap::-webkit-scrollbar-thumb,
 #dividendTableWrap::-webkit-scrollbar-thumb,
+.dividend-history-table-wrap::-webkit-scrollbar-thumb,
 .tx-wrap::-webkit-scrollbar-thumb {
   background: var(--line);
   border: 3px solid var(--panel);
@@ -587,10 +591,12 @@ main {
 .table-wrap::-webkit-scrollbar-thumb:hover,
 #statsTableWrap::-webkit-scrollbar-thumb:hover,
 #dividendTableWrap::-webkit-scrollbar-thumb:hover,
+.dividend-history-table-wrap::-webkit-scrollbar-thumb:hover,
 .tx-wrap::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 .table-wrap::-webkit-scrollbar-corner,
 #statsTableWrap::-webkit-scrollbar-corner,
 #dividendTableWrap::-webkit-scrollbar-corner,
+.dividend-history-table-wrap::-webkit-scrollbar-corner,
 .tx-wrap::-webkit-scrollbar-corner { background: transparent; }
 #statsTableWrap {
   padding: 0;

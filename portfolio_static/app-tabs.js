@@ -312,6 +312,10 @@ async function openDividendHistory(ticker) {
   document.getElementById("dividendHistoryTicker").textContent = ticker || "-";
   body.innerHTML = `<div class="dividend-history-empty">불러오는 중...</div>`;
   modal.showModal();
+  // 모바일 뒤로가기로 닫을 수 있도록 history 항목 추가 (URL은 유지)
+  if (!(history.state && history.state.dividendHistory)) {
+    history.pushState({ dividendHistory: true }, "");
+  }
   try {
     renderDividendHistory(await apiFetchDividendHistory(ticker));
   } catch (err) {
@@ -327,7 +331,26 @@ function bindDividendHistoryLinks() {
 
 function initDividendHistoryModal() {
   const modal = document.getElementById("dividendHistoryModal");
+  if (!modal) return;
   document.getElementById("dividendHistoryClose")?.addEventListener("click", () => modal.close());
+  // PC: 모달 바깥(백드롭) 클릭 시 닫기
+  modal.addEventListener("click", event => {
+    const card = modal.querySelector(".modal-card");
+    if (!card) return;
+    const r = card.getBoundingClientRect();
+    const outside =
+      event.clientX < r.left || event.clientX > r.right ||
+      event.clientY < r.top || event.clientY > r.bottom;
+    if (outside) modal.close();
+  });
+  // 버튼·백드롭·ESC로 닫히면 우리가 추가한 history 항목을 정리한다.
+  modal.addEventListener("close", () => {
+    if (history.state && history.state.dividendHistory) history.back();
+  });
+  // 모바일: 뒤로가기(popstate) 시 팝업 닫기
+  window.addEventListener("popstate", () => {
+    if (modal.open) modal.close();
+  });
 }
 
 function dividendDateText(dateText) {
