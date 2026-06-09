@@ -391,6 +391,7 @@ initAutoRefreshControls();
 initUsPriceControls();
 initThemeControl();
 initDataHelpModal();
+initDividendHistoryModal();
 initWatchlistControls();
 initChartRangeModal();
 initChartDisplayControls();

@@ -19,7 +19,7 @@ from portfolio_core.constants import KOREAN_ETF_BRANDS, LOCAL_MARKET_SUFFIXES
 from portfolio_core.db import connect, initialize_schema
 from portfolio_core.queries import load_collection_diagnostics, load_ticker_directory
 from portfolio_core.logos import is_dark_logo
-from portfolio_core.dividends import load_dividends
+from portfolio_core.dividends import load_dividend_history, load_dividends
 from portfolio_core.paths import DB_PATH, LOGO_DIR
 from portfolio_core.portfolio import load_portfolio as load_portfolio_data
 from portfolio_core.prices import load_ticker_changes
@@ -266,6 +266,10 @@ class Handler(BaseHTTPRequestHandler):
     def api_dividends(self, query: dict[str, list[str]]) -> dict:
         return load_dividends(self.query_values(query, "account_ids"))
 
+    def api_dividend_history(self, query: dict[str, list[str]]) -> dict:
+        ticker = (query.get("ticker") or [""])[0]
+        return load_dividend_history(ticker)
+
     def api_transactions(self, query: dict[str, list[str]]) -> dict:
         account_id = (query.get("account_id") or [None])[0]
         ticker = (query.get("ticker") or [None])[0]
@@ -309,6 +313,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/chart": self.api_chart,
                 "/api/account-performance": self.api_account_performance,
                 "/api/dividends": self.api_dividends,
+                "/api/dividend-history": self.api_dividend_history,
                 "/api/transactions": self.api_transactions,
                 "/api/watchlist/lookup": self.api_watchlist_lookup,
             }

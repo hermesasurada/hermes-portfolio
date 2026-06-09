@@ -20,6 +20,10 @@ function apiFetchDividends(accountIds, allAccounts) {
   return fetchJson(`/api/dividends${query}`);
 }
 
+function apiFetchDividendHistory(ticker) {
+  return fetchJson(`/api/dividend-history?ticker=${encodeURIComponent(ticker || "")}`);
+}
+
 function apiFetchChart(ticker) {
   return fetchJson(`/api/chart?ticker=${encodeURIComponent(ticker || "")}`);
 }

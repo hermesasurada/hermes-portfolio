@@ -784,6 +784,26 @@ th:first-child, td:first-child { text-align: left; }
   color: var(--ink);
   font-weight: 800;
 }
+.dividend-history-link {
+  display: inline;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.dividend-history-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .dividend-month-row td,
 tbody tr.dividend-month-row:nth-child(even) td,
 tr.dividend-month-row:hover td {
@@ -1837,6 +1857,10 @@ tbody tr.index-row td:first-child::before {
 .help-modal {
   width: min(860px, calc(100vw - 28px));
 }
+.dividend-history-modal {
+  width: min(620px, calc(100vw - 28px));
+  max-height: min(760px, calc(100vh - 28px));
+}
 .watch-modal::backdrop {
   background: rgba(15, 23, 42, .34);
 }
@@ -1865,6 +1889,134 @@ tbody tr.index-row td:first-child::before {
 }
 .modal-head strong {
   font-size: 16px;
+}
+.dividend-history-card {
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+}
+#dividendHistoryBody {
+  width: 100%;
+  min-width: 0;
+}
+.dividend-history-title {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.dividend-history-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dividend-history-title span {
+  color: var(--accent-2);
+  font-size: 12px;
+  font-weight: 800;
+}
+.dividend-history-table-wrap {
+  max-height: min(510px, calc(100vh - 245px));
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.dividend-history-table {
+  width: 100%;
+  min-width: 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.dividend-history-table th,
+.dividend-history-table td {
+  height: 34px;
+  padding: 6px 9px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+.dividend-history-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+.dividend-history-table th:first-child,
+.dividend-history-table td:first-child {
+  width: 84px;
+  text-align: left;
+}
+.dividend-history-table th:nth-child(4),
+.dividend-history-table td:nth-child(4) {
+  width: 56px;
+  text-align: center;
+}
+.dividend-history-table th:last-child,
+.dividend-history-table td:last-child {
+  width: 92px;
+  text-align: center;
+}
+.dividend-history-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.history-ytd {
+  display: inline-flex;
+  margin-left: 5px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 9px;
+  font-weight: 800;
+  vertical-align: 1px;
+}
+.dividend-history-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.dividend-history-summary > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 9px 10px;
+  border-right: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.dividend-history-summary > div:last-child {
+  border-right: 0;
+}
+.dividend-history-summary span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.dividend-history-summary strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.dividend-history-note,
+.dividend-history-empty {
+  color: var(--muted);
+  font-size: 11px;
+}
+.dividend-history-empty {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
 }
 .help-card {
   gap: 14px;
@@ -2337,6 +2489,20 @@ tbody tr.index-row td:first-child::before {
   }
   #dividendTableWrap {
     padding: 0;
+  }
+  .dividend-history-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dividend-history-summary > div:nth-child(2) {
+    border-right: 0;
+  }
+  .dividend-history-summary > div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+  .dividend-history-table th,
+  .dividend-history-table td {
+    padding-left: 7px;
+    padding-right: 7px;
   }
   .chart-head {
     align-items: flex-start;

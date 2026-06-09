@@ -160,7 +160,7 @@ function renderDividendTable() {
       <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
       <td class="dividend-target">${esc(item.row.target || item.row.member || "-")}</td>
       <td class="dividend-ticker">${esc(item.row.ticker || "-")}</td>
-      <td>${esc(item.row.name || item.row.ticker || "-")}</td>
+      <td><button class="dividend-history-link" type="button" data-dividend-history="${esc(item.row.ticker)}">${esc(item.row.name || item.row.ticker || "-")}</button></td>
       <td>${dividendAmountText(item.row.amount, item.row.currency)}</td>
       <td>${fmt2.format(Number(item.row.qty) || 0)}</td>
       <td>${dividendMoneyText(item.row.gross, item.row.currency)}</td>
@@ -181,7 +181,103 @@ function renderDividendTable() {
       renderDividendTable();
     });
   });
+  bindDividendHistoryLinks();
   bindChartLinks();
+}
+
+function dividendHistoryPercent(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "-";
+  const cls = number > 0 ? "up" : number < 0 ? "down" : "flat";
+  const arrow = number > 0 ? "▲" : number < 0 ? "▼" : "→";
+  return `<span class="${cls}"><span aria-hidden="true">${arrow}</span>${fmt1.format(Math.abs(number))}%</span>`;
+}
+
+function dividendHistoryEstimate(value, currency) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "-";
+  const digits = currency === "KRW" || currency === "JPY" ? 0 : 2;
+  return `${dividendCurrencyPrefix(currency)}${number.toLocaleString("ko-KR", { maximumFractionDigits: digits })}`;
+}
+
+function renderDividendHistory(payload) {
+  const rows = payload.rows || [];
+  const summary = payload.summary || {};
+  const body = document.getElementById("dividendHistoryBody");
+  document.getElementById("dividendHistoryName").textContent = payload.name || payload.ticker || "-";
+  document.getElementById("dividendHistoryTicker").textContent = payload.ticker || "-";
+  if (!rows.length) {
+    body.innerHTML = `<div class="dividend-history-empty">${payload.start_year || 2010}년 이후 배당이력 없음</div>`;
+    return;
+  }
+  const summaryItems = [
+    ["최근 성장률", dividendHistoryPercent(summary.latest_growth_pct)],
+    ["3년 CAGR", dividendHistoryPercent(summary.cagr_3y)],
+    ["5년 CAGR", dividendHistoryPercent(summary.cagr_5y)],
+    [`${summary.next_year || "다음해"} 예상`, dividendHistoryEstimate(summary.next_estimate, payload.currency)],
+  ];
+  body.innerHTML = `
+    <div class="dividend-history-table-wrap">
+      <table class="dividend-history-table">
+        <thead>
+          <tr>
+            <th>연도</th>
+            <th>주당배당금</th>
+            <th>성장률</th>
+            <th>횟수</th>
+            <th>최근 일자</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(row => `
+            <tr>
+              <td><strong>${row.year}</strong>${row.current_ytd ? `<span class="history-ytd">YTD</span>` : ""}</td>
+              <td>${dividendAmountText(row.amount, payload.currency)}</td>
+              <td>${row.current_ytd ? "-" : dividendHistoryPercent(row.growth_pct)}</td>
+              <td>${fmt.format(Number(row.payments) || 0)}</td>
+              <td>${dividendDateText(row.last_date)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+    <div class="dividend-history-summary">
+      ${summaryItems.map(([label, value]) => `
+        <div>
+          <span>${label}</span>
+          <strong>${value}</strong>
+        </div>
+      `).join("")}
+    </div>
+    <div class="dividend-history-note">
+      연간 합계는 ${payload.start_year || 2010}년 이후 DB 원본 주당배당금 기준입니다. 현재 연도는 오늘까지의 YTD이며 액면분할은 별도 보정하지 않습니다.
+    </div>
+  `;
+}
+
+async function openDividendHistory(ticker) {
+  const modal = document.getElementById("dividendHistoryModal");
+  const body = document.getElementById("dividendHistoryBody");
+  document.getElementById("dividendHistoryName").textContent = "배당이력";
+  document.getElementById("dividendHistoryTicker").textContent = ticker || "-";
+  body.innerHTML = `<div class="dividend-history-empty">불러오는 중...</div>`;
+  modal.showModal();
+  try {
+    renderDividendHistory(await apiFetchDividendHistory(ticker));
+  } catch (err) {
+    body.innerHTML = `<div class="dividend-history-empty">${esc(err.message || String(err))}</div>`;
+  }
+}
+
+function bindDividendHistoryLinks() {
+  document.querySelectorAll("[data-dividend-history]").forEach(button => {
+    button.addEventListener("click", () => openDividendHistory(button.dataset.dividendHistory));
+  });
+}
+
+function initDividendHistoryModal() {
+  const modal = document.getElementById("dividendHistoryModal");
+  document.getElementById("dividendHistoryClose")?.addEventListener("click", () => modal.close());
 }
 
 function dividendDateText(dateText) {

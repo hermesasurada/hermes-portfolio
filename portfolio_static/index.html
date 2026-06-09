@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=chart-display-controls">
+  <link rel="stylesheet" href="/static/styles.css?v=dividend-history-3">
 </head>
 <body>
   <header>
@@ -343,6 +343,18 @@
       <div class="status" id="chartRangeStatus"></div>
     </form>
   </dialog>
+  <dialog class="watch-modal dividend-history-modal" id="dividendHistoryModal">
+    <form method="dialog" class="modal-card dividend-history-card">
+      <div class="modal-head">
+        <div class="dividend-history-title">
+          <strong id="dividendHistoryName">배당이력</strong>
+          <span id="dividendHistoryTicker">-</span>
+        </div>
+        <button class="ghost-btn" id="dividendHistoryClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <div id="dividendHistoryBody"></div>
+    </form>
+  </dialog>
   <dialog class="watch-modal help-modal" id="dataHelpModal">
     <form method="dialog" class="modal-card help-card">
       <div class="modal-head">
@@ -410,9 +422,9 @@
   </dialog>
   <script src="/static/state.js?v=chart-display-controls"></script>
   <script src="/static/format.js?v=dividend-estimated-dates"></script>
-  <script src="/static/api.js?v=dividend-estimated-dates"></script>
+  <script src="/static/api.js?v=dividend-history"></script>
   <script src="/static/chart-utils.js?v=refactor-chart-utils"></script>
-  <script src="/static/app-tabs.js?v=dividend-month-collapse"></script>
+  <script src="/static/app-tabs.js?v=dividend-history-2"></script>
   <script src="/static/app-charts.js?v=chart-border-controls"></script>
   <script src="/static/app-holdings.js?v=chart-display-controls"></script>
   <script src="/static/app-chart-scale.js?v=chart-display-controls"></script>
@@ -421,6 +433,6 @@
   <script src="/static/app-transactions.js?v=portfolio-refactor"></script>
   <script src="/static/app-trade-controls.js?v=portfolio-refactor"></script>
   <script src="/static/app-watchlist.js?v=portfolio-refactor"></script>
-  <script src="/static/app.js?v=chart-display-controls"></script>
+  <script src="/static/app.js?v=dividend-history"></script>
 </body>
 </html>
