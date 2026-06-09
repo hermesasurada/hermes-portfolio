@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import threading
 import time
+from datetime import date, timedelta
 from typing import Iterable
 
 from .constants import MARKET_INDEXES
@@ -25,9 +26,32 @@ def _krx_listing_df():
         if cached is None or now - _KRX_LISTING_CACHE["ts"] > _KRX_LISTING_TTL:
             from FinanceDataReader import StockListing
 
-            _KRX_LISTING_CACHE["df"] = StockListing("KRX")
+            try:
+                listing = StockListing("KRX")
+            except Exception:
+                listing = _recent_krx_listing_cache()
+            _KRX_LISTING_CACHE["df"] = listing
             _KRX_LISTING_CACHE["ts"] = now
         return _KRX_LISTING_CACHE["df"]
+
+
+def _recent_krx_listing_cache():
+    import pandas as pd
+
+    base_url = (
+        "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/"
+        "refs/heads/master/data/listing/krx"
+    )
+    for days_ago in range(1, 11):
+        target = date.today() - timedelta(days=days_ago)
+        try:
+            return pd.read_csv(
+                f"{base_url}/{target.isoformat()}.csv",
+                dtype={"Code": str, "Dept": str, "ChangeCode": str, "MarketId": str},
+            )
+        except Exception:
+            continue
+    return None
 
 
 def normalize_lookup_ticker(value: str) -> str:
@@ -42,7 +66,10 @@ def lookup_krx_listing(query: str) -> dict | None:
     if not text:
         return None
     compact = re.sub(r"\s+", "", text).upper()
-    df = _krx_listing_df()
+    try:
+        df = _krx_listing_df()
+    except Exception:
+        return None
     if df is None or df.empty:
         return None
     code_column = "Code" if "Code" in df.columns else "Symbol"
@@ -72,6 +99,37 @@ def lookup_krx_listing(query: str) -> dict | None:
         "currency": "KRW",
         "category": "kr",
         "region": "KR",
+    }
+
+
+def lookup_registered_name(query: str) -> dict | None:
+    compact = re.sub(r"\s+", "", str(query or "")).upper()
+    if not compact:
+        return None
+    with connect() as conn:
+        row = conn.execute(
+            """
+            SELECT ticker, name, currency, category, region
+            FROM tickers
+            WHERE REPLACE(UPPER(name), ' ', '') = ?
+               OR REPLACE(UPPER(name), ' ', '') LIKE ?
+            ORDER BY
+                CASE WHEN REPLACE(UPPER(name), ' ', '') = ? THEN 0 ELSE 1 END,
+                LENGTH(name),
+                ticker
+            LIMIT 1
+            """,
+            (compact, f"%{compact}%", compact),
+        ).fetchone()
+    if not row:
+        return None
+    category = infer_category(row["ticker"], row["category"])
+    return {
+        "ticker": row["ticker"],
+        "name": row["name"] or row["ticker"],
+        "currency": row["currency"] or ticker_currency(row["ticker"]),
+        "category": category,
+        "region": row["region"] or ticker_region(row["ticker"], category),
     }
 
 
@@ -134,7 +192,7 @@ def lookup_ticker(value: str) -> dict:
     if not ticker:
         raise ValueError("종목코드를 입력해야 합니다.")
     if not re.fullmatch(r"[A-Z0-9.^-]+", ticker):
-        found_by_name = lookup_krx_listing(raw_value)
+        found_by_name = lookup_registered_name(raw_value) or lookup_krx_listing(raw_value)
         if found_by_name:
             return found_by_name
         raise ValueError(f"{raw_value} 종목을 찾지 못했습니다.")
