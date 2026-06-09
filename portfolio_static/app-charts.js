@@ -194,7 +194,7 @@ function renderPerformanceChart(payload) {
   const width = 980;
   const isMobileChart = Boolean(window.matchMedia?.("(max-width: 980px)")?.matches);
   const height = isMobileChart ? 864 : 432;
-  const pad = { top: 58, right: 104, bottom: 34, left: 56 };
+  const pad = { top: 26, right: 104, bottom: 34, left: 56 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const range = max - min || 1;
@@ -204,7 +204,6 @@ function renderPerformanceChart(payload) {
   const pathFor = points => points.map((point, index) => `${index === 0 ? "M" : "L"}${xForTime(point.time).toFixed(2)},${yFor(point.close).toFixed(2)}`).join(" ");
   const portfolio = series[0];
   const lastPoint = portfolio.points[portfolio.points.length - 1];
-  const cls = lastPoint.close > 0 ? "up" : lastPoint.close < 0 ? "down" : "flat";
   document.getElementById("chartMeta").textContent = "";
   const tickLabel = value => `${value > 0 ? "+" : value < 0 ? "-" : ""}${Math.round(Math.abs(value))}%`;
   const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
@@ -233,10 +232,7 @@ function renderPerformanceChart(payload) {
     </div>
     <svg class="line-chart perf-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="계좌 기간 성과 차트">
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
-      <g class="chart-summary-overlay">
-        <text class="chart-period-overlay" x="${pad.left + 4}" y="18">${esc(chartDateLabel(portfolio.points[0].date))} - ${esc(chartDateLabel(lastPoint.date))}</text>
-        <text class="chart-summary-change ${cls}" x="${pad.left + 4}" y="42">${esc(pctChartLabel(lastPoint.close))}</text>
-      </g>
+      <rect class="chart-plot-border" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
       ${yTicks.map(tick => `
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
         <text class="chart-y-label" x="${pad.left - 8}" y="${(tick.y + 4).toFixed(2)}">${esc(tickLabel(tick.value))}</text>

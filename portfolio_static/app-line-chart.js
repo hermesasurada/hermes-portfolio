@@ -22,17 +22,17 @@ function renderChartRangeButtons() {
           <button class="chart-range-btn marker-toggle sell ${chartShowSells ? "active" : ""}" type="button" data-marker-toggle="sell" aria-pressed="${chartShowSells}"><i></i>매도</button>
         </span>
       ` : ""}
+      ${!performanceChartOpen ? `<button class="chart-range-btn chart-log-toggle ${chartLogScale ? "active" : ""}" type="button" data-chart-log aria-pressed="${chartLogScale}">로그</button>` : ""}
     </div>
   `;
 }
 
-// 우측 상단 로그 스케일 토글: 단일 가격 차트에서만 노출
 function syncChartLogToggle(visible) {
-  const btn = document.getElementById("chartLogToggle");
-  if (!btn) return;
-  btn.classList.toggle("hidden", !visible);
-  btn.classList.toggle("active", chartLogScale);
-  btn.setAttribute("aria-pressed", String(chartLogScale));
+  document.querySelectorAll("[data-chart-log]").forEach(btn => {
+    btn.classList.toggle("hidden", !visible);
+    btn.classList.toggle("active", chartLogScale);
+    btn.setAttribute("aria-pressed", String(chartLogScale));
+  });
 }
 
 function chartPointDatesForModal() {
@@ -263,6 +263,12 @@ function ensureChartStats(ticker) {
 function bindLineChartControls(payload) {
   document.querySelectorAll(".chart-range-btn").forEach(btn => {
     btn.addEventListener("click", () => {
+      if (btn.dataset.chartLog != null) {
+        chartLogScale = !chartLogScale;
+        storageSet(detailStorage.chartLogScale, String(chartLogScale));
+        renderLineChart(payload);
+        return;
+      }
       if (btn.dataset.markerToggle != null) {
         if (btn.dataset.markerToggle === "buy") {
           chartShowBuys = !chartShowBuys;
@@ -523,13 +529,11 @@ function renderLineChart(payload) {
   const first = values[0];
   const last = values[values.length - 1];
   const changePct = first ? (last - first) / first * 100 : null;
-  const cls = changePct > 0 ? "up" : changePct < 0 ? "down" : "flat";
-  const arrow = changePct > 0 ? "▲" : changePct < 0 ? "▼" : "→";
   document.getElementById("chartMeta").textContent = "";
 
   const width = 980;
   const height = 408;
-  const pad = { top: 58, right: 58, bottom: 32, left: 14 };
+  const pad = { top: 28, right: 58, bottom: 32, left: 14 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const range = max - min || Math.max(1, Math.abs(max));
@@ -589,11 +593,7 @@ function renderLineChart(payload) {
         </linearGradient>
       </defs>
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
-      <g class="chart-summary-overlay">
-        <text class="chart-period-overlay" x="${pad.left + 4}" y="18">${esc(chartDateLabel(points[0].date))} - ${esc(chartDateLabel(points[points.length - 1].date))}</text>
-        <text class="chart-summary-change ${cls}" x="${pad.left + 4}" y="42">${arrow}${fmt2.format(Math.abs(changePct || 0))}%</text>
-        <text class="chart-summary-value" x="${pad.left + 112}" y="42">${esc(chartMoney(last, payload.currency))}</text>
-      </g>
+      <rect class="chart-plot-border" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
       ${yTicks.map(tick => `
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
         <text class="chart-y-label" x="${width - 6}" y="${(tick.y + 4).toFixed(2)}">${esc(chartMoney(tick.value, payload.currency))}</text>

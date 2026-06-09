@@ -331,11 +331,6 @@ const positionFilterStates = ["held", "unheld", "all"];
 chartLogScale = storageGet(detailStorage.chartLogScale) === "true";
 chartShowBuys = storageGet(detailStorage.chartShowBuys) !== "false";   // 기본 ON
 chartShowSells = storageGet(detailStorage.chartShowSells) !== "false"; // 기본 ON
-document.getElementById("chartLogToggle")?.addEventListener("click", () => {
-  chartLogScale = !chartLogScale;
-  storageSet(detailStorage.chartLogScale, String(chartLogScale));
-  if (chartPayload) renderLineChart(chartPayload);
-});
 document.getElementById("fxAdjustedToggle").checked = storageGet(detailStorage.fxAdjusted) === "true";
 document.getElementById("fxAdjustedToggle").addEventListener("change", () => {
   storageSet(detailStorage.fxAdjusted, String(document.getElementById("fxAdjustedToggle").checked));
