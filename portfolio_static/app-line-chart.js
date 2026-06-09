@@ -525,15 +525,11 @@ function renderLineChart(payload) {
   const changePct = first ? (last - first) / first * 100 : null;
   const cls = changePct > 0 ? "up" : changePct < 0 ? "down" : "flat";
   const arrow = changePct > 0 ? "▲" : changePct < 0 ? "▼" : "→";
-  document.getElementById("chartMeta").innerHTML = `
-    <span>${points.length}일</span>
-    <span class="${cls}">${arrow}${fmt2.format(Math.abs(changePct || 0))}%</span>
-    <span>${chartMoney(last, payload.currency)}</span>
-  `;
+  document.getElementById("chartMeta").textContent = "";
 
   const width = 980;
   const height = 408;
-  const pad = { top: 28, right: 58, bottom: 32, left: 14 };
+  const pad = { top: 58, right: 58, bottom: 32, left: 14 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const range = max - min || Math.max(1, Math.abs(max));
@@ -593,7 +589,11 @@ function renderLineChart(payload) {
         </linearGradient>
       </defs>
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
-      <text class="chart-period-overlay" x="${pad.left + 4}" y="18">${esc(chartDateLabel(points[0].date))} - ${esc(chartDateLabel(points[points.length - 1].date))}</text>
+      <g class="chart-summary-overlay">
+        <text class="chart-period-overlay" x="${pad.left + 4}" y="18">${esc(chartDateLabel(points[0].date))} - ${esc(chartDateLabel(points[points.length - 1].date))}</text>
+        <text class="chart-summary-change ${cls}" x="${pad.left + 4}" y="42">${arrow}${fmt2.format(Math.abs(changePct || 0))}%</text>
+        <text class="chart-summary-value" x="${pad.left + 112}" y="42">${esc(chartMoney(last, payload.currency))}</text>
+      </g>
       ${yTicks.map(tick => `
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
         <text class="chart-y-label" x="${width - 6}" y="${(tick.y + 4).toFixed(2)}">${esc(chartMoney(tick.value, payload.currency))}</text>

@@ -1317,8 +1317,8 @@ tbody tr.index-row td:first-child::before {
 .chart-y-label { text-anchor: end; }
 .chart-period-overlay {
   fill: var(--chart-axis);
-  font-size: 10.5px;
-  font-weight: 700;
+  font-size: 12.5px;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
   paint-order: stroke;
@@ -1326,6 +1326,24 @@ tbody tr.index-row td:first-child::before {
   stroke-width: 3px;
   stroke-linejoin: round;
 }
+.chart-summary-overlay {
+  pointer-events: none;
+}
+.chart-summary-change,
+.chart-summary-value {
+  font-size: 16px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--chart-bg);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+.chart-summary-change { fill: var(--chart-ink); }
+.chart-summary-change.up { fill: var(--up); }
+.chart-summary-change.down { fill: var(--down); }
+.chart-summary-change.flat { fill: var(--muted); }
+.chart-summary-value { fill: var(--chart-ink); }
 .chart-extreme {
   pointer-events: none;
 }

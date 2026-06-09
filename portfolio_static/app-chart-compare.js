@@ -243,7 +243,7 @@ function renderCompareLineChart(payload) {
   const scale = useLog ? compareLogScale(values.map(ratioOf)) : niceChartScale([...values, 0]);
   const width = 980;
   const height = 420;
-  const pad = { top: 28, right: 108, bottom: 34, left: 52 };
+  const pad = { top: 58, right: 108, bottom: 34, left: 52 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const min = scale.min;
@@ -262,10 +262,7 @@ function renderCompareLineChart(payload) {
   const first = main.points[0];
   const last = main.points[main.points.length - 1];
   const cls = last.close > 0 ? "up" : last.close < 0 ? "down" : "flat";
-  document.getElementById("chartMeta").innerHTML = `
-    <span>비교 ${chartComparePayloads.length}개</span>
-    <span class="${cls}">${pctChartLabel(last.close)}</span>
-  `;
+  document.getElementById("chartMeta").textContent = "";
   const yTicks = scale.ticks.map(tick => {
     const pct = useLog ? (tick - 1) * 100 : tick;   // 로그 틱은 비율 → %로 환산
     return { value: pct, y: yFor(pct) };
@@ -289,7 +286,11 @@ function renderCompareLineChart(payload) {
     </div>
     <svg class="line-chart compare-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(payload.name)} 비교 차트">
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
-      <text class="chart-period-overlay" x="${pad.left + 4}" y="18">${esc(chartDateLabel(first.date))} - ${esc(chartDateLabel(last.date))}</text>
+      <g class="chart-summary-overlay">
+        <text class="chart-period-overlay" x="${pad.left + 4}" y="18">${esc(chartDateLabel(first.date))} - ${esc(chartDateLabel(last.date))}</text>
+        <text class="chart-summary-change ${cls}" x="${pad.left + 4}" y="42">${esc(pctChartLabel(last.close))}</text>
+        <text class="chart-summary-value" x="${pad.left + 112}" y="42">${esc(chartMoney(last.value, main.currency))}</text>
+      </g>
       ${yTicks.map(tick => `
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
         <text class="chart-y-label" x="${pad.left - 8}" y="${(tick.y + 4).toFixed(2)}">${esc(pctChartLabel(tick.value))}</text>
