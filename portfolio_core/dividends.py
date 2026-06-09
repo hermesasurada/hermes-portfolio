@@ -230,6 +230,7 @@ def load_dividend_history(ticker: str) -> dict:
         if year < today.year and count >= frequency
     }
     current_estimate = _current_year_estimate(events, frequency, today.year)
+    is_korean = ticker_row["ticker"].upper().endswith(KOREAN_SUFFIXES)
     rows = []
     for year in sorted(annual, reverse=True):
         row = annual[year]
@@ -237,15 +238,28 @@ def load_dividend_history(ticker: str) -> dict:
         complete = year in complete_years
         current_ytd = year == today.year
         estimated_amount = current_estimate if current_ytd else None
+        growth_pct = (
+            None
+            if not complete or not previous_complete
+            else _annual_growth(row["amount"], totals.get(year - 1))
+        )
+        growth_basis = "annual" if growth_pct is not None else None
+        # 연간배당이 완결되지 않은 해외주식: 직전연도 대비 '해당연도 최초 배당금'으로 성장률 산출
+        if growth_pct is None and not is_korean:
+            previous = annual.get(year - 1)
+            if previous and previous["events"] and row["events"]:
+                first_growth = _annual_growth(
+                    row["events"][0]["amount"], previous["events"][0]["amount"]
+                )
+                if first_growth is not None:
+                    growth_pct = first_growth
+                    growth_basis = "first_payment"
         rows.append(
             {
                 "year": year,
                 "amount": row["amount"],
-                "growth_pct": (
-                    None
-                    if not complete or not previous_complete
-                    else _annual_growth(row["amount"], totals.get(year - 1))
-                ),
+                "growth_pct": growth_pct,
+                "growth_basis": growth_basis,
                 "payments": row["payments"],
                 "expected_payments": frequency,
                 "complete": complete,

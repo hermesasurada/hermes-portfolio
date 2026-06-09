@@ -261,6 +261,7 @@ function renderDividendHistory(payload) {
             <th>성장률</th>
             <th>횟수</th>
             <th>기준일</th>
+            <th>지급일</th>
             <th>주당배당금</th>
             <th>구분</th>
           </tr>
@@ -284,12 +285,21 @@ function renderDividendHistory(payload) {
                   ? `<span class="history-estimate">예상 ${dividendHistoryEstimate(row.estimated_amount, payload.currency)}</span>`
                   : ""}
               </td>`;
-            const growthCell = `<td class="history-annual-cell" rowspan="${span}">${row.current_ytd ? "-" : dividendHistoryPercent(row.growth_pct)}</td>`;
+            const growthCell = `<td class="history-annual-cell" rowspan="${span}">${
+              row.growth_pct == null
+                ? "-"
+                : `${dividendHistoryPercent(row.growth_pct)}${
+                    row.growth_basis === "first_payment"
+                      ? `<span class="history-growth-basis" title="연간 미완결 — 해당 연도 최초 배당금 기준">*</span>`
+                      : ""
+                  }`
+            }</td>`;
             const countCell = `<td class="history-annual-cell" rowspan="${span}">${fmt.format(Number(row.payments) || 0)}${row.expected_payments ? `/${fmt.format(row.expected_payments)}` : ""}</td>`;
             return details.map((detail, index) => `
               <tr>
                 ${index === 0 ? `${yearCell}${amountCell}${growthCell}${countCell}` : ""}
                 <td class="history-detail-date">${detail ? dividendHistoryFullDate(detail.entitlement_date) : "-"}</td>
+                <td class="history-detail-date">${detail ? dividendHistoryFullDate(detail.pay_date) : "-"}</td>
                 <td class="history-detail-amount">${detail ? dividendAmountText(detail.amount, payload.currency) : "-"}</td>
                 <td class="history-source-cell">
                   ${detail && detail.is_final ? `<span class="history-final">결산</span>` : ""}
@@ -308,10 +318,6 @@ function renderDividendHistory(payload) {
           <strong>${value}</strong>
         </div>
       `).join("")}
-    </div>
-    <div class="dividend-history-note">
-      배당기준일(없으면 배당락일) 기준으로 귀속합니다. 한국 결산배당은 연초 결의 여부를 반영해 직전 사업연도로 조정하며,
-      성장률은 추정 지급주기를 충족한 완결연도끼리만 계산합니다. 현재 연도 예상은 최근 회차 배당금과 남은 주기 기준이며 액면분할은 별도 보정하지 않습니다.
     </div>
   `;
 }

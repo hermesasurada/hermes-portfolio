@@ -1858,7 +1858,7 @@ tbody tr.index-row td:first-child::before {
   width: min(860px, calc(100vw - 28px));
 }
 .dividend-history-modal {
-  width: min(620px, calc(100vw - 28px));
+  width: min(780px, calc(100vw - 28px));
   max-height: min(760px, calc(100vh - 28px));
 }
 .watch-modal::backdrop {
@@ -1917,7 +1917,8 @@ tbody tr.index-row td:first-child::before {
 }
 .dividend-history-table-wrap {
   max-height: min(510px, calc(100vh - 245px));
-  overflow: auto;
+  overflow-x: hidden;   /* 데스크톱: 팝업 폭이 충분해 가로 스크롤 불필요 */
+  overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
 }
@@ -2004,11 +2005,13 @@ tbody tr.index-row td:first-child::before {
   border-bottom: 2px solid var(--line);
   background: var(--surface-1);
 }
-.dividend-history-table.detailed th:nth-child(5) {
-  width: 86px;
+/* 8열(귀속연도·연간배당·성장률·횟수·기준일·지급일·주당배당금·구분) 폭 — fixed 레이아웃이라 헤더 행 기준 */
+.dividend-history-table.detailed th:nth-child(5),
+.dividend-history-table.detailed th:nth-child(6) {
+  width: 80px;
 }
 .dividend-history-table.detailed th:last-child {
-  width: 96px;
+  width: 84px;
 }
 /* 연/분기 셀 정렬은 위치(nth-child)가 rowspan으로 어긋나므로 클래스로 고정 */
 .dividend-history-table.detailed .history-detail-date {
@@ -2025,6 +2028,13 @@ tbody tr.index-row td:first-child::before {
   color: var(--muted);
   font-size: 10px;
   font-weight: 700;
+}
+.history-growth-basis {
+  margin-left: 1px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  vertical-align: 3px;
 }
 .dividend-detail-btn {
   padding: 2px 10px;
@@ -2576,6 +2586,13 @@ tbody tr.index-row td:first-child::before {
   .dividend-history-table td {
     padding-left: 7px;
     padding-right: 7px;
+  }
+  /* 모바일: 좁은 화면에선 가로 스크롤 허용 (열이 많아 압축 대신 스크롤) */
+  .dividend-history-table-wrap {
+    overflow-x: auto;
+  }
+  .dividend-history-table.detailed {
+    min-width: 620px;
   }
   .chart-head {
     align-items: flex-start;
