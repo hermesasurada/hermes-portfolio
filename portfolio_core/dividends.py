@@ -202,6 +202,8 @@ def load_dividend_history(ticker: str) -> dict:
                 "amount": float(event["amount"]),
                 "source": event["source"],
                 "declaration_date": _history_date(event["declaration_date"]),
+                "ex_date": _history_date(event["ex_date"]),
+                "pay_date": _history_date(event["pay_date"]),
                 "is_final": is_final,
             }
         )
@@ -210,12 +212,13 @@ def load_dividend_history(ticker: str) -> dict:
     for event in events:
         year_row = annual.setdefault(
             event["year"],
-            {"amount": 0.0, "payments": 0, "last_date": event["date"], "sources": set(), "final": False},
+            {"amount": 0.0, "payments": 0, "last_date": event["date"], "sources": set(), "final": False, "events": []},
         )
         year_row["amount"] += event["amount"]
         year_row["payments"] += 1
         year_row["last_date"] = max(year_row["last_date"], event["date"])
         year_row["final"] = year_row["final"] or event["is_final"]
+        year_row["events"].append(event)
         if event["source"]:
             year_row["sources"].add(event["source"])
 
@@ -251,6 +254,17 @@ def load_dividend_history(ticker: str) -> dict:
                 "current_ytd": current_ytd,
                 "final_dividend": row["final"],
                 "sources": sorted(row["sources"]),
+                "payments_detail": [
+                    {
+                        "entitlement_date": event["date"].isoformat(),
+                        "ex_date": event["ex_date"].isoformat() if event["ex_date"] else None,
+                        "pay_date": event["pay_date"].isoformat() if event["pay_date"] else None,
+                        "amount": event["amount"],
+                        "source": event["source"],
+                        "is_final": event["is_final"],
+                    }
+                    for event in sorted(row["events"], key=lambda item: item["date"], reverse=True)
+                ],
             }
         )
 

@@ -120,13 +120,13 @@ async function loadDividendsForSelection() {
   dividendLoadKey = key;
   const accounts = visibleAccounts();
   const allAccounts = selectionMode === "all";
-  document.getElementById("dividendRows").innerHTML = `<tr><td colspan="11">배당 loading...</td></tr>`;
+  document.getElementById("dividendRows").innerHTML = `<tr><td colspan="12">배당 loading...</td></tr>`;
   dividendInFlight = apiFetchDividends(accounts.map(account => account.id), allAccounts);
   try {
     dividendData = await dividendInFlight;
     renderDividendTable();
   } catch (err) {
-    document.getElementById("dividendRows").innerHTML = `<tr><td colspan="11">${esc(err.message || String(err))}</td></tr>`;
+    document.getElementById("dividendRows").innerHTML = `<tr><td colspan="12">${esc(err.message || String(err))}</td></tr>`;
   } finally {
     dividendInFlight = null;
   }
@@ -139,13 +139,13 @@ function renderDividendTable() {
   }
   const rows = [...(dividendData.rows || [])];
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
-  const empty = `<tr><td colspan="11" class="flat">예정 배당 없음</td></tr>`;
+  const empty = `<tr><td colspan="12" class="flat">예정 배당 없음</td></tr>`;
   const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : "confirmed-date"}">${dividendDateText(value)}</span>`;
   document.getElementById("dividendRows").innerHTML = rows.length ? groupedDividendRows(rows).map(item => {
     const collapsed = item.kind === "month" && collapsedDividendMonths.has(item.key);
     if (item.kind === "month") return `
     <tr class="dividend-month-row ${collapsed ? "collapsed" : ""}" data-month="${esc(item.key)}">
-      <td colspan="11">
+      <td colspan="12">
         <div class="dividend-month-summary">
           <button class="dividend-month-toggle" type="button" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${collapsed ? "월별 배당 펼치기" : "월별 배당 접기"}"></button>
           <span>${esc(item.label)}</span>
@@ -159,8 +159,8 @@ function renderDividendTable() {
     <tr>
       <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
       <td class="dividend-target">${esc(item.row.target || item.row.member || "-")}</td>
-      <td class="dividend-ticker">${esc(item.row.ticker || "-")}</td>
-      <td><button class="dividend-history-link" type="button" data-dividend-history="${esc(item.row.ticker)}">${esc(item.row.name || item.row.ticker || "-")}</button></td>
+      <td class="dividend-ticker"><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(item.row.ticker || "-")}</a></td>
+      <td><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(item.row.name || item.row.ticker || "-")}</a></td>
       <td>${dividendAmountText(item.row.amount, item.row.currency)}</td>
       <td>${fmt2.format(Number(item.row.qty) || 0)}</td>
       <td>${dividendMoneyText(item.row.gross, item.row.currency)}</td>
@@ -168,6 +168,7 @@ function renderDividendTable() {
       <td class="net-dividend">${dividendMoneyText(item.row.net, item.row.currency)}</td>
       <td class="fx-rate">${dividendFxText(item.row.fx_rate)}</td>
       <td class="net-krw">${dividendKrwText(item.row.net_krw)}</td>
+      <td class="dividend-detail-cell"><button class="ghost-btn dividend-detail-btn" type="button" data-dividend-history="${esc(item.row.ticker)}">상세</button></td>
     </tr>
   `;
   }).join("") : empty;
@@ -191,6 +192,32 @@ function dividendHistoryPercent(value) {
   const cls = number > 0 ? "up" : number < 0 ? "down" : "flat";
   const arrow = number > 0 ? "▲" : number < 0 ? "▼" : "→";
   return `<span class="${cls}"><span aria-hidden="true">${arrow}</span>${fmt1.format(Math.abs(number))}%</span>`;
+}
+
+function dividendHistoryFullDate(dateText) {
+  const text = String(dateText || "");
+  if (!/^\d{4}-\d{2}-\d{2}/.test(text)) return "-";
+  return text.slice(0, 10).replace(/-/g, ".");
+}
+
+const DIVIDEND_SOURCE_LABELS = {
+  polygon: "Polygon",
+  yahoo: "Yahoo",
+  "yahoo-finance": "Yahoo",
+  "kr-history": "Yahoo",
+  yfinance: "yfinance",
+  stockanalysis: "StockAnalysis",
+  nasdaq: "Nasdaq",
+  seibro: "세이브로",
+  opendart: "OpenDART",
+  estimate: "추정",
+  estimated: "추정",
+};
+
+function dividendSourceLabel(source) {
+  const key = String(source || "").trim().toLowerCase();
+  if (!key) return "-";
+  return DIVIDEND_SOURCE_LABELS[key] || source;
 }
 
 function dividendHistoryEstimate(value, currency) {
@@ -226,35 +253,51 @@ function renderDividendHistory(payload) {
   ];
   body.innerHTML = `
     <div class="dividend-history-table-wrap">
-      <table class="dividend-history-table">
+      <table class="dividend-history-table detailed">
         <thead>
           <tr>
             <th>귀속연도</th>
             <th>연간배당</th>
             <th>성장률</th>
             <th>횟수</th>
-            <th>최근 기준일</th>
+            <th>기준일</th>
+            <th>주당배당금</th>
+            <th>구분</th>
           </tr>
         </thead>
         <tbody>
-          ${rows.map(row => `
-            <tr>
-              <td>
+          ${rows.map(row => {
+            const details = (row.payments_detail && row.payments_detail.length)
+              ? row.payments_detail
+              : [null];
+            const span = details.length;
+            const yearCell = `
+              <td class="history-year-cell" rowspan="${span}">
                 <strong>${row.year}</strong>
                 ${row.current_ytd ? `<span class="history-ytd">YTD</span>` : ""}
                 ${row.final_dividend ? `<span class="history-final">결산</span>` : ""}
-              </td>
-              <td>
+              </td>`;
+            const amountCell = `
+              <td class="history-annual-cell" rowspan="${span}">
                 <span class="history-amount">${dividendAmountText(row.amount, payload.currency)}</span>
                 ${row.estimated_amount != null && row.estimated_amount > row.amount
                   ? `<span class="history-estimate">예상 ${dividendHistoryEstimate(row.estimated_amount, payload.currency)}</span>`
                   : ""}
-              </td>
-              <td>${row.current_ytd ? "-" : dividendHistoryPercent(row.growth_pct)}</td>
-              <td>${fmt.format(Number(row.payments) || 0)}${row.expected_payments ? `/${fmt.format(row.expected_payments)}` : ""}</td>
-              <td>${dividendDateText(row.last_date)}</td>
-            </tr>
-          `).join("")}
+              </td>`;
+            const growthCell = `<td class="history-annual-cell" rowspan="${span}">${row.current_ytd ? "-" : dividendHistoryPercent(row.growth_pct)}</td>`;
+            const countCell = `<td class="history-annual-cell" rowspan="${span}">${fmt.format(Number(row.payments) || 0)}${row.expected_payments ? `/${fmt.format(row.expected_payments)}` : ""}</td>`;
+            return details.map((detail, index) => `
+              <tr>
+                ${index === 0 ? `${yearCell}${amountCell}${growthCell}${countCell}` : ""}
+                <td class="history-detail-date">${detail ? dividendHistoryFullDate(detail.entitlement_date) : "-"}</td>
+                <td class="history-detail-amount">${detail ? dividendAmountText(detail.amount, payload.currency) : "-"}</td>
+                <td class="history-source-cell">
+                  ${detail && detail.is_final ? `<span class="history-final">결산</span>` : ""}
+                  <span class="history-source">${detail ? esc(dividendSourceLabel(detail.source)) : "-"}</span>
+                </td>
+              </tr>
+            `).join("");
+          }).join("")}
         </tbody>
       </table>
     </div>

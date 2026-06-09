@@ -1997,6 +1997,40 @@ tbody tr.index-row td:first-child::before {
   font-size: 10px;
   font-weight: 700;
 }
+.dividend-history-table.detailed .history-year-cell,
+.dividend-history-table.detailed .history-annual-cell {
+  vertical-align: top;
+  padding-top: 8px;
+  border-bottom: 2px solid var(--line);
+  background: var(--surface-1);
+}
+.dividend-history-table.detailed th:nth-child(5) {
+  width: 86px;
+}
+.dividend-history-table.detailed th:last-child {
+  width: 96px;
+}
+/* 연/분기 셀 정렬은 위치(nth-child)가 rowspan으로 어긋나므로 클래스로 고정 */
+.dividend-history-table.detailed .history-detail-date {
+  text-align: center;
+}
+.dividend-history-table.detailed .history-detail-amount {
+  text-align: right;
+}
+.dividend-history-table.detailed .history-source-cell {
+  text-align: center;
+  white-space: nowrap;
+}
+.history-source {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.dividend-detail-btn {
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
 .dividend-history-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
