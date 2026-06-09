@@ -297,6 +297,56 @@ function tickerDisplayName(ticker) {
 }
 
 
+function rsiThresholdAreaPaths(points, threshold, direction, xFor, yFor) {
+  const samples = points
+    .map((point, index) => ({ x: xFor(index), value: Number(point.rsi) }))
+    .filter(point => Number.isFinite(point.value));
+  if (samples.length < 2) return [];
+
+  const inside = value => direction === "above" ? value > threshold : value < threshold;
+  const thresholdY = yFor(threshold);
+  const runs = [];
+  let run = [];
+
+  const crossing = (left, right) => {
+    const ratio = (threshold - left.value) / (right.value - left.value);
+    return {
+      x: left.x + (right.x - left.x) * ratio,
+      y: thresholdY,
+      value: threshold,
+    };
+  };
+
+  for (let index = 0; index < samples.length - 1; index += 1) {
+    const left = samples[index];
+    const right = samples[index + 1];
+    const leftInside = inside(left.value);
+    const rightInside = inside(right.value);
+
+    if (leftInside && !run.length) run.push({ ...left, y: yFor(left.value) });
+    if (leftInside && rightInside) {
+      run.push({ ...right, y: yFor(right.value) });
+    } else if (leftInside && !rightInside) {
+      run.push(crossing(left, right));
+      runs.push(run);
+      run = [];
+    } else if (!leftInside && rightInside) {
+      run = [crossing(left, right), { ...right, y: yFor(right.value) }];
+    }
+  }
+  if (run.length) runs.push(run);
+
+  return runs
+    .filter(items => items.length >= 2)
+    .map(items => {
+      const curve = smoothLinePath(items);
+      const first = items[0];
+      const last = items[items.length - 1];
+      return `${curve} L${last.x.toFixed(2)},${thresholdY.toFixed(2)} L${first.x.toFixed(2)},${thresholdY.toFixed(2)} Z`;
+    });
+}
+
+
 function bindChartInteractions(points, payload, geometry) {
   const svg = document.querySelector("#chartCanvas svg");
   const hoverLayer = document.getElementById("chartHoverLayer");
@@ -567,6 +617,8 @@ function renderLineChart(payload) {
       .map((point, index) => ({ x: xFor(index), y: rsiYFor(Number(point.rsi)), value: Number(point.rsi) }))
       .filter(point => Number.isFinite(point.value))
   );
+  const rsiOverboughtAreas = rsiThresholdAreaPaths(points, 70, "above", xFor, rsiYFor);
+  const rsiOversoldAreas = rsiThresholdAreaPaths(points, 30, "below", xFor, rsiYFor);
   const rsiGuides = [30, 50, 70].map(value => ({ value, y: rsiYFor(value) }));
   const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
   const vGrid = indexedChartVerticalGrid(points, xFor, chartRange);
@@ -614,6 +666,14 @@ function renderLineChart(payload) {
           <stop offset="72%" stop-color="var(--brand)" stop-opacity=".045"></stop>
           <stop offset="100%" stop-color="var(--brand)" stop-opacity="0"></stop>
         </linearGradient>
+        <linearGradient id="rsiOverboughtFill" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="var(--up)" stop-opacity=".28"></stop>
+          <stop offset="100%" stop-color="var(--up)" stop-opacity=".06"></stop>
+        </linearGradient>
+        <linearGradient id="rsiOversoldFill" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="var(--down)" stop-opacity=".06"></stop>
+          <stop offset="100%" stop-color="var(--down)" stop-opacity=".28"></stop>
+        </linearGradient>
       </defs>
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
       <rect class="chart-plot-border" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
@@ -633,6 +693,8 @@ function renderLineChart(payload) {
       }).join("")}
       <path class="chart-area" d="${area}"></path>
       <path class="chart-line" d="${line}"></path>
+      ${rsiOverboughtAreas.map(path => `<path class="chart-rsi-zone overbought" d="${path}"></path>`).join("")}
+      ${rsiOversoldAreas.map(path => `<path class="chart-rsi-zone oversold" d="${path}"></path>`).join("")}
       ${rsiGuides.map(guide => `
         <line class="chart-rsi-guide level-${guide.value}" x1="${pad.left}" x2="${pad.left + plotW}" y1="${guide.y.toFixed(2)}" y2="${guide.y.toFixed(2)}"></line>
         <text class="chart-rsi-axis" x="${width - 6}" y="${(guide.y + 4).toFixed(2)}">${guide.value}</text>

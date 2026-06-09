@@ -1328,6 +1328,15 @@ tbody tr.index-row td:first-child::before {
   stroke-width: 1;
   pointer-events: none;
 }
+.chart-rsi-zone {
+  pointer-events: none;
+}
+.chart-rsi-zone.overbought {
+  fill: url(#rsiOverboughtFill);
+}
+.chart-rsi-zone.oversold {
+  fill: url(#rsiOversoldFill);
+}
 .chart-rsi-line {
   fill: none;
   stroke: var(--accent);
