@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 from .db import connect, ensure_dividend_tables
 from .dividend_sources import (
     _cache_due,
@@ -15,6 +17,17 @@ from .dividend_sources import (
     _stockanalysis_attempt_due,
 )
 from .tickers import ticker_currency
+
+DIVIDEND_HISTORY_START = date(2010, 1, 1)
+
+
+def _in_retention_window(event: dict) -> bool:
+    schedule_text = event.get("pay_date") or event.get("ex_date")
+    try:
+        return date.fromisoformat(str(schedule_text)) >= DIVIDEND_HISTORY_START
+    except (TypeError, ValueError):
+        return False
+
 
 def refresh_dividend_events(tickers: list[str]) -> None:
     clean_tickers = sorted({ticker.strip().upper() for ticker in tickers if ticker and ticker.strip()})
@@ -73,7 +86,7 @@ def refresh_dividend_events(tickers: list[str]) -> None:
             if _seibro_candidate(ticker) and events:
                 conn.execute("DELETE FROM dividend_events WHERE ticker = ?", (ticker,))
             for event in events:
-                if not event.get("ex_date"):
+                if not event.get("ex_date") or not _in_retention_window(event):
                     continue
                 conn.execute(
                     """
@@ -113,4 +126,3 @@ def refresh_dividend_events(tickers: list[str]) -> None:
                 (ticker, now, status),
             )
         conn.commit()
-
