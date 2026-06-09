@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=compare-rsi">
+  <link rel="stylesheet" href="/static/styles.css?v=chart-display-controls">
 </head>
 <body>
   <header>
@@ -198,6 +198,10 @@
               <span id="chartLinks" class="chart-links"></span>
             </div>
             <div class="chart-head-right">
+              <div class="chart-display-controls hidden" id="chartDisplayControls" role="group" aria-label="차트 표시">
+                <button class="chart-head-toggle" id="chartSmoothToggle" type="button" aria-pressed="true">부드럽게</button>
+                <button class="chart-head-toggle" id="chartLogToggle" type="button" aria-pressed="false">로그</button>
+              </div>
               <div class="segmented chart-interval-control hidden" id="chartIntervalControl" role="group" aria-label="차트 단위">
                 <button class="seg-btn" type="button" data-chart-interval="day" aria-pressed="true">일</button>
                 <button class="seg-btn" type="button" data-chart-interval="week" aria-pressed="false">주</button>
@@ -404,19 +408,19 @@
       </div>
     </form>
   </dialog>
-  <script src="/static/state.js?v=chart-interval"></script>
+  <script src="/static/state.js?v=chart-display-controls"></script>
   <script src="/static/format.js?v=dividend-estimated-dates"></script>
   <script src="/static/api.js?v=dividend-estimated-dates"></script>
   <script src="/static/chart-utils.js?v=refactor-chart-utils"></script>
   <script src="/static/app-tabs.js?v=dividend-month-collapse"></script>
   <script src="/static/app-charts.js?v=chart-border-controls"></script>
-  <script src="/static/app-holdings.js?v=chart-interval"></script>
-  <script src="/static/app-chart-scale.js?v=compare-rsi"></script>
-  <script src="/static/app-line-chart.js?v=chart-interval"></script>
-  <script src="/static/app-chart-compare.js?v=compare-rsi"></script>
+  <script src="/static/app-holdings.js?v=chart-display-controls"></script>
+  <script src="/static/app-chart-scale.js?v=chart-display-controls"></script>
+  <script src="/static/app-line-chart.js?v=chart-display-controls"></script>
+  <script src="/static/app-chart-compare.js?v=chart-display-controls"></script>
   <script src="/static/app-transactions.js?v=portfolio-refactor"></script>
   <script src="/static/app-trade-controls.js?v=portfolio-refactor"></script>
   <script src="/static/app-watchlist.js?v=portfolio-refactor"></script>
-  <script src="/static/app.js?v=chart-interval"></script>
+  <script src="/static/app.js?v=chart-display-controls"></script>
 </body>
 </html>

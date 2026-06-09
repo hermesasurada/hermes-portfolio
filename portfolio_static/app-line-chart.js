@@ -22,7 +22,6 @@ function renderChartRangeButtons() {
           <button class="chart-range-btn marker-toggle sell ${chartShowSells ? "active" : ""}" type="button" data-marker-toggle="sell" aria-pressed="${chartShowSells}" ${chartInterval === "day" ? "" : `disabled title="일 단위에서만 표시"`}><i></i>매도</button>
         </span>
       ` : ""}
-      ${!performanceChartOpen ? `<button class="chart-range-btn chart-log-toggle ${chartLogScale ? "active" : ""}" type="button" data-chart-log aria-pressed="${chartLogScale}">로그</button>` : ""}
     </div>
   `;
 }
@@ -54,12 +53,38 @@ function initChartIntervalControl() {
   });
 }
 
-function syncChartLogToggle(visible) {
-  document.querySelectorAll("[data-chart-log]").forEach(btn => {
-    btn.classList.toggle("hidden", !visible);
-    btn.classList.toggle("active", chartLogScale);
-    btn.setAttribute("aria-pressed", String(chartLogScale));
+function syncChartDisplayControls(visible = Boolean(chartTicker) && !performanceChartOpen) {
+  const control = document.getElementById("chartDisplayControls");
+  if (!control) return;
+  control.classList.toggle("hidden", !visible);
+  const smoothToggle = document.getElementById("chartSmoothToggle");
+  const logToggle = document.getElementById("chartLogToggle");
+  smoothToggle?.classList.toggle("active", chartSmoothLines);
+  smoothToggle?.setAttribute("aria-pressed", String(chartSmoothLines));
+  logToggle?.classList.toggle("active", chartLogScale);
+  logToggle?.setAttribute("aria-pressed", String(chartLogScale));
+}
+
+function initChartDisplayControls() {
+  const smoothToggle = document.getElementById("chartSmoothToggle");
+  const logToggle = document.getElementById("chartLogToggle");
+  smoothToggle?.addEventListener("click", () => {
+    chartSmoothLines = !chartSmoothLines;
+    storageSet(detailStorage.chartSmoothLines, String(chartSmoothLines));
+    syncChartDisplayControls();
+    if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
   });
+  logToggle?.addEventListener("click", () => {
+    chartLogScale = !chartLogScale;
+    storageSet(detailStorage.chartLogScale, String(chartLogScale));
+    syncChartDisplayControls();
+    if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
+  });
+  syncChartDisplayControls();
+}
+
+function syncChartLogToggle(visible) {
+  syncChartDisplayControls(visible);
 }
 
 function chartPointDatesForModal() {
@@ -290,12 +315,6 @@ function ensureChartStats(ticker) {
 function bindLineChartControls(payload) {
   document.querySelectorAll(".chart-range-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      if (btn.dataset.chartLog != null) {
-        chartLogScale = !chartLogScale;
-        storageSet(detailStorage.chartLogScale, String(chartLogScale));
-        renderLineChart(payload);
-        return;
-      }
       if (btn.dataset.markerToggle != null) {
         if (btn.dataset.markerToggle === "buy") {
           chartShowBuys = !chartShowBuys;
@@ -366,7 +385,7 @@ function rsiThresholdAreaPaths(points, threshold, direction, xFor, yFor) {
   return runs
     .filter(items => items.length >= 2)
     .map(items => {
-      const curve = smoothLinePath(items);
+      const curve = chartLinePath(items);
       const first = items[0];
       const last = items[items.length - 1];
       return `${curve} L${last.x.toFixed(2)},${thresholdY.toFixed(2)} L${first.x.toFixed(2)},${thresholdY.toFixed(2)} Z`;
@@ -640,9 +659,9 @@ function renderLineChart(payload) {
     ? (value => pad.top + (logMax - Math.log10(value)) / logSpan * plotH)
     : (value => pad.top + (max - value) / range * plotH);
   const rsiYFor = value => rsiTop + (100 - Math.max(0, Math.min(100, value))) / 100 * rsiH;
-  const line = smoothLinePath(points.map((point, index) => ({ x: xFor(index), y: yFor(Number(point.close)) })));
+  const line = chartLinePath(points.map((point, index) => ({ x: xFor(index), y: yFor(Number(point.close)) })));
   const area = `${line} L${pad.left + plotW},${pad.top + plotH} L${pad.left},${pad.top + plotH} Z`;
-  const rsiLine = smoothLinePath(
+  const rsiLine = chartLinePath(
     points
       .map((point, index) => ({ x: xFor(index), y: rsiYFor(Number(point.rsi)), value: Number(point.rsi) }))
       .filter(point => Number.isFinite(point.value))

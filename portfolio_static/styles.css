@@ -1108,11 +1108,16 @@ tbody tr.index-row td:first-child::before {
   padding: 0 9px;
   font-size: 12px;
 }
-.chart-log-toggle {
+.chart-display-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.chart-head-toggle {
   height: 28px;
-  padding: 0 12px;
+  padding: 0 10px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 6px;
   background: var(--panel);
   color: var(--muted);
   font-size: 12px;
@@ -1121,12 +1126,12 @@ tbody tr.index-row td:first-child::before {
   flex: 0 0 auto;
   transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
-.chart-log-toggle:hover {
+.chart-head-toggle:hover {
   background: var(--brand-soft);
   border-color: var(--brand);
   color: var(--brand);
 }
-.chart-log-toggle.active {
+.chart-head-toggle.active {
   background: var(--brand);
   border-color: var(--brand);
   color: var(--on-accent);

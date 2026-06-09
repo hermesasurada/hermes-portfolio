@@ -12,6 +12,7 @@ const detailStorage = {
   positionFilter: "portfolio.detail.positionFilter",
   chartInterval: "portfolio.chart.interval",
   chartLogScale: "portfolio.chart.logScale",
+  chartSmoothLines: "portfolio.chart.smoothLines",
   chartShowBuys: "portfolio.chart.showBuys",
   chartShowSells: "portfolio.chart.showSells"
 };

@@ -28,6 +28,7 @@ let chartPayload = null;
 let chartRange = "6m";
 let chartInterval = "day";
 let chartLogScale = false;
+let chartSmoothLines = true;
 let chartShowBuys = true;
 let chartShowSells = true;
 let chartCustomRange = { start: "", end: "" };
@@ -330,6 +331,7 @@ const positionFilterStates = ["held", "unheld", "all"];
   });
 })();
 chartLogScale = storageGet(detailStorage.chartLogScale) === "true";
+chartSmoothLines = storageGet(detailStorage.chartSmoothLines) !== "false";
 chartInterval = ["day", "week", "month"].includes(storageGet(detailStorage.chartInterval))
   ? storageGet(detailStorage.chartInterval)
   : "day";
@@ -391,6 +393,7 @@ initThemeControl();
 initDataHelpModal();
 initWatchlistControls();
 initChartRangeModal();
+initChartDisplayControls();
 initChartIntervalControl();
 initTradeSideToggle();
 initTradeApplyToggle();

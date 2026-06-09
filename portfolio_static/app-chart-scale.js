@@ -186,6 +186,16 @@ function smoothLinePath(pts) {
   return d;
 }
 
+function straightLinePath(pts) {
+  return pts
+    .map((point, index) => `${index ? "L" : "M"}${point.x.toFixed(2)},${point.y.toFixed(2)}`)
+    .join(" ");
+}
+
+function chartLinePath(pts) {
+  return chartSmoothLines ? smoothLinePath(pts) : straightLinePath(pts);
+}
+
 function transactionsForChart(payload, points) {
   const start = points[0]?.date;
   const end = points[points.length - 1]?.date;

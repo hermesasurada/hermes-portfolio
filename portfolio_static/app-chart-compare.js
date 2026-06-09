@@ -279,8 +279,8 @@ function renderCompareLineChart(payload) {
     : pad.top + (max - pct) / range * plotH;
   const rsiYFor = value => rsiTop + (100 - Math.max(0, Math.min(100, value))) / 100 * rsiH;
   const clampY = value => Math.max(pad.top + 4, Math.min(pad.top + plotH - 2, value));
-  const pathFor = points => smoothLinePath(points.map(point => ({ x: xForTime(point.time), y: yFor(point.close) })));
-  const rsiPathFor = points => smoothLinePath(
+  const pathFor = points => chartLinePath(points.map(point => ({ x: xForTime(point.time), y: yFor(point.close) })));
+  const rsiPathFor = points => chartLinePath(
     points
       .filter(point => Number.isFinite(point.rsi))
       .map(point => ({ x: xForTime(point.time), y: rsiYFor(point.rsi) }))
