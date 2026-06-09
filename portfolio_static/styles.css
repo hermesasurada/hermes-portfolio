@@ -1315,6 +1315,17 @@ tbody tr.index-row td:first-child::before {
   stroke-linejoin: round;
 }
 .chart-y-label { text-anchor: end; }
+.chart-period-overlay {
+  fill: var(--chart-axis);
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--chart-bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
 .chart-extreme {
   pointer-events: none;
 }
@@ -1455,6 +1466,7 @@ tbody tr.index-row td:first-child::before {
   fill: transparent;
   cursor: ew-resize;
   pointer-events: all;
+  touch-action: pan-y;
 }
 /* the hover overlay (line/dots/tooltip) must never steal pointer events from
    the hover layer, or moving onto the tooltip fires pointerleave → flicker */

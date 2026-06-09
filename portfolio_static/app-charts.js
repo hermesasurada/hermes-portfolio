@@ -103,6 +103,7 @@ function bindPerformanceHover(series, geometry) {
   const hoverLine = document.getElementById("chartHoverLine");
   const tooltip = document.getElementById("compareTooltip");
   if (!svg || !canvas || !hoverLayer || !hoverGroup || !hoverLine || !tooltip) return;
+  let touchPinned = false;
 
   const nearest = (points, targetTime) => points.reduce((best, point) => {
     const distance = Math.abs(point.time - targetTime);
@@ -153,7 +154,13 @@ function bindPerformanceHover(series, geometry) {
 
   hoverLayer.addEventListener("pointermove", event => showPoint(event.clientX));
   hoverLayer.addEventListener("pointerenter", event => showPoint(event.clientX));
+  hoverLayer.addEventListener("pointerdown", event => {
+    if (event.pointerType !== "touch") return;
+    touchPinned = true;
+    showPoint(event.clientX);
+  });
   hoverLayer.addEventListener("pointerleave", () => {
+    if (touchPinned) return;
     hoverGroup.classList.add("hidden");
     tooltip.classList.add("hidden");
   });
@@ -199,7 +206,6 @@ function renderPerformanceChart(payload) {
   const lastPoint = portfolio.points[portfolio.points.length - 1];
   const cls = lastPoint.close > 0 ? "up" : lastPoint.close < 0 ? "down" : "flat";
   document.getElementById("chartMeta").innerHTML = `
-    <span>${chartDateLabel(portfolio.points[0].date)} - ${chartDateLabel(lastPoint.date)}</span>
     <span>${payload.holdings_count || 0}개 종목</span>
     <span class="${cls}">${pctChartLabel(lastPoint.close)}</span>
   `;
@@ -230,6 +236,7 @@ function renderPerformanceChart(payload) {
     </div>
     <svg class="line-chart perf-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="계좌 기간 성과 차트">
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
+      <text class="chart-period-overlay" x="${pad.left + 4}" y="18">${esc(chartDateLabel(portfolio.points[0].date))} - ${esc(chartDateLabel(lastPoint.date))}</text>
       ${yTicks.map(tick => `
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
         <text class="chart-y-label" x="${pad.left - 8}" y="${(tick.y + 4).toFixed(2)}">${esc(tickLabel(tick.value))}</text>

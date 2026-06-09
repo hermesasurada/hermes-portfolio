@@ -307,6 +307,7 @@ function bindChartInteractions(points, payload, geometry) {
   const selectionTooltipBox = document.getElementById("chartSelectionTooltipBox");
   let dragStartIndex = null;
   let isDragging = false;
+  let touchPinned = false;
   if (!svg || !hoverLayer || !hoverGroup || !hoverLine || !hoverDot || !tooltip) return;
 
   const updateTooltipBox = () => {
@@ -439,6 +440,11 @@ function bindChartInteractions(points, payload, geometry) {
   }
 
   hoverLayer.addEventListener("pointerdown", event => {
+    if (event.pointerType === "touch") {
+      touchPinned = true;
+      showPoint(event.clientX, event.clientY);
+      return;
+    }
     dragStartIndex = pointIndexFromClientX(event.clientX);
     isDragging = true;
     hoverGroup.classList.add("hidden");
@@ -446,6 +452,10 @@ function bindChartInteractions(points, payload, geometry) {
     event.preventDefault();
   });
   hoverLayer.addEventListener("pointermove", event => {
+    if (event.pointerType === "touch") {
+      if (event.buttons) showPoint(event.clientX, event.clientY);
+      return;
+    }
     if (isDragging && dragStartIndex != null) {
       updateSelection(dragStartIndex, pointIndexFromClientX(event.clientX));
       return;
@@ -453,6 +463,10 @@ function bindChartInteractions(points, payload, geometry) {
     showPoint(event.clientX, event.clientY);
   });
   hoverLayer.addEventListener("pointerup", event => {
+    if (event.pointerType === "touch") {
+      showPoint(event.clientX, event.clientY);
+      return;
+    }
     if (isDragging && dragStartIndex != null) {
       updateSelection(dragStartIndex, pointIndexFromClientX(event.clientX));
     }
@@ -465,7 +479,9 @@ function bindChartInteractions(points, payload, geometry) {
     dragStartIndex = null;
   });
   hoverLayer.addEventListener("pointerenter", event => showPoint(event.clientX, event.clientY));
-  hoverLayer.addEventListener("pointerleave", () => hoverGroup.classList.add("hidden"));
+  hoverLayer.addEventListener("pointerleave", () => {
+    if (!touchPinned) hoverGroup.classList.add("hidden");
+  });
 
   document.querySelectorAll(".trade-marker").forEach(marker => {
     ["pointerenter", "mouseenter", "mouseover", "focus", "click"].forEach(eventName => {
@@ -510,7 +526,6 @@ function renderLineChart(payload) {
   const cls = changePct > 0 ? "up" : changePct < 0 ? "down" : "flat";
   const arrow = changePct > 0 ? "▲" : changePct < 0 ? "▼" : "→";
   document.getElementById("chartMeta").innerHTML = `
-    <span>${chartDateLabel(points[0].date)} - ${chartDateLabel(points[points.length - 1].date)}</span>
     <span>${points.length}일</span>
     <span class="${cls}">${arrow}${fmt2.format(Math.abs(changePct || 0))}%</span>
     <span>${chartMoney(last, payload.currency)}</span>
@@ -578,6 +593,7 @@ function renderLineChart(payload) {
         </linearGradient>
       </defs>
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
+      <text class="chart-period-overlay" x="${pad.left + 4}" y="18">${esc(chartDateLabel(points[0].date))} - ${esc(chartDateLabel(points[points.length - 1].date))}</text>
       ${yTicks.map(tick => `
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
         <text class="chart-y-label" x="${width - 6}" y="${(tick.y + 4).toFixed(2)}">${esc(chartMoney(tick.value, payload.currency))}</text>

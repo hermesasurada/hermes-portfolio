@@ -151,6 +151,7 @@ function bindCompareHover(series, geometry) {
   const hoverLine = document.getElementById("chartHoverLine");
   const tooltip = document.getElementById("compareTooltip");
   if (!svg || !canvas || !hoverLayer || !hoverGroup || !hoverLine || !tooltip) return;
+  let touchPinned = false;
   const nearest = (points, targetTime) => points.reduce((best, point) => {
     const distance = Math.abs(point.time - targetTime);
     return !best || distance < best.distance ? { point, distance } : best;
@@ -205,7 +206,13 @@ function bindCompareHover(series, geometry) {
   };
   hoverLayer.addEventListener("pointermove", event => showPoint(event.clientX));
   hoverLayer.addEventListener("pointerenter", event => showPoint(event.clientX));
+  hoverLayer.addEventListener("pointerdown", event => {
+    if (event.pointerType !== "touch") return;
+    touchPinned = true;
+    showPoint(event.clientX);
+  });
   hoverLayer.addEventListener("pointerleave", () => {
+    if (touchPinned) return;
     hoverGroup.classList.add("hidden");
     tooltip.classList.add("hidden");
   });
@@ -256,7 +263,6 @@ function renderCompareLineChart(payload) {
   const last = main.points[main.points.length - 1];
   const cls = last.close > 0 ? "up" : last.close < 0 ? "down" : "flat";
   document.getElementById("chartMeta").innerHTML = `
-    <span>${chartDateLabel(first.date)} - ${chartDateLabel(last.date)}</span>
     <span>비교 ${chartComparePayloads.length}개</span>
     <span class="${cls}">${pctChartLabel(last.close)}</span>
   `;
@@ -283,6 +289,7 @@ function renderCompareLineChart(payload) {
     </div>
     <svg class="line-chart compare-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(payload.name)} 비교 차트">
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
+      <text class="chart-period-overlay" x="${pad.left + 4}" y="18">${esc(chartDateLabel(first.date))} - ${esc(chartDateLabel(last.date))}</text>
       ${yTicks.map(tick => `
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
         <text class="chart-y-label" x="${pad.left - 8}" y="${(tick.y + 4).toFixed(2)}">${esc(pctChartLabel(tick.value))}</text>
@@ -315,4 +322,3 @@ function renderCompareLineChart(payload) {
   bindChartCompareControls(payload);
   bindLineChartControls(payload);
 }
-
