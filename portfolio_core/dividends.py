@@ -75,31 +75,45 @@ def _history_date(value: str | None) -> date | None:
         return None
 
 
-def _dividend_attribution(event: Any, ticker: str) -> tuple[date | None, int | None, bool]:
-    entitlement_date = (
+def _entitlement_date(event: Any) -> date | None:
+    return (
         _history_date(event["record_date"])
         or _history_date(event["ex_date"])
         or _history_date(event["pay_date"])
     )
+
+
+def _dividend_attribution(
+    event: Any, ticker: str, anchor_month: int | None = None
+) -> tuple[date | None, int | None, bool]:
+    entitlement_date = _entitlement_date(event)
     if entitlement_date is None:
         return None, None, False
 
     declaration_date = _history_date(event["declaration_date"])
     is_korean = ticker.upper().endswith(KOREAN_SUFFIXES)
-    is_final = is_korean and entitlement_date.month == 12
+    if is_korean:
+        is_final = entitlement_date.month == 12
+        attributed_year = entitlement_date.year
+        # 결산배당 기준일을 다음 해로 옮긴 한국 기업: 연초 이사회 결의 + 1~3월
+        # 기준일이면 직전 사업연도 결산배당으로 귀속한다.
+        if (
+            entitlement_date.month <= 3
+            and declaration_date is not None
+            and declaration_date.year == entitlement_date.year
+            and declaration_date.month <= 2
+        ):
+            attributed_year -= 1
+            is_final = True
+        return entitlement_date, attributed_year, is_final
+
+    # 해외주식: 배당 결산년도는 '최초 배당월(anchor)' 기준 1년 주기로 귀속한다.
+    # 예) 구글은 6월 시작 → 6/9/12월 + 익년 3월이 같은 결산년도.
+    # anchor_month가 1월이거나 분기월이 anchor 이후만 있으면 기존 역년 귀속과 동일.
     attributed_year = entitlement_date.year
-    # 결산배당 기준일을 다음 해로 옮긴 한국 기업: 연초 이사회 결의 + 1~3월
-    # 기준일이면 직전 사업연도 결산배당으로 귀속한다.
-    if (
-        is_korean
-        and entitlement_date.month <= 3
-        and declaration_date is not None
-        and declaration_date.year == entitlement_date.year
-        and declaration_date.month <= 2
-    ):
+    if anchor_month and entitlement_date.month < anchor_month:
         attributed_year -= 1
-        is_final = True
-    return entitlement_date, attributed_year, is_final
+    return entitlement_date, attributed_year, False
 
 
 def _dividend_frequency(events: list[dict], completed_counts: dict[int, int], current_year: int) -> int:
@@ -188,10 +202,21 @@ def load_dividend_history(ticker: str) -> dict:
             (ticker_row["ticker"], f"{DIVIDEND_HISTORY_START_YEAR}-01-01", today.isoformat()),
         ).fetchall()
 
+    # 해외주식 결산년도 귀속 기준이 되는 최초 배당월(anchor) — 가장 이른 배당 회차의 월
+    anchor_month = None
+    if not ticker_row["ticker"].upper().endswith(KOREAN_SUFFIXES):
+        for event in event_rows:
+            first_date = _entitlement_date(event)
+            if first_date is not None:
+                anchor_month = first_date.month
+                break
+
     events = []
     final_dividend_count = 0
     for event in event_rows:
-        entitlement_date, attributed_year, is_final = _dividend_attribution(event, ticker_row["ticker"])
+        entitlement_date, attributed_year, is_final = _dividend_attribution(
+            event, ticker_row["ticker"], anchor_month
+        )
         if entitlement_date is None or attributed_year is None:
             continue
         final_dividend_count += int(is_final)
