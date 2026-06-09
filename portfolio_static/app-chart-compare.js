@@ -22,7 +22,12 @@ function chartCompareSeries(payload) {
   const raw = [payload, ...chartComparePayloads].map((item, index) => {
     const pts = aggregateChartPoints(item.points || [])
       .filter(point => point.date && Number.isFinite(Number(point.close)) && Number(point.close) > 0)
-      .map(point => ({ date: point.date, value: Number(point.close), time: new Date(`${point.date}T00:00:00`).getTime() }));
+      .map(point => ({
+        date: point.date,
+        value: Number(point.close),
+        rsi: point.rsi != null && Number.isFinite(Number(point.rsi)) ? Number(point.rsi) : null,
+        time: new Date(`${point.date}T00:00:00`).getTime(),
+      }));
     return { item, index, pts };
   }).filter(entry => entry.pts.length >= 2);
   if (!raw.length) return [];
@@ -60,6 +65,7 @@ function chartCompareSeries(payload) {
         time: point.time,
         value: point.value,                          // 원주가
         close: (point.value / base - 1) * 100,       // 공통 기준일 대비 %
+        rsi: point.rsi,
       })),
     };
   }).filter(Boolean);
@@ -170,11 +176,19 @@ function bindCompareHover(series, geometry) {
     hoverLine.setAttribute("x2", x.toFixed(2));
     series.forEach(item => {
       const dot = document.getElementById(`compareDot-${item.key}`);
+      const rsiDot = document.getElementById(`compareRsiDot-${item.key}`);
       const point = nearest(item.points, targetTime);
       if (!dot || !point) return;
       dot.setAttribute("cx", x.toFixed(2));
       dot.setAttribute("cy", geometry.yFor(point.close).toFixed(2));
       dot.style.display = "";
+      if (rsiDot && Number.isFinite(point.rsi)) {
+        rsiDot.setAttribute("cx", x.toFixed(2));
+        rsiDot.setAttribute("cy", geometry.rsiYFor(point.rsi).toFixed(2));
+        rsiDot.style.display = "";
+      } else if (rsiDot) {
+        rsiDot.style.display = "none";
+      }
     });
     // HTML 툴팁: 로고 + 기업명(선 색) + 등락% + 주가
     const rows = series.map(item => {
@@ -190,6 +204,7 @@ function bindCompareHover(series, geometry) {
         <span class="ct-name" style="color:${item.color}">${esc(item.ticker || item.name)}</span>
         <span class="ct-pct ${pctCls}">${esc(pctChartLabel(point.close))}</span>
         <span class="ct-price">${chartMoney(point.value, item.currency)}</span>
+        <span class="ct-rsi">${Number.isFinite(point.rsi) ? `RSI ${point.rsi.toFixed(1)}` : "RSI -"}</span>
       </div>`;
     }).join("");
     tooltip.innerHTML = `<div class="ct-date">${esc(chartFullDateLabel(dateText))}</div>${rows}`;
@@ -243,10 +258,15 @@ function renderCompareLineChart(payload) {
   const ratioOf = pct => 1 + pct / 100;
   const scale = useLog ? compareLogScale(values.map(ratioOf)) : niceChartScale([...values, 0]);
   const width = 980;
-  const height = 420;
+  const compactChart = window.matchMedia?.("(max-width: 980px)")?.matches;
+  const height = compactChart ? 900 : 560;
   const pad = { top: 28, right: 108, bottom: 34, left: 52 };
   const plotW = width - pad.left - pad.right;
-  const plotH = height - pad.top - pad.bottom;
+  const rsiGap = compactChart ? 24 : 18;
+  const rsiH = compactChart ? 180 : 100;
+  const plotH = height - pad.top - pad.bottom - rsiGap - rsiH;
+  const rsiTop = pad.top + plotH + rsiGap;
+  const rsiBottom = rsiTop + rsiH;
   const min = scale.min;
   const max = scale.max;
   const range = max - min || 1;
@@ -257,8 +277,14 @@ function renderCompareLineChart(payload) {
   const yFor = pct => useLog
     ? pad.top + (Math.log10(max) - Math.log10(ratioOf(pct))) / logSpan * plotH
     : pad.top + (max - pct) / range * plotH;
+  const rsiYFor = value => rsiTop + (100 - Math.max(0, Math.min(100, value))) / 100 * rsiH;
   const clampY = value => Math.max(pad.top + 4, Math.min(pad.top + plotH - 2, value));
   const pathFor = points => smoothLinePath(points.map(point => ({ x: xForTime(point.time), y: yFor(point.close) })));
+  const rsiPathFor = points => smoothLinePath(
+    points
+      .filter(point => Number.isFinite(point.rsi))
+      .map(point => ({ x: xForTime(point.time), y: rsiYFor(point.rsi) }))
+  );
   const main = series[0];
   const first = main.points[0];
   const last = main.points[main.points.length - 1];
@@ -279,6 +305,19 @@ function renderCompareLineChart(payload) {
   for (let i = 1; i < endLabels.length; i++) {
     if (endLabels[i].y - endLabels[i - 1].y < minGap) endLabels[i].y = endLabels[i - 1].y + minGap;
   }
+  const rsiEndLabels = series
+    .map(item => {
+      const lastPoint = [...item.points].reverse().find(point => Number.isFinite(point.rsi));
+      return lastPoint ? { color: item.color, value: lastPoint.rsi, y: rsiYFor(lastPoint.rsi) } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.y - b.y);
+  const rsiMinGap = compactChart ? 12 : 9;
+  for (let i = 1; i < rsiEndLabels.length; i++) {
+    if (rsiEndLabels[i].y - rsiEndLabels[i - 1].y < rsiMinGap) rsiEndLabels[i].y = rsiEndLabels[i - 1].y + rsiMinGap;
+  }
+  const clampRsiY = value => Math.max(rsiTop + 7, Math.min(rsiBottom - 4, value));
+  const rsiGuides = [30, 50, 70].map(value => ({ value, y: rsiYFor(value) }));
   const legend = series.map(item => `<span class="perf-legend-item ${item.primary ? "" : "removable"}" style="color:${item.color}"><i style="background:${item.color}"></i><span class="pl-name">${esc(item.ticker || item.name)}</span>${item.primary ? "" : `<button class="legend-remove" type="button" data-compare-remove="${esc(item.ticker)}" aria-label="${esc(item.ticker)} 비교 삭제" title="비교 삭제">&times;</button>`}</span>`).join("");
   document.getElementById("chartCanvas").innerHTML = `
     <div class="perf-chart-top">
@@ -287,12 +326,14 @@ function renderCompareLineChart(payload) {
     <svg class="line-chart compare-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(payload.name)} 비교 차트">
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
       <rect class="chart-plot-border" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
+      <rect class="chart-rsi-border" x="${pad.left}" y="${rsiTop}" width="${plotW}" height="${rsiH}"></rect>
       ${yTicks.map(tick => `
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
         <text class="chart-y-label" x="${pad.left - 8}" y="${(tick.y + 4).toFixed(2)}">${esc(pctChartLabel(tick.value))}</text>
       `).join("")}
       ${vGrid.lines.map(time => `
         <line class="chart-grid perf-vgrid" x1="${xForTime(time).toFixed(2)}" x2="${xForTime(time).toFixed(2)}" y1="${pad.top}" y2="${(pad.top + plotH).toFixed(2)}"></line>
+        <line class="chart-grid perf-vgrid" x1="${xForTime(time).toFixed(2)}" x2="${xForTime(time).toFixed(2)}" y1="${rsiTop}" y2="${rsiBottom}"></line>
       `).join("")}
       <line class="perf-zero-line" x1="${pad.left}" x2="${pad.left + plotW}" y1="${yFor(0).toFixed(2)}" y2="${yFor(0).toFixed(2)}"></line>
       ${vGrid.lines.map((time, index) => {
@@ -302,20 +343,33 @@ function renderCompareLineChart(payload) {
         return `<text class="chart-x-label" x="${x.toFixed(2)}" y="${height - 12}" text-anchor="${anchor}">${esc(perfGridLabel(time, vGrid.unit))}</text>`;
       }).join("")}
       ${series.map(item => `<path class="perf-line ${item.primary ? "primary" : "index"}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>`).join("")}
+      ${rsiGuides.map(guide => `
+        <line class="chart-rsi-guide level-${guide.value}" x1="${pad.left}" x2="${pad.left + plotW}" y1="${guide.y.toFixed(2)}" y2="${guide.y.toFixed(2)}"></line>
+        <text class="chart-rsi-axis" x="${pad.left - 8}" y="${(guide.y + 4).toFixed(2)}">${guide.value}</text>
+      `).join("")}
+      <text class="chart-rsi-title" x="${pad.left + 7}" y="${rsiTop + 14}">RSI (14)</text>
+      ${series.map(item => {
+        const path = rsiPathFor(item.points);
+        return path ? `<path class="compare-rsi-line ${item.primary ? "primary" : ""}" d="${path}" style="stroke:${item.color}"></path>` : "";
+      }).join("")}
       ${endLabels.map(label => `
         <text class="perf-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(pctChartLabel(label.close))}</text>
       `).join("")}
-      <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
+      ${rsiEndLabels.map(label => `
+        <text class="compare-rsi-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampRsiY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${Math.round(label.value)}</text>
+      `).join("")}
+      <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${rsiBottom - pad.top}"></rect>
       <g id="chartHoverGroup" class="chart-hover hidden">
-        <line id="chartHoverLine" class="chart-hover-line" x1="0" x2="0" y1="${pad.top}" y2="${pad.top + plotH}"></line>
+        <line id="chartHoverLine" class="chart-hover-line" x1="0" x2="0" y1="${pad.top}" y2="${rsiBottom}"></line>
         ${series.map(item => `<circle id="compareDot-${item.key}" class="perf-hover-dot" r="3.6" cx="0" cy="0" style="stroke:${item.color}"></circle>`).join("")}
+        ${series.map(item => `<circle id="compareRsiDot-${item.key}" class="perf-hover-dot compare-rsi-dot" r="3.2" cx="0" cy="0" style="stroke:${item.color}"></circle>`).join("")}
       </g>
     </svg>
     <div id="compareTooltip" class="compare-tooltip hidden" aria-hidden="true"></div>
     ${renderChartCompareControls()}
     ${renderChartRangeButtons()}
   `;
-  bindCompareHover(series, { width, height, pad, plotW, plotH, minTime, maxTime, xForTime, yFor });
+  bindCompareHover(series, { width, height, pad, plotW, plotH, minTime, maxTime, xForTime, yFor, rsiYFor });
   bindChartCompareControls(payload);
   bindLineChartControls(payload);
 }

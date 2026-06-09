@@ -83,7 +83,12 @@ function aggregateChartPoints(points, interval = chartInterval) {
   if (interval === "day") return clean;
   const grouped = new Map();
   clean.forEach(point => {
-    grouped.set(chartIntervalKey(point.date, interval), point);
+    const key = chartIntervalKey(point.date, interval);
+    const previous = grouped.get(key);
+    const rsi = point.rsi != null && Number.isFinite(Number(point.rsi))
+      ? Number(point.rsi)
+      : previous?.rsi;
+    grouped.set(key, { ...point, ...(Number.isFinite(rsi) ? { rsi } : {}) });
   });
   return Array.from(grouped.values());
 }

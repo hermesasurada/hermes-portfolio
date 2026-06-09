@@ -1655,6 +1655,30 @@ tbody tr.index-row td:first-child::before {
   stroke-width: 2;
   pointer-events: none;
 }
+.compare-rsi-line {
+  fill: none;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .88;
+  pointer-events: none;
+}
+.compare-rsi-line.primary {
+  stroke-width: 2;
+  opacity: 1;
+}
+.compare-rsi-end-label {
+  font-size: 10px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--chart-bg);
+  stroke-width: 3px;
+  pointer-events: none;
+}
+.compare-rsi-dot {
+  fill: var(--chart-dot-fill);
+}
 .perf-tooltip tspan:first-child {
   font-weight: 900;
 }
@@ -1681,7 +1705,7 @@ tbody tr.index-row td:first-child::before {
 }
 .compare-tooltip .ct-row {
   display: grid;
-  grid-template-columns: 18px auto 1fr auto;
+  grid-template-columns: 18px auto 1fr auto auto;
   align-items: center;
   column-gap: 8px;
   line-height: 1.75;
@@ -1716,6 +1740,12 @@ tbody tr.index-row td:first-child::before {
   color: var(--ink);
   font-weight: 700;
   padding-left: 4px;
+}
+.compare-tooltip .ct-rsi {
+  min-width: 52px;
+  text-align: right;
+  color: var(--muted);
+  font-weight: 700;
 }
 .chart-compare-panel {
   display: grid;
