@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+import json
+from datetime import date, datetime, timedelta, timezone
 from statistics import median
 from typing import Any
 
@@ -83,8 +84,33 @@ def _entitlement_date(event: Any) -> date | None:
     )
 
 
+def _fiscal_year_end_month(conn, ticker: str) -> int | None:
+    """캐시된 yfinance info의 lastFiscalYearEnd에서 회계연도 종료 '월'을 읽는다.
+    12월(역년) 결산이면 None을 돌려 일반 anchor 방식으로 처리하게 한다."""
+    try:
+        row = conn.execute(
+            "SELECT raw_json FROM ticker_stats_cache WHERE ticker = ?", (ticker,)
+        ).fetchone()
+    except Exception:
+        return None
+    if not row or not row["raw_json"]:
+        return None
+    try:
+        info = json.loads(row["raw_json"]).get("info", {}) or {}
+        ts = info.get("lastFiscalYearEnd") or info.get("nextFiscalYearEnd")
+        if not ts:
+            return None
+        month = datetime.fromtimestamp(int(ts), tz=timezone.utc).month
+    except (TypeError, ValueError, OSError):
+        return None
+    return None if month == 12 else month
+
+
 def _dividend_attribution(
-    event: Any, ticker: str, anchor_month: int | None = None
+    event: Any,
+    ticker: str,
+    anchor_month: int | None = None,
+    fiscal_end_month: int | None = None,
 ) -> tuple[date | None, int | None, bool]:
     entitlement_date = _entitlement_date(event)
     if entitlement_date is None:
@@ -107,7 +133,18 @@ def _dividend_attribution(
             is_final = True
         return entitlement_date, attributed_year, is_final
 
-    # 해외주식: 배당 결산년도는 '최초 배당월(anchor)' 기준 1년 주기로 귀속한다.
+    # 비역년 회계연도(예: 디어·브로드컴 11월 결산) → 회계연도 기준 귀속.
+    # 기준일 월이 결산월 이하면 그 해 회계연도, 초과하면 다음 회계연도.
+    # 결산배당(연중 마지막 회차) 표식은 그룹 확정 후 별도로 단다.
+    if fiscal_end_month:
+        attributed_year = (
+            entitlement_date.year
+            if entitlement_date.month <= fiscal_end_month
+            else entitlement_date.year + 1
+        )
+        return entitlement_date, attributed_year, False
+
+    # 그 외 해외주식: '최초 배당월(anchor)' 기준 1년 주기로 귀속한다.
     # 예) 구글은 6월 시작 → 6/9/12월 + 익년 3월이 같은 결산년도.
     # anchor_month가 1월이거나 분기월이 anchor 이후만 있으면 기존 역년 귀속과 동일.
     attributed_year = entitlement_date.year
@@ -201,10 +238,13 @@ def load_dividend_history(ticker: str) -> dict:
             """,
             (ticker_row["ticker"], f"{DIVIDEND_HISTORY_START_YEAR}-01-01", today.isoformat()),
         ).fetchall()
+        is_korean = ticker_row["ticker"].upper().endswith(KOREAN_SUFFIXES)
+        # 비역년 회계연도면 회계연도 기준 귀속(디어 11월 등), 아니면 최초 배당월 anchor.
+        fiscal_end_month = None if is_korean else _fiscal_year_end_month(conn, ticker_row["ticker"])
 
-    # 해외주식 결산년도 귀속 기준이 되는 최초 배당월(anchor) — 가장 이른 배당 회차의 월
+    # 해외 역년결산/신규배당 종목의 anchor — 가장 이른 배당 회차의 월
     anchor_month = None
-    if not ticker_row["ticker"].upper().endswith(KOREAN_SUFFIXES):
+    if not is_korean and not fiscal_end_month:
         for event in event_rows:
             first_date = _entitlement_date(event)
             if first_date is not None:
@@ -215,7 +255,7 @@ def load_dividend_history(ticker: str) -> dict:
     final_dividend_count = 0
     for event in event_rows:
         entitlement_date, attributed_year, is_final = _dividend_attribution(
-            event, ticker_row["ticker"], anchor_month
+            event, ticker_row["ticker"], anchor_month, fiscal_end_month
         )
         if entitlement_date is None or attributed_year is None:
             continue
@@ -254,8 +294,18 @@ def load_dividend_history(ticker: str) -> dict:
         year for year, count in payment_counts.items()
         if year < today.year and count >= frequency
     }
+    # 비역년 회계연도 종목: 완결된 회계연도의 마지막 회차를 '결산배당'으로 표시
+    if fiscal_end_month:
+        for year in complete_years:
+            group = annual.get(year)
+            if not group or not group["events"]:
+                continue
+            final_event = max(group["events"], key=lambda item: item["date"])
+            if not final_event["is_final"]:
+                final_event["is_final"] = True
+                final_dividend_count += 1
+                group["final"] = True
     current_estimate = _current_year_estimate(events, frequency, today.year)
-    is_korean = ticker_row["ticker"].upper().endswith(KOREAN_SUFFIXES)
     rows = []
     for year in sorted(annual, reverse=True):
         row = annual[year]
