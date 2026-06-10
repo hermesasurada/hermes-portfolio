@@ -1,6 +1,7 @@
 let data = null;
 let selectedAccounts = new Set();
 let selectionMode = "all";
+let defaultAccountSelectionApplied = false;
 let sortState = {
   detail: { key: "value_krw", dir: -1 },
   stats: { key: "market_cap_usd", dir: -1 },
@@ -59,7 +60,7 @@ const chartCompareLimit = 10;
 const chartCompareColors = ["var(--brand)", "#ea4335", "#34a853", "#fbbc04", "#9333ea", "#06b6d4", "#f97316", "#64748b", "#be123c", "#16a34a", "#7c3aed"];
 const detailSortKeys = new Set(["ticker", "name", "display_change_pct", "extended_change_pct", "change_krw", "qty", "current_price", "current_price_krw", "value", "value_krw", "weight_pct", "next_earnings_date"]);
 const statsSortKeys = new Set(["ticker", "name", "market_cap_usd", "dividend_yield", "drawdown_52w", "beta", "beta_adj", "rsi_day", "rsi_week", "rsi_month", "bb_day", "bb_week", "bb_month", "trailing_pe", "forward_pe", "price_to_book", "perf_1m", "perf_3m", "perf_6m", "perf_ytd", "perf_1y", "perf_3y", "perf_5y"]);
-const dividendSortKeys = new Set(["pay_date", "target", "ticker", "name", "amount", "qty", "gross", "tax_rate", "net", "fx_rate", "net_krw"]);
+const dividendSortKeys = new Set(["pay_date", "target", "ticker", "name", "amount", "qty", "gross", "tax", "tax_rate", "net", "fx_rate", "net_krw"]);
 
 // app-holdings.js loaded separately.
 // app-line-chart.js loaded separately.
@@ -158,6 +159,7 @@ async function load() {
   if (loadInFlight) return loadInFlight;
   loadInFlight = (async () => {
     data = await apiFetchPortfolio(usExtendedEnabled());
+    applyTimeBasedDefaultAccountSelection();
     if (!document.getElementById("tradeDate").value) document.getElementById("tradeDate").value = todayLocal();
     renderCurrencyFilter();
     render();

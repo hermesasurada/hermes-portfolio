@@ -33,6 +33,37 @@ function accountGroupKey(account) {
   if (type === "pension_kr" || type === "retirement_kr") return "pension";
   return type;
 }
+function portfolioKstHour() {
+  const asOfMatch = String(data?.as_of || "").match(/T(\d{2}):/);
+  if (asOfMatch) return Number(asOfMatch[1]);
+  const hourPart = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date()).find(part => part.type === "hour");
+  return Number(hourPart?.value || 0);
+}
+function defaultAccountTypesForHour(hour) {
+  const types = new Set(["bitcoin"]);
+  if (hour >= 17 || hour < 8) types.add("overseas");
+  if (hour >= 8 && hour < 18) {
+    types.add("kr_individual");
+    types.add("pension_kr");
+    types.add("retirement_kr");
+  }
+  return types;
+}
+function applyTimeBasedDefaultAccountSelection() {
+  if (defaultAccountSelectionApplied || !data) return;
+  const accountTypes = defaultAccountTypesForHour(portfolioKstHour());
+  selectedAccounts = new Set(
+    flattenAccounts()
+      .filter(account => accountTypes.has(account.type))
+      .map(account => account.id)
+  );
+  selectionMode = "custom";
+  defaultAccountSelectionApplied = true;
+}
 function isAccountSelected(id) {
   return selectionMode === "all" || selectedAccounts.has(id);
 }
