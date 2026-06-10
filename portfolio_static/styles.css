@@ -1469,6 +1469,18 @@ tbody tr.index-row td:first-child::before {
   fill: var(--down);
   stroke: var(--chart-label-halo);
 }
+.chart-change-overlay {
+  fill: var(--chart-ink);
+  font-size: 14px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: var(--chart-label-halo);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.chart-change-overlay.up { fill: var(--up); }
+.chart-change-overlay.down { fill: var(--down); }
 .chart-ranges {
   display: flex;
   align-items: center;
@@ -1876,6 +1888,15 @@ tbody tr.index-row td:first-child::before {
   stroke: var(--chart-label-halo);
   stroke-width: 2;
   filter: var(--chart-shadow);
+  pointer-events: none;
+}
+.trade-marker text {
+  fill: #fff;
+  font-size: 8px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, .18);
+  stroke-width: 1px;
   pointer-events: none;
 }
 .trade-marker.buy circle { fill: var(--up); }    /* 매수 = 빨강 */
@@ -2720,6 +2741,17 @@ tbody tr.index-row td:first-child::before {
   .chart-extreme text {
     font-size: 15px;
     stroke-width: 5px;
+  }
+  .chart-change-overlay {
+    font-size: 20px;
+    stroke-width: 5px;
+  }
+  .trade-marker circle {
+    stroke-width: 3px;
+  }
+  .trade-marker text {
+    font-size: 13px;
+    stroke-width: 1.5px;
   }
   .chart-rsi-title,
   .chart-rsi-axis {

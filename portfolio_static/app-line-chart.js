@@ -636,14 +636,21 @@ function renderLineChart(payload) {
   const scale = useLog ? logChartScale([...values, ...markerValues]) : niceChartScale([...values, ...markerValues]);
   const min = scale.min;
   const max = scale.max;
-  const first = values[0];
-  const last = values[values.length - 1];
-  const changePct = first ? (last - first) / first * 100 : null;
-  document.getElementById("chartMeta").textContent = "";
-
   const width = 980;
   const compactChart = window.matchMedia?.("(max-width: 980px)")?.matches;
   const height = compactChart ? 900 : 530;
+  const first = values[0];
+  const last = values[values.length - 1];
+  const changePct = first ? (last - first) / first * 100 : null;
+  const changeDirection = changePct > 0 ? "up" : changePct < 0 ? "down" : "flat";
+  const changeArrow = changePct > 0 ? "▲" : changePct < 0 ? "▼" : "";
+  const changeLabel = Number.isFinite(changePct)
+    ? `${changeArrow}${changeArrow ? " " : ""}${fmt2.format(Math.abs(changePct))}%`
+    : "-";
+  const extremeRadius = compactChart ? 7 : 4;
+  const tradeMarkerRadius = compactChart ? 10 : 5;
+  document.getElementById("chartMeta").textContent = "";
+
   const pad = { top: 28, right: 58, bottom: 32, left: 14 };
   const plotW = width - pad.left - pad.right;
   const rsiGap = compactChart ? 24 : 18;
@@ -744,10 +751,11 @@ function renderLineChart(payload) {
       ${rsiLine ? `<path class="chart-rsi-line" d="${rsiLine}"></path>` : ""}
       ${extremes.map(item => `
         <g class="chart-extreme ${item.kind}">
-          <circle cx="${item.x.toFixed(2)}" cy="${item.y.toFixed(2)}" r="4"></circle>
+          <circle cx="${item.x.toFixed(2)}" cy="${item.y.toFixed(2)}" r="${extremeRadius}"></circle>
           <text x="${item.labelX.toFixed(2)}" y="${item.labelY.toFixed(2)}" text-anchor="${item.anchor}">${esc(item.text)}</text>
         </g>
       `).join("")}
+      <text class="chart-change-overlay ${changeDirection}" x="${pad.left + 10}" y="${pad.top + 24}">${esc(changeLabel)}</text>
       <g id="chartSelectionGroup" class="chart-selection hidden">
         <rect id="chartSelectionRect" class="chart-selection-range" x="0" y="${pad.top}" width="0" height="${plotH}"></rect>
         <line id="chartSelectionStartLine" class="chart-selection-line" x1="0" x2="0" y1="${pad.top}" y2="${rsiBottom}"></line>
@@ -758,7 +766,8 @@ function renderLineChart(payload) {
       <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${rsiBottom - pad.top}"></rect>
       ${markers.map(marker => `
         <g class="trade-marker ${marker.cls}" data-x="${marker.x.toFixed(2)}" data-y="${marker.y.toFixed(2)}" data-tooltip="${esc(marker.tooltip)}" tabindex="0" role="img" aria-label="${esc(marker.tooltip)}">
-          <circle cx="${marker.x.toFixed(2)}" cy="${marker.y.toFixed(2)}" r="5"></circle>
+          <circle cx="${marker.x.toFixed(2)}" cy="${marker.y.toFixed(2)}" r="${tradeMarkerRadius}"></circle>
+          <text x="${marker.x.toFixed(2)}" y="${(marker.y + (compactChart ? 4.5 : 3)).toFixed(2)}" text-anchor="middle">${marker.label}</text>
         </g>
       `).join("")}
       <circle class="chart-last-dot" cx="${xFor(points.length - 1).toFixed(2)}" cy="${yFor(last).toFixed(2)}" r="4"></circle>
