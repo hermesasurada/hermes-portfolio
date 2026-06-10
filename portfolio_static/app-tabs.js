@@ -146,6 +146,10 @@ function renderDividendTable() {
     const rate = Number(value);
     return Number.isFinite(rate) && rate !== 0 ? numberText(rate, 2) : "-";
   };
+  const taxMoneyText = (value, currency) => {
+    const tax = Number(value);
+    return Number.isFinite(tax) && tax !== 0 ? dividendMoneyText(tax, currency) : "-";
+  };
   document.getElementById("dividendRows").innerHTML = rows.length ? groupedDividendRows(rows).map(item => {
     const collapsed = item.kind === "month" && collapsedDividendMonths.has(item.key);
     if (item.kind === "month") return `
@@ -163,13 +167,13 @@ function renderDividendTable() {
     return `
     <tr>
       <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
-      <td class="dividend-target">${esc(item.row.target || item.row.member || "-")}</td>
+      <td class="dividend-target" title="${esc(item.row.target || item.row.member || "-")}">${esc(item.row.target || item.row.member || "-")}</td>
       <td class="dividend-ticker"><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(displayTicker(item.row.ticker))}</a></td>
-      <td><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(item.row.name || item.row.ticker || "-")}</a></td>
+      <td class="dividend-name" title="${esc(item.row.name || item.row.ticker || "-")}"><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(item.row.name || item.row.ticker || "-")}</a></td>
       <td>${dividendAmountText(item.row.amount, item.row.currency)}</td>
       <td>${fmt2.format(Number(item.row.qty) || 0)}</td>
       <td>${dividendMoneyText(item.row.gross, item.row.currency)}</td>
-      <td class="tax-dividend">${dividendMoneyText(item.row.tax, item.row.currency)}</td>
+      <td class="tax-dividend">${taxMoneyText(item.row.tax, item.row.currency)}</td>
       <td class="tax-rate">${taxRateText(item.row.tax_rate)}</td>
       <td class="net-dividend">${dividendMoneyText(item.row.net, item.row.currency)}</td>
       <td class="fx-rate">${dividendFxText(item.row.fx_rate)}</td>
