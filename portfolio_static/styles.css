@@ -2711,6 +2711,29 @@ tbody tr.index-row td:first-child::before {
   .line-chart {
     min-height: 0;
   }
+  .chart-y-label,
+  .chart-x-label {
+    font-size: 14px;
+    font-weight: 700;
+    stroke-width: 3.5px;
+  }
+  .chart-extreme text {
+    font-size: 15px;
+    stroke-width: 5px;
+  }
+  .chart-rsi-title,
+  .chart-rsi-axis {
+    font-size: 13px;
+    stroke-width: 3.5px;
+  }
+  .perf-end-label {
+    font-size: 14px;
+    stroke-width: 4px;
+  }
+  .compare-rsi-end-label {
+    font-size: 13px;
+    stroke-width: 4px;
+  }
   .mobile-collapse-toggle {
     display: inline-flex;
     align-items: center;
