@@ -34,6 +34,7 @@ const defaultSortDir = {
   ticker: 1,
   amount: -1,
   gross: -1,
+  tax: -1,
   tax_rate: -1,
   net: -1,
   fx_rate: -1,

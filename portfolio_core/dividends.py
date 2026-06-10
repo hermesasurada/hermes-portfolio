@@ -504,6 +504,7 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
                     "amount": amount,
                     "qty": qty,
                     "gross": gross,
+                    "tax": tax,
                     "tax_rate": tax_rate,
                     "net": net,
                     "fx_rate": rate if currency != "KRW" else None,

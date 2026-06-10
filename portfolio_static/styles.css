@@ -769,7 +769,7 @@ th:first-child, td:first-child { text-align: left; }
   padding: 0;
 }
 .dividend-list {
-  min-width: 1040px;
+  min-width: 1120px;
   width: 100%;
   table-layout: fixed;
   margin: 0;
@@ -804,12 +804,12 @@ th:first-child, td:first-child { text-align: left; }
   width: 17.6%;
   text-align: left;
 }
-.dividend-list th:nth-child(9),
-.dividend-list td:nth-child(9) {
+.dividend-list th:nth-child(10),
+.dividend-list td:nth-child(10) {
   width: 8%;
 }
-.dividend-list th:nth-child(11),
-.dividend-list td:nth-child(11) {
+.dividend-list th:nth-child(12),
+.dividend-list td:nth-child(12) {
   width: 9.8%;
 }
 .dividend-target {
@@ -916,6 +916,7 @@ tr.dividend-month-row:hover td {
   color: var(--ink);
   font-weight: 800;
 }
+.tax-dividend,
 .net-dividend,
 .net-krw {
   font-weight: 800;
@@ -923,10 +924,12 @@ tr.dividend-month-row:hover td {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
-.dividend-list th:nth-child(9),
-.dividend-list th:nth-child(11),
-.dividend-list td:nth-child(9),
-.dividend-list td:nth-child(11) {
+.dividend-list th:nth-child(8),
+.dividend-list th:nth-child(10),
+.dividend-list th:nth-child(12),
+.dividend-list td:nth-child(8),
+.dividend-list td:nth-child(10),
+.dividend-list td:nth-child(12) {
   text-align: right;
 }
 #detailTableWrap th:first-child,

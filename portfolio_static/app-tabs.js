@@ -120,13 +120,13 @@ async function loadDividendsForSelection() {
   dividendLoadKey = key;
   const accounts = visibleAccounts();
   const allAccounts = selectionMode === "all";
-  document.getElementById("dividendRows").innerHTML = `<tr><td colspan="12">배당 loading...</td></tr>`;
+  document.getElementById("dividendRows").innerHTML = `<tr><td colspan="13">배당 loading...</td></tr>`;
   dividendInFlight = apiFetchDividends(accounts.map(account => account.id), allAccounts);
   try {
     dividendData = await dividendInFlight;
     renderDividendTable();
   } catch (err) {
-    document.getElementById("dividendRows").innerHTML = `<tr><td colspan="12">${esc(err.message || String(err))}</td></tr>`;
+    document.getElementById("dividendRows").innerHTML = `<tr><td colspan="13">${esc(err.message || String(err))}</td></tr>`;
   } finally {
     dividendInFlight = null;
   }
@@ -139,13 +139,18 @@ function renderDividendTable() {
   }
   const rows = [...(dividendData.rows || [])];
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
-  const empty = `<tr><td colspan="12" class="flat">예정 배당 없음</td></tr>`;
+  const empty = `<tr><td colspan="13" class="flat">예정 배당 없음</td></tr>`;
   const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : "confirmed-date"}">${dividendDateText(value)}</span>`;
+  const displayTicker = ticker => String(ticker || "-").replace(/\.(KS|KQ)$/i, "");
+  const taxRateText = value => {
+    const rate = Number(value);
+    return Number.isFinite(rate) && rate !== 0 ? numberText(rate, 2) : "-";
+  };
   document.getElementById("dividendRows").innerHTML = rows.length ? groupedDividendRows(rows).map(item => {
     const collapsed = item.kind === "month" && collapsedDividendMonths.has(item.key);
     if (item.kind === "month") return `
     <tr class="dividend-month-row ${collapsed ? "collapsed" : ""}" data-month="${esc(item.key)}">
-      <td colspan="12">
+      <td colspan="13">
         <div class="dividend-month-summary">
           <button class="dividend-month-toggle" type="button" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${collapsed ? "월별 배당 펼치기" : "월별 배당 접기"}"></button>
           <span>${esc(item.label)}</span>
@@ -159,12 +164,13 @@ function renderDividendTable() {
     <tr>
       <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
       <td class="dividend-target">${esc(item.row.target || item.row.member || "-")}</td>
-      <td class="dividend-ticker"><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(item.row.ticker || "-")}</a></td>
+      <td class="dividend-ticker"><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(displayTicker(item.row.ticker))}</a></td>
       <td><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(item.row.name || item.row.ticker || "-")}</a></td>
       <td>${dividendAmountText(item.row.amount, item.row.currency)}</td>
       <td>${fmt2.format(Number(item.row.qty) || 0)}</td>
       <td>${dividendMoneyText(item.row.gross, item.row.currency)}</td>
-      <td class="tax-rate">${numberText(item.row.tax_rate, 2)}</td>
+      <td class="tax-dividend">${dividendMoneyText(item.row.tax, item.row.currency)}</td>
+      <td class="tax-rate">${taxRateText(item.row.tax_rate)}</td>
       <td class="net-dividend">${dividendMoneyText(item.row.net, item.row.currency)}</td>
       <td class="fx-rate">${dividendFxText(item.row.fx_rate)}</td>
       <td class="net-krw">${dividendKrwText(item.row.net_krw)}</td>
