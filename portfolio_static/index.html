@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=dividend-attribution">
+  <link rel="stylesheet" href="/static/styles.css?v=ticker-search">
 </head>
 <body>
   <header>
@@ -49,6 +49,9 @@
         <button id="watchlistOpen" class="ghost-btn" type="button">관리종목</button>
         <button id="performanceOpen" class="ghost-btn" type="button">성과차트</button>
         <button id="themeToggle" class="theme-btn" type="button" title="테마">자동</button>
+        <button id="tickerSearchOpen" class="header-icon-btn" type="button" aria-label="종목 검색" title="종목 검색">
+          <span class="search-icon" aria-hidden="true"></span>
+        </button>
       </div>
     </div>
   </header>
@@ -302,6 +305,21 @@
       </div>
     </section>
   </main>
+  <dialog class="watch-modal ticker-search-modal" id="tickerSearchModal">
+    <form method="dialog" class="modal-card ticker-search-card">
+      <div class="modal-head">
+        <strong>종목 검색</strong>
+        <button class="ghost-btn" id="tickerSearchClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <label class="ticker-search-field" for="tickerSearchInput">
+        <span class="search-icon" aria-hidden="true"></span>
+        <input id="tickerSearchInput" type="search" placeholder="티커 또는 종목명" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="ticker-search-results" id="tickerSearchResults" role="listbox" aria-label="종목 검색 결과">
+        <div class="ticker-search-empty">티커 또는 종목명을 입력하세요.</div>
+      </div>
+    </form>
+  </dialog>
   <dialog class="watch-modal" id="watchModal">
     <form method="dialog" class="modal-card">
       <div class="modal-head">
@@ -434,6 +452,7 @@
   <script src="/static/app-transactions.js?v=portfolio-refactor"></script>
   <script src="/static/app-trade-controls.js?v=portfolio-refactor"></script>
   <script src="/static/app-watchlist.js?v=portfolio-refactor"></script>
-  <script src="/static/app.js?v=dividend-history"></script>
+  <script src="/static/app-ticker-search.js?v=ticker-search"></script>
+  <script src="/static/app.js?v=ticker-search"></script>
 </body>
 </html>

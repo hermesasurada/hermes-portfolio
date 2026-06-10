@@ -393,6 +393,7 @@ initThemeControl();
 initDataHelpModal();
 initDividendHistoryModal();
 initWatchlistControls();
+initTickerSearch();
 initChartRangeModal();
 initChartDisplayControls();
 initChartIntervalControl();
