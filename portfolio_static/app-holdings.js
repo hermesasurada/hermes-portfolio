@@ -654,9 +654,9 @@ function renderTable() {
       </td>
       <td>${changeMarkup(r)}</td>
       <td class="extended-change-col ${hideExtendedColumn ? "hidden" : ""}">${extendedChangeText(r) || "-"}</td>
+      <td>${localCurrentPriceText(r)}</td>
       <td>${noPosition ? "-" : changeKrwText(r.change_krw)}</td>
       <td>${noPosition ? "-" : fmt2.format(r.qty)}</td>
-      <td>${localCurrentPriceText(r)}</td>
       <td>${krwCurrentPriceText(r)}</td>
       <td>${noPosition ? "-" : localValueText(r)}</td>
       <td>${noPosition ? "-" : krwValueText(r)}</td>
