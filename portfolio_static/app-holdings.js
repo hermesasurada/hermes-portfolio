@@ -621,10 +621,13 @@ function renderTable() {
   syncSortGlobals(activeDetailTab);
   syncTransactionPanel();
   const rows = filteredRows();
+  const hideExtendedColumn = Boolean(data?.us_market?.is_regular);
   const accounts = flattenAccounts();
   const selected = selectionMode === "all" ? accounts : accounts.filter(a => selectedAccounts.has(a.id));
   syncFilterToggleControls();
   syncDetailTabs();
+  document.querySelector("#detailTableWrap thead .extended-change-col")
+    ?.classList.toggle("hidden", hideExtendedColumn);
   updateSortHeaders();
   if (!chartTicker) {
     document.getElementById("tableTitle").textContent = selectionMode === "all" ? "전체 계좌" : selected.length === 1 ? `${selected[0].memberName} · ${selected[0].name}` : selected.length > 1 ? `${selected.length}개 계좌` : "선택 없음";
@@ -650,7 +653,7 @@ function renderTable() {
         </span>
       </td>
       <td>${changeMarkup(r)}</td>
-      <td>${extendedChangeText(r) || "-"}</td>
+      <td class="extended-change-col ${hideExtendedColumn ? "hidden" : ""}">${extendedChangeText(r) || "-"}</td>
       <td>${noPosition ? "-" : changeKrwText(r.change_krw)}</td>
       <td>${noPosition ? "-" : fmt2.format(r.qty)}</td>
       <td>${localCurrentPriceText(r)}</td>
