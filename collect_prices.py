@@ -16,6 +16,7 @@ from portfolio_core.collectors import (
     fetch_price,
     fetch_yahoo_earnings_date,
 )
+from portfolio_core.corporate_actions import refresh_stock_splits
 from portfolio_core.db import connect, ensure_dividend_tables
 from portfolio_core.dividends import refresh_dividend_events
 from portfolio_core.price_store import (
@@ -188,6 +189,16 @@ def collect_dividend_events(tickers: list[str] | None = None) -> int:
     return len(dividend_tickers)
 
 
+def collect_stock_splits(tickers: list[str] | None = None) -> int:
+    split_tickers = load_dividend_tickers(tickers)
+    if not split_tickers:
+        return 0
+    updated = refresh_stock_splits(split_tickers)
+    for ticker, count in updated.items():
+        print(f"  + {ticker} splits: {count}")
+    return len(updated)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Collect portfolio prices into stock_history.db.")
     parser.add_argument(
@@ -199,6 +210,7 @@ def main() -> int:
     parser.add_argument("--history-start", default="20250101", help="FDR start date for Korean stock history.")
     parser.add_argument("--skip-earnings", action="store_true", help="Do not update earnings dates.")
     parser.add_argument("--skip-dividends", action="store_true", help="Do not update dividend event cache.")
+    parser.add_argument("--skip-splits", action="store_true", help="Do not update stock split history.")
     parser.add_argument("--force-earnings", action="store_true", help="Refresh earnings dates even if recently updated.")
     parser.add_argument("--earnings-max-age-hours", type=float, default=24, help="Refresh earnings dates older than this many hours.")
     args = parser.parse_args()
@@ -238,6 +250,10 @@ def main() -> int:
         dividend_count = collect_dividend_events(args.ticker)
         if dividend_count:
             print(f"Checked dividend events for {dividend_count} held tickers")
+    if not args.skip_splits:
+        split_count = collect_stock_splits(args.ticker)
+        if split_count:
+            print(f"Updated stock splits for {split_count} held tickers")
 
     print(f"Updated {len(fetched)} tickers / {row_count} daily rows")
     all_errors = errors + [f"{ticker}:earnings" for ticker in earnings_errors]

@@ -7,7 +7,7 @@ from typing import Any
 
 from .constants import DIVIDEND_LOOKAHEAD_DAYS, DIVIDEND_LOOKBACK_DAYS, FX_DEFAULT_RATES, KOREAN_SUFFIXES
 from .dates import positive_float, today_kst
-from .db import connect, ensure_dividend_tables
+from .db import connect, ensure_dividend_tables, ensure_stock_split_tables
 from .dividend_refresh import refresh_dividend_events
 from .dividend_schedule import consolidated_dividend_events, event_schedule_date
 from .prices import latest_prices
@@ -25,6 +25,7 @@ TAX_FREE_ACCOUNT_TYPES = {"pension_kr", "retirement_kr"}
 FISCAL_END_MONTH_OVERRIDES = {
     "NVDA": 3,
 }
+UNADJUSTED_DIVIDEND_SOURCES = {"polygon", "nasdaq", "opendart", "seibro"}
 
 
 def _tax_rate(currency: str, account_type: str | None = None) -> float:
@@ -106,6 +107,23 @@ def _active_dividend_year(today: date, fiscal_end_month: int | None) -> int:
     if fiscal_end_month and today.month > fiscal_end_month:
         return today.year + 1
     return today.year
+
+
+def _split_adjusted_amount(
+    amount: float,
+    event_date: date,
+    source: str | None,
+    splits: list[dict],
+) -> tuple[float, float]:
+    if str(source or "").lower() not in UNADJUSTED_DIVIDEND_SOURCES:
+        return amount, 1.0
+    factor = 1.0
+    for split in splits:
+        split_date = _history_date(split["split_date"])
+        ratio = _float_value(split["ratio"])
+        if split_date and split_date > event_date and ratio:
+            factor *= ratio
+    return (amount / factor, factor) if abs(factor - 1.0) > 1e-12 else (amount, 1.0)
 
 
 def _dividend_attribution(
@@ -214,7 +232,11 @@ def _current_year_estimate(events: list[dict], frequency: int, current_year: int
 
 
 def _attributed_history_events(
-    event_rows: list, ticker: str, is_korean: bool, fiscal_end_month: int | None
+    event_rows: list,
+    ticker: str,
+    is_korean: bool,
+    fiscal_end_month: int | None,
+    splits: list[dict] | None = None,
 ) -> tuple[list[dict], int]:
     """DB 행 → 귀속연도가 매겨진 이벤트 목록 + 결산배당 횟수."""
     # 해외 역년결산/신규배당 종목의 anchor — 가장 이른 배당 회차의 월
@@ -227,6 +249,7 @@ def _attributed_history_events(
                 break
 
     events = []
+    splits = splits or []
     final_dividend_count = 0
     for event in event_rows:
         entitlement_date, attributed_year, is_final = _dividend_attribution(
@@ -234,12 +257,18 @@ def _attributed_history_events(
         )
         if entitlement_date is None or attributed_year is None:
             continue
+        raw_amount = float(event["amount"])
+        amount, split_factor = _split_adjusted_amount(
+            raw_amount, entitlement_date, event["source"], splits
+        )
         final_dividend_count += int(is_final)
         events.append(
             {
                 "date": entitlement_date,
                 "year": attributed_year,
-                "amount": float(event["amount"]),
+                "amount": amount,
+                "raw_amount": raw_amount,
+                "split_factor": split_factor,
                 "source": event["source"],
                 "declaration_date": _history_date(event["declaration_date"]),
                 "ex_date": _history_date(event["ex_date"]),
@@ -336,6 +365,9 @@ def _history_year_rows(
                         "ex_date": event["ex_date"].isoformat() if event["ex_date"] else None,
                         "pay_date": event["pay_date"].isoformat() if event["pay_date"] else None,
                         "amount": event["amount"],
+                        "raw_amount": event["raw_amount"],
+                        "split_factor": event["split_factor"],
+                        "split_adjusted": event["split_factor"] != 1.0,
                         "source": event["source"],
                         "is_final": event["is_final"],
                     }
@@ -403,6 +435,7 @@ def load_dividend_history(ticker: str) -> dict:
     today = _today()
     with connect() as conn:
         ensure_dividend_tables(conn)
+        ensure_stock_split_tables(conn)
         ticker_row = conn.execute(
             "SELECT ticker, name, currency FROM tickers WHERE UPPER(ticker) = ?",
             (clean_ticker,),
@@ -422,12 +455,23 @@ def load_dividend_history(ticker: str) -> dict:
             """,
             (ticker_row["ticker"], f"{DIVIDEND_HISTORY_START_YEAR}-01-01", today.isoformat()),
         ).fetchall()
+        split_rows = [
+            dict(row) for row in conn.execute(
+                """
+                SELECT split_date, ratio, source
+                FROM stock_splits
+                WHERE ticker = ?
+                ORDER BY split_date
+                """,
+                (ticker_row["ticker"],),
+            ).fetchall()
+        ]
         is_korean = ticker_row["ticker"].upper().endswith(KOREAN_SUFFIXES)
         # 비역년 회계연도면 회계연도 기준 귀속(디어 11월 등), 아니면 최초 배당월 anchor.
         fiscal_end_month = None if is_korean else _fiscal_year_end_month(conn, ticker_row["ticker"])
 
     events, final_dividend_count = _attributed_history_events(
-        event_rows, ticker_row["ticker"], is_korean, fiscal_end_month
+        event_rows, ticker_row["ticker"], is_korean, fiscal_end_month, split_rows
     )
     annual = _aggregate_annual_dividends(events)
 

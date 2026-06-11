@@ -145,6 +145,36 @@ def ensure_dividend_tables(conn: sqlite3.Connection) -> None:
     )
 
 
+def ensure_stock_split_tables(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS stock_splits (
+            ticker TEXT NOT NULL,
+            split_date TEXT NOT NULL,
+            ratio REAL NOT NULL,
+            source TEXT NOT NULL,
+            fetched_at TEXT NOT NULL,
+            PRIMARY KEY (ticker, split_date)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ticker_split_cache (
+            ticker TEXT PRIMARY KEY,
+            fetched_at TEXT NOT NULL,
+            status TEXT
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_stock_splits_ticker_date
+        ON stock_splits(ticker, split_date)
+        """
+    )
+
+
 def ensure_market_index_tickers(conn: sqlite3.Connection) -> None:
     for ticker, meta in MARKET_INDEXES.items():
         conn.execute(
@@ -169,6 +199,7 @@ def initialize_schema() -> None:
         ensure_daily_technical_indicators_table(conn)
         ensure_transaction_columns(conn)
         ensure_dividend_tables(conn)
+        ensure_stock_split_tables(conn)
         ensure_price_indexes(conn)
         ensure_collector_runs_table(conn)
         ensure_market_index_tickers(conn)

@@ -7,6 +7,7 @@ from datetime import date
 
 from .collectors import fetch_investing_kr_earnings_date, fetch_yahoo_earnings_date
 from .constants import MARKET_INDEXES
+from .corporate_actions import refresh_stock_splits
 from .db import connect, ensure_ticker_metadata_columns
 from .fundamentals import fetch_fundamentals
 from .logos import cache_logo
@@ -99,6 +100,11 @@ def hydrate_ticker(ticker: str, years: int = 10) -> dict:
         result["logo"] = cache_logo(ticker)
     except Exception as exc:
         result["logo_error"] = str(exc)
+
+    try:
+        result["stock_splits"] = refresh_stock_splits([ticker], force=True).get(ticker, 0)
+    except Exception as exc:
+        result["stock_splits_error"] = str(exc)
 
     return result
 

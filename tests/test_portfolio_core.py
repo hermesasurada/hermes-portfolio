@@ -21,6 +21,7 @@ from portfolio_core.dividends import (
     _aggregate_annual_dividends,
     _attributed_history_events,
     _mark_fiscal_finals,
+    _split_adjusted_amount,
     _tax_rate,
 )
 from portfolio_core.dividend_schedule import consolidated_dividend_events
@@ -299,6 +300,21 @@ def test_nvda_march_dividend_closes_fiscal_year():
         final = next(event for event in annual[year]["events"] if event["is_final"])
         assert final["date"].year == year
         assert final["date"].month == 3
+
+
+def test_dividend_split_adjustment_is_source_aware():
+    splits = [{"split_date": "2024-07-15", "ratio": 10.0}]
+    adjusted, factor = _split_adjusted_amount(
+        5.25, date(2024, 6, 24), "polygon", splits
+    )
+    assert adjusted == 0.525
+    assert factor == 10.0
+
+    yahoo_amount, yahoo_factor = _split_adjusted_amount(
+        0.525, date(2024, 6, 24), "yf-history", splits
+    )
+    assert yahoo_amount == 0.525
+    assert yahoo_factor == 1.0
 
 
 # --- quote parsing: behaviour-preservation regression -----------------------
