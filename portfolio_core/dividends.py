@@ -201,7 +201,189 @@ def _current_year_estimate(events: list[dict], frequency: int, current_year: int
     return actual + missing * latest["amount"]
 
 
+def _attributed_history_events(
+    event_rows: list, ticker: str, is_korean: bool, fiscal_end_month: int | None
+) -> tuple[list[dict], int]:
+    """DB 행 → 귀속연도가 매겨진 이벤트 목록 + 결산배당 횟수."""
+    # 해외 역년결산/신규배당 종목의 anchor — 가장 이른 배당 회차의 월
+    anchor_month = None
+    if not is_korean and not fiscal_end_month:
+        for event in event_rows:
+            first_date = _entitlement_date(event)
+            if first_date is not None:
+                anchor_month = first_date.month
+                break
+
+    events = []
+    final_dividend_count = 0
+    for event in event_rows:
+        entitlement_date, attributed_year, is_final = _dividend_attribution(
+            event, ticker, anchor_month, fiscal_end_month
+        )
+        if entitlement_date is None or attributed_year is None:
+            continue
+        final_dividend_count += int(is_final)
+        events.append(
+            {
+                "date": entitlement_date,
+                "year": attributed_year,
+                "amount": float(event["amount"]),
+                "source": event["source"],
+                "declaration_date": _history_date(event["declaration_date"]),
+                "ex_date": _history_date(event["ex_date"]),
+                "pay_date": _history_date(event["pay_date"]),
+                "is_final": is_final,
+            }
+        )
+    return events, final_dividend_count
+
+
+def _aggregate_annual_dividends(events: list[dict]) -> dict[int, dict]:
+    """귀속연도별 합계·회차·최근기준일·소스 집계."""
+    annual: dict[int, dict] = {}
+    for event in events:
+        year_row = annual.setdefault(
+            event["year"],
+            {"amount": 0.0, "payments": 0, "last_date": event["date"], "sources": set(), "final": False, "events": []},
+        )
+        year_row["amount"] += event["amount"]
+        year_row["payments"] += 1
+        year_row["last_date"] = max(year_row["last_date"], event["date"])
+        year_row["final"] = year_row["final"] or event["is_final"]
+        year_row["events"].append(event)
+        if event["source"]:
+            year_row["sources"].add(event["source"])
+    return annual
+
+
+def _mark_fiscal_finals(annual: dict[int, dict], complete_years: set[int]) -> int:
+    """비역년 회계연도 종목: 완결 회계연도의 마지막 회차를 '결산배당'으로 표시.
+    새로 표시한 개수를 돌려준다."""
+    marked = 0
+    for year in complete_years:
+        group = annual.get(year)
+        if not group or not group["events"]:
+            continue
+        final_event = max(group["events"], key=lambda item: item["date"])
+        if not final_event["is_final"]:
+            final_event["is_final"] = True
+            group["final"] = True
+            marked += 1
+    return marked
+
+
+def _year_growth(
+    year: int, annual: dict[int, dict], totals: dict[int, float],
+    complete_years: set[int], is_korean: bool,
+) -> tuple[float | None, str | None]:
+    """연간 성장률 — 완결연도끼리는 연간합계, 미완결 해외주식은 '해당 연도
+    최초 배당금' 기준(first_payment)으로 폴백."""
+    if year in complete_years and year - 1 in complete_years:
+        growth = _annual_growth(annual[year]["amount"], totals.get(year - 1))
+        if growth is not None:
+            return growth, "annual"
+    if not is_korean:
+        previous = annual.get(year - 1)
+        current = annual.get(year)
+        if previous and previous["events"] and current and current["events"]:
+            growth = _annual_growth(
+                current["events"][0]["amount"], previous["events"][0]["amount"]
+            )
+            if growth is not None:
+                return growth, "first_payment"
+    return None, None
+
+
+def _history_year_rows(
+    annual: dict[int, dict], totals: dict[int, float], complete_years: set[int],
+    frequency: int, current_estimate: float | None, current_year: int, is_korean: bool,
+) -> list[dict]:
+    """연도별 응답 행 직렬화 (최신 연도부터)."""
+    rows = []
+    for year in sorted(annual, reverse=True):
+        row = annual[year]
+        current_ytd = year == current_year
+        growth_pct, growth_basis = _year_growth(year, annual, totals, complete_years, is_korean)
+        rows.append(
+            {
+                "year": year,
+                "amount": row["amount"],
+                "growth_pct": growth_pct,
+                "growth_basis": growth_basis,
+                "payments": row["payments"],
+                "expected_payments": frequency,
+                "complete": year in complete_years,
+                "estimated_amount": current_estimate if current_ytd else None,
+                "last_date": row["last_date"].isoformat(),
+                "current_ytd": current_ytd,
+                "final_dividend": row["final"],
+                "sources": sorted(row["sources"]),
+                "payments_detail": [
+                    {
+                        "entitlement_date": event["date"].isoformat(),
+                        "ex_date": event["ex_date"].isoformat() if event["ex_date"] else None,
+                        "pay_date": event["pay_date"].isoformat() if event["pay_date"] else None,
+                        "amount": event["amount"],
+                        "source": event["source"],
+                        "is_final": event["is_final"],
+                    }
+                    for event in sorted(row["events"], key=lambda item: item["date"], reverse=True)
+                ],
+            }
+        )
+    return rows
+
+
+def _last_raise(events: list[dict]) -> tuple[float | None, str | None]:
+    """가장 최근 '인상' 회차 — 전년 동기 대비 증가했고 직전 회차와 금액이 달라진 것."""
+    last_raise_pct = None
+    last_raise_date = None
+    for index, current in enumerate(events):
+        reference = _same_period_reference(events, current)
+        previous = events[index - 1] if index > 0 else None
+        if (
+            reference
+            and previous
+            and current["amount"] > reference["amount"]
+            and reference["amount"] > 0
+            and abs(current["amount"] - previous["amount"]) > 1e-12
+        ):
+            last_raise_pct = _annual_growth(current["amount"], reference["amount"])
+            last_raise_date = (current["declaration_date"] or current["date"]).isoformat()
+    return last_raise_pct, last_raise_date
+
+
+def _history_summary(
+    events: list[dict], totals: dict[int, float], complete_years: set[int],
+    frequency: int, current_estimate: float | None, final_dividend_count: int,
+) -> dict:
+    completed_years = sorted(complete_years)
+    latest_completed = completed_years[-1] if completed_years else None
+    latest_growth = (
+        _annual_growth(totals[latest_completed], totals.get(latest_completed - 1))
+        if latest_completed is not None and latest_completed - 1 in complete_years
+        else None
+    )
+    cagr_3y = _annual_cagr(totals, complete_years, latest_completed, 3) if latest_completed is not None else None
+    cagr_5y = _annual_cagr(totals, complete_years, latest_completed, 5) if latest_completed is not None else None
+    last_raise_pct, last_raise_date = _last_raise(events)
+    latest_completed_total = totals.get(latest_completed) if latest_completed is not None else None
+    return {
+        "latest_completed_year": latest_completed,
+        "latest_growth_pct": latest_growth,
+        "cagr_3y": cagr_3y,
+        "cagr_5y": cagr_5y,
+        "frequency": frequency,
+        "frequency_label": _frequency_label(frequency),
+        "annualized_run_rate": current_estimate if current_estimate is not None else latest_completed_total,
+        "last_raise_pct": last_raise_pct,
+        "last_raise_date": last_raise_date,
+        "final_dividend_adjusted": final_dividend_count > 0,
+    }
+
+
 def load_dividend_history(ticker: str) -> dict:
+    """배당이력 팝업 응답 — 조회 → 귀속 → 연간집계 → 파생지표 → 직렬화."""
     clean_ticker = str(ticker or "").strip().upper()
     if not clean_ticker:
         raise ValueError("ticker is required")
@@ -232,50 +414,10 @@ def load_dividend_history(ticker: str) -> dict:
         # 비역년 회계연도면 회계연도 기준 귀속(디어 11월 등), 아니면 최초 배당월 anchor.
         fiscal_end_month = None if is_korean else _fiscal_year_end_month(conn, ticker_row["ticker"])
 
-    # 해외 역년결산/신규배당 종목의 anchor — 가장 이른 배당 회차의 월
-    anchor_month = None
-    if not is_korean and not fiscal_end_month:
-        for event in event_rows:
-            first_date = _entitlement_date(event)
-            if first_date is not None:
-                anchor_month = first_date.month
-                break
-
-    events = []
-    final_dividend_count = 0
-    for event in event_rows:
-        entitlement_date, attributed_year, is_final = _dividend_attribution(
-            event, ticker_row["ticker"], anchor_month, fiscal_end_month
-        )
-        if entitlement_date is None or attributed_year is None:
-            continue
-        final_dividend_count += int(is_final)
-        events.append(
-            {
-                "date": entitlement_date,
-                "year": attributed_year,
-                "amount": float(event["amount"]),
-                "source": event["source"],
-                "declaration_date": _history_date(event["declaration_date"]),
-                "ex_date": _history_date(event["ex_date"]),
-                "pay_date": _history_date(event["pay_date"]),
-                "is_final": is_final,
-            }
-        )
-
-    annual: dict[int, dict] = {}
-    for event in events:
-        year_row = annual.setdefault(
-            event["year"],
-            {"amount": 0.0, "payments": 0, "last_date": event["date"], "sources": set(), "final": False, "events": []},
-        )
-        year_row["amount"] += event["amount"]
-        year_row["payments"] += 1
-        year_row["last_date"] = max(year_row["last_date"], event["date"])
-        year_row["final"] = year_row["final"] or event["is_final"]
-        year_row["events"].append(event)
-        if event["source"]:
-            year_row["sources"].add(event["source"])
+    events, final_dividend_count = _attributed_history_events(
+        event_rows, ticker_row["ticker"], is_korean, fiscal_end_month
+    )
+    annual = _aggregate_annual_dividends(events)
 
     totals = {year: row["amount"] for year, row in annual.items()}
     payment_counts = {year: row["payments"] for year, row in annual.items()}
@@ -284,113 +426,21 @@ def load_dividend_history(ticker: str) -> dict:
         year for year, count in payment_counts.items()
         if year < today.year and count >= frequency
     }
-    # 비역년 회계연도 종목: 완결된 회계연도의 마지막 회차를 '결산배당'으로 표시
     if fiscal_end_month:
-        for year in complete_years:
-            group = annual.get(year)
-            if not group or not group["events"]:
-                continue
-            final_event = max(group["events"], key=lambda item: item["date"])
-            if not final_event["is_final"]:
-                final_event["is_final"] = True
-                final_dividend_count += 1
-                group["final"] = True
+        final_dividend_count += _mark_fiscal_finals(annual, complete_years)
     current_estimate = _current_year_estimate(events, frequency, today.year)
-    rows = []
-    for year in sorted(annual, reverse=True):
-        row = annual[year]
-        previous_complete = year - 1 in complete_years
-        complete = year in complete_years
-        current_ytd = year == today.year
-        estimated_amount = current_estimate if current_ytd else None
-        growth_pct = (
-            None
-            if not complete or not previous_complete
-            else _annual_growth(row["amount"], totals.get(year - 1))
-        )
-        growth_basis = "annual" if growth_pct is not None else None
-        # 연간배당이 완결되지 않은 해외주식: 직전연도 대비 '해당연도 최초 배당금'으로 성장률 산출
-        if growth_pct is None and not is_korean:
-            previous = annual.get(year - 1)
-            if previous and previous["events"] and row["events"]:
-                first_growth = _annual_growth(
-                    row["events"][0]["amount"], previous["events"][0]["amount"]
-                )
-                if first_growth is not None:
-                    growth_pct = first_growth
-                    growth_basis = "first_payment"
-        rows.append(
-            {
-                "year": year,
-                "amount": row["amount"],
-                "growth_pct": growth_pct,
-                "growth_basis": growth_basis,
-                "payments": row["payments"],
-                "expected_payments": frequency,
-                "complete": complete,
-                "estimated_amount": estimated_amount,
-                "last_date": row["last_date"].isoformat(),
-                "current_ytd": current_ytd,
-                "final_dividend": row["final"],
-                "sources": sorted(row["sources"]),
-                "payments_detail": [
-                    {
-                        "entitlement_date": event["date"].isoformat(),
-                        "ex_date": event["ex_date"].isoformat() if event["ex_date"] else None,
-                        "pay_date": event["pay_date"].isoformat() if event["pay_date"] else None,
-                        "amount": event["amount"],
-                        "source": event["source"],
-                        "is_final": event["is_final"],
-                    }
-                    for event in sorted(row["events"], key=lambda item: item["date"], reverse=True)
-                ],
-            }
-        )
 
-    completed_years = sorted(complete_years)
-    latest_completed = completed_years[-1] if completed_years else None
-    latest_growth = (
-        _annual_growth(totals[latest_completed], totals.get(latest_completed - 1))
-        if latest_completed is not None and latest_completed - 1 in complete_years
-        else None
-    )
-    cagr_3y = _annual_cagr(totals, complete_years, latest_completed, 3) if latest_completed is not None else None
-    cagr_5y = _annual_cagr(totals, complete_years, latest_completed, 5) if latest_completed is not None else None
-
-    last_raise_pct = None
-    last_raise_date = None
-    for index, current in enumerate(events):
-        reference = _same_period_reference(events, current)
-        previous = events[index - 1] if index > 0 else None
-        if (
-            reference
-            and previous
-            and current["amount"] > reference["amount"]
-            and reference["amount"] > 0
-            and abs(current["amount"] - previous["amount"]) > 1e-12
-        ):
-            last_raise_pct = _annual_growth(current["amount"], reference["amount"])
-            last_raise_date = (current["declaration_date"] or current["date"]).isoformat()
-    latest_completed_total = totals.get(latest_completed) if latest_completed is not None else None
-    annualized_run_rate = current_estimate if current_estimate is not None else latest_completed_total
     return {
         "ticker": ticker_row["ticker"],
         "name": ticker_row["name"] or ticker_row["ticker"],
         "currency": ticker_row["currency"] or ticker_currency(ticker_row["ticker"]),
         "start_year": DIVIDEND_HISTORY_START_YEAR,
-        "rows": rows,
-        "summary": {
-            "latest_completed_year": latest_completed,
-            "latest_growth_pct": latest_growth,
-            "cagr_3y": cagr_3y,
-            "cagr_5y": cagr_5y,
-            "frequency": frequency,
-            "frequency_label": _frequency_label(frequency),
-            "annualized_run_rate": annualized_run_rate,
-            "last_raise_pct": last_raise_pct,
-            "last_raise_date": last_raise_date,
-            "final_dividend_adjusted": final_dividend_count > 0,
-        },
+        "rows": _history_year_rows(
+            annual, totals, complete_years, frequency, current_estimate, today.year, is_korean
+        ),
+        "summary": _history_summary(
+            events, totals, complete_years, frequency, current_estimate, final_dividend_count
+        ),
     }
 
 

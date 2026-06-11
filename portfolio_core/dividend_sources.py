@@ -28,23 +28,9 @@ SEIBRO_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
 }
-NASDAQ_PRESS_RELEASE_URLS = {
-    "DE": (
-        "https://www.nasdaq.com/press-release/deere-company-announces-quarterly-dividend-2026-02-25",
-    ),
-}
 STOCKANALYSIS_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
-}
-DIVIDENDMAX_HEADERS = {
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
-}
-DIVIDENDMAX_URLS = {
-    "DE": (
-        "https://www.dividendmax.com/united-states/nyse/financial-services/deere-and-co/dividends",
-    ),
 }
 CURRENCY_SYMBOLS = {
     "$": "USD",
@@ -248,20 +234,11 @@ def _seibro_candidate(ticker: str) -> bool:
 
 
 def _nasdaq_attempt_due(ticker: str, status: str | None) -> bool:
-    status_text = status or ""
-    if not _nasdaq_candidate(ticker):
-        return False
-    if "nasdaq" not in status_text:
-        return True
-    return bool(NASDAQ_PRESS_RELEASE_URLS.get(ticker)) and "nasdaq_press" not in status_text
+    return _nasdaq_candidate(ticker) and "nasdaq" not in (status or "")
 
 
 def _stockanalysis_attempt_due(ticker: str, status: str | None) -> bool:
     return _stockanalysis_candidate(ticker) and "stockanalysis" not in (status or "")
-
-
-def _dividendmax_attempt_due(ticker: str, status: str | None) -> bool:
-    return bool(DIVIDENDMAX_URLS.get(ticker)) and "dividendmax" not in (status or "")
 
 
 def _seibro_attempt_due(ticker: str, status: str | None) -> bool:
@@ -386,66 +363,6 @@ def _fetch_stockanalysis_dividends(ticker: str) -> list[dict]:
                 "amount": amount,
                 "currency": _currency_from_amount_text(amount_text, fallback_currency),
                 "source": "stockanalysis",
-            }
-        )
-    return events
-
-
-def _fetch_dividendmax_dividends(ticker: str) -> list[dict]:
-    events = []
-    for url in DIVIDENDMAX_URLS.get(ticker, ()):
-        html = _fetch_text(url, DIVIDENDMAX_HEADERS)
-        for row_match in re.finditer(r"<tr class='mdc-data-table__row'>(.*?)</tr>", html, re.DOTALL):
-            cells = [
-                unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", cell))).strip()
-                for cell in re.findall(r"<td class='mdc-data-table__cell'>(.*?)</td>", row_match.group(1), re.DOTALL)
-            ]
-            if len(cells) < 8 or cells[0] not in {"Paid", "Declared"}:
-                continue
-            amount = _amount_from_text(cells[7])
-            if amount is None:
-                continue
-            if cells[7].lower().endswith("c"):
-                amount /= 100
-            ex_date = _date_from_short_month_text(cells[3])
-            if not ex_date:
-                continue
-            events.append(
-                {
-                    "ticker": ticker,
-                    "ex_date": ex_date,
-                    "pay_date": _date_from_short_month_text(cells[4]),
-                    "amount": amount,
-                    "currency": cells[5] or ticker_currency(ticker),
-                    "source": "dividendmax",
-                }
-            )
-    return events
-
-
-def _fetch_nasdaq_press_release_dividends(ticker: str) -> list[dict]:
-    events = []
-    for url in NASDAQ_PRESS_RELEASE_URLS.get(ticker, ()):
-        req = urllib.request.Request(url, headers=NASDAQ_HEADERS)
-        with urllib.request.urlopen(req, timeout=12) as resp:
-            html = resp.read().decode("utf-8", "ignore")
-        text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html))
-        amount_match = re.search(r"dividend of \$([0-9]+(?:\.[0-9]+)?) per share", text, re.IGNORECASE)
-        pay_match = re.search(r"payable ([A-Z][a-z]+) (\d{1,2}), (\d{4})", text)
-        record_match = re.search(r"(?:record|stockholders of record) (?:as of |on )([A-Z][a-z]+) (\d{1,2}), (\d{4})", text)
-        amount = _amount_from_text(amount_match.group(1) if amount_match else None)
-        pay_date = _date_from_english_text(*pay_match.groups()) if pay_match else None
-        record_date = _date_from_english_text(*record_match.groups()) if record_match else None
-        if amount is None or not pay_date or not record_date:
-            continue
-        events.append(
-            {
-                "ticker": ticker,
-                "ex_date": record_date,
-                "pay_date": pay_date,
-                "amount": amount,
-                "currency": "USD",
-                "source": "nasdaq-press",
             }
         )
     return events
@@ -591,25 +508,6 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
                     events[event["ex_date"]] = event
         except Exception as exc:
             sources.append(_source_error("nasdaq", ticker, exc))
-        try:
-            press_events = _fetch_nasdaq_press_release_dividends(ticker)
-            if press_events:
-                sources.append("nasdaq_press")
-            for event in press_events:
-                if event.get("ex_date"):
-                    events[event["ex_date"]] = event
-        except Exception as exc:
-            sources.append(_source_error("nasdaq_press", ticker, exc))
-
-    if DIVIDENDMAX_URLS.get(ticker):
-        try:
-            dividendmax_events = _fetch_dividendmax_dividends(ticker)
-            sources.append("dividendmax" if dividendmax_events else "dividendmax0")
-            for event in dividendmax_events:
-                if event.get("ex_date"):
-                    events[event["ex_date"]] = event
-        except Exception as exc:
-            sources.append(_source_error("dividendmax", ticker, exc))
 
     # Polygon: 권위 소스이므로 마지막에 같은 ex_date를 덮어써 선언일/기준일/미래
     # 확정분까지 채운다. (분당 5콜 스로틀은 _fetch_polygon_dividends 내부 처리)
