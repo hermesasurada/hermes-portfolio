@@ -27,7 +27,12 @@ function setCurrentSort(key) {
 function flattenAccounts() {
   return data.members.flatMap(m => m.accounts.map(a => ({...a, memberName: m.name})));
 }
+function isHenryOverseasAccount(account) {
+  return String(account.memberName || "").trim().toLowerCase() === "henry"
+    && account.type === "overseas";
+}
 function accountGroupKey(account) {
+  if (isHenryOverseasAccount(account)) return "henry_overseas";
   const type = account.type || "other";
   // 연금저축(pension_kr)·퇴직연금(retirement_kr)을 하나의 "연금" 카테고리로 통합
   if (type === "pension_kr" || type === "retirement_kr") return "pension";
@@ -58,7 +63,7 @@ function applyTimeBasedDefaultAccountSelection() {
   const accountTypes = defaultAccountTypesForHour(portfolioKstHour());
   selectedAccounts = new Set(
     flattenAccounts()
-      .filter(account => accountTypes.has(account.type))
+      .filter(account => accountTypes.has(account.type) && !isHenryOverseasAccount(account))
       .map(account => account.id)
   );
   selectionMode = "custom";
@@ -436,7 +441,8 @@ function renderAccounts() {
     { key: "kr_individual", label: "한국개별주" },
     { key: "bitcoin", label: "비트코인" },
     { key: "pension", label: "연금" },
-    { key: "other", label: "기타" }
+    { key: "other", label: "기타" },
+    { key: "henry_overseas", label: "Henry 해외주식" }
   ];
   const totalButton = `
     <button class="account ${selectionMode === "all" ? "active" : ""}" data-account="all">
