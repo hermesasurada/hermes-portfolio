@@ -1439,13 +1439,19 @@ tbody tr.index-row td:first-child::before {
   grid-template-columns: minmax(90px, 1fr) minmax(62px, auto);
   align-items: center;
   gap: 10px;
-  padding: 5px 11px;
+  padding: 0;
   border-bottom: 1px solid var(--line);
 }
 .cstat-row:last-child { border-bottom: 0; }
 .cstat-k {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
   min-width: 0;
   overflow: hidden;
+  padding: 5px 11px;
+  border-right: 1px solid var(--line);
+  background: var(--surface-2);
   color: var(--muted);
   font-size: 12px;
   font-weight: var(--fw-md);
@@ -1453,6 +1459,7 @@ tbody tr.index-row td:first-child::before {
   white-space: nowrap;
 }
 .cstat-v {
+  padding: 5px 11px 5px 0;
   color: var(--ink);
   font-size: 13px;
   font-weight: var(--fw-bold);
@@ -1476,7 +1483,11 @@ tbody tr.index-row td:first-child::before {
 :root[data-theme="dark"] .cstat-row {
   border-color: #39414f;
 }
-:root[data-theme="dark"] .cstat-k { color: #929bb0; }
+:root[data-theme="dark"] .cstat-k {
+  border-right-color: #39414f;
+  background: #29313d;
+  color: #aab3c3;
+}
 :root[data-theme="dark"] .cstat-v { color: #e7e9ee; }
 .chart-icon-slot .asset-icon { color: var(--accent); }
 .chart-meta {
@@ -2966,7 +2977,12 @@ tbody tr.index-row td:first-child::before {
   }
   .cstat-row {
     grid-template-columns: minmax(120px, 1fr) auto;
+  }
+  .cstat-k {
     padding-left: 12px;
+    padding-right: 12px;
+  }
+  .cstat-v {
     padding-right: 12px;
   }
   :root[data-theme="dark"] .cstat-column {
