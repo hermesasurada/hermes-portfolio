@@ -16,7 +16,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from portfolio_core.fundamentals import normalize_pe, parse_number
 from portfolio_core.dates import parse_iso_date, to_iso_text
-from portfolio_core.dividends import _tax_rate
+from portfolio_core.dividends import (
+    _active_dividend_year,
+    _aggregate_annual_dividends,
+    _attributed_history_events,
+    _mark_fiscal_finals,
+    _tax_rate,
+)
 from portfolio_core.dividend_schedule import consolidated_dividend_events
 from portfolio_core.indicators import (
     performance_pct,
@@ -260,6 +266,39 @@ def test_pension_dividend_tax_rate_is_zero():
     assert _tax_rate("USD", "retirement_kr") == 0.0
     assert _tax_rate("KRW", "kr_individual") == 15.4
     assert _tax_rate("USD", "overseas") == 15.0
+
+
+def test_nvda_march_dividend_closes_fiscal_year():
+    rows = []
+    for year in (2024, 2025, 2026):
+        for month in (6, 9, 12):
+            rows.append({
+                "record_date": f"{year - 1}-{month:02d}-10",
+                "ex_date": None,
+                "pay_date": None,
+                "declaration_date": None,
+                "amount": 0.01,
+                "source": "test",
+            })
+        rows.append({
+            "record_date": f"{year}-03-10",
+            "ex_date": None,
+            "pay_date": None,
+            "declaration_date": None,
+            "amount": 0.01,
+            "source": "test",
+        })
+
+    events, _ = _attributed_history_events(rows, "NVDA", False, 3)
+    annual = _aggregate_annual_dividends(events)
+    complete_years = {2024, 2025, 2026}
+    _mark_fiscal_finals(annual, complete_years)
+
+    assert _active_dividend_year(date(2026, 6, 12), 3) == 2027
+    for year in complete_years:
+        final = next(event for event in annual[year]["events"] if event["is_final"])
+        assert final["date"].year == year
+        assert final["date"].month == 3
 
 
 # --- quote parsing: behaviour-preservation regression -----------------------

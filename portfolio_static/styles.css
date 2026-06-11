@@ -2288,17 +2288,6 @@ tbody tr.index-row td:first-child::before {
   font-weight: 800;
   vertical-align: 1px;
 }
-.history-final {
-  display: inline-flex;
-  margin-left: 4px;
-  padding: 1px 4px;
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  color: var(--muted);
-  font-size: 9px;
-  font-weight: 800;
-  vertical-align: 1px;
-}
 .history-amount,
 .history-estimate {
   display: block;
@@ -2313,8 +2302,10 @@ tbody tr.index-row td:first-child::before {
 .dividend-history-table.detailed .history-annual-cell {
   vertical-align: top;
   padding-top: 8px;
-  border-bottom: 2px solid var(--line);
   background: var(--surface-1);
+}
+.dividend-history-table.detailed tr.history-year-start td {
+  border-top: 2px solid var(--line);
 }
 /* 7열(귀속연도·연간배당·성장률·횟수·기준일·지급일·주당배당금) 폭 — fixed 레이아웃이라 헤더 행 기준 */
 .dividend-history-table.detailed th:nth-child(5),
@@ -2322,7 +2313,7 @@ tbody tr.index-row td:first-child::before {
   width: 84px;
 }
 .dividend-history-table.detailed th:last-child {
-  width: auto;
+  width: 92px;
   text-align: right;
 }
 /* 연/분기 셀 정렬은 위치(nth-child)가 rowspan으로 어긋나므로 클래스로 고정 */

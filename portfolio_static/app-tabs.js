@@ -257,7 +257,6 @@ function renderDividendHistory(payload) {
   const summaryColumns = [
     [
       ["지급주기", esc(summary.frequency_label || "-")],
-      ["결산배당 귀속", summary.final_dividend_adjusted ? "반영" : "해당 없음"],
       ["최근 배당 연환산", dividendHistoryEstimate(summary.annualized_run_rate, payload.currency)],
     ],
     [
@@ -289,7 +288,7 @@ function renderDividendHistory(payload) {
           </tr>
         </thead>
         <tbody>
-          ${rows.map(row => {
+          ${rows.map((row, rowIndex) => {
             const details = (row.payments_detail && row.payments_detail.length)
               ? row.payments_detail
               : [null];
@@ -298,7 +297,6 @@ function renderDividendHistory(payload) {
               <td class="history-year-cell" rowspan="${span}">
                 <strong>${row.year}</strong>
                 ${row.current_ytd ? `<span class="history-ytd">YTD</span>` : ""}
-                ${row.final_dividend ? `<span class="history-final">결산</span>` : ""}
               </td>`;
             const amountCell = `
               <td class="history-annual-cell" rowspan="${span}">
@@ -318,11 +316,11 @@ function renderDividendHistory(payload) {
             }</td>`;
             const countCell = `<td class="history-annual-cell" rowspan="${span}">${fmt.format(Number(row.payments) || 0)}${row.expected_payments ? `/${fmt.format(row.expected_payments)}` : ""}</td>`;
             return details.map((detail, index) => `
-              <tr>
+              <tr class="${index === 0 && rowIndex > 0 ? "history-year-start" : ""}">
                 ${index === 0 ? `${yearCell}${amountCell}${growthCell}${countCell}` : ""}
                 <td class="history-detail-date">${detail ? dividendHistoryFullDate(detail.entitlement_date) : "-"}</td>
                 <td class="history-detail-date">${detail ? dividendHistoryFullDate(detail.pay_date) : "-"}</td>
-                <td class="history-detail-amount">${detail ? dividendAmountText(detail.amount, payload.currency) : "-"}${detail && detail.is_final ? ` <span class="history-final">결산</span>` : ""}</td>
+                <td class="history-detail-amount">${detail ? dividendAmountText(detail.amount, payload.currency) : "-"}</td>
               </tr>
             `).join("");
           }).join("")}

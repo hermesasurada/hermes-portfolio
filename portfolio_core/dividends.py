@@ -22,6 +22,9 @@ _float_value = positive_float
 
 
 TAX_FREE_ACCOUNT_TYPES = {"pension_kr", "retirement_kr"}
+FISCAL_END_MONTH_OVERRIDES = {
+    "NVDA": 3,
+}
 
 
 def _tax_rate(currency: str, account_type: str | None = None) -> float:
@@ -77,6 +80,9 @@ def _entitlement_date(event: Any) -> date | None:
 def _fiscal_year_end_month(conn, ticker: str) -> int | None:
     """캐시된 yfinance info의 lastFiscalYearEnd에서 회계연도 종료 '월'을 읽는다.
     12월(역년) 결산이면 None을 돌려 일반 anchor 방식으로 처리하게 한다."""
+    override = FISCAL_END_MONTH_OVERRIDES.get(str(ticker or "").upper())
+    if override:
+        return override
     try:
         row = conn.execute(
             "SELECT raw_json FROM ticker_stats_cache WHERE ticker = ?", (ticker,)
@@ -94,6 +100,12 @@ def _fiscal_year_end_month(conn, ticker: str) -> int | None:
     except (TypeError, ValueError, OSError):
         return None
     return None if month == 12 else month
+
+
+def _active_dividend_year(today: date, fiscal_end_month: int | None) -> int:
+    if fiscal_end_month and today.month > fiscal_end_month:
+        return today.year + 1
+    return today.year
 
 
 def _dividend_attribution(
@@ -419,16 +431,17 @@ def load_dividend_history(ticker: str) -> dict:
     )
     annual = _aggregate_annual_dividends(events)
 
+    active_year = _active_dividend_year(today, fiscal_end_month)
     totals = {year: row["amount"] for year, row in annual.items()}
     payment_counts = {year: row["payments"] for year, row in annual.items()}
-    frequency = _dividend_frequency(events, payment_counts, today.year)
+    frequency = _dividend_frequency(events, payment_counts, active_year)
     complete_years = {
         year for year, count in payment_counts.items()
-        if year < today.year and count >= frequency
+        if year < active_year and count >= frequency
     }
     if fiscal_end_month:
         final_dividend_count += _mark_fiscal_finals(annual, complete_years)
-    current_estimate = _current_year_estimate(events, frequency, today.year)
+    current_estimate = _current_year_estimate(events, frequency, active_year)
 
     return {
         "ticker": ticker_row["ticker"],
@@ -436,7 +449,7 @@ def load_dividend_history(ticker: str) -> dict:
         "currency": ticker_row["currency"] or ticker_currency(ticker_row["ticker"]),
         "start_year": DIVIDEND_HISTORY_START_YEAR,
         "rows": _history_year_rows(
-            annual, totals, complete_years, frequency, current_estimate, today.year, is_korean
+            annual, totals, complete_years, frequency, current_estimate, active_year, is_korean
         ),
         "summary": _history_summary(
             events, totals, complete_years, frequency, current_estimate, final_dividend_count
