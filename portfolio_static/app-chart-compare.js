@@ -198,7 +198,7 @@ function bindCompareHover(series, geometry) {
         ${logoHtml}
         <span class="ct-name" style="color:${item.color}">${esc(item.ticker || item.name)}</span>
         <span class="ct-pct ${pctCls}">${esc(pctChartLabel(point.close))}</span>
-        <span class="ct-price">${chartMoney(point.value, item.currency)}</span>
+        <span class="ct-price">${chartMoney(point.value, item.currency, item.ticker)}</span>
         <span class="ct-rsi">${Number.isFinite(point.rsi) ? `RSI ${point.rsi.toFixed(1)}` : "RSI -"}</span>
       </div>`;
     }).join("");

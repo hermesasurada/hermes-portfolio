@@ -24,8 +24,9 @@ function money(v, cur) {
   const prefix = cur === "USD" ? "$" : cur === "EUR" ? "€" : cur === "JPY" ? "¥" : "";
   return prefix + fmt.format(v);
 }
-function unitMoney(v, cur) {
+function unitMoney(v, cur, ticker = "") {
   if (v == null) return '<span class="missing">조회불가</span>';
+  if (String(ticker).toUpperCase() === "BTC") return `₩${fmt.format(Number(v) / 1000)}K`;
   if (cur === "KRW") return fmt.format(v) + "원";
   if (cur === "USD") return "$" + fmt1.format(v);
   if (cur === "EUR") return "€" + fmt1.format(v);
@@ -37,7 +38,7 @@ function unitKrw(v) {
 }
 function currentPriceMarkup(row) {
   if (row.current_price == null || !Number.isFinite(row.current_price_krw)) return '<span class="missing">조회불가</span>';
-  const local = unitMoney(row.current_price, row.currency);
+  const local = unitMoney(row.current_price, row.currency, row.ticker);
   if (row.currency === "KRW") return local;
   return `<span class="price-cell"><span>${local}</span><span class="krw-sub">(${unitKrw(row.current_price_krw)})</span></span>`;
 }
@@ -48,10 +49,13 @@ function valueMarkup(row) {
   return `<span class="price-cell"><span>${local}</span><span class="krw-sub">(${krw(row.value_krw)})</span></span>`;
 }
 function localCurrentPriceText(row) {
-  return row.current_price == null ? '<span class="missing">조회불가</span>' : unitMoney(row.current_price, row.currency);
+  return row.current_price == null ? '<span class="missing">조회불가</span>' : unitMoney(row.current_price, row.currency, row.ticker);
 }
 function krwCurrentPriceText(row) {
-  return Number.isFinite(row.current_price_krw) ? unitKrw(row.current_price_krw) : '<span class="missing">조회불가</span>';
+  if (!Number.isFinite(row.current_price_krw)) return '<span class="missing">조회불가</span>';
+  return String(row.ticker).toUpperCase() === "BTC"
+    ? unitMoney(row.current_price_krw, "KRW", row.ticker)
+    : unitKrw(row.current_price_krw);
 }
 function localValueText(row) {
   return row.value == null ? '<span class="missing">조회불가</span>' : money(row.value, row.currency);

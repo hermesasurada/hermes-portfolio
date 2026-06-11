@@ -483,7 +483,7 @@ function bindChartInteractions(points, payload, geometry) {
     }
     tooltip.setAttribute("x", tooltipX.toFixed(2));
     tooltip.setAttribute("y", tooltipY.toFixed(2));
-    tooltip.textContent = `${chartFullDateLabel(point.date)} · ${chartMoney(Number(point.close), payload.currency)}${Number.isFinite(rsiValue) ? ` · RSI ${rsiValue.toFixed(1)}` : ""}`;
+    tooltip.textContent = `${chartFullDateLabel(point.date)} · ${chartMoney(Number(point.close), payload.currency, payload.ticker)}${Number.isFinite(rsiValue) ? ` · RSI ${rsiValue.toFixed(1)}` : ""}`;
     updateTooltipBox();
   }
 
@@ -512,9 +512,9 @@ function bindChartInteractions(points, payload, geometry) {
     const x2 = geometry.xFor(endIndex);
     const labelX = Math.min(geometry.width - 10, Math.max(10, (x1 + x2) / 2));
     const lines = [
-      `${arrow}${signedChartMoney(change, payload.currency)} (${changePct > 0 ? "+" : ""}${fmt2.format(changePct)}%)`,
+      `${arrow}${signedChartMoney(change, payload.currency, payload.ticker)} (${changePct > 0 ? "+" : ""}${fmt2.format(changePct)}%)`,
       `${chartFullDateLabel(start.date)} - ${chartFullDateLabel(end.date)}`,
-      `${chartMoney(startPrice, payload.currency)} → ${chartMoney(endPrice, payload.currency)}`,
+      `${chartMoney(startPrice, payload.currency, payload.ticker)} → ${chartMoney(endPrice, payload.currency, payload.ticker)}`,
     ];
 
     selectionGroup.classList.remove("hidden", "up", "down", "flat");
@@ -691,7 +691,7 @@ function renderLineChart(payload) {
       cls: isBuy ? "buy" : "sell",
       x,
       y,
-      tooltip: `${tx.account || tx.member || "-"} · ${tx.side === "BUY" ? "매수" : "매도"} ${fmt2.format(tx.qty)}주 · ${chartMoney(tx.price, tx.currency || payload.currency)}`,
+      tooltip: `${tx.account || tx.member || "-"} · ${tx.side === "BUY" ? "매수" : "매도"} ${fmt2.format(tx.qty)}주 · ${chartMoney(tx.price, tx.currency || payload.currency, payload.ticker)}`,
     };
   });
   const extremes = chartExtremes(values).map(item => {
@@ -710,7 +710,7 @@ function renderLineChart(payload) {
       labelX: leftSide ? x - 10 : x + 10,
       labelY,
       anchor: leftSide ? "end" : "start",
-      text: `${item.label} ${chartMoney(item.value, payload.currency)}`,
+      text: `${item.label} ${chartMoney(item.value, payload.currency, payload.ticker)}`,
     };
   });
 
@@ -728,7 +728,7 @@ function renderLineChart(payload) {
       <rect class="chart-rsi-border" x="${pad.left}" y="${rsiTop}" width="${plotW}" height="${rsiH}"></rect>
       ${yTicks.map(tick => `
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
-        <text class="chart-y-label" x="${width - 6}" y="${(tick.y + 4).toFixed(2)}">${esc(chartMoney(tick.value, payload.currency))}</text>
+        <text class="chart-y-label" x="${width - 6}" y="${(tick.y + 4).toFixed(2)}">${esc(chartMoney(tick.value, payload.currency, payload.ticker))}</text>
       `).join("")}
       ${vGrid.ticks.map(tick => `
         <line class="chart-grid perf-vgrid" x1="${tick.x.toFixed(2)}" x2="${tick.x.toFixed(2)}" y1="${pad.top}" y2="${(pad.top + plotH).toFixed(2)}"></line>

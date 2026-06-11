@@ -1,13 +1,13 @@
 // 차트 공용 헬퍼: 포맷·기간·스케일(nice/log/비교로그)·스무딩·그리드. app-line-chart.js에서 분리.
-function chartMoney(value, currency) {
+function chartMoney(value, currency, ticker = "") {
   if (!Number.isFinite(value)) return "-";
-  return unitMoney(value, currency).replace(/<[^>]+>/g, "");
+  return unitMoney(value, currency, ticker).replace(/<[^>]+>/g, "");
 }
 
-function signedChartMoney(value, currency) {
+function signedChartMoney(value, currency, ticker = "") {
   if (!Number.isFinite(value)) return "-";
   const sign = value > 0 ? "+" : value < 0 ? "-" : "";
-  return `${sign}${chartMoney(Math.abs(value), currency)}`;
+  return `${sign}${chartMoney(Math.abs(value), currency, ticker)}`;
 }
 
 function chartFullDateLabel(dateText) {

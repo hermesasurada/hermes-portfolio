@@ -137,7 +137,7 @@ function txViewRow(tx) {
       <td>${esc(tx.name || "")}</td>
       <td><span class="${sideClass}">${sideText}</span></td>
       <td>${fmt2.format(tx.qty || 0)}</td>
-      <td>${unitMoney(tx.price, tx.currency)}</td>
+      <td>${unitMoney(tx.price, tx.currency, tx.ticker)}</td>
       <td>${money(amount, tx.currency)}</td>
       <td>${compareText}</td>
       <td class="tx-actions">
