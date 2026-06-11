@@ -151,6 +151,16 @@ function renderDividendTable() {
     const tax = Number(value);
     return Number.isFinite(tax) && tax !== 0 ? dividendMoneyText(tax, currency) : "-";
   };
+  const today = todayLocal();
+  const payDateValue = row => {
+    const value = String(row.pay_date || "").slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+  };
+  const dateSort = sortState.dividend?.key === "pay_date";
+  const boundaryPaidState = (sortState.dividend?.dir || 1) < 0;
+  const hasPaid = rows.some(row => payDateValue(row) && payDateValue(row) <= today);
+  const hasUpcoming = rows.some(row => payDateValue(row) > today);
+  let todayBoundaryInserted = false;
   document.getElementById("dividendRows").innerHTML = rows.length ? groupedDividendRows(rows).map(item => {
     const collapsed = item.kind === "month" && collapsedDividendMonths.has(item.key);
     if (item.kind === "month") return `
@@ -165,8 +175,23 @@ function renderDividendTable() {
     </tr>
   `;
     if (collapsedDividendMonths.has(item.monthKey)) return "";
+    const paid = Boolean(payDateValue(item.row) && payDateValue(item.row) <= today);
+    const showTodayBoundary = dateSort
+      && hasPaid
+      && hasUpcoming
+      && !todayBoundaryInserted
+      && paid === boundaryPaidState;
+    if (showTodayBoundary) todayBoundaryInserted = true;
+    const todayBoundary = showTodayBoundary ? `
+      <tr class="dividend-today-row">
+        <td colspan="13">
+          <span class="dividend-today-marker"><span aria-hidden="true">✓</span> 오늘 ${dividendDateText(today)} · 지급 완료 기준</span>
+        </td>
+      </tr>
+    ` : "";
     return `
-    <tr>
+    ${todayBoundary}
+    <tr class="${paid ? "dividend-paid-row" : "dividend-upcoming-row"}">
       <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
       <td class="dividend-target" title="${esc(item.row.target || item.row.member || "-")}">${esc(item.row.target || item.row.member || "-")}</td>
       <td class="dividend-ticker"><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(displayTicker(item.row.ticker))}</a></td>
