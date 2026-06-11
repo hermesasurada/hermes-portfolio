@@ -185,7 +185,7 @@ function renderDividendTable() {
     const todayBoundary = showTodayBoundary ? `
       <tr class="dividend-today-row">
         <td colspan="13">
-          <span class="dividend-today-marker"><span aria-hidden="true">✓</span> 오늘 ${dividendDateText(today)} · 지급 완료 기준</span>
+          <span class="dividend-today-marker">오늘 ${dividendDateText(today)}</span>
         </td>
       </tr>
     ` : "";
