@@ -1436,9 +1436,9 @@ tbody tr.index-row td:first-child::before {
 .cstat-row {
   min-height: 31px;
   display: grid;
-  grid-template-columns: minmax(90px, 1fr) minmax(62px, auto);
+  grid-template-columns: 108px minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 0;
   padding: 0;
   border-bottom: 1px solid var(--line);
 }
@@ -1459,7 +1459,7 @@ tbody tr.index-row td:first-child::before {
   white-space: nowrap;
 }
 .cstat-v {
-  padding: 5px 11px 5px 0;
+  padding: 5px 11px;
   color: var(--ink);
   font-size: 13px;
   font-weight: var(--fw-bold);
@@ -2353,9 +2353,8 @@ tbody tr.index-row td:first-child::before {
 .dividend-history-stats .cstat-board {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-/* 라벨 트랙을 줄여 '최근 인상 ▲%+일자' 같은 긴 값에 여유 확보 */
 .dividend-history-stats .cstat-row {
-  grid-template-columns: minmax(56px, 1fr) minmax(62px, auto);
+  grid-template-columns: 108px minmax(0, 1fr);
 }
 
 /* ── 반응형 ① 모바일(≤560px) — 배당이력 모달 ───────────────────────────── */
@@ -2976,13 +2975,14 @@ tbody tr.index-row td:first-child::before {
     border-bottom: 0;
   }
   .cstat-row {
-    grid-template-columns: minmax(120px, 1fr) auto;
+    grid-template-columns: 108px minmax(0, 1fr);
   }
   .cstat-k {
     padding-left: 12px;
     padding-right: 12px;
   }
   .cstat-v {
+    padding-left: 12px;
     padding-right: 12px;
   }
   :root[data-theme="dark"] .cstat-column {
