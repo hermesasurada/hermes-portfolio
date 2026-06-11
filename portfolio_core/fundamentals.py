@@ -10,7 +10,7 @@ from datetime import datetime
 from urllib.parse import quote
 
 from .paths import KST
-from .tickers import is_korean_stock_ticker, normalize_yfinance_symbol
+from .tickers import is_korean_stock_ticker, kr_ticker_code, normalize_yfinance_symbol
 
 STATS_CACHE_SECONDS = 30 * 60
 STATS_CACHE_VERSION = 7
@@ -112,7 +112,7 @@ def normalize_pe(value) -> float | None:
 
 
 def fetch_naver_fundamentals(ticker: str) -> tuple[dict, dict]:
-    code = ticker.split(".")[0]
+    code = kr_ticker_code(ticker)
     url = f"https://stock.naver.com/api/domestic/detail/{quote(code)}/detail?codeType=KRX"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=8) as resp:

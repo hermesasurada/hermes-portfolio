@@ -10,7 +10,7 @@ from .constants import MARKET_INDEXES
 from .db import connect
 from .hydration import deficient_tickers, estimate_hydration_minutes, hydrate_deficient_tickers, hydrate_ticker
 from .price_store import infer_category
-from .tickers import asset_class, normalize_yfinance_symbol, ticker_currency
+from .tickers import asset_class, kr_ticker_code, normalize_yfinance_symbol, ticker_currency
 
 # Cache the full KRX listing in-process so name-based lookups don't re-download
 # it on every search. (#4)
@@ -79,7 +79,7 @@ def lookup_krx_listing(query: str) -> dict | None:
     rows = df.copy()
     rows["_code"] = rows[code_column].astype(str).str.zfill(6)
     rows["_name"] = rows[name_column].astype(str)
-    exact_code = rows[rows["_code"] == compact.replace(".KS", "").replace(".KQ", "")]
+    exact_code = rows[rows["_code"] == kr_ticker_code(compact)]
     if not exact_code.empty:
         row = exact_code.iloc[0]
     else:
@@ -150,7 +150,7 @@ def lookup_korean_ticker(ticker: str) -> dict | None:
     import urllib.request
     from urllib.parse import quote
 
-    code = ticker.split(".")[0]
+    code = kr_ticker_code(ticker)
     url = f"https://stock.naver.com/api/domestic/detail/{quote(code)}/detail?codeType=KRX"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=8) as resp:

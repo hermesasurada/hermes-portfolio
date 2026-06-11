@@ -103,12 +103,6 @@ function bindPerformanceHover(series, geometry) {
   const hoverLine = document.getElementById("chartHoverLine");
   const tooltip = document.getElementById("compareTooltip");
   if (!svg || !canvas || !hoverLayer || !hoverGroup || !hoverLine || !tooltip) return;
-  let touchPinned = false;
-
-  const nearest = (points, targetTime) => points.reduce((best, point) => {
-    const distance = Math.abs(point.time - targetTime);
-    return !best || distance < best.distance ? { point, distance } : best;
-  }, null)?.point;
 
   const showPoint = clientX => {
     const rect = svg.getBoundingClientRect();
@@ -116,7 +110,7 @@ function bindPerformanceHover(series, geometry) {
     const ratio = Math.min(1, Math.max(0, (svgX - geometry.pad.left) / geometry.plotW));
     const targetTime = geometry.minTime + ratio * (geometry.maxTime - geometry.minTime);
     const x = geometry.xForTime(targetTime);
-    const mainPoint = nearest(series[0]?.points || [], targetTime);
+    const mainPoint = nearestChartPoint(series[0]?.points || [], targetTime);
     const dateText = mainPoint?.date || new Date(targetTime).toISOString().slice(0, 10);
     hoverGroup.classList.remove("hidden");
     hoverLine.setAttribute("x1", x.toFixed(2));
@@ -124,7 +118,7 @@ function bindPerformanceHover(series, geometry) {
     series.forEach(item => {
       const dot = document.getElementById(`perfDot-${item.key}`);
       if (!dot) return;
-      const point = nearest(item.points, targetTime);
+      const point = nearestChartPoint(item.points, targetTime);
       if (point) {
         dot.setAttribute("cx", x.toFixed(2));
         dot.setAttribute("cy", geometry.yFor(point.close).toFixed(2));
@@ -134,33 +128,17 @@ function bindPerformanceHover(series, geometry) {
       }
     });
     const rows = series.map(item => {
-      const point = nearest(item.points, targetTime);
+      const point = nearestChartPoint(item.points, targetTime);
       if (!point) return "";
       const cls = point.close > 0 ? "up" : point.close < 0 ? "down" : "flat";
       return `<div class="ct-row simple"><span class="ct-name" style="color:${item.color}">${esc(item.name)}</span><span class="ct-pct ${cls}">${esc(pctChartLabel(point.close))}</span></div>`;
     }).join("");
     tooltip.innerHTML = `<div class="ct-date">${esc(chartFullDateLabel(dateText))}</div>${rows}`;
     tooltip.classList.remove("hidden");
-    const canvasRect = canvas.getBoundingClientRect();
-    const lineClientX = rect.left + (x / geometry.width) * rect.width;
-    const tipW = tooltip.offsetWidth;
-    let leftPx = (lineClientX - canvasRect.left) + 14;
-    if (leftPx + tipW > canvasRect.width - 6) leftPx = (lineClientX - canvasRect.left) - tipW - 14;
-    if (leftPx < 6) leftPx = 6;
-    const topPx = (rect.top - canvasRect.top) + (geometry.pad.top / geometry.height) * rect.height + 4;
-    tooltip.style.left = `${leftPx.toFixed(0)}px`;
-    tooltip.style.top = `${Math.max(4, topPx).toFixed(0)}px`;
+    placeChartHoverTooltip(tooltip, canvas, rect, geometry, x);
   };
 
-  hoverLayer.addEventListener("pointermove", event => showPoint(event.clientX));
-  hoverLayer.addEventListener("pointerenter", event => showPoint(event.clientX));
-  hoverLayer.addEventListener("pointerdown", event => {
-    if (event.pointerType !== "touch") return;
-    touchPinned = true;
-    showPoint(event.clientX);
-  });
-  hoverLayer.addEventListener("pointerleave", () => {
-    if (touchPinned) return;
+  bindHoverPointerEvents(hoverLayer, showPoint, () => {
     hoverGroup.classList.add("hidden");
     tooltip.classList.add("hidden");
   });

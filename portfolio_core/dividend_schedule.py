@@ -1,33 +1,19 @@
 from __future__ import annotations
 
-import math
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Any
 
-from .dates import parse_iso_date
-from .paths import KST
+from .constants import DIVIDEND_LOOKAHEAD_DAYS, DIVIDEND_LOOKBACK_DAYS
+from .dates import parse_iso_date, positive_float, today_kst
 
-DIVIDEND_LOOKBACK_DAYS = 30
-DIVIDEND_LOOKAHEAD_DAYS = 365
 KR_MARKET_HOLIDAY_OVERRIDES = {
     "2026-05-04",
 }
 
-
-def today() -> date:
-    return datetime.now(KST).date()
-
-
-def parse_date(value: str | None) -> date | None:
-    return parse_iso_date(value)
-
-
-def float_value(value: Any) -> float | None:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    return number if math.isfinite(number) and number > 0 else None
+# 공용 헬퍼 위임 (중복 제거)
+today = today_kst
+parse_date = parse_iso_date
+float_value = positive_float
 
 
 def add_one_year(value: date) -> date:

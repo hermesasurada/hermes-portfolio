@@ -10,12 +10,6 @@ function signedChartMoney(value, currency) {
   return `${sign}${chartMoney(Math.abs(value), currency)}`;
 }
 
-function chartDateLabel(dateText) {
-  if (!dateText) return "-";
-  const text = String(dateText);
-  return text.length >= 10 ? text.slice(2, 10).replaceAll("-", ".") : text;
-}
-
 function chartFullDateLabel(dateText) {
   if (!dateText) return "-";
   const text = String(dateText);

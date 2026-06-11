@@ -292,12 +292,28 @@ class Handler(BaseHTTPRequestHandler):
         payload = self.read_json()
         return add_watchlist_async(payload.get("tickers") or [])
 
+    def _dispatch(self, verb: str, handler) -> None:
+        """GET/POST 공통 에러 처리: 끊긴 파이프 무시, ValueError→400, 그 외→로그+500."""
+        try:
+            handler()
+        except BrokenPipeError:
+            return
+        except ValueError as exc:
+            self.send_json({"error": str(exc)}, 400)
+        except Exception:
+            logging.exception("%s %s failed", verb, self.path)
+            try:
+                self.send_json({"error": HTTPStatus.INTERNAL_SERVER_ERROR.phrase}, 500)
+            except BrokenPipeError:
+                return
+
     def do_GET(self) -> None:
         self._request_started_at = time.perf_counter()
         parsed = urlparse(self.path)
         path = parsed.path
         query = parse_qs(parsed.query)
-        try:
+
+        def handle() -> None:
             if path.startswith("/static/"):
                 self.send_static(Path(path).name)
                 return
@@ -324,21 +340,14 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_file(INDEX_HTML, "text/html; charset=utf-8")
                 return
             self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
-        except BrokenPipeError:
-            return
-        except ValueError as exc:
-            self.send_json({"error": str(exc)}, 400)
-        except Exception:
-            logging.exception("GET %s failed", self.path)
-            try:
-                self.send_json({"error": HTTPStatus.INTERNAL_SERVER_ERROR.phrase}, 500)
-            except BrokenPipeError:
-                return
+
+        self._dispatch("GET", handle)
 
     def do_POST(self) -> None:
         self._request_started_at = time.perf_counter()
         path = urlparse(self.path).path
-        try:
+
+        def handle() -> None:
             post_routes = {
                 "/api/transactions": self.post_transactions,
                 "/api/transactions/update": self.post_transaction_update,
@@ -349,16 +358,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(post_routes[path]())
                 return
             self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
-        except BrokenPipeError:
-            return
-        except ValueError as exc:
-            self.send_json({"error": str(exc)}, 400)
-        except Exception:
-            logging.exception("POST %s failed", self.path)
-            try:
-                self.send_json({"error": HTTPStatus.INTERNAL_SERVER_ERROR.phrase}, 500)
-            except BrokenPipeError:
-                return
+
+        self._dispatch("POST", handle)
 
 
 def main() -> None:

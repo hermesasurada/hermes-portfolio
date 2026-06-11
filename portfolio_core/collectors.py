@@ -11,7 +11,7 @@ from urllib.parse import quote
 
 from .constants import MARKET_INDEXES
 from .paths import KST
-from .tickers import normalize_yfinance_symbol, ticker_currency
+from .tickers import kr_ticker_code, normalize_yfinance_symbol, ticker_currency
 
 FX_SYMBOLS = {"USDKRW": "USDKRW=X", "EURKRW": "EURKRW=X", "JPYKRW": "JPYKRW=X"}
 INVESTING_HEADERS = {
@@ -43,7 +43,7 @@ def _rows_from_close_series(series) -> list[tuple[str, float]]:
 def fetch_kr_price(ticker: str, history_start: str = "20250101") -> CollectedPrice | None:
     from FinanceDataReader import DataReader as fdr
 
-    code = ticker.replace(".KS", "").replace(".KQ", "")
+    code = kr_ticker_code(ticker)
     df = fdr(code, history_start)
     if df is None or df.empty or "Close" not in df:
         return None
@@ -68,7 +68,7 @@ def fetch_history_rows(category: str, ticker: str, period: str = "10y") -> list[
     if category == "kr":
         from FinanceDataReader import DataReader as fdr
 
-        code = ticker.replace(".KS", "").replace(".KQ", "")
+        code = kr_ticker_code(ticker)
         df = fdr(code, "20150101")
         if df is None or df.empty or "Close" not in df:
             return []
@@ -144,7 +144,7 @@ def _date_from_korean_text(text: str) -> str | None:
 
 
 def fetch_investing_kr_earnings_date(ticker: str) -> str | None:
-    code = ticker.split(".")[0]
+    code = kr_ticker_code(ticker)
     search_url = f"https://api.investing.com/api/search/v2/search?q={quote(code)}"
     headers = {**INVESTING_HEADERS, "Accept": "application/json"}
     req = urllib.request.Request(search_url, headers=headers)

@@ -23,6 +23,14 @@ def is_korean_stock_ticker(ticker: str) -> bool:
     return ticker.endswith(KOREAN_SUFFIXES)
 
 
+def kr_ticker_code(ticker: str) -> str:
+    """'005930.KS' → '005930'. KRX 단축코드(6자리 영숫자)만 남긴다."""
+    code = str(ticker or "").strip().upper()
+    for suffix in KOREAN_SUFFIXES:
+        code = code.removesuffix(suffix)
+    return code
+
+
 def is_us_stock_ticker(ticker: str, currency: str | None) -> bool:
     if currency != "USD":
         return False

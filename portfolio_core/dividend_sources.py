@@ -11,15 +11,13 @@ from html import unescape
 from pathlib import Path
 from typing import Any
 
-from .constants import KOREAN_SUFFIXES
-from .dates import parse_iso_date, to_iso_text
+from .constants import DIVIDEND_LOOKAHEAD_DAYS, DIVIDEND_LOOKBACK_DAYS, KOREAN_SUFFIXES
+from .dates import now_kst_text, parse_iso_date, positive_float, to_iso_text, today_kst
 from .opendart_dividends import fetch_opendart_dividends, is_opendart_candidate
 from .paths import KST
 from .tickers import normalize_yfinance_symbol, ticker_currency
 
 DIVIDEND_CACHE_HOURS = 24
-DIVIDEND_LOOKBACK_DAYS = 30
-DIVIDEND_LOOKAHEAD_DAYS = 365
 NASDAQ_HEADERS = {
     "Accept": "application/json, text/plain, */*",
     "Origin": "https://www.nasdaq.com",
@@ -56,17 +54,12 @@ CURRENCY_SYMBOLS = {
 }
 
 
-def _today() -> date:
-    return datetime.now(KST).date()
-
-
-def _now_text() -> str:
-    return datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
-
-
 # 공용 헬퍼 위임 (중복 제거). 사이트별 포맷 파서는 아래에 그대로 둔다.
+_today = today_kst
+_now_text = now_kst_text
 _date_text = to_iso_text
 _parse_date = parse_iso_date
+_float_value = positive_float
 
 
 def _date_from_us_text(value: str | None) -> str | None:
@@ -102,14 +95,6 @@ def _date_from_kr_text(value: str | None) -> str | None:
         except ValueError:
             continue
     return None
-
-
-def _float_value(value: Any) -> float | None:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    return number if number > 0 else None
 
 
 def _amount_from_text(value: Any) -> float | None:
@@ -514,6 +499,13 @@ def _fetch_yahoo_dividends(ticker: str) -> list[dict]:
     return list(events.values())
 
 
+def _source_error(source: str, ticker: str, exc: Exception) -> str:
+    """소스별 수집 실패를 상태문자열+로그 한 줄로 남긴다 (launchd 로그로 추적 가능).
+    상태는 'xxx_error(TypeName)' 형태 — 진단의 LIKE '%_error%' 매칭 유지."""
+    print(f"[dividends] {ticker} {source} failed: {type(exc).__name__}: {exc}")
+    return f"{source}_error({type(exc).__name__})"
+
+
 def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], str]:
     events: dict[str, dict] = {}
     sources = []
@@ -533,8 +525,8 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
                             opendart_ex_dates.append(date.fromisoformat(event["ex_date"]))
                         except ValueError:
                             pass
-            except Exception:
-                sources.append("opendart_error")
+            except Exception as exc:
+                sources.append(_source_error("opendart", ticker, exc))
 
         def _near_opendart(ex_date_text: str) -> bool:
             if not opendart_ex_dates:
@@ -552,8 +544,8 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
                 ex = event.get("ex_date")
                 if ex and not _near_opendart(ex):
                     events.setdefault(ex, event)
-        except Exception:
-            sources.append("seibro_error")
+        except Exception as exc:
+            sources.append(_source_error("seibro", ticker, exc))
         try:
             history_events = [
                 event for event in _fetch_yahoo_dividends(ticker)
@@ -567,8 +559,8 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
                         **event,
                         "source": "kr-history",
                     })
-        except Exception:
-            sources.append("kr_history_error")
+        except Exception as exc:
+            sources.append(_source_error("kr_history", ticker, exc))
     else:
         try:
             yahoo_events = _fetch_yahoo_dividends(ticker)
@@ -577,8 +569,8 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
             for event in yahoo_events:
                 if event.get("ex_date"):
                     events[event["ex_date"]] = event
-        except Exception:
-            sources.append("yahoo_error")
+        except Exception as exc:
+            sources.append(_source_error("yahoo", ticker, exc))
 
     if _stockanalysis_candidate(ticker):
         try:
@@ -587,8 +579,8 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
             for event in stockanalysis_events:
                 if event.get("ex_date"):
                     events[event["ex_date"]] = event
-        except Exception:
-            sources.append("stockanalysis_error")
+        except Exception as exc:
+            sources.append(_source_error("stockanalysis", ticker, exc))
 
     if _nasdaq_candidate(ticker):
         try:
@@ -597,8 +589,8 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
             for event in nasdaq_events:
                 if event.get("ex_date"):
                     events[event["ex_date"]] = event
-        except Exception:
-            sources.append("nasdaq_error")
+        except Exception as exc:
+            sources.append(_source_error("nasdaq", ticker, exc))
         try:
             press_events = _fetch_nasdaq_press_release_dividends(ticker)
             if press_events:
@@ -606,8 +598,8 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
             for event in press_events:
                 if event.get("ex_date"):
                     events[event["ex_date"]] = event
-        except Exception:
-            sources.append("nasdaq_press_error")
+        except Exception as exc:
+            sources.append(_source_error("nasdaq_press", ticker, exc))
 
     if DIVIDENDMAX_URLS.get(ticker):
         try:
@@ -616,8 +608,8 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
             for event in dividendmax_events:
                 if event.get("ex_date"):
                     events[event["ex_date"]] = event
-        except Exception:
-            sources.append("dividendmax_error")
+        except Exception as exc:
+            sources.append(_source_error("dividendmax", ticker, exc))
 
     # Polygon: 권위 소스이므로 마지막에 같은 ex_date를 덮어써 선언일/기준일/미래
     # 확정분까지 채운다. (분당 5콜 스로틀은 _fetch_polygon_dividends 내부 처리)
@@ -628,7 +620,7 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
             for event in polygon_events:
                 if event.get("ex_date"):
                     events[event["ex_date"]] = event
-        except Exception:
-            sources.append("polygon_error")
+        except Exception as exc:
+            sources.append(_source_error("polygon", ticker, exc))
 
     return list(events.values()), "+".join(sources) or "none"

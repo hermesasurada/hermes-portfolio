@@ -12,7 +12,7 @@ from .fundamentals import fetch_fundamentals
 from .logos import cache_logo
 from .price_store import infer_category, save_daily_prices, update_earnings_dates, update_price_cache
 from .technical_stats import refresh_technical_stats_cache
-from .tickers import asset_class, normalize_yfinance_symbol, ticker_currency
+from .tickers import asset_class, kr_ticker_code, normalize_yfinance_symbol, ticker_currency
 
 
 def normalize_hydration_ticker(value: str) -> str:
@@ -33,7 +33,7 @@ def fetch_history_rows(ticker: str, years: int = 10) -> tuple[list[tuple[str, fl
     if category == "kr":
         from FinanceDataReader import DataReader as fdr
 
-        df = fdr(ticker.replace(".KS", "").replace(".KQ", ""), start)
+        df = fdr(kr_ticker_code(ticker), start)
         source = "fdr-history"
     elif ticker == "KOSPI":
         from FinanceDataReader import DataReader as fdr

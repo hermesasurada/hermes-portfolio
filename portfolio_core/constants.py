@@ -8,6 +8,10 @@ FX_DEFAULT_RATES = {
     "KRW": 1.0,
 }
 
+# 배당 조회 윈도우 — 과거 30일·미래 1년 (dividends/dividend_sources/dividend_schedule 공용)
+DIVIDEND_LOOKBACK_DAYS = 30
+DIVIDEND_LOOKAHEAD_DAYS = 365
+
 KOREAN_SUFFIXES = (".KS", ".KQ")
 LOCAL_MARKET_SUFFIXES = (".KS", ".KQ", ".T", ".TO", ".PA", ".DE")
 ETF_BRANDS = ("KODEX", "TIGER", "ACE", "SOL", "ETF", "ETN", "QQQ")

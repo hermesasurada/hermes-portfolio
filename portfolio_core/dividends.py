@@ -5,30 +5,20 @@ from datetime import date, datetime, timedelta, timezone
 from statistics import median
 from typing import Any
 
-from .constants import FX_DEFAULT_RATES, KOREAN_SUFFIXES
+from .constants import DIVIDEND_LOOKAHEAD_DAYS, DIVIDEND_LOOKBACK_DAYS, FX_DEFAULT_RATES, KOREAN_SUFFIXES
+from .dates import positive_float, today_kst
 from .db import connect, ensure_dividend_tables
 from .dividend_refresh import refresh_dividend_events
 from .dividend_schedule import consolidated_dividend_events, event_schedule_date
-from .paths import KST
 from .prices import latest_prices
 from .queries import clean_account_ids, load_holding_rows
 from .tickers import account_label, ticker_currency
 
-DIVIDEND_LOOKBACK_DAYS = 30
-DIVIDEND_LOOKAHEAD_DAYS = 365
 DIVIDEND_HISTORY_START_YEAR = 2010
 
-
-def _today():
-    return datetime.now(KST).date()
-
-
-def _float_value(value: Any) -> float | None:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    return number if number > 0 else None
+# 공용 헬퍼 위임 (중복 제거)
+_today = today_kst
+_float_value = positive_float
 
 
 TAX_FREE_ACCOUNT_TYPES = {"pension_kr", "retirement_kr"}

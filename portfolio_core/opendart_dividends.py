@@ -26,6 +26,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from .paths import KST, LOGO_DIR
+from .tickers import kr_ticker_code
 
 OPENDART_ENV_PATH = Path.home() / ".hermes" / "opendart.env"
 CORP_CODE_CACHE = LOGO_DIR.parent / "dart_corpcodes.json"
@@ -110,8 +111,7 @@ def _corp_map() -> dict[str, str]:
     return _corp_map_cache
 
 
-def _stock_code(ticker: str) -> str:
-    return ticker.upper().replace(".KS", "").replace(".KQ", "")
+_stock_code = kr_ticker_code   # 공용 헬퍼 위임
 
 
 def is_opendart_candidate(ticker: str) -> bool:
