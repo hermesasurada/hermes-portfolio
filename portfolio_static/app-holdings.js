@@ -617,6 +617,47 @@ function syncTransactionPanel() {
   if (panel) panel.classList.toggle("hidden", Boolean(performanceChartOpen || chartTicker));
 }
 
+let frozenColumnsFrame = 0;
+
+function schedulePcFrozenColumns() {
+  cancelAnimationFrame(frozenColumnsFrame);
+  frozenColumnsFrame = requestAnimationFrame(syncPcFrozenColumns);
+}
+
+function syncPcFrozenColumns() {
+  const frozenCells = document.querySelectorAll(".pc-frozen-col, .pc-frozen-edge");
+  frozenCells.forEach(cell => {
+    cell.classList.remove("pc-frozen-col", "pc-frozen-edge");
+    cell.style.removeProperty("--pc-frozen-left");
+  });
+  if (!window.matchMedia("(min-width: 981px)").matches) return;
+
+  [
+    ["#detailTableWrap table", 2],
+    ["#statsTableWrap table", 2],
+    ["#dividendTableWrap table", 4]
+  ].forEach(([selector, columnCount]) => {
+    const table = document.querySelector(selector);
+    if (!table || table.closest(".hidden")) return;
+    const headers = Array.from(table.querySelectorAll("thead tr:first-child > th"));
+    let left = 0;
+    for (let index = 0; index < Math.min(columnCount, headers.length); index += 1) {
+      const cells = [headers[index]];
+      table.querySelectorAll("tbody > tr").forEach(row => {
+        const cell = row.cells[index];
+        if (cell && cell.colSpan === 1) cells.push(cell);
+      });
+      const isEdge = index === columnCount - 1;
+      cells.forEach(cell => {
+        cell.classList.add("pc-frozen-col");
+        if (isEdge) cell.classList.add("pc-frozen-edge");
+        cell.style.setProperty("--pc-frozen-left", `${left}px`);
+      });
+      left += headers[index].getBoundingClientRect().width;
+    }
+  });
+}
+
 function renderTable() {
   syncSortGlobals(activeDetailTab);
   syncTransactionPanel();
@@ -674,6 +715,7 @@ function renderTable() {
   bindChartLinks();
   if (activeDetailTab === "stats") renderStatsTable(rows);
   if (activeDetailTab === "dividend") renderDividendTable();
+  schedulePcFrozenColumns();
 }
 
 function bindChartLinks() {

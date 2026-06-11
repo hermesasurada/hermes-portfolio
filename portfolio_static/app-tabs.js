@@ -107,6 +107,7 @@ function renderStatsTable(baseRows = null) {
     </tr>
   `).join("");
   bindChartLinks();
+  schedulePcFrozenColumns();
 }
 
 function dividendSelectionKey() {
@@ -194,6 +195,7 @@ function renderDividendTable() {
   });
   bindDividendHistoryLinks();
   bindChartLinks();
+  schedulePcFrozenColumns();
 }
 
 function dividendHistoryPercent(value) {

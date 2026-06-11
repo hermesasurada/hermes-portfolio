@@ -365,6 +365,7 @@ document.addEventListener("click", event => {
   openChart(btn.dataset.chartTicker);
 });
 window.addEventListener("hashchange", syncChartRoute);
+window.addEventListener("resize", schedulePcFrozenColumns);
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     const previousTab = activeDetailTab;

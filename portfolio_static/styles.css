@@ -6,6 +6,7 @@
   --surface-2: #eef1f5;     /* pills, table head, tab track */
   --surface-hover: #f7f9fb; /* row hover */
   --zebra: #fbfcfddb;       /* zebra stripe */
+  --zebra-solid: #fbfcfd;
   --index-row-bg: #eaf3ff;
   --index-row-hover: #ddeeff;
   --index-row-line: #1f4e79;
@@ -70,6 +71,7 @@
     --surface-2: #263241;
     --surface-hover: #232d3a;
     --zebra: #202a36cc;
+    --zebra-solid: #202a36;
     --index-row-bg: #23364d;
     --index-row-hover: #29405d;
     --index-row-line: #6ea8e6;
@@ -1014,6 +1016,39 @@ tbody tr.index-row td:first-child::before {
   width: 3px;
   border-radius: 999px;
   background: var(--index-row-line);
+}
+@media (min-width: 981px) {
+  .pc-frozen-col {
+    position: sticky;
+    left: var(--pc-frozen-left);
+    z-index: 3;
+    background: var(--panel);
+  }
+  tbody tr:nth-child(even) > .pc-frozen-col {
+    background: var(--zebra-solid);
+  }
+  tbody tr:hover > .pc-frozen-col {
+    background: var(--surface-hover);
+  }
+  tbody tr.index-row > .pc-frozen-col,
+  tbody tr.index-row:nth-child(even) > .pc-frozen-col {
+    background: var(--index-row-bg);
+  }
+  tbody tr.index-row:hover > .pc-frozen-col {
+    background: var(--index-row-hover);
+  }
+  th.pc-frozen-col {
+    z-index: 6;
+    background: var(--surface-2);
+  }
+  .pc-frozen-edge {
+    box-shadow: 2px 0 0 color-mix(in srgb, var(--line) 85%, transparent);
+  }
+  th.pc-frozen-edge {
+    box-shadow:
+      inset 0 -1px 0 var(--line),
+      2px 0 0 color-mix(in srgb, var(--line) 85%, transparent);
+  }
 }
 .toolbar {
   display: flex;
