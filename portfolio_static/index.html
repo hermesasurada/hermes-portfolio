@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=design-p6">
+  <link rel="stylesheet" href="/static/styles.css?v=stats-help">
 </head>
 <body>
   <header>
@@ -109,6 +109,7 @@
               <button class="tab-btn" id="statsTabBtn" type="button" data-tab="stats">통계</button>
               <button class="tab-btn" id="dividendTabBtn" type="button" data-tab="dividend">배당</button>
             </span>
+            <button class="help-icon-btn hidden" id="statsHelpOpen" type="button" aria-label="통계 지표 설명" title="통계 지표 설명">?</button>
             <span class="position-filter" id="positionFilterBtn" data-state="held" role="group" aria-label="보유 여부">
               <button class="position-filter-option active" type="button" data-position-state="held" aria-pressed="true">보유</button>
               <button class="position-filter-option" type="button" data-position-state="unheld" aria-pressed="false">미보유</button>
@@ -464,6 +465,66 @@
       </div>
       <div class="help-note">
         통계 탭은 실시간 외부 조회를 하지 않고 DB 캐시를 읽습니다. 신규 관리종목 적용 시 과거 가격, 통계지표, 실적일, 로고를 별도로 채웁니다.
+      </div>
+    </form>
+  </dialog>
+  <dialog class="watch-modal help-modal" id="statsHelpModal">
+    <form method="dialog" class="modal-card help-card">
+      <div class="modal-head">
+        <strong>통계 지표 설명</strong>
+        <button class="ghost-btn" id="statsHelpClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <div class="help-summary">
+        <span>벤치마크: S&amp;P 500</span>
+        <span>RSI 14 · BB 20·2σ</span>
+        <span>ETF·지수는 펀더멘털 제외</span>
+      </div>
+      <div class="help-grid">
+        <section class="help-block">
+          <h3><span class="help-section-icon">₩</span><span>규모 · 가치</span></h3>
+          <dl>
+            <dt>시가총액</dt>
+            <dd>발행주식 × 현재가. 통화 무관 비교를 위해 USD로 환산해 정렬합니다. ETF·지수는 제외.</dd>
+            <dt>배당율</dt>
+            <dd>최근 12개월 주당배당금 ÷ 현재가(%). 데이터 출처 기준의 후행 배당수익률.</dd>
+            <dt>P/E (t) · (f)</dt>
+            <dd>주가수익비율. (t)=후행(최근 4분기 실적), (f)=선행(향후 추정 EPS). 낮을수록 이익 대비 저평가, 적자면 공란.</dd>
+            <dt>P/B</dt>
+            <dd>주가순자산비율(PBR). 거래통화≠재무통화(ADR 등)로 환산이 왜곡되는 경우는 표시에서 제외.</dd>
+          </dl>
+        </section>
+        <section class="help-block">
+          <h3><span class="help-section-icon">⤴</span><span>추세 · 과열</span></h3>
+          <dl>
+            <dt>52주高 대비</dt>
+            <dd>최근 52주(약 252거래일) 최고가 대비 현재가 위치(%). 0%면 신고가, 음수일수록 고점에서 더 내려온 상태.</dd>
+            <dt>RSI (일·주·월)</dt>
+            <dd>상대강도지수(14기간). 일봉·주봉·월봉 각각 계산. 통상 70↑ 과매수, 30↓ 과매도로 봅니다.</dd>
+            <dt>BB (일·주·월)</dt>
+            <dd>볼린저밴드 %B(20기간·2σ). 100=상단밴드, 0=하단밴드. 밴드 내 현재가 위치를 0~100으로 나타냅니다.</dd>
+          </dl>
+        </section>
+        <section class="help-block">
+          <h3><span class="help-section-icon">β</span><span>위험 (변동성)</span></h3>
+          <dl>
+            <dt>β (베타)</dt>
+            <dd>시장(S&amp;P 500) 대비 민감도 = cov(종목,시장)÷var(시장). 1보다 크면 시장보다 더 출렁입니다. 최근 180거래일 일간수익률 기준.</dd>
+            <dt>β″ (수정베타)</dt>
+            <dd>상대변동성 = 종목 변동성 ÷ 시장 변동성(표준편차 비율). 방향성(상관)을 빼고 순수 변동 크기만 비교. 데이터 30거래일 미만이면 공란.</dd>
+          </dl>
+        </section>
+        <section class="help-block">
+          <h3><span class="help-section-icon">%</span><span>기간 수익률</span></h3>
+          <dl>
+            <dt>1 · 3 · 6개월 / YTD / 1 · 3 · 5년</dt>
+            <dd>해당 기간 시작가 대비 현재가의 누적 수익률(%). YTD는 연초 대비. 배당 재투자는 반영하지 않은 가격 수익률입니다.</dd>
+            <dt>계산 기준</dt>
+            <dd>가격 수집 직후 daily_prices로 산출해 DB 캐시에 저장. 외부 실시간 조회 없이 즉시 표시됩니다.</dd>
+          </dl>
+        </section>
+      </div>
+      <div class="help-note">
+        모든 지표는 보관된 일별 종가(daily_prices)에서 계산한 참고용 수치입니다. 상승=빨강·하락=파랑(국내 관례)로 색을 표시합니다.
       </div>
     </form>
   </dialog>

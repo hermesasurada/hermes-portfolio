@@ -694,6 +694,8 @@ function syncDetailTabs() {
   document.getElementById("chartDisplayControls")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
   document.getElementById("performanceDetailControl")?.classList.toggle("hidden", !performanceChartOpen);
   document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart);
+  // 통계 지표 도움말 버튼은 통계 탭(차트 아닐 때)에서만 노출
+  document.getElementById("statsHelpOpen")?.classList.toggle("hidden", showingChart || activeDetailTab !== "stats");
   ["positionFilterBtn", "fxAdjustedControl", "showIndexesControl", "currencyFilterControl", "rowCount"].forEach(id => {
     document.getElementById(id)?.classList.toggle("hidden", showingChart);
   });
