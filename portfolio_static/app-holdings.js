@@ -398,6 +398,9 @@ function syncMobileCollapsePanels() {
   }
 }
 
+// 종목별 직전 렌더 현재가 — 가격 변동 셀 펄스 판정용
+const priceFlashMap = new Map();
+
 // ── 히어로 요약 (총 평가액 + 오늘 손익 + 1개월 스파크라인) ──
 // 값은 renderAccounts와 동일 기준(보유분 고정, 표 필터 무관)으로 현재 선택 계좌 합계.
 let heroPerfKey = null;
@@ -774,6 +777,13 @@ function renderTable() {
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
   document.getElementById("holdings").innerHTML = rows.map(r => {
     const noPosition = !hasPosition(r);
+    // 직전 렌더 대비 현재가가 바뀐 종목만 가격 셀에 펄스 (정렬·필터 재렌더는 가격 동일→펄스 없음)
+    const prevPrice = priceFlashMap.get(r.ticker);
+    const priceNum = Number(r.current_price);
+    let pulse = "";
+    if (prevPrice != null && Number.isFinite(priceNum) && priceNum !== prevPrice) {
+      pulse = priceNum > prevPrice ? " price-pulse-up" : " price-pulse-down";
+    }
     return `
     <tr class="${tableRowClass(r)}">
       <td class="logo-cell">${logoMarkup(r)}</td>
@@ -787,7 +797,7 @@ function renderTable() {
       </td>
       <td>${changeMarkup(r)}</td>
       <td class="extended-change-col ${hideExtendedColumn ? "hidden" : ""}">${extendedChangeText(r) || "-"}</td>
-      <td>${currentPriceMarkup(r)}</td>
+      <td class="price-cell-td${pulse}">${currentPriceMarkup(r)}</td>
       <td>${noPosition ? "-" : changeKrwText(r.change_krw)}</td>
       <td>${noPosition ? "-" : fmt2.format(r.qty)}</td>
       <td>${noPosition ? "-" : valueMarkup(r)}</td>
@@ -797,6 +807,11 @@ function renderTable() {
     </tr>
   `;
   }).join("");
+  // 다음 렌더의 펄스 판정용으로 현재가 스냅샷 갱신
+  rows.forEach(r => {
+    const priceNum = Number(r.current_price);
+    if (Number.isFinite(priceNum)) priceFlashMap.set(r.ticker, priceNum);
+  });
   document.querySelectorAll(".tx-pick").forEach(btn => {
     btn.addEventListener("click", () => {
       selectTradeTarget(btn.dataset.account, btn.dataset.ticker);

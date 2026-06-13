@@ -1591,7 +1591,15 @@ tbody tr.index-row td:first-child::before {
   background: var(--chart-bg);
   overflow: hidden;
   position: relative;
+  /* 컨트롤 위치 정돈: 기간·마커 바는 차트 위로, 비교검색만 아래로 (CSS order) */
+  display: flex;
+  flex-direction: column;
 }
+.chart-canvas > svg,
+.chart-canvas > .chart-empty { order: 0; }
+.chart-canvas > .chart-ranges { order: -1; }
+.chart-canvas > .chart-compare-panel,
+.chart-canvas > .perf-controls { order: 1; }
 
 /* ── 단일 가격 차트 (SVG·RSI 패널·거래 마커) ───────────────────────────── */
 .line-chart {
@@ -1733,8 +1741,9 @@ tbody tr.index-row td:first-child::before {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px 12px 16px;
+  padding: 10px 12px;
   flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);   /* 상단 컨트롤 바 → 차트와 분리 */
 }
 .chart-range-btn {
   height: 30px;
@@ -2267,7 +2276,66 @@ tbody tr.index-row td:first-child::before {
   max-height: min(760px, calc(100vh - 28px));
 }
 .watch-modal::backdrop {
-  background: rgba(15, 23, 42, .34);
+  background: rgba(15, 23, 42, .42);
+  backdrop-filter: blur(3px);
+}
+/* 모달 진입: 150ms 페이드+살짝 솟기 (reduced-motion에선 비활성) */
+@media (prefers-reduced-motion: no-preference) {
+  .watch-modal[open] {
+    animation: modal-in .15s ease-out;
+  }
+  .watch-modal[open]::backdrop {
+    animation: backdrop-in .15s ease-out;
+  }
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* 스켈레톤 로딩 — 'loading...' 텍스트 대신 형태가 보이는 자리표시 */
+.skeleton-bar {
+  display: inline-block;
+  height: 11px;
+  width: 70%;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+    var(--surface-2) 25%, var(--surface-hover) 37%, var(--surface-2) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shine 1.3s ease-in-out infinite;
+}
+tr.skeleton-row td { border-bottom: 1px solid var(--line); }
+.chart-skeleton {
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  background: linear-gradient(90deg,
+    var(--surface-2) 25%, var(--surface-hover) 37%, var(--surface-2) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shine 1.3s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-bar, .chart-skeleton { animation: none; }
+}
+@keyframes skeleton-shine {
+  from { background-position: 100% 0; }
+  to   { background-position: 0 0; }
+}
+/* 가격 갱신 펄스 — 직전 대비 오른/내린 현재가 셀이 0.7초 배경 점멸 (거래소 앱 패턴) */
+@media (prefers-reduced-motion: no-preference) {
+  .price-pulse-up { animation: price-pulse-up .7s ease-out; }
+  .price-pulse-down { animation: price-pulse-down .7s ease-out; }
+}
+@keyframes price-pulse-up {
+  0% { background: color-mix(in srgb, var(--up) 26%, transparent); }
+  100% { background: transparent; }
+}
+@keyframes price-pulse-down {
+  0% { background: color-mix(in srgb, var(--down) 26%, transparent); }
+  100% { background: transparent; }
 }
 .modal-card {
   display: grid;

@@ -70,6 +70,13 @@ function pctChangeText(pct, label = "") {
 function changeMarkup(row) {
   return changePercentText(row.display_change_pct, true);   // 등락 컬럼은 칩 스타일
 }
+// 표 로딩 스켈레톤 — colspan 한 셀에 폭 다른 바를 여러 행 깔아 형태를 암시
+function skeletonRows(colspan, rows = 8) {
+  const widths = [62, 80, 48, 72, 55, 88, 66];
+  return Array.from({ length: rows }, (_, i) =>
+    `<tr class="skeleton-row"><td colspan="${colspan}"><span class="skeleton-bar" style="width:${widths[i % widths.length]}%"></span></td></tr>`
+  ).join("");
+}
 function extendedChangeText(row) {
   return changePercentText(row.extended_change_pct);
 }

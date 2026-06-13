@@ -60,10 +60,11 @@ function performanceSeries(payload) {
       });
     });
   }
+  // 빨강=상승/파랑=하락 시맨틱과 충돌하지 않도록 중립 비교색(보라·청록·앰버)
   const indexMeta = [
-    ["SP500", "S&P 500", "#ea4335"],
-    ["NASDAQ", "나스닥", "#fbbc04"],
-    ["KOSPI", "코스피", "#34a853"],
+    ["SP500", "S&P 500", "#7c3aed"],
+    ["NASDAQ", "나스닥", "#0d9488"],
+    ["KOSPI", "코스피", "#d97706"],
   ];
   indexMeta.forEach(([key, label, color]) => {
     if (!performanceIndexes[key]) return;
@@ -275,7 +276,7 @@ async function openPerformanceChart() {
   document.getElementById("chartName").textContent = "계좌 퍼포먼스";
   if (typeof clearChartExternalLinks === "function") clearChartExternalLinks();
   document.getElementById("chartMeta").textContent = "loading...";
-  document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">loading...</div>`;
+  document.getElementById("chartCanvas").innerHTML = `<div class="chart-skeleton"></div>`;
   const accounts = visibleAccounts();
   const allAccounts = selectionMode === "all";
   performanceLoadInFlight = apiFetchAccountPerformance(accounts.map(account => account.id), allAccounts);
@@ -303,7 +304,7 @@ async function openChart(ticker) {
   document.getElementById("tableTitle").textContent = cleanTicker;
   renderChartIdentity({ ticker: cleanTicker, name: cleanTicker });
   document.getElementById("chartMeta").textContent = "loading...";
-  document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">loading...</div>`;
+  document.getElementById("chartCanvas").innerHTML = `<div class="chart-skeleton"></div>`;
   chartLoadInFlight = apiFetchChart(cleanTicker);
   try {
     const payload = await chartLoadInFlight;

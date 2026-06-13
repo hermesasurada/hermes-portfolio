@@ -50,7 +50,7 @@ async function loadStatsForRows(rows) {
   const key = missing.join(",");
   if (!missing.length || statsLoadKey === key || statsInFlight) return;
   statsLoadKey = key;
-  document.getElementById("statsRows").innerHTML = `<tr><td colspan="23">통계 loading...</td></tr>`;
+  document.getElementById("statsRows").innerHTML = skeletonRows(23);
   statsInFlight = (async () => {
     const payload = await apiFetchStats(missing);
     statsData = { ...statsData, ...(payload.stats || {}) };
@@ -123,7 +123,7 @@ async function loadDividendsForSelection() {
   dividendLoadKey = key;
   const accounts = visibleAccounts();
   const allAccounts = selectionMode === "all";
-  document.getElementById("dividendRows").innerHTML = `<tr><td colspan="13">배당 loading...</td></tr>`;
+  document.getElementById("dividendRows").innerHTML = skeletonRows(13);
   dividendInFlight = apiFetchDividends(accounts.map(account => account.id), allAccounts);
   try {
     dividendData = await dividendInFlight;
