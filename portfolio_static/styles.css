@@ -755,6 +755,18 @@ table.stats-list {
   text-align: center;
   vertical-align: middle;
 }
+/* 2행 sticky 헤더: 그룹행(위, 22px) + 컬럼행(아래). 23컬럼을 4묶음으로 라벨링 */
+.stats-list thead .stats-group-head th {
+  top: 0;
+  height: 22px;
+  padding: 3px 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: var(--muted);
+  z-index: 3;
+}
+.stats-list thead .stats-col-head th { top: 22px; }
 /* 23컬럼: 로고·종목·시총·배당율·52주高대비·β·β″·RSI×3·BB×3·P/E(t,f)·P/B·기간수익률×7 */
 .stats-list th:nth-child(1), .stats-list td:nth-child(1) { width: 40px; }    /* 로고 (틀고정) */
 .stats-list th:nth-child(2), .stats-list td:nth-child(2) { width: 160px; }   /* 종목명 (티커·종목 헤더 동거) */
