@@ -10,8 +10,6 @@
   --panel: #ffffff;
   --surface-2: #eef1f5;     /* pills, table head, tab track */
   --surface-hover: #f7f9fb; /* row hover */
-  --zebra: #fbfcfddb;       /* zebra stripe */
-  --zebra-solid: #fbfcfd;
   --index-row-bg: #eaf3ff;
   --index-row-hover: #ddeeff;
   --index-row-line: #1f4e79;
@@ -77,8 +75,6 @@
     --panel: #1d2530;
     --surface-2: #263241;
     --surface-hover: #232d3a;
-    --zebra: #202a36cc;
-    --zebra-solid: #202a36;
     --index-row-bg: #23364d;
     --index-row-hover: #29405d;
     --index-row-line: #6ea8e6;
@@ -809,11 +805,14 @@ table.stats-list {
   white-space: nowrap;
 }
 .stats-list .ticker-symbol { font-size: 11px; }
+/* 지표군 경계(모멘텀|밸류|수익률)를 수직선으로 구분 — 23컬럼의 호흡 분절 */
+.stats-list th.group-start,
+.stats-list td.group-start { border-left: 1px solid var(--line); }
 .stats-list .price-cell { gap: 1px; }
 .stats-list .price-cell .krw-sub { font-size: 10.5px; }
 .hidden { display: none !important; }
 th, td {
-  padding: 9px 8px;
+  padding: 10px 8px;
   border-bottom: 1px solid var(--line);
   text-align: right;
   white-space: nowrap;
@@ -1134,10 +1133,9 @@ tr.dividend-month-row:hover td {
 #detailTableWrap td:first-child { min-width: 40px; width: 40px; }   /* 로고 (틀고정) */
 #detailTableWrap th:nth-child(2),
 #detailTableWrap td:nth-child(2) { min-width: 180px; }              /* 종목명 */
-tbody tr:nth-child(even) td { background: var(--zebra); }
+/* 행 처리 단일화: 지브라+보더+호버 3중첩에서 보더+호버만 남김 */
 tr:hover td { background: var(--surface-hover); }
-tbody tr.index-row td,
-tbody tr.index-row:nth-child(even) td {
+tbody tr.index-row td {
   background: var(--index-row-bg);
   font-weight: 700;
 }
@@ -1166,14 +1164,10 @@ tbody tr.index-row td:first-child::before {
     z-index: 3;
     background: var(--panel);
   }
-  tbody tr:nth-child(even) > .pc-frozen-col {
-    background: var(--zebra-solid);
-  }
   tbody tr:hover > .pc-frozen-col {
     background: var(--surface-hover);
   }
-  tbody tr.index-row > .pc-frozen-col,
-  tbody tr.index-row:nth-child(even) > .pc-frozen-col {
+  tbody tr.index-row > .pc-frozen-col {
     background: var(--index-row-bg);
   }
   tbody tr.index-row:hover > .pc-frozen-col {
@@ -1349,6 +1343,15 @@ tbody tr.index-row td:first-child::before {
   gap: 5px;
   font-weight: 700;
 }
+/* 등락% 칩 — 색칠은 이 칩 하나로 제한해 '온통 빨강' 화면을 진정시킨다 */
+.pct-chip {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+}
+.pct-chip.up { background: color-mix(in srgb, var(--up) 10%, transparent); }
+.pct-chip.down { background: color-mix(in srgb, var(--down) 10%, transparent); }
+.pct-chip.flat { color: var(--muted); background: var(--surface-2); }
 .change-stack {
   display: inline-grid;
   justify-items: end;
@@ -2917,7 +2920,7 @@ tbody tr.index-row td:first-child::before {
     width: 1394px;
     min-width: 1394px;
   }
-  /* 가로스크롤 시 종목명(첫 컬럼) 좌측 틀고정 (불투명 배경 필수 — zebra는 반투명) */
+  /* 가로스크롤 시 종목명(첫 컬럼) 좌측 틀고정 (불투명 배경 필수) */
   #detailTableWrap td:first-child,
   #statsTableWrap .stats-list td:first-child {
     position: sticky;

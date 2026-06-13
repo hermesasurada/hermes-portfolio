@@ -90,16 +90,16 @@ function renderStatsTable(baseRows = null) {
       <td>${signedPercentText(r.drawdown_52w, 1)}</td>
       <td>${betaText(r.beta)}</td>
       <td>${betaText(r.beta_adj)}</td>
-      <td>${indicatorText(r.rsi_day, "rsi")}</td>
+      <td class="group-start">${indicatorText(r.rsi_day, "rsi")}</td>
       <td>${indicatorText(r.rsi_week, "rsi")}</td>
       <td>${indicatorText(r.rsi_month, "rsi")}</td>
       <td>${indicatorText(r.bb_day, "bb")}</td>
       <td>${indicatorText(r.bb_week, "bb")}</td>
       <td>${indicatorText(r.bb_month, "bb")}</td>
-      <td>${peText(r.trailing_pe)}</td>
+      <td class="group-start">${peText(r.trailing_pe)}</td>
       <td>${peText(r.forward_pe)}</td>
       <td>${peText(r.price_to_book)}</td>
-      <td>${signedPercentText(r.perf_1m, 1)}</td>
+      <td class="group-start">${signedPercentText(r.perf_1m, 1)}</td>
       <td>${signedPercentText(r.perf_3m, 0)}</td>
       <td>${signedPercentText(r.perf_6m, 0)}</td>
       <td>${signedPercentText(r.perf_ytd, 0)}</td>

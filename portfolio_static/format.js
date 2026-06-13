@@ -37,31 +37,17 @@ function unitKrw(v) {
   return Number.isFinite(v) ? `${fmt.format(v)}원` : '<span class="missing">조회불가</span>';
 }
 function currentPriceMarkup(row) {
-  if (row.current_price == null || !Number.isFinite(row.current_price_krw)) return '<span class="missing">조회불가</span>';
+  if (row.current_price == null) return '<span class="missing">조회불가</span>';
   const local = unitMoney(row.current_price, row.currency, row.ticker);
-  if (row.currency === "KRW") return local;
+  // KRW 종목·환산 불가 시엔 현지가 한 줄만 (이전엔 별도 컬럼이라 따로 보였음)
+  if (row.currency === "KRW" || !Number.isFinite(row.current_price_krw)) return local;
   return `<span class="price-cell"><span>${local}</span><span class="krw-sub">(${unitKrw(row.current_price_krw)})</span></span>`;
 }
 function valueMarkup(row) {
-  if (row.value == null || !Number.isFinite(row.value_krw)) return '<span class="missing">조회불가</span>';
+  if (row.value == null) return '<span class="missing">조회불가</span>';
   const local = money(row.value, row.currency);
-  if (row.currency === "KRW") return local;
+  if (row.currency === "KRW" || !Number.isFinite(row.value_krw)) return local;
   return `<span class="price-cell"><span>${local}</span><span class="krw-sub">(${krw(row.value_krw)})</span></span>`;
-}
-function localCurrentPriceText(row) {
-  return row.current_price == null ? '<span class="missing">조회불가</span>' : unitMoney(row.current_price, row.currency, row.ticker);
-}
-function krwCurrentPriceText(row) {
-  if (!Number.isFinite(row.current_price_krw)) return '<span class="missing">조회불가</span>';
-  return String(row.ticker).toUpperCase() === "BTC"
-    ? unitMoney(row.current_price_krw, "KRW", row.ticker)
-    : unitKrw(row.current_price_krw);
-}
-function localValueText(row) {
-  return row.value == null ? '<span class="missing">조회불가</span>' : money(row.value, row.currency);
-}
-function krwValueText(row) {
-  return Number.isFinite(row.value_krw) ? krw(row.value_krw) : '<span class="missing">조회불가</span>';
 }
 function changeText(v, pct) {
   if (v == null || pct == null) return "-";
@@ -69,11 +55,11 @@ function changeText(v, pct) {
   const arrow = v > 0 ? "▲" : v < 0 ? "▼" : "→";
   return `<span class="change-cell ${cls}"><span aria-hidden="true">${arrow}</span>${fmt2.format(Math.abs(pct))}%</span>`;
 }
-function changePercentText(pct) {
+function changePercentText(pct, chip = false) {
   if (!Number.isFinite(pct)) return "-";
   const cls = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
   const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "→";
-  return `<span class="change-cell ${cls}"><span aria-hidden="true">${arrow}</span>${fmt2.format(Math.abs(pct))}%</span>`;
+  return `<span class="change-cell ${chip ? "pct-chip " : ""}${cls}"><span aria-hidden="true">${arrow}</span>${fmt2.format(Math.abs(pct))}%</span>`;
 }
 function pctChangeText(pct, label = "") {
   if (!Number.isFinite(pct)) return "";
@@ -82,7 +68,7 @@ function pctChangeText(pct, label = "") {
   return `<span class="${cls}">${label}${arrow}${fmt2.format(Math.abs(pct))}%</span>`;
 }
 function changeMarkup(row) {
-  return changePercentText(row.display_change_pct);
+  return changePercentText(row.display_change_pct, true);   // 등락 컬럼은 칩 스타일
 }
 function extendedChangeText(row) {
   return changePercentText(row.extended_change_pct);

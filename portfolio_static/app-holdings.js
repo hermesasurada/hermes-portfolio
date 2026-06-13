@@ -787,12 +787,10 @@ function renderTable() {
       </td>
       <td>${changeMarkup(r)}</td>
       <td class="extended-change-col ${hideExtendedColumn ? "hidden" : ""}">${extendedChangeText(r) || "-"}</td>
-      <td>${localCurrentPriceText(r)}</td>
+      <td>${currentPriceMarkup(r)}</td>
       <td>${noPosition ? "-" : changeKrwText(r.change_krw)}</td>
       <td>${noPosition ? "-" : fmt2.format(r.qty)}</td>
-      <td>${krwCurrentPriceText(r)}</td>
-      <td>${noPosition ? "-" : localValueText(r)}</td>
-      <td>${noPosition ? "-" : krwValueText(r)}</td>
+      <td>${noPosition ? "-" : valueMarkup(r)}</td>
       <td>${noPosition ? "-" : weightText(r.weight_pct)}</td>
       <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
       <td>${r.is_watchlist ? "-" : `<button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button>`}</td>
