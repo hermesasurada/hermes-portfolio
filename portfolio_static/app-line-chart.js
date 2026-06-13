@@ -260,10 +260,13 @@ function renderChartStats(payload) {
       <span class="cstat-v">${value}</span>
     </div>
   `;
+  const dividendYieldCell = Number(s.dividend_yield) > 0
+    ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(ticker)}" title="배당 이력 보기">${dividendYieldText(s.dividend_yield)}</button>`
+    : dividendYieldText(s.dividend_yield);
   const columns = [
     [
       ["시가총액", mcap],
-      ["배당수익률", dividendYieldText(s.dividend_yield)],
+      ["배당수익률", dividendYieldCell],
       ["P/E (t)", peText(s.trailing_pe)],
       ["P/E (f)", peText(s.forward_pe)],
       ["P/B", peText(s.price_to_book)],
@@ -299,6 +302,9 @@ function renderChartStats(payload) {
     </div>
     ${loaded ? "" : `<div class="chart-stat-loading">통계 불러오는 중…</div>`}
   `;
+  el.querySelectorAll("[data-dividend-history]").forEach(btn => {
+    btn.addEventListener("click", () => openDividendHistory(btn.dataset.dividendHistory));
+  });
 }
 
 function ensureChartStats(ticker) {
