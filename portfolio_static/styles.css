@@ -820,6 +820,15 @@ table.stats-list {
 /* 지표군 경계(모멘텀|밸류|수익률)를 수직선으로 구분 — 23컬럼의 호흡 분절 */
 .stats-list th.group-start,
 .stats-list td.group-start { border-left: 1px solid var(--line); }
+/* 숫자가 우측정렬이라 세로선 '직전' 컬럼(7·13·16번)의 값이 선에 붙는다.
+   그 셀들의 padding-right만 키워 선과 간격 확보. (#statsTableWrap 접두로
+   좁은 RSI/BB 컬럼 규칙의 높은 specificity를 이긴다) */
+#statsTableWrap .stats-list th:nth-child(7),
+#statsTableWrap .stats-list td:nth-child(7),
+#statsTableWrap .stats-list th:nth-child(13),
+#statsTableWrap .stats-list td:nth-child(13),
+#statsTableWrap .stats-list th:nth-child(16),
+#statsTableWrap .stats-list td:nth-child(16) { padding-right: 9px; }
 .stats-list .price-cell { gap: 1px; }
 .stats-list .price-cell .krw-sub { font-size: 10.5px; }
 .hidden { display: none !important; }
