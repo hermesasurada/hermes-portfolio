@@ -733,7 +733,7 @@ function syncPcFrozenColumns() {
     cell.classList.remove("pc-frozen-col", "pc-frozen-edge");
     cell.style.removeProperty("--pc-frozen-left");
   });
-  if (!window.matchMedia("(min-width: 981px)").matches) return;
+  // PC·모바일 공통: 가로 스크롤 시 로고+종목명을 틀고정 (뷰포트 제한 없음)
 
   [
     ["#detailTableWrap table", 2],
