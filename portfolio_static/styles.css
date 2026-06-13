@@ -739,8 +739,9 @@ main {
 /* ── 테이블 공통 · 통계/배당 테이블 ────────────────────────────────────── */
 table { width: 100%; border-collapse: collapse; min-width: 660px; }
 table.stats-list {
-  width: max(100%, 1520px);
-  min-width: 1520px;
+  /* 컬럼 폭은 <colgroup>이 권위. 합(1430px)에 맞춰 균일 스케일 방지 */
+  width: 1430px;
+  min-width: 1430px;
   table-layout: fixed;
 }
 .stats-list th,
@@ -3042,8 +3043,8 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     overflow-y: auto;
   }
   #statsTableWrap .stats-list {
-    width: 1394px;
-    min-width: 1394px;
+    width: 1430px;
+    min-width: 1430px;
   }
   /* 가로스크롤 시 종목명(첫 컬럼) 좌측 틀고정 (불투명 배경 필수) */
   #detailTableWrap td:first-child,
