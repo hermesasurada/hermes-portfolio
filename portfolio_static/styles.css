@@ -2671,6 +2671,42 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   font-weight: 650;
   line-height: 1.45;
 }
+/* 지표 해석 방향 칩 (낮을수록/높을수록/게이지/맥락) + 계산식 강조 */
+.help-judge {
+  display: inline-block;
+  margin: 0 5px 2px 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 10.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+.help-judge.good-low { background: var(--accent-soft); color: var(--accent); }
+.help-judge.good-high { background: var(--brand-soft); color: var(--brand); }
+.help-block dd code {
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 11px;
+}
+/* dd 안의 계산/해석/기준 라벨 */
+.help-block dd b {
+  color: var(--ink);
+  font-weight: 800;
+  margin-right: 2px;
+}
+.help-block dd b:not(:first-child) { margin-left: 4px; }
+.help-judge-legend {
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.8;
+}
 .help-note {
   padding: 10px 12px;
   border: 1px solid var(--line);

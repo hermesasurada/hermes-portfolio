@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=stats-divider-pad">
+  <link rel="stylesheet" href="/static/styles.css?v=stats-help-detail">
 </head>
 <body>
   <header>
@@ -479,52 +479,57 @@
         <span>RSI 14 · BB 20·2σ</span>
         <span>ETF·지수는 펀더멘털 제외</span>
       </div>
+      <p class="help-judge-legend">
+        <span class="help-judge good-low">낮을수록 ↓</span> 저평가·안정
+        <span class="help-judge good-high">높을수록 ↑</span> 유리
+        <span class="help-judge">게이지·맥락</span> 좋고 나쁨이 아니라 상태/성향
+      </p>
       <div class="help-grid">
         <section class="help-block">
           <h3><span class="help-section-icon">₩</span><span>규모 · 가치</span></h3>
           <dl>
             <dt>시가총액</dt>
-            <dd>발행주식 × 현재가. 통화 무관 비교를 위해 USD로 환산해 정렬합니다. ETF·지수는 제외.</dd>
+            <dd><span class="help-judge">규모</span><b>계산</b> 발행주식수 × 현재가(통화 무관 비교 위해 USD 환산 정렬). <b>해석</b> 회사 덩치. 클수록 대형주라 일반적으로 변동성이 작은 경향이지만, 좋고 나쁨이 아니라 분류 기준입니다. ETF·지수는 제외.</dd>
             <dt>배당율</dt>
-            <dd>최근 12개월 주당배당금 ÷ 현재가(%). 데이터 출처 기준의 후행 배당수익률.</dd>
-            <dt>P/E (t) · (f)</dt>
-            <dd>주가수익비율. (t)=후행(최근 4분기 실적), (f)=선행(향후 추정 EPS). 낮을수록 이익 대비 저평가, 적자면 공란.</dd>
+            <dd><span class="help-judge">맥락</span><b>계산</b> 최근 12개월 주당배당금 ÷ 현재가 ×100(%). <b>해석</b> 높으면 현금흐름 매력↑. 단 비정상적으로 높으면(주가 급락·감배 위험) 경고 신호일 수 있어 무조건 좋은 건 아닙니다. 후행 기준.</dd>
+            <dt>P/E (t)·(f)</dt>
+            <dd><span class="help-judge good-low">낮을수록 ↓</span><b>계산</b> 주가 ÷ 주당순이익(EPS). (t)=후행(최근 4분기 실적), (f)=선행(향후 추정). <b>해석</b> 낮으면 이익 대비 저렴(가치주), 높으면 성장 기대가 선반영된 것. 적자면 공란. <b>기준</b> 절대 정답은 없고 같은 업종끼리 비교하세요.</dd>
             <dt>P/B</dt>
-            <dd>주가순자산비율(PBR). 거래통화≠재무통화(ADR 등)로 환산이 왜곡되는 경우는 표시에서 제외.</dd>
+            <dd><span class="help-judge good-low">낮을수록 ↓</span><b>계산</b> 주가 ÷ 주당순자산(BPS). <b>해석</b> 자산가치 대비 저평가 정도. <code>1 미만</code>이면 장부상 순자산보다 싸게 거래됩니다. <b>기준</b> 업종 편차가 크고, ADR 등 거래통화≠재무통화 왜곡분은 표시 제외.</dd>
           </dl>
         </section>
         <section class="help-block">
           <h3><span class="help-section-icon">⤴</span><span>추세 · 과열</span></h3>
           <dl>
             <dt>52주高 대비</dt>
-            <dd>최근 52주(약 252거래일) 최고가 대비 현재가 위치(%). 0%면 신고가, 음수일수록 고점에서 더 내려온 상태.</dd>
+            <dd><span class="help-judge">위치</span><b>계산</b> (현재가 ÷ 52주(약 252거래일) 최고가 − 1) ×100. <b>해석</b> <code>0%</code>면 신고가, <code>−20%</code>면 고점 대비 20% 아래. <b>기준</b> 높낮이 유불리는 전략에 따라 다릅니다(모멘텀이면 0 근처 선호, 역발상이면 깊은 음수에 관심).</dd>
             <dt>RSI (일·주·월)</dt>
-            <dd>상대강도지수(14기간). 일봉·주봉·월봉 각각 계산. 통상 70↑ 과매수, 30↓ 과매도로 봅니다.</dd>
+            <dd><span class="help-judge">게이지</span><b>계산</b> 14기간 상승/하락 강도(0~100), 일·주·월봉 각각. <b>해석</b> 방향이 아니라 과열도. <b>기준</b> <code>70↑</code> 과매수(단기 과열, 조정 가능), <code>30↓</code> 과매도(반등 가능), <code>50</code>이 중립.</dd>
             <dt>BB (일·주·월)</dt>
-            <dd>볼린저밴드 %B(20기간·2σ). 100=상단밴드, 0=하단밴드. 밴드 내 현재가 위치를 0~100으로 나타냅니다.</dd>
+            <dd><span class="help-judge">게이지</span><b>계산</b> 볼린저밴드 %B(20기간·2σ). <b>해석</b> 현재가가 밴드의 어디인지 0~100. <b>기준</b> <code>100</code>=상단밴드(과열권), <code>0</code>=하단밴드(침체권), <code>50</code>=중심선. RSI와 함께 보면 보완됩니다.</dd>
           </dl>
         </section>
         <section class="help-block">
           <h3><span class="help-section-icon">β</span><span>위험 (변동성)</span></h3>
           <dl>
             <dt>β (베타)</dt>
-            <dd>시장(S&amp;P 500) 대비 민감도 = cov(종목,시장)÷var(시장). 1보다 크면 시장보다 더 출렁입니다. 최근 180거래일 일간수익률 기준.</dd>
+            <dd><span class="help-judge">성향</span><b>계산</b> cov(종목,시장) ÷ var(시장). 시장=S&amp;P 500, 최근 180거래일 일간수익률. <b>해석</b> 시장이 1% 움직일 때 평균 몇 % 따라 움직였나. <b>기준</b> <code>1</code>=시장과 동행, <code>&gt;1</code> 공격적(더 출렁), <code>&lt;1</code> 방어적. 유불리는 위험 선호에 달림.</dd>
             <dt>β″ (수정베타)</dt>
-            <dd>상대변동성 = 종목 변동성 ÷ 시장 변동성(표준편차 비율). 방향성(상관)을 빼고 순수 변동 크기만 비교. 데이터 30거래일 미만이면 공란.</dd>
+            <dd><span class="help-judge good-low">낮을수록 ↓</span><b>계산</b> 종목 변동성 ÷ 시장 변동성(표준편차 비율). <b>해석</b> 방향(상관)을 빼고 순수 변동 크기만 비교 — 낮을수록 시장 대비 잔잔합니다. 데이터 30거래일 미만이면 공란.</dd>
           </dl>
         </section>
         <section class="help-block">
           <h3><span class="help-section-icon">%</span><span>기간 수익률</span></h3>
           <dl>
-            <dt>1 · 3 · 6개월 / YTD / 1 · 3 · 5년</dt>
-            <dd>해당 기간 시작가 대비 현재가의 누적 수익률(%). YTD는 연초 대비. 배당 재투자는 반영하지 않은 가격 수익률입니다.</dd>
+            <dt>1·3·6개월 / YTD / 1·3·5년</dt>
+            <dd><span class="help-judge good-high">높을수록 ↑</span><b>계산</b> (현재가 ÷ 기간 시작가 − 1) ×100. YTD는 연초 대비. <b>해석</b> 양수면 올랐고 음수면 내렸습니다. <b>기준</b> 배당 재투자는 반영하지 않은 순수 가격 수익률입니다.</dd>
             <dt>계산 기준</dt>
-            <dd>가격 수집 직후 daily_prices로 산출해 DB 캐시에 저장. 외부 실시간 조회 없이 즉시 표시됩니다.</dd>
+            <dd>모든 지표는 가격 수집 직후 보관된 일별 종가(daily_prices)에서 산출해 DB에 캐시합니다. 외부 실시간 조회 없이 즉시 표시됩니다.</dd>
           </dl>
         </section>
       </div>
       <div class="help-note">
-        모든 지표는 보관된 일별 종가(daily_prices)에서 계산한 참고용 수치입니다. 상승=빨강·하락=파랑(국내 관례)로 색을 표시합니다.
+        참고용 수치이며 투자 판단의 근거가 아닙니다. 표에서 상승=빨강·하락=파랑(국내 관례)으로 색을 표시합니다.
       </div>
     </form>
   </dialog>
