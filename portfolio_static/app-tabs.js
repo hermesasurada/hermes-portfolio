@@ -86,7 +86,9 @@ function renderStatsTable(baseRows = null) {
         </span>
       </td>
       <td>${marketCapMarkup(r)}</td>
-      <td>${dividendYieldText(r.dividend_yield)}</td>
+      <td>${Number(r.dividend_yield) > 0
+        ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(r.ticker)}" title="배당 이력 보기">${dividendYieldText(r.dividend_yield)}</button>`
+        : dividendYieldText(r.dividend_yield)}</td>
       <td>${signedPercentText(r.drawdown_52w, 1)}</td>
       <td>${betaText(r.beta)}</td>
       <td>${betaText(r.beta_adj)}</td>
@@ -109,6 +111,11 @@ function renderStatsTable(baseRows = null) {
     </tr>
   `).join("");
   bindChartLinks();
+  // 배당율 → 배당이력 모달 (배당탭 '상세'와 동일). #statsRows는 매번 교체되므로
+  // 여기서만 바인딩 — 중복 리스너 없음.
+  document.querySelectorAll("#statsRows [data-dividend-history]").forEach(btn => {
+    btn.addEventListener("click", () => openDividendHistory(btn.dataset.dividendHistory));
+  });
   schedulePcFrozenColumns();
 }
 
@@ -348,7 +355,7 @@ async function openDividendHistory(ticker) {
   document.getElementById("dividendHistoryName").textContent = "배당이력";
   document.getElementById("dividendHistoryTicker").textContent = ticker || "-";
   body.innerHTML = `<div class="dividend-history-empty">불러오는 중...</div>`;
-  modal.showModal();
+  if (!modal.open) modal.showModal();   // 이미 열려 있으면 내용만 교체(showModal 재호출 시 throw 방지)
   // 모바일 뒤로가기로 닫을 수 있도록 history 항목 추가 (URL은 유지)
   if (!(history.state && history.state.dividendHistory)) {
     history.pushState({ dividendHistory: true }, "");

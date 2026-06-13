@@ -157,22 +157,24 @@ def collect_earnings_dates(
 
 
 def load_dividend_tickers(tickers: list[str] | None = None) -> list[str]:
+    # 추적 중인 전 배당대상 종목(보유+미보유) — 한국·해외 주식/ETF.
+    # 지수·환율·BTC는 배당 개념이 없어 제외.
     wanted = {ticker.strip().upper() for ticker in tickers or [] if ticker and ticker.strip()}
     filter_sql = ""
     params: list[object] = []
     if wanted:
         placeholders = ",".join("?" for _ in wanted)
-        filter_sql = f"AND UPPER(h.ticker) IN ({placeholders})"
+        filter_sql = f"AND UPPER(ticker) IN ({placeholders})"
         params.extend(sorted(wanted))
     with connect() as conn:
         ensure_dividend_tables(conn)
         rows = conn.execute(
             f"""
-            SELECT DISTINCT UPPER(h.ticker) AS ticker
-            FROM holdings h
-            WHERE h.ticker IS NOT NULL
-              AND TRIM(h.ticker) <> ''
-              AND COALESCE(h.qty, 0) > 0
+            SELECT DISTINCT UPPER(ticker) AS ticker
+            FROM tickers
+            WHERE ticker IS NOT NULL
+              AND TRIM(ticker) <> ''
+              AND category IN ('kr', 'overseas')
               {filter_sql}
             ORDER BY ticker
             """,
@@ -213,7 +215,15 @@ def main() -> int:
     parser.add_argument("--skip-splits", action="store_true", help="Do not update stock split history.")
     parser.add_argument("--force-earnings", action="store_true", help="Refresh earnings dates even if recently updated.")
     parser.add_argument("--earnings-max-age-hours", type=float, default=24, help="Refresh earnings dates older than this many hours.")
+    parser.add_argument("--dividends-only", action="store_true", help="Only collect dividend events + splits (전 추적종목), skip prices/earnings. 가격 크론과 분리해 일배치로 돌릴 때 사용.")
     args = parser.parse_args()
+
+    # 배당/분할 전용 모드: 가격·실적 수집을 건너뛰고 전 추적종목 배당만 갱신.
+    if args.dividends_only:
+        dividend_count = collect_dividend_events(args.ticker)
+        split_count = collect_stock_splits(args.ticker)
+        print(f"Dividends-only: checked {dividend_count} tickers, updated splits for {split_count}")
+        return 0
 
     categories = parse_categories(args.category)
     fetched, errors = collect_prices(categories, args.ticker, args.history_start)
@@ -249,11 +259,11 @@ def main() -> int:
     if not args.skip_dividends:
         dividend_count = collect_dividend_events(args.ticker)
         if dividend_count:
-            print(f"Checked dividend events for {dividend_count} held tickers")
+            print(f"Checked dividend events for {dividend_count} tracked tickers")
     if not args.skip_splits:
         split_count = collect_stock_splits(args.ticker)
         if split_count:
-            print(f"Updated stock splits for {split_count} held tickers")
+            print(f"Updated stock splits for {split_count} tracked tickers")
 
     print(f"Updated {len(fetched)} tickers / {row_count} daily rows")
     all_errors = errors + [f"{ticker}:earnings" for ticker in earnings_errors]

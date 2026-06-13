@@ -1073,6 +1073,21 @@ tr.dividend-today-row:hover td {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+/* 통계탭 배당율 → 배당이력 모달 링크 (셀 우측정렬·tnum 유지) */
+.stat-yield-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.stat-yield-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .dividend-month-row td,
 tbody tr.dividend-month-row:nth-child(even) td,
 tr.dividend-month-row:hover td {
