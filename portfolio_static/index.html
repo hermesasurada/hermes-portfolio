@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=compact-stat-labels">
+  <link rel="stylesheet" href="/static/styles.css?v=design-p12">
 </head>
 <body>
   <header>
@@ -27,31 +27,37 @@
         </div>
       </div>
       <div class="controls">
-        <div class="auto-refresh-control">
-          <label class="toggle-switch" for="autoRefreshToggle">
-            <input id="autoRefreshToggle" type="checkbox">
-            <span class="toggle-ui" aria-hidden="true"></span>
-            <span class="toggle-label">자동갱신</span>
-          </label>
-          <label for="autoRefreshInterval">
-            <input id="autoRefreshInterval" type="number" min="1" max="1440" step="1" value="5" inputmode="numeric">
-            <span>분</span>
-          </label>
+        <div class="ctrl-group" aria-label="데이터 설정">
+          <div class="auto-refresh-control">
+            <label class="toggle-switch" for="autoRefreshToggle">
+              <input id="autoRefreshToggle" type="checkbox">
+              <span class="toggle-ui" aria-hidden="true"></span>
+              <span class="toggle-label">자동갱신</span>
+            </label>
+            <label for="autoRefreshInterval">
+              <input id="autoRefreshInterval" type="number" min="1" max="1440" step="1" value="5" inputmode="numeric">
+              <span>분</span>
+            </label>
+          </div>
+          <div class="us-price-control" id="usPriceControl">
+            <label class="toggle-switch" for="usExtendedToggle">
+              <input id="usExtendedToggle" type="checkbox">
+              <span class="toggle-ui" aria-hidden="true"></span>
+              <span class="toggle-label">연장</span>
+            </label>
+            <span class="us-market-status" id="usMarketStatus">-</span>
+          </div>
         </div>
-        <div class="us-price-control" id="usPriceControl">
-          <label class="toggle-switch" for="usExtendedToggle">
-            <input id="usExtendedToggle" type="checkbox">
-            <span class="toggle-ui" aria-hidden="true"></span>
-            <span class="toggle-label">연장</span>
-          </label>
-          <span class="us-market-status" id="usMarketStatus">-</span>
+        <div class="ctrl-group" aria-label="탐색">
+          <button id="tickerSearchOpen" class="header-icon-btn" type="button" aria-label="종목 검색" title="종목 검색">
+            <span class="search-icon" aria-hidden="true"></span>
+          </button>
+          <button id="watchlistOpen" class="ghost-btn" type="button">관리종목</button>
+          <button id="performanceOpen" class="ghost-btn" type="button">성과차트</button>
         </div>
-        <button id="watchlistOpen" class="ghost-btn" type="button">관리종목</button>
-        <button id="performanceOpen" class="ghost-btn" type="button">성과차트</button>
-        <button id="themeToggle" class="theme-btn" type="button" title="테마">자동</button>
-        <button id="tickerSearchOpen" class="header-icon-btn" type="button" aria-label="종목 검색" title="종목 검색">
-          <span class="search-icon" aria-hidden="true"></span>
-        </button>
+        <div class="ctrl-group" aria-label="환경">
+          <button id="themeToggle" class="theme-btn" type="button" title="테마">자동</button>
+        </div>
       </div>
     </div>
   </header>
@@ -70,11 +76,26 @@
       </aside>
       </div>
       <div class="main-col">
+      <section class="section hero-strip" id="heroStrip" aria-label="포트폴리오 요약">
+        <div class="hero-main">
+          <div class="hero-label" id="heroLabel">총 평가액</div>
+          <div class="hero-value-row">
+            <strong id="heroValue">-</strong>
+            <span class="hero-change flat" id="heroChange">-</span>
+          </div>
+        </div>
+        <div class="hero-side">
+          <div class="hero-stat">
+            <span>최근 1개월</span>
+            <strong id="heroPerf" class="hero-perf flat">-</strong>
+          </div>
+          <svg id="heroSpark" width="132" height="40" viewBox="0 0 132 40" role="img" aria-label="최근 1개월 평가액 추이"></svg>
+        </div>
+      </section>
       <section class="section holdings-section">
         <div class="toolbar">
           <div class="title-tools">
             <strong id="tableTitle">전체</strong>
-            <span class="pill account-total-pill" id="accountTotal">-</span>
             <button class="ghost-btn hidden" id="chartBack" type="button">목록</button>
             <span class="filter-toggle-control hidden" id="performanceDetailControl">
               <label class="toggle-switch" for="performanceDetailToggle">

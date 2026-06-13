@@ -54,6 +54,7 @@
   --fs-md: 13px;
   --fs-lg: 16px;
   --fs-xl: 22px;
+  --fs-hero: 30px;   /* 히어로 요약(총 평가액) 전용 */
   /* weights (3 tiers) */
   --fw-md: 600;
   --fw-bold: 700;
@@ -71,7 +72,8 @@
 }
 /* dark palette — JS sets data-theme to the resolved value (auto follows OS) */
 :root[data-theme="dark"] {
-    --bg: #151b23;
+    /* 3단 표면(배경<패널<요소)의 명도차를 키워 보더 의존도를 낮춘다 */
+    --bg: #11161d;
     --panel: #1d2530;
     --surface-2: #263241;
     --surface-hover: #232d3a;
@@ -87,7 +89,7 @@
     --accent-2: #6ea8e6;
     --brand: #6ea8e6;
     --brand-soft: #24364b;
-    --up: #ff6b6b;          /* dark-bg-safe 상승=빨강 */
+    --up: #f87171;          /* dark-bg-safe 상승=빨강 (살짝 탈채도로 눈부심 완화) */
     --down: #7aa2ff;        /* 하락=파랑 */
     --buy: #4ade80;
     --sell: #f87171;
@@ -98,7 +100,7 @@
     --accent-soft-border: #3d7d75;
     --track-off: #465466;
     --track-off-border: #526174;
-    --header-bg: rgba(21, 27, 35, 0.94);
+    --header-bg: rgba(17, 22, 29, 0.94);
     --chart-bg: #1b2430;
     --chart-grid: #354253;
     --chart-axis: #9aa6b5;
@@ -111,10 +113,18 @@
     --chart-selection-fill: rgba(110, 168, 230, .14);
     --chart-shadow: drop-shadow(0 8px 18px rgba(0, 0, 0, .35));
 }
+/* 자체 호스팅 가변 폰트 — 한글 자간·숫자 형태가 시스템 폰트보다 일관적.
+   서버가 .woff2만 max-age=86400으로 캐시(그 외 정적은 no-store 유지). */
+@font-face {
+  font-family: "Pretendard Variable";
+  src: url("/static/PretendardVariable.woff2") format("woff2-variations");
+  font-weight: 45 920;
+  font-display: swap;
+}
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--bg);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -156,7 +166,8 @@ header {
   gap: 16px;
   align-items: center;
 }
-h1 { margin: 0 0 4px; font-size: 24px; letter-spacing: 0; }
+/* 브랜드 텍스트는 정보가치가 낮으므로 작게 — 큰 숫자는 히어로 요약이 담당 */
+h1 { margin: 0 0 3px; font-size: 17px; letter-spacing: -0.2px; }
 .home-link {
   color: var(--ink);
   text-decoration: none;
@@ -196,12 +207,22 @@ h1 { margin: 0 0 4px; font-size: 24px; letter-spacing: 0; }
 }
 .controls {
   display: flex;
-  gap: 8px;
+  gap: 0;
   flex-wrap: wrap;
   justify-content: flex-end;
   align-items: center;
 }
 .controls button { height: 30px; }
+/* 컨트롤 기능별 묶음: [데이터 설정] | [탐색] | [환경] */
+.ctrl-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-right: 1px solid var(--line);
+}
+.ctrl-group:last-child { border-right: 0; padding-right: 0; }
+.ctrl-group:first-child { padding-left: 0; }
 .header-icon-btn {
   width: 30px;
   min-width: 30px;
@@ -460,6 +481,67 @@ main {
 .metric { padding: 14px; }
 .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
 
+/* ── 히어로 요약 (총 평가액 · 오늘 손익 · 1개월 스파크라인) ─────────────────── */
+.hero-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  margin-bottom: var(--sp-4);
+}
+.hero-label {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+}
+.hero-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.hero-value-row strong {
+  font-size: var(--fs-hero);
+  font-weight: var(--fw-strong);
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.hero-change {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-strong);
+  padding: 3px 11px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.hero-change.up { color: var(--up); background: color-mix(in srgb, var(--up) 11%, transparent); }
+.hero-change.down { color: var(--down); background: color-mix(in srgb, var(--down) 11%, transparent); }
+.hero-change.flat { color: var(--muted); background: var(--surface-2); }
+.hero-side {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.hero-stat { text-align: right; }
+.hero-stat > span {
+  display: block;
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  margin-bottom: 2px;
+}
+.hero-perf { font-size: 14px; font-weight: var(--fw-strong); }
+.hero-perf.up { color: var(--up); }
+.hero-perf.down { color: var(--down); }
+.hero-perf.flat { color: var(--muted); }
+.hero-spark-line { fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linejoin: round; }
+.hero-spark-line.up { stroke: var(--up); }
+.hero-spark-line.down { stroke: var(--down); }
+
 /* ── 레이아웃 · 계좌 패널 · 거래내역 패널 ────────────────────────────────── */
 .layout {
   display: grid;
@@ -543,18 +625,23 @@ main {
   font-weight: 800;
   line-height: 1.35;
 }
+/* 계좌 = 2줄 미니 카드 (이름 / 평가액·등락). 선택 상태는 좌측 브랜드 바 + 옅은 채움 */
 .account {
   width: 100%;
-  min-height: 32px;
+  min-height: 44px;
   text-align: left;
-  padding: 5px 8px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  border-left-width: 3px;
+  display: grid;
+  gap: 3px;
 }
-.account.active { background: var(--accent-soft); color: var(--ink); border-color: var(--accent-soft-border); }
+.account.active {
+  background: var(--brand-soft);
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--brand) 38%, transparent);
+  border-left-color: var(--brand);
+}
 .account .name {
   font-weight: 700;
   font-size: 12px;
@@ -565,13 +652,14 @@ main {
   white-space: nowrap;
 }
 .account .meta {
+  width: 100%;
   color: var(--muted);
   font-size: 11px;
   line-height: 1.15;
-  flex: 0 0 auto;
   white-space: nowrap;
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 6px;
 }
 .account-change {
@@ -597,8 +685,9 @@ main {
   align-items: center;
   justify-content: space-between;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
+  letter-spacing: .05em;
 }
 .group-head .group-action {
   color: var(--accent);
@@ -1119,15 +1208,6 @@ tbody tr.index-row td:first-child::before {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-}
-.account-total-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 850;
-}
-.account-total-change .change-cell {
-  gap: 2px;
 }
 .detail-tabs {
   height: 30px;
@@ -2817,7 +2897,11 @@ tbody tr.index-row td:first-child::before {
   main {
     padding: 10px 8px 32px;
   }
-  .controls { justify-content: flex-start; }
+  .controls { justify-content: flex-start; row-gap: 8px; }
+  /* 좁은 화면: 그룹 구분선 없이 평탄하게 줄바꿈 */
+  .ctrl-group { border-right: 0; padding: 0 8px 0 0; }
+  .hero-value-row strong { font-size: 24px; }
+  .hero-strip { padding: 12px 14px; }
   .summary { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
   .layout { grid-template-columns: 1fr; }
   .trade-form, .trade-form.compact { grid-template-columns: repeat(2, minmax(120px, 1fr)); }

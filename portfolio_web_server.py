@@ -202,6 +202,9 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
             return True
+        # 폰트(2MB woff2)는 거의 안 바뀌므로 no-store 예외 — 하루 캐시
+        if static_path.suffix == ".woff2":
+            return self.send_file(static_path, "font/woff2", cache_control="public, max-age=86400")
         return self.send_file(static_path)
 
     def send_logo(self, name: str) -> bool:

@@ -398,6 +398,96 @@ function syncMobileCollapsePanels() {
   }
 }
 
+// ── 히어로 요약 (총 평가액 + 오늘 손익 + 1개월 스파크라인) ──
+// 값은 renderAccounts와 동일 기준(보유분 고정, 표 필터 무관)으로 현재 선택 계좌 합계.
+let heroPerfKey = null;
+let heroPerfFetchedAt = 0;
+
+function updateHeroSummary(byAccount, totalStats, accounts) {
+  const valueEl = document.getElementById("heroValue");
+  const labelEl = document.getElementById("heroLabel");
+  const changeEl = document.getElementById("heroChange");
+  if (!valueEl || !labelEl || !changeEl) return;
+  let value = 0;
+  let change = 0;
+  let label = "총 평가액 · 전체 계좌";
+  if (selectionMode === "all") {
+    value = totalStats.value_krw;
+    change = totalStats.change_krw;
+  } else {
+    const selected = accounts.filter(a => isAccountSelected(a.id));
+    selected.forEach(a => {
+      const stat = byAccount.get(a.id);
+      if (!stat) return;
+      value += stat.value_krw || 0;
+      change += stat.change_krw || 0;
+    });
+    label = selected.length === 1
+      ? `총 평가액 · ${selected[0].memberName} ${selected[0].name}`
+      : `총 평가액 · ${selected.length}개 계좌`;
+  }
+  labelEl.textContent = label;
+  valueEl.textContent = krw(value);
+  const previous = value - change;
+  const pct = previous > 0 ? (change / previous) * 100 : null;
+  const cls = change > 0 ? "up" : change < 0 ? "down" : "flat";
+  const arrow = change > 0 ? "▲" : change < 0 ? "▼" : "→";
+  changeEl.className = `hero-change ${cls}`;
+  changeEl.textContent = `${arrow} ${krw(Math.abs(change))}${
+    pct == null ? "" : ` · ${pct > 0 ? "+" : pct < 0 ? "−" : ""}${fmt2.format(Math.abs(pct))}%`
+  }`;
+  updateHeroSpark();
+}
+
+async function updateHeroSpark() {
+  const svg = document.getElementById("heroSpark");
+  if (!svg) return;
+  const ids = selectionMode === "all" ? [] : Array.from(selectedAccounts).sort();
+  const key = selectionMode === "all" ? "all" : ids.join(",");
+  // 같은 선택은 10분간 재조회하지 않음 (스파크라인은 보조 정보)
+  if (heroPerfKey === key && Date.now() - heroPerfFetchedAt < 600000) return;
+  heroPerfKey = key;
+  heroPerfFetchedAt = Date.now();
+  try {
+    const payload = await apiFetchAccountPerformance(ids, selectionMode === "all");
+    if (heroPerfKey !== key) return;   // 그 사이 선택이 바뀜
+    const points = (payload.points || [])
+      .filter(point => point.date && Number.isFinite(Number(point.value)) && Number(point.value) > 0)
+      .slice(-22);   // 최근 ~1개월 거래일
+    drawHeroSpark(points.map(point => Number(point.value)));
+  } catch {
+    drawHeroSpark([]);
+  }
+}
+
+function drawHeroSpark(values) {
+  const svg = document.getElementById("heroSpark");
+  const perfEl = document.getElementById("heroPerf");
+  if (!svg || !perfEl) return;
+  if (!values || values.length < 2) {
+    svg.innerHTML = "";
+    perfEl.className = "hero-perf flat";
+    perfEl.textContent = "-";
+    return;
+  }
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const W = 132, H = 40, PAD = 3;
+  const coords = values.map((v, i) => {
+    const x = PAD + i * (W - PAD * 2) / (values.length - 1);
+    const y = H - PAD - (v - min) / range * (H - PAD * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const pct = values[0] > 0 ? (values[values.length - 1] / values[0] - 1) * 100 : null;
+  const cls = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
+  svg.innerHTML = `<polyline class="hero-spark-line ${cls}" points="${coords.join(" ")}"></polyline>`;
+  perfEl.className = `hero-perf ${cls}`;
+  perfEl.textContent = pct == null
+    ? "-"
+    : `${pct > 0 ? "+" : pct < 0 ? "−" : ""}${fmt2.format(Math.abs(pct))}%`;
+}
+
 function renderAccounts() {
   // 계좌현황(평가액)은 보유분 기준으로 고정 — 보유/미보유/전체 필터에 영향받지 않음
   const rows = filteredRows({ ignoreAccount: true, ignoreAggregate: true, ignoreCurrency: true, positionFilter: "held" });
@@ -469,6 +559,7 @@ function renderAccounts() {
     `;
   }).join("");
   document.getElementById("accounts").innerHTML = totalButton + groupHtml;
+  updateHeroSummary(byAccount, totalStats, accounts);
   renderPriceUpdated();
   document.querySelectorAll(".account").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -600,7 +691,7 @@ function syncDetailTabs() {
   document.getElementById("chartDisplayControls")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
   document.getElementById("performanceDetailControl")?.classList.toggle("hidden", !performanceChartOpen);
   document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart);
-  ["positionFilterBtn", "fxAdjustedControl", "showIndexesControl", "currencyFilterControl", "rowCount", "accountTotal"].forEach(id => {
+  ["positionFilterBtn", "fxAdjustedControl", "showIndexesControl", "currencyFilterControl", "rowCount"].forEach(id => {
     document.getElementById(id)?.classList.toggle("hidden", showingChart);
   });
 }
@@ -681,12 +772,6 @@ function renderTable() {
     document.getElementById("tableTitle").textContent = selectionMode === "all" ? "전체 계좌" : selected.length === 1 ? `${selected[0].memberName} · ${selected[0].name}` : selected.length > 1 ? `${selected.length}개 계좌` : "선택 없음";
   }
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
-  const total = rows.reduce((s, r) => s + (r.value_krw || 0), 0);
-  const totalChange = rows.reduce((s, r) => {
-    const value = Number(r.change_krw);
-    return Number.isFinite(value) ? s + value : s;
-  }, 0);
-  document.getElementById("accountTotal").innerHTML = `<span>평가 ${krw(total)}</span><span class="account-total-change">${changeKrwText(totalChange)}</span>`;
   document.getElementById("holdings").innerHTML = rows.map(r => {
     const noPosition = !hasPosition(r);
     return `
