@@ -55,7 +55,6 @@ async function loadStatsForRows(rows) {
     const payload = await apiFetchStats(missing);
     statsData = { ...statsData, ...(payload.stats || {}) };
     missing.forEach(ticker => statsFetchedTickers.add(ticker));
-    renderStatsTable(rows);
   })();
   try {
     await statsInFlight;
@@ -63,6 +62,9 @@ async function loadStatsForRows(rows) {
     document.getElementById("statsRows").innerHTML = `<tr><td colspan="23">${esc(err.message || String(err))}</td></tr>`;
   } finally {
     statsInFlight = null;
+    // 요청 중 계좌·보유여부·통화 필터가 바뀌었을 수 있으므로, 캡처된
+    // 이전 rows가 아니라 현재 화면 기준으로 다시 그려 누락 종목을 후속 조회한다.
+    renderStatsTable();
   }
 }
 

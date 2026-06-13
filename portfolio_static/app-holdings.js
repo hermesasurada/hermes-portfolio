@@ -157,10 +157,11 @@ function flattenHoldings() {
 function tickerAssetClass(ticker, name, category) {
   const upperName = String(name || "").toUpperCase();
   const upperTicker = String(ticker || "").toUpperCase();
+  const nameTokens = new Set(upperName.split(/[^A-Z0-9]+/).filter(Boolean));
   if (category === "crypto" || upperTicker === "BTC") return "crypto";
   if (category === "index") return "index";
   if (["ARKG", "ARKK", "QLD", "TQQQ", "SQQQ", "SOXL", "SOXS", "SPY", "VOO", "VTI", "IVV", "QQQ", "DIA", "IWM", "SCHD", "1629.T", "200A.T"].includes(upperTicker)) return "etf";
-  if (["KODEX", "TIGER", "ACE", "SOL", "ETF", "ISHARES", "PROSHARES", "DIREXION"].some(token => upperName.includes(token))) return "etf";
+  if (["KODEX", "TIGER", "ACE", "SOL", "ETF", "ISHARES", "PROSHARES", "DIREXION"].some(token => nameTokens.has(token))) return "etf";
   return "stock";
 }
 

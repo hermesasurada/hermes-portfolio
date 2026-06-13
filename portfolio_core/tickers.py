@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from .constants import ETF_BRANDS, FX_TICKERS, KOREAN_SUFFIXES, MARKET_INDEXES, US_ETF_TICKERS
 
 
@@ -98,6 +100,7 @@ def asset_class(ticker: str, name: str) -> str:
         return "crypto"
     upper_name = (name or "").upper()
     upper_ticker = ticker.upper()
-    if upper_ticker in US_ETF_TICKERS or any(token in upper_name for token in ETF_BRANDS):
+    name_tokens = set(re.findall(r"[A-Z0-9]+", upper_name))
+    if upper_ticker in US_ETF_TICKERS or any(token in name_tokens for token in ETF_BRANDS):
         return "etf"
     return "stock"

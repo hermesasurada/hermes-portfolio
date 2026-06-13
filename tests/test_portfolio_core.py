@@ -117,8 +117,10 @@ def test_asset_class():
     assert asset_class("ARKG", "ARK Genomic") == "etf"
     assert asset_class("200A.T", "Nikkei Semiconductor") == "etf"
     assert asset_class("069500.KS", "KODEX 200") == "etf"
+    assert asset_class("457480.KS", "ACE 테슬라밸류체인액티브") == "etf"
     assert asset_class("SCHD", "") == "etf"          # ticker-only ETF
     assert asset_class("AAPL", "Apple Inc.") == "stock"
+    assert asset_class("SPCX", "SpaceX") == "stock"
 
 
 def test_account_kind_and_label():
