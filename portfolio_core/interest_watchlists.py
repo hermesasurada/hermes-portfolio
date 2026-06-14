@@ -176,6 +176,40 @@ def create_interest_group(payload: dict) -> dict:
     return load_interest_watchlists()
 
 
+def rename_interest_group(payload: dict) -> dict:
+    group_id = int(payload.get("group_id") or 0)
+    name = str(payload.get("name") or "").strip()
+    if group_id <= 0:
+        raise ValueError("이름을 변경할 그룹이 올바르지 않습니다.")
+    if not name:
+        raise ValueError("그룹명을 입력해야 합니다.")
+    if len(name) > 40:
+        raise ValueError("그룹명은 40자 이내로 입력해야 합니다.")
+    with connect() as conn:
+        ensure_interest_watchlist_tables(conn)
+        if not conn.execute(
+            "SELECT 1 FROM interest_watchlist_groups WHERE id = ?",
+            (group_id,),
+        ).fetchone():
+            raise ValueError("그룹을 찾지 못했습니다.")
+        duplicate = conn.execute(
+            """
+            SELECT 1
+            FROM interest_watchlist_groups
+            WHERE name = ? COLLATE NOCASE AND id <> ?
+            """,
+            (name, group_id),
+        ).fetchone()
+        if duplicate:
+            raise ValueError("같은 이름의 그룹이 이미 있습니다.")
+        conn.execute(
+            "UPDATE interest_watchlist_groups SET name = ? WHERE id = ?",
+            (name, group_id),
+        )
+        conn.commit()
+    return load_interest_watchlists()
+
+
 def delete_interest_group(payload: dict) -> dict:
     group_id = int(payload.get("group_id") or 0)
     if group_id <= 0:

@@ -9,7 +9,6 @@ const detailStorage = {
   fxAdjusted: "portfolio.detail.fxAdjusted",
   showIndexes: "portfolio.detail.showIndexes",
   currencyFilter: "portfolio.detail.currencyFilter",
-  positionFilter: "portfolio.detail.positionFilter",
   chartInterval: "portfolio.chart.interval",
   chartLogScale: "portfolio.chart.logScale",
   chartSmoothLines: "portfolio.chart.smoothLines",
@@ -17,7 +16,8 @@ const detailStorage = {
   chartShowSells: "portfolio.chart.showSells"
 };
 const sidebarStorage = {
-  activeTab: "portfolio.sidebar.activeTab"
+  activeTab: "portfolio.sidebar.activeTab",
+  interestGroupId: "portfolio.sidebar.interestGroupId"
 };
 const defaultSortDir = {
   name: 1,

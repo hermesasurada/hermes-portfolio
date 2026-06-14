@@ -358,43 +358,6 @@ h1 { margin: 0 0 3px; font-size: 17px; letter-spacing: -0.2px; }
   border-color: var(--brand);
   background: var(--brand-soft);
 }
-/* 보유 여부 3-state 세그먼트 */
-.position-filter {
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--surface-2);
-  white-space: nowrap;
-}
-.position-filter-option {
-  height: 24px;
-  min-width: 42px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 11.5px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background .15s ease, color .15s ease, box-shadow .15s ease;
-}
-.position-filter-option:hover:not(.active) {
-  background: var(--panel);
-  color: var(--ink);
-}
-.position-filter-option.active {
-  background: var(--brand);
-  color: var(--on-accent);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, .16);
-}
-.position-filter-option:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
-}
 .us-market-status {
   color: var(--muted);
   font-size: 11px;
@@ -663,8 +626,7 @@ main {
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
 }
-.interest-group-form,
-.interest-item-form {
+.interest-group-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -675,8 +637,7 @@ main {
   border-bottom: 1px solid var(--line);
   background: var(--surface-2);
 }
-.interest-group-form input,
-.interest-item-form input {
+.interest-group-form input {
   width: 100%;
   min-width: 0;
   height: 30px;
@@ -704,7 +665,7 @@ main {
 .interest-group + .interest-group {
   border-top: 1px solid var(--line);
 }
-.interest-group-head {
+.interest-group {
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 26px 26px;
@@ -713,14 +674,14 @@ main {
   padding: 5px 7px;
   background: var(--panel);
 }
-.interest-group.expanded > .interest-group-head {
-  background: var(--surface-2);
+.interest-group.active {
+  background: var(--brand-soft);
 }
-.interest-group-toggle {
+.interest-group-select {
   min-width: 0;
   height: 30px;
   display: grid;
-  grid-template-columns: 12px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 7px;
   padding: 0 5px;
@@ -729,16 +690,8 @@ main {
   color: var(--ink);
   text-align: left;
 }
-.interest-caret {
-  width: 7px;
-  height: 7px;
-  border-right: 2px solid var(--muted);
-  border-bottom: 2px solid var(--muted);
-  transform: rotate(-45deg);
-  transition: transform var(--t-fast);
-}
-.interest-group.expanded .interest-caret {
-  transform: rotate(45deg) translate(-1px, -1px);
+.interest-group-select:hover .interest-group-name {
+  color: var(--brand);
 }
 .interest-group-name {
   min-width: 0;
@@ -785,98 +738,20 @@ main {
   background: color-mix(in srgb, var(--sell) 8%, var(--panel));
   color: var(--sell);
 }
-.interest-group-body {
-  padding: 0 7px 7px;
-}
-.interest-item-form {
-  padding: 7px 0;
-}
-.interest-item-form button {
-  height: 30px;
-  padding: 0 9px;
-  border-color: var(--brand);
-  background: var(--brand);
-  color: var(--on-accent);
-  font-size: 11px;
-  font-weight: 800;
-}
-.interest-items {
+.interest-group-rename {
+  min-width: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr) 26px 26px;
+  align-items: center;
   gap: 3px;
+  padding: 5px 7px;
+  border-top: 1px solid var(--line);
 }
-.interest-item {
+.interest-group-rename input {
+  height: 30px;
   min-width: 0;
-  min-height: 42px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 24px;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 3px 4px 5px;
-  border-radius: var(--radius-sm);
-}
-.interest-item:hover {
-  background: var(--surface-hover);
-}
-.interest-item-main {
-  min-width: 0;
-  height: auto;
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--ink);
-  text-align: left;
-}
-.interest-item .asset-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  font-size: 9px;
-}
-.interest-item-name {
-  min-width: 0;
-  display: grid;
-  gap: 1px;
-}
-.interest-item-name strong,
-.interest-item-name span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.interest-item-name strong {
-  font-size: 11.5px;
-  font-weight: 750;
-}
-.interest-item-name span {
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 700;
-}
-.interest-item-quote {
-  display: grid;
-  justify-items: end;
-  gap: 1px;
-  white-space: nowrap;
-}
-.interest-item-quote > strong {
-  font-size: 11px;
-  font-weight: 800;
-}
-.interest-item-quote .change-cell {
-  gap: 2px;
-  font-size: 10px;
-}
-.interest-item > .interest-icon-btn {
-  width: 22px;
-  min-width: 22px;
-  height: 22px;
-  border-color: transparent;
-  background: transparent;
-  font-size: 15px;
+  padding: 0 8px;
+  font-size: 12px;
 }
 .interest-empty {
   padding: 24px 12px;
@@ -888,6 +763,92 @@ main {
 }
 .interest-empty.compact {
   padding: 12px 8px;
+}
+.interest-main-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+}
+.interest-main-form input {
+  width: 190px;
+  height: 30px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+.interest-main-form button {
+  height: 30px;
+  padding: 0 12px;
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--on-accent);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+.interest-main-status {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.interest-main-status.error {
+  color: var(--sell);
+}
+#interestTableWrap {
+  overflow: auto;
+}
+.interest-detail-list {
+  width: 1990px;
+  min-width: 1990px;
+  table-layout: fixed;
+}
+.interest-detail-list th,
+.interest-detail-list td {
+  padding: 9px 5px;
+  text-align: right;
+}
+.interest-detail-list th {
+  cursor: pointer;
+  text-align: center;
+}
+.interest-detail-list th:first-child,
+.interest-detail-list td:first-child {
+  width: 40px;
+  text-align: center;
+}
+.interest-detail-list th:nth-child(2),
+.interest-detail-list td:nth-child(2) {
+  width: 165px;
+  text-align: left;
+}
+.interest-detail-list th:nth-child(5),
+.interest-detail-list td:nth-child(5),
+.interest-detail-list th:nth-child(7),
+.interest-detail-list td:nth-child(7) {
+  width: 112px;
+}
+.interest-detail-list th:nth-child(n+12):nth-child(-n+17),
+.interest-detail-list td:nth-child(n+12):nth-child(-n+17) {
+  width: 48px;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+.interest-detail-list .indicator-head span {
+  display: block;
+}
+.interest-row-delete {
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 17px;
+}
+.interest-row-delete:hover {
+  border-color: var(--sell);
+  background: color-mix(in srgb, var(--sell) 8%, var(--panel));
+  color: var(--sell);
 }
 /* 계좌 = 2줄 미니 카드 (이름 / 평가액·등락). 선택 상태는 좌측 브랜드 바 + 옅은 채움 */
 .account {

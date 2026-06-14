@@ -50,7 +50,8 @@ async function loadStatsForRows(rows) {
   const key = missing.join(",");
   if (!missing.length || statsLoadKey === key || statsInFlight) return;
   statsLoadKey = key;
-  document.getElementById("statsRows").innerHTML = skeletonRows(23);
+  const target = interestModeActive() ? document.getElementById("interestRows") : document.getElementById("statsRows");
+  if (target && !target.children.length) target.innerHTML = skeletonRows(interestModeActive() ? 28 : 23);
   statsInFlight = (async () => {
     const payload = await apiFetchStats(missing);
     statsData = { ...statsData, ...(payload.stats || {}) };
@@ -59,12 +60,13 @@ async function loadStatsForRows(rows) {
   try {
     await statsInFlight;
   } catch (err) {
-    document.getElementById("statsRows").innerHTML = `<tr><td colspan="23">${esc(err.message || String(err))}</td></tr>`;
+    if (target) target.innerHTML = `<tr><td colspan="${interestModeActive() ? 28 : 23}">${esc(err.message || String(err))}</td></tr>`;
   } finally {
     statsInFlight = null;
-    // 요청 중 계좌·보유여부·통화 필터가 바뀌었을 수 있으므로, 캡처된
+    // 요청 중 계좌·통화 필터나 관심그룹이 바뀌었을 수 있으므로, 캡처된
     // 이전 rows가 아니라 현재 화면 기준으로 다시 그려 누락 종목을 후속 조회한다.
-    renderStatsTable();
+    if (interestModeActive()) renderInterestMainTable();
+    else renderStatsTable();
   }
 }
 

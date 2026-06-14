@@ -102,6 +102,14 @@ function apiDeleteInterestGroup(groupId) {
   });
 }
 
+function apiRenameInterestGroup(groupId, name) {
+  return fetchJson("/api/interest-watchlists/groups/rename", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ group_id: groupId, name }),
+  });
+}
+
 function apiAddInterestItem(groupId, ticker) {
   return fetchJson("/api/interest-watchlists/items", {
     method: "POST",

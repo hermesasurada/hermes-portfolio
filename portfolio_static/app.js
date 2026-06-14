@@ -160,6 +160,7 @@ function render() {
   renderAccounts();
   renderInterestWatchlists();
   const rows = filteredRows();
+  document.getElementById("heroStrip")?.classList.toggle("hidden", interestModeActive());
   renderSummary(rows);
   renderTable();
   renderTradeControls();
@@ -316,33 +317,6 @@ document.getElementById("tradeForm").addEventListener("submit", async event => {
     showTradeError(err);
   }
 });
-// 보유 필터: 세 상태를 항상 노출하고 원하는 상태를 바로 선택한다.
-const positionFilterStates = ["held", "unheld", "all"];
-(() => {
-  const control = document.getElementById("positionFilterBtn");
-  if (!control) return;
-  const saved = storageGet(detailStorage.positionFilter);
-  const initial = positionFilterStates.includes(saved) ? saved : "held";
-  const selectPositionFilter = state => {
-    if (!positionFilterStates.includes(state)) return;
-    control.dataset.state = state;
-    control.querySelectorAll("[data-position-state]").forEach(btn => {
-      const selected = btn.dataset.positionState === state;
-      btn.classList.toggle("active", selected);
-      btn.setAttribute("aria-pressed", String(selected));
-    });
-  };
-  selectPositionFilter(initial);
-  control.addEventListener("click", event => {
-    const btn = event.target.closest?.("[data-position-state]");
-    if (!btn) return;
-    const next = btn.dataset.positionState;
-    selectPositionFilter(next);
-    storageSet(detailStorage.positionFilter, next);
-    syncFilterToggleControls();
-    render();
-  });
-})();
 chartLogScale = storageGet(detailStorage.chartLogScale) === "true";
 chartSmoothLines = storageGet(detailStorage.chartSmoothLines) !== "false";
 chartInterval = ["day", "week", "month"].includes(storageGet(detailStorage.chartInterval))

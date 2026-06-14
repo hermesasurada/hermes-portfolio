@@ -94,9 +94,6 @@ function performanceDetailEnabled() {
 function currencyFilterValue() {
   return document.getElementById("currencyFilter")?.value || "all";
 }
-function positionFilterValue() {
-  return document.getElementById("positionFilterBtn")?.dataset.state || "held";
-}
 function holdingChangePct(row, fxAdjusted = fxAdjustedEnabled()) {
   if (fxAdjusted && row.currency !== "KRW" && Number.isFinite(row.change_krw_pct)) return row.change_krw_pct;
   return Number.isFinite(row.change_pct) ? row.change_pct : null;
@@ -165,22 +162,6 @@ function tickerAssetClass(ticker, name, category) {
   return "stock";
 }
 
-// Scope is computed server-side (portfolio_core.tickers) and shipped on each
-// account / ticker as `scope`, so the rule lives in one place. (#5)
-function accountScope(account) {
-  return account?.scope ?? null;
-}
-
-function tickerScope(tickerMeta) {
-  return tickerMeta?.scope ?? null;
-}
-
-function watchlistAccountsForTicker(tickerMeta) {
-  const scope = tickerScope(tickerMeta);
-  if (!scope) return [];
-  return flattenAccounts().filter(account => accountScope(account) === scope);
-}
-
 function watchlistRowForAccount(tickerMeta, account) {
   const price = Number(tickerMeta.current_price);
   const currentPrice = Number.isFinite(price) ? price : null;
@@ -227,17 +208,6 @@ function watchlistRowForAccount(tickerMeta, account) {
   };
 }
 
-function watchlistRows() {
-  const held = new Set(flattenHoldings().map(row => String(row.ticker || "").toUpperCase()));
-  return (data?.tickers || [])
-    .filter(t => t.ticker && !held.has(String(t.ticker).toUpperCase()) && t.category !== "fx" && t.category !== "index")
-    .flatMap(t => {
-      const accounts = watchlistAccountsForTicker(t);
-      if (selectionMode === "all") return [watchlistRowForAccount(t, accounts[0] || null)];
-      const selectedMatches = accounts.filter(account => selectedAccounts.has(account.id));
-      return selectedMatches.map(account => watchlistRowForAccount(t, account));
-    });
-}
 function indexRows() {
   const order = new Map(["SP500", "NASDAQ", "KOSPI"].map((ticker, index) => [ticker, index]));
   return (data?.tickers || [])
@@ -495,8 +465,8 @@ function drawHeroSpark(values) {
 }
 
 function renderAccounts() {
-  // 계좌현황(평가액)은 보유분 기준으로 고정 — 보유/미보유/전체 필터에 영향받지 않음
-  const rows = filteredRows({ ignoreAccount: true, ignoreAggregate: true, ignoreCurrency: true, positionFilter: "held" });
+  // 계좌현황과 메인 포트폴리오 표는 실제 보유 수량이 있는 행만 집계한다.
+  const rows = filteredRows({ ignoreAccount: true, ignoreAggregate: true, ignoreCurrency: true });
   const byAccount = new Map();
   rows.forEach(r => {
     const current = byAccount.get(r.accountId) || { value_krw: 0, change_krw: 0, previous_krw: 0, count: 0 };
@@ -614,14 +584,10 @@ function renderAccounts() {
 }
 
 function filteredRows(options = {}) {
-  const positionFilter = options.positionFilter || positionFilterValue();   // "held" | "unheld" | "all"
   const currencyFilter = currencyFilterValue();
-  let rows = flattenHoldings();
-  if (positionFilter !== "held") rows = rows.concat(watchlistRows());
+  let rows = flattenHoldings().filter(r => (r.qty || 0) > 0);
   const fxAdjusted = fxAdjustedEnabled();
   if (!options.ignoreAccount && selectionMode !== "all") rows = rows.filter(r => selectedAccounts.has(r.accountId));
-  if (positionFilter === "held") rows = rows.filter(r => (r.qty || 0) > 0);
-  else if (positionFilter === "unheld") rows = rows.filter(r => !((r.qty || 0) > 0));
   if (!options.ignoreCurrency && currencyFilter !== "all") rows = rows.filter(r => r.currency === currencyFilter);
   if (showIndexesEnabled() && !options.ignoreIndexes) {
     let indexes = indexRows();
@@ -684,24 +650,28 @@ function syncFilterToggleControls() {
 
 function syncDetailTabs() {
   const showingChart = Boolean(chartTicker) || performanceChartOpen;
+  const showingInterest = interestModeActive() && !showingChart;
   document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.classList.toggle("active", !showingChart && btn.dataset.tab === activeDetailTab);
+    btn.classList.toggle("active", !showingChart && !showingInterest && btn.dataset.tab === activeDetailTab);
   });
   document.getElementById("tableTitle").classList.toggle("hidden", showingChart);
-  document.getElementById("detailTableWrap").classList.toggle("hidden", showingChart || activeDetailTab !== "detail");
-  document.getElementById("statsTableWrap").classList.toggle("hidden", showingChart || activeDetailTab !== "stats");
-  document.getElementById("dividendTableWrap").classList.toggle("hidden", showingChart || activeDetailTab !== "dividend");
+  document.getElementById("detailTableWrap").classList.toggle("hidden", showingChart || showingInterest || activeDetailTab !== "detail");
+  document.getElementById("statsTableWrap").classList.toggle("hidden", showingChart || showingInterest || activeDetailTab !== "stats");
+  document.getElementById("dividendTableWrap").classList.toggle("hidden", showingChart || showingInterest || activeDetailTab !== "dividend");
+  document.getElementById("interestTableWrap").classList.toggle("hidden", showingChart || !showingInterest);
   document.getElementById("chartView").classList.toggle("hidden", !showingChart);
   document.getElementById("chartBack").classList.toggle("hidden", !showingChart);
   document.getElementById("chartIntervalControl")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
   document.getElementById("chartDisplayControls")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
   document.getElementById("performanceDetailControl")?.classList.toggle("hidden", !performanceChartOpen);
-  document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart);
+  document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart || showingInterest);
   // 통계 지표 도움말 버튼은 통계 탭(차트 아닐 때)에서만 노출
-  document.getElementById("statsHelpOpen")?.classList.toggle("hidden", showingChart || activeDetailTab !== "stats");
-  ["positionFilterBtn", "fxAdjustedControl", "showIndexesControl", "currencyFilterControl", "rowCount"].forEach(id => {
+  document.getElementById("statsHelpOpen")?.classList.toggle("hidden", showingChart || showingInterest || activeDetailTab !== "stats");
+  ["fxAdjustedControl", "currencyFilterControl", "rowCount"].forEach(id => {
     document.getElementById(id)?.classList.toggle("hidden", showingChart);
   });
+  document.getElementById("showIndexesControl")?.classList.toggle("hidden", showingChart || showingInterest);
+  document.getElementById("interestMainItemForm")?.classList.toggle("hidden", showingChart || !showingInterest);
 }
 
 function chartHref(ticker) {
@@ -720,7 +690,7 @@ function performanceChartFromHash() {
 function syncTransactionPanel() {
   // 차트 화면에서는 하단 거래내역 패널을 숨긴다.
   const panel = document.querySelector(".transaction-panel");
-  if (panel) panel.classList.toggle("hidden", Boolean(performanceChartOpen || chartTicker));
+  if (panel) panel.classList.toggle("hidden", Boolean(performanceChartOpen || chartTicker || interestModeActive()));
 }
 
 let frozenColumnsFrame = 0;
@@ -741,7 +711,8 @@ function syncPcFrozenColumns() {
   [
     ["#detailTableWrap table", 2],
     ["#statsTableWrap table", 2],
-    ["#dividendTableWrap table", 4]
+    ["#dividendTableWrap table", 4],
+    ["#interestTableWrap table", 2]
   ].forEach(([selector, columnCount]) => {
     const table = document.querySelector(selector);
     if (!table || table.closest(".hidden")) return;
@@ -769,12 +740,16 @@ function syncPcFrozenColumns() {
 function renderTable() {
   syncSortGlobals(activeDetailTab);
   syncTransactionPanel();
+  syncFilterToggleControls();
+  syncDetailTabs();
+  if (interestModeActive() && !chartTicker && !performanceChartOpen) {
+    renderInterestMainTable();
+    return;
+  }
   const rows = filteredRows();
   const hideExtendedColumn = Boolean(data?.us_market?.is_regular);
   const accounts = flattenAccounts();
   const selected = selectionMode === "all" ? accounts : accounts.filter(a => selectedAccounts.has(a.id));
-  syncFilterToggleControls();
-  syncDetailTabs();
   document.querySelector("#detailTableWrap thead .extended-change-col")
     ?.classList.toggle("hidden", hideExtendedColumn);
   updateSortHeaders();
