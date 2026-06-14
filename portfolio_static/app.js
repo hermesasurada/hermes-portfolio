@@ -158,6 +158,7 @@ function initStatsHelpModal() {
 
 function render() {
   renderAccounts();
+  renderInterestWatchlists();
   const rows = filteredRows();
   renderSummary(rows);
   renderTable();
@@ -263,7 +264,7 @@ document.getElementById("accountCollapseToggle").addEventListener("click", () =>
   const btn = document.getElementById(btnId);
   if (!head || !btn) return;
   head.addEventListener("click", (e) => {
-    if (e.target.closest(".mobile-collapse-toggle, a, input, label, .pill")) return;
+    if (e.target.closest(".mobile-collapse-toggle, .sidebar-tab, a, input, label, .pill")) return;
     if (getComputedStyle(btn).display === "none") return;  // desktop: caret hidden
     btn.click();
   });
@@ -413,5 +414,6 @@ initChartDisplayControls();
 initChartIntervalControl();
 initTradeSideToggle();
 initTradeApplyToggle();
+initInterestWatchlists();
 setTransactionsExpanded(false);
 load().then(syncChartRoute).catch(err => showTradeStatus(err.message || String(err), true));

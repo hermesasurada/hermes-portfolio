@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=stats-yield-link">
+  <link rel="stylesheet" href="/static/styles.css?v=interest-sidebar">
 </head>
 <body>
   <header>
@@ -65,13 +65,27 @@
     <section class="layout">
       <div class="side-col">
       <aside class="section mobile-collapse-panel" id="accountPanel">
-        <div class="mobile-panel-head">
-          <h2>계좌</h2>
+        <div class="mobile-panel-head sidebar-panel-head">
+          <div class="sidebar-tabs" role="tablist" aria-label="사이드바 보기">
+            <button class="sidebar-tab active" id="accountsSidebarTab" type="button" role="tab" aria-selected="true" data-sidebar-tab="accounts">계좌</button>
+            <button class="sidebar-tab" id="interestSidebarTab" type="button" role="tab" aria-selected="false" data-sidebar-tab="interest">관심목록</button>
+          </div>
           <button id="accountCollapseToggle" class="mobile-collapse-toggle" type="button" aria-expanded="false" aria-label="계좌 펼치기" title="계좌 펼치기"></button>
         </div>
         <div class="mobile-collapse-body" id="accountPanelBody">
-          <div id="accounts" class="account-list"></div>
-          <div id="priceUpdated" class="account-footer">가격 갱신: -</div>
+          <div id="accountSidebarPane" role="tabpanel" aria-labelledby="accountsSidebarTab">
+            <div id="accounts" class="account-list"></div>
+            <div id="priceUpdated" class="account-footer">가격 갱신: -</div>
+          </div>
+          <div id="interestSidebarPane" class="hidden" role="tabpanel" aria-labelledby="interestSidebarTab">
+            <form class="interest-group-form" id="interestGroupForm">
+              <input id="interestGroupName" type="text" maxlength="40" placeholder="새 그룹명" autocomplete="off">
+              <button class="interest-icon-btn" type="submit" aria-label="그룹 추가" title="그룹 추가">+</button>
+            </form>
+            <div class="interest-status" id="interestStatus" aria-live="polite"></div>
+            <div class="interest-groups" id="interestGroups"></div>
+            <datalist id="interestTickerOptions"></datalist>
+          </div>
         </div>
       </aside>
       </div>
@@ -546,14 +560,15 @@
   <script src="/static/chart-utils.js?v=refactor-chart-utils"></script>
   <script src="/static/app-tabs.js?v=stats-yield-link"></script>
   <script src="/static/app-charts.js?v=chart-border-controls"></script>
-  <script src="/static/app-holdings.js?v=us-live-60s"></script>
+  <script src="/static/app-holdings.js?v=interest-sidebar"></script>
   <script src="/static/app-chart-scale.js?v=bitcoin-k-price"></script>
   <script src="/static/app-line-chart.js?v=chart-yield-link"></script>
   <script src="/static/app-chart-compare.js?v=bitcoin-k-price"></script>
   <script src="/static/app-transactions.js?v=bitcoin-k-price"></script>
   <script src="/static/app-trade-controls.js?v=portfolio-refactor"></script>
   <script src="/static/app-watchlist.js?v=portfolio-refactor"></script>
+  <script src="/static/app-interest-watchlists.js?v=interest-sidebar"></script>
   <script src="/static/app-ticker-search.js?v=ticker-search"></script>
-  <script src="/static/app.js?v=pc-frozen-name-columns"></script>
+  <script src="/static/app.js?v=interest-sidebar"></script>
 </body>
 </html>

@@ -390,11 +390,14 @@ function renderPriceUpdated() {
 function syncMobileCollapsePanels() {
   const accountPanel = document.getElementById("accountPanel");
   const accountToggle = document.getElementById("accountCollapseToggle");
+  const panelName = typeof activeSidebarTab !== "undefined" && activeSidebarTab === "interest"
+    ? "관심목록"
+    : "계좌";
   accountPanel?.classList.toggle("mobile-collapsed", mobileAccountsCollapsed);
   if (accountToggle) {
     accountToggle.setAttribute("aria-expanded", String(!mobileAccountsCollapsed));
-    accountToggle.setAttribute("aria-label", mobileAccountsCollapsed ? "계좌 펼치기" : "계좌 접기");
-    accountToggle.title = mobileAccountsCollapsed ? "계좌 펼치기" : "계좌 접기";
+    accountToggle.setAttribute("aria-label", mobileAccountsCollapsed ? `${panelName} 펼치기` : `${panelName} 접기`);
+    accountToggle.title = mobileAccountsCollapsed ? `${panelName} 펼치기` : `${panelName} 접기`;
   }
 }
 

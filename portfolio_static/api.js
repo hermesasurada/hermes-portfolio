@@ -81,3 +81,39 @@ function apiAddWatchlist(tickers) {
     body: JSON.stringify({ tickers }),
   });
 }
+
+function apiFetchInterestWatchlists() {
+  return fetchJson("/api/interest-watchlists");
+}
+
+function apiCreateInterestGroup(name) {
+  return fetchJson("/api/interest-watchlists/groups", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+}
+
+function apiDeleteInterestGroup(groupId) {
+  return fetchJson("/api/interest-watchlists/groups/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ group_id: groupId }),
+  });
+}
+
+function apiAddInterestItem(groupId, ticker) {
+  return fetchJson("/api/interest-watchlists/items", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ group_id: groupId, ticker }),
+  });
+}
+
+function apiDeleteInterestItem(groupId, ticker) {
+  return fetchJson("/api/interest-watchlists/items/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ group_id: groupId, ticker }),
+  });
+}

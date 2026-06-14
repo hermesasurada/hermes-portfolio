@@ -16,6 +16,9 @@ const detailStorage = {
   chartShowBuys: "portfolio.chart.showBuys",
   chartShowSells: "portfolio.chart.showSells"
 };
+const sidebarStorage = {
+  activeTab: "portfolio.sidebar.activeTab"
+};
 const defaultSortDir = {
   name: 1,
   display_change_pct: -1,

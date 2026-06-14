@@ -102,6 +102,44 @@ def ensure_collector_runs_table(conn: sqlite3.Connection) -> None:
     )
 
 
+def ensure_interest_watchlist_tables(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS interest_watchlist_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS interest_watchlist_items (
+            group_id INTEGER NOT NULL,
+            ticker TEXT NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            PRIMARY KEY (group_id, ticker)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS interest_watchlist_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_interest_watchlist_items_group_order
+        ON interest_watchlist_items(group_id, sort_order, ticker)
+        """
+    )
+
+
 def ensure_transaction_columns(conn: sqlite3.Connection) -> None:
     columns = {row["name"] for row in conn.execute("PRAGMA table_info(transactions)").fetchall()}
     if "apply_to_holdings" not in columns:
@@ -202,5 +240,6 @@ def initialize_schema() -> None:
         ensure_stock_split_tables(conn)
         ensure_price_indexes(conn)
         ensure_collector_runs_table(conn)
+        ensure_interest_watchlist_tables(conn)
         ensure_market_index_tickers(conn)
         conn.commit()

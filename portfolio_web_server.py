@@ -20,6 +20,13 @@ from portfolio_core.db import connect, initialize_schema
 from portfolio_core.queries import load_collection_diagnostics, load_ticker_directory
 from portfolio_core.logos import is_dark_logo
 from portfolio_core.dividends import load_dividend_history, load_dividends
+from portfolio_core.interest_watchlists import (
+    add_interest_item,
+    create_interest_group,
+    delete_interest_group,
+    delete_interest_item,
+    load_interest_watchlists,
+)
 from portfolio_core.paths import DB_PATH, LOGO_DIR
 from portfolio_core.portfolio import load_portfolio as load_portfolio_data
 from portfolio_core.prices import load_ticker_changes
@@ -282,6 +289,9 @@ class Handler(BaseHTTPRequestHandler):
         q = (query.get("q") or [""])[0]
         return {"ticker": lookup_ticker(q)}
 
+    def api_interest_watchlists(self, query: dict[str, list[str]]) -> dict:
+        return load_interest_watchlists()
+
     def post_transactions(self) -> dict:
         return add_transaction(self.read_json(), portfolio_loader=load_portfolio)
 
@@ -294,6 +304,18 @@ class Handler(BaseHTTPRequestHandler):
     def post_watchlist(self) -> dict:
         payload = self.read_json()
         return add_watchlist_async(payload.get("tickers") or [])
+
+    def post_interest_group(self) -> dict:
+        return create_interest_group(self.read_json())
+
+    def post_interest_group_delete(self) -> dict:
+        return delete_interest_group(self.read_json())
+
+    def post_interest_item(self) -> dict:
+        return add_interest_item(self.read_json())
+
+    def post_interest_item_delete(self) -> dict:
+        return delete_interest_item(self.read_json())
 
     def _dispatch(self, verb: str, handler) -> None:
         """GET/POST 공통 에러 처리: 끊긴 파이프 무시, ValueError→400, 그 외→로그+500."""
@@ -335,6 +357,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/dividend-history": self.api_dividend_history,
                 "/api/transactions": self.api_transactions,
                 "/api/watchlist/lookup": self.api_watchlist_lookup,
+                "/api/interest-watchlists": self.api_interest_watchlists,
             }
             if path in get_routes:
                 self.send_json(get_routes[path](query))
@@ -356,6 +379,10 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/transactions/update": self.post_transaction_update,
                 "/api/transactions/delete": self.post_transaction_delete,
                 "/api/watchlist": self.post_watchlist,
+                "/api/interest-watchlists/groups": self.post_interest_group,
+                "/api/interest-watchlists/groups/delete": self.post_interest_group_delete,
+                "/api/interest-watchlists/items": self.post_interest_item,
+                "/api/interest-watchlists/items/delete": self.post_interest_item_delete,
             }
             if path in post_routes:
                 self.send_json(post_routes[path]())
