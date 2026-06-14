@@ -797,8 +797,7 @@ main {
   overflow: auto;
 }
 .interest-detail-list {
-  width: 1990px;
-  min-width: 1990px;
+  min-width: 100%;
   table-layout: fixed;
 }
 .interest-detail-list th,

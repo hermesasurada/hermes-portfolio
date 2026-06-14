@@ -182,6 +182,62 @@ function sortInterestRows(rows) {
   });
 }
 
+const interestColumnWidths = {
+  display_change_pct: 72,
+  extended_change_pct: 62,
+  current_price: 112,
+  next_earnings_date: 82,
+  market_cap_usd: 112,
+  dividend_yield: 70,
+  drawdown_52w: 72,
+  beta: 52,
+  beta_adj: 52,
+  rsi_day: 48,
+  rsi_week: 48,
+  rsi_month: 48,
+  bb_day: 48,
+  bb_week: 48,
+  bb_month: 48,
+  trailing_pe: 62,
+  forward_pe: 62,
+  price_to_book: 56,
+  perf_1m: 64,
+  perf_3m: 64,
+  perf_6m: 64,
+  perf_ytd: 64,
+  perf_1y: 64,
+  perf_3y: 64,
+  perf_5y: 64,
+};
+
+const interestAlwaysVisibleFields = new Set(["display_change_pct", "current_price"]);
+
+function hasInterestColumnValue(row, field) {
+  if (field === "next_earnings_date") return Boolean(row[field]);
+  if (field === "dividend_yield") return Number(row[field]) > 0;
+  return row[field] != null && Number.isFinite(Number(row[field]));
+}
+
+function syncInterestVisibleColumns(rows) {
+  const table = document.querySelector("#interestTableWrap .interest-detail-list");
+  if (!table) return;
+  const headers = Array.from(table.querySelectorAll("thead tr:last-child > th"));
+  let tableWidth = 40 + 165 + 40;
+  headers.forEach((header, index) => {
+    const field = header.dataset.interestSortKey || "";
+    const hide = Boolean(field)
+      && !interestAlwaysVisibleFields.has(field)
+      && !rows.some(row => hasInterestColumnValue(row, field));
+    header.classList.toggle("hidden", hide);
+    table.querySelectorAll("tbody > tr").forEach(row => {
+      row.cells[index]?.classList.toggle("hidden", hide);
+    });
+    if (field && !hide) tableWidth += interestColumnWidths[field] || 64;
+  });
+  table.style.width = `${tableWidth}px`;
+  table.style.minWidth = "100%";
+}
+
 function renderInterestMainTable() {
   const group = activeInterestGroup();
   const body = document.getElementById("interestRows");
@@ -238,6 +294,7 @@ function renderInterestMainTable() {
       <td><button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button></td>
     </tr>
   `).join("") : '<tr><td colspan="28">이 그룹에 등록된 종목이 없습니다.</td></tr>';
+  syncInterestVisibleColumns(rows);
   bindChartLinks();
   body.querySelectorAll("[data-dividend-history]").forEach(btn => {
     btn.addEventListener("click", () => openDividendHistory(btn.dataset.dividendHistory));
