@@ -241,10 +241,6 @@ def _stockanalysis_attempt_due(ticker: str, status: str | None) -> bool:
     return _stockanalysis_candidate(ticker) and "stockanalysis" not in (status or "")
 
 
-def _seibro_attempt_due(ticker: str, status: str | None) -> bool:
-    return _seibro_candidate(ticker) and "seibro" not in (status or "")
-
-
 def _opendart_attempt_due(ticker: str, status: str | None) -> bool:
     return is_opendart_candidate(ticker) and "opendart" not in (status or "")
 
@@ -285,35 +281,178 @@ def _fetch_nasdaq_dividends(ticker: str) -> list[dict]:
     return events
 
 
-def _fetch_seibro_dividends(ticker: str, name: str | None = None) -> list[dict]:
-    code = ticker.split(".", 1)[0]
-    if not re.fullmatch(r"\d{6}", code) or not name:
+# ── KRX KIND: 한국 ETF 분배금 (SEIBRO 대체) ──────────────────────────────────
+# SEIBRO selectCompanySchedule.do가 더 이상 분배일정 테이블을 주지 않아(타임아웃/
+# 랜딩 페이지) KIND 'ETF이익금분배신고(분배금안내)' 공시에서 기준일·지급일·주당
+# 분배금을 확정값으로 받는다. 종목명으로 분배금 공시를 찾고 → 일괄공시 문서를 열어
+# → ISIN에 6자리 코드가 들어간 해당 종목 행을 뽑는다. 일괄공시 1건이 다수 ETF를
+# 담으므로 문서는 접수번호(acptno) 기준으로 메모이즈해 종목 간 재사용한다.
+KIND_BASE = "https://kind.krx.co.kr"
+KIND_DISCLOSURE_URL = f"{KIND_BASE}/disclosure/disclosurebystocktype.do"
+KIND_VIEWER_URL = f"{KIND_BASE}/common/disclsviewer.do"
+KIND_ETF_ENTRY = f"{KIND_DISCLOSURE_URL}?method=searchDisclosureByStockTypeEtf"
+KIND_HISTORY_LOOKBACK_DAYS = 200   # 최근 ~6개월 확정분(기준일·지급일·금액)
+KIND_LOOKAHEAD_DAYS = 20           # 공시는 기준일 ~3영업일 전 → 임박 확정분 포착
+
+_kind_opener_cache: list = []
+_kind_doc_cache: dict[str, list[dict]] = {}
+
+
+def _kind_opener():
+    if not _kind_opener_cache:
+        import http.cookiejar
+
+        jar = http.cookiejar.CookieJar()
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+        opener.addheaders = [("User-Agent", SEIBRO_HEADERS["User-Agent"])]
+        try:
+            opener.open(KIND_ETF_ENTRY, timeout=12).read()   # JSESSIONID 적재
+        except Exception:
+            pass
+        _kind_opener_cache.append(opener)
+    return _kind_opener_cache[0]
+
+
+def _kind_form_post(url: str, params: dict, referer: str, timeout: int = 15) -> str:
+    data = urllib.parse.urlencode(params, encoding="utf-8").encode("utf-8")
+    req = urllib.request.Request(
+        url, data=data,
+        headers={
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "Referer": referer,
+            "X-Requested-With": "XMLHttpRequest",
+        },
+    )
+    with _kind_opener().open(req, timeout=timeout) as resp:
+        return resp.read().decode("utf-8", "replace")
+
+
+def _kind_cells(row_html: str) -> list[str]:
+    return [
+        unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", cell))).strip()
+        for cell in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", row_html, re.DOTALL)
+    ]
+
+
+def _kind_distribution_acptnos(name: str, start: str, end: str) -> list[str]:
+    html = _kind_form_post(
+        KIND_DISCLOSURE_URL,
+        {
+            "method": "searchDisclosureByStockTypeEtfSub",
+            "forward": "disclosurebystocktype_etf_sub",
+            "etfIsuSrtNm": name,        # 정확한 종목명 단독 필터가 유일하게 동작(코드 필터는 0건)
+            "reportNm": "분배금",
+            "fromDate": start,
+            "toDate": end,
+            "currentPageSize": "100",
+            "pageIndex": "1",
+            "orderMode": "1",
+            "orderStat": "D",
+        },
+        referer=KIND_ETF_ENTRY,
+    )
+    acptnos: list[str] = []
+    for match in re.finditer(r"openDisclsViewer\('(\d{14})'", html):
+        if match.group(1) not in acptnos:
+            acptnos.append(match.group(1))
+    return acptnos
+
+
+def _kind_document_rows(acptno: str) -> list[dict]:
+    """일괄공시 문서 → [{isin,name,record_date,pay_date,amount}]. acptno 기준 메모이즈."""
+    if acptno in _kind_doc_cache:
+        return _kind_doc_cache[acptno]
+    rows: list[dict] = []
+    try:
+        opener = _kind_opener()
+        viewer = opener.open(
+            f"{KIND_VIEWER_URL}?method=search&acptno={acptno}&docno=&viewerhost=&viewerport=",
+            timeout=15,
+        ).read().decode("utf-8", "replace")
+        doc_nos = [n for n in dict.fromkeys(re.findall(r"\d{14}", viewer)) if n != acptno]
+        for doc_no in doc_nos:
+            stub = _kind_form_post(
+                KIND_VIEWER_URL,
+                {"method": "searchContents", "docNo": doc_no, "acptNo": acptno, "viewerHost": "", "viewerPort": ""},
+                referer=KIND_VIEWER_URL,
+            )
+            path = re.search(r"setPath\('[^']*','([^']+\.html?)'", stub)
+            if not path:
+                continue
+            doc_url = path.group(1)
+            if doc_url.startswith("/"):
+                doc_url = KIND_BASE + doc_url
+            raw = opener.open(
+                urllib.request.Request(doc_url, headers={"Referer": KIND_VIEWER_URL}), timeout=15
+            ).read()
+            text = None
+            for enc in ("utf-8", "euc-kr", "cp949"):
+                try:
+                    text = raw.decode(enc)
+                    break
+                except Exception:
+                    continue
+            if text is None:
+                continue
+            for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", text, re.DOTALL):
+                cells = _kind_cells(tr)
+                # 행 구조: ISIN · 종목약명 · 지급기준일 · 지급예정일 · 분배금(원) · 기타
+                if len(cells) >= 5 and re.match(r"KR[0-9A-Z]{10}", cells[0]):
+                    rows.append({
+                        "isin": cells[0],
+                        "name": cells[1],
+                        "record_date": _date_from_kr_text(cells[2]),
+                        "pay_date": _date_from_kr_text(cells[3]),
+                        "amount": _amount_from_text(cells[4]),
+                    })
+    except Exception as exc:
+        print(f"[dividends] {acptno} kind-doc failed: {type(exc).__name__}: {exc}")
+    _kind_doc_cache[acptno] = rows
+    return rows
+
+
+_KRX_SHORT_CODE = re.compile(r"[0-9A-Z]{6}")   # 신규 ETF는 0167Z0처럼 영숫자 단축코드
+
+
+def _kind_candidate(ticker: str) -> bool:
+    return _seibro_candidate(ticker) and bool(_KRX_SHORT_CODE.fullmatch(ticker.split(".", 1)[0].upper()))
+
+
+def _kind_attempt_due(ticker: str, status: str | None) -> bool:
+    return _kind_candidate(ticker) and "kind" not in (status or "")
+
+
+def _fetch_kind_etf_dividends(ticker: str, name: str | None) -> list[dict]:
+    code = ticker.split(".", 1)[0].upper()
+    if not name or not _KRX_SHORT_CODE.fullmatch(code):
         return []
-    query = urllib.parse.urlencode({"shotn_isin": code, "txt_sch": name})
-    url = f"https://m.seibro.or.kr/cmuc/company/selectCompanySchedule.do?{query}"
-    html = _fetch_text(url, SEIBRO_HEADERS)
-    events = []
-    for row_match in re.finditer(r"<tr>\s*(.*?)\s*</tr>", html, re.DOTALL):
-        cells = [
-            unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", cell))).strip()
-            for cell in re.findall(r"<td[^>]*>(.*?)</td>", row_match.group(1), re.DOTALL)
-        ]
-        if len(cells) < 2 or cells[1] != "배당/분배":
-            continue
-        record_date = _date_from_kr_text(cells[0])
-        if not record_date:
-            continue
-        events.append(
-            {
+    today = _today()
+    start = (today - timedelta(days=KIND_HISTORY_LOOKBACK_DAYS)).isoformat()
+    end = (today + timedelta(days=KIND_LOOKAHEAD_DAYS)).isoformat()
+    try:
+        from .dividend_schedule import previous_kr_business_day
+    except Exception:
+        previous_kr_business_day = None
+
+    events: dict[str, dict] = {}
+    for acptno in _kind_distribution_acptnos(name, start, end):
+        for row in _kind_document_rows(acptno):
+            if code not in row["isin"] or row["amount"] is None or not row["record_date"]:
+                continue
+            record = date.fromisoformat(row["record_date"])
+            # yfinance 관례에 맞춰 ex_date = 배당기준일 직전 영업일 (병합 시 정렬·중복억제).
+            ex = previous_kr_business_day(record) if previous_kr_business_day else record
+            ex_text = ex.isoformat()
+            events[ex_text] = {
                 "ticker": ticker,
-                "ex_date": record_date,
-                "pay_date": None,
-                "amount": None,
+                "ex_date": ex_text,
+                "record_date": row["record_date"],
+                "pay_date": row["pay_date"],
+                "amount": row["amount"],
                 "currency": "KRW",
-                "source": "seibro",
+                "source": "kind",
             }
-        )
-    return events
+    return sorted(events.values(), key=lambda event: event["ex_date"])
 
 
 def _stockanalysis_urls(ticker: str) -> tuple[str, ...]:
@@ -454,15 +593,32 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
                 return False
             return any(abs((d - od).days) <= 4 for od in opendart_ex_dates)
 
+        # KIND ETF 분배금 공시 = ETF 권위 소스(기준일·지급일·주당분배금 확정값).
+        # SEIBRO 대체. opendart와 ±4일 내 겹치지 않는 ex_date만 덮어쓴다.
+        kind_ex_dates: list[date] = []
         try:
-            seibro_events = _fetch_seibro_dividends(ticker, name)
-            sources.append("seibro" if seibro_events else "seibro0")
-            for event in seibro_events:
+            kind_events = _fetch_kind_etf_dividends(ticker, name)
+            sources.append("kind" if kind_events else "kind0")
+            for event in kind_events:
                 ex = event.get("ex_date")
                 if ex and not _near_opendart(ex):
-                    events.setdefault(ex, event)
+                    events[ex] = event
+                    try:
+                        kind_ex_dates.append(date.fromisoformat(ex))
+                    except ValueError:
+                        pass
         except Exception as exc:
-            sources.append(_source_error("seibro", ticker, exc))
+            sources.append(_source_error("kind", ticker, exc))
+
+        def _near_kind(ex_date_text: str) -> bool:
+            if not kind_ex_dates:
+                return False
+            try:
+                d = date.fromisoformat(ex_date_text)
+            except ValueError:
+                return False
+            return any(abs((d - kd).days) <= 4 for kd in kind_ex_dates)
+
         try:
             history_events = [
                 event for event in _fetch_yahoo_dividends(ticker)
@@ -471,7 +627,8 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
             sources.append("kr_history" if history_events else "kr_history0")
             for event in history_events:
                 ex = event.get("ex_date")
-                if ex and not _near_opendart(ex):
+                # KIND 윈도 밖(과거)만 yfinance로 보강 — 최근분은 KIND가 권위.
+                if ex and not _near_opendart(ex) and not _near_kind(ex):
                     events.setdefault(ex, {
                         **event,
                         "source": "kr-history",

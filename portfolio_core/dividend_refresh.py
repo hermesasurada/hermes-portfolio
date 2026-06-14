@@ -6,12 +6,12 @@ from .db import connect, ensure_dividend_tables
 from .dividend_sources import (
     _cache_due,
     _fetch_dividends,
+    _kind_attempt_due,
     _kr_history_attempt_due,
     _nasdaq_attempt_due,
     _now_text,
     _opendart_attempt_due,
     _polygon_attempt_due,
-    _seibro_attempt_due,
     _seibro_candidate,
     _stockanalysis_attempt_due,
 )
@@ -63,7 +63,7 @@ def refresh_dividend_events(tickers: list[str]) -> None:
                 _cache_due(fetched.get(ticker))
                 or _stockanalysis_attempt_due(ticker, statuses.get(ticker))
                 or _nasdaq_attempt_due(ticker, statuses.get(ticker))
-                or _seibro_attempt_due(ticker, statuses.get(ticker))
+                or _kind_attempt_due(ticker, statuses.get(ticker))
                 or _kr_history_attempt_due(ticker, statuses.get(ticker))
                 or _polygon_attempt_due(ticker, statuses.get(ticker))
                 or _opendart_attempt_due(ticker, statuses.get(ticker))
