@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-FX_TICKERS = ("USDKRW", "EURKRW", "JPYKRW")
+FX_TICKERS = ("USDKRW", "EURKRW", "JPYKRW", "CNYKRW", "TWDKRW")
 FX_DEFAULT_RATES = {
     "USD": 1450.0,
     "EUR": 1700.0,
     "JPY": 9.3,
+    "CNY": 205.0,
+    "TWD": 47.0,
     "KRW": 1.0,
 }
 

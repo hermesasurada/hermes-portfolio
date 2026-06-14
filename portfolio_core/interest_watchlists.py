@@ -25,6 +25,13 @@ def now_text() -> str:
     return datetime.now(KST).isoformat(timespec="seconds")
 
 
+# 가상 "기타" 그룹 — 항상 최하위, 삭제·이름변경 불가(실제 DB 행 아님).
+# 가격수집 대상(tickers 테이블)인데 어느 그룹에도 없는 종목을 모은다.
+# id=0이라 모든 변경 API의 group_id<=0 가드에 자동으로 막힌다.
+OTHERS_GROUP_ID = 0
+OTHERS_GROUP_NAME = "기타"
+
+
 def initial_group_name(ticker: str, name: str, category: str | None, currency: str | None) -> str:
     category = str(category or "").lower()
     currency = str(currency or ticker_currency(ticker)).upper()
@@ -124,6 +131,22 @@ def load_interest_watchlists() -> dict:
             ORDER BY i.group_id, i.sort_order, i.ticker
             """
         ).fetchall()
+        # 가격수집 대상(tickers)인데 어느 그룹에도 없는 종목 = "기타"
+        others = conn.execute(
+            """
+            SELECT
+                t.ticker,
+                COALESCE(t.name, t.ticker) AS name,
+                COALESCE(t.currency, '') AS currency,
+                COALESCE(t.category, '') AS category
+            FROM tickers t
+            WHERE t.ticker IS NOT NULL AND TRIM(t.ticker) <> ''
+              AND UPPER(t.ticker) NOT IN (
+                  SELECT UPPER(ticker) FROM interest_watchlist_items
+              )
+            ORDER BY t.category, t.ticker
+            """
+        ).fetchall()
         conn.commit()
 
     by_group: dict[int, list[dict]] = {}
@@ -136,16 +159,32 @@ def load_interest_watchlists() -> dict:
                 "category": row["category"] or None,
             }
         )
-    return {
-        "groups": [
-            {
-                "id": int(row["id"]),
-                "name": row["name"],
-                "items": by_group.get(int(row["id"]), []),
-            }
-            for row in groups
-        ]
-    }
+    result_groups = [
+        {
+            "id": int(row["id"]),
+            "name": row["name"],
+            "items": by_group.get(int(row["id"]), []),
+        }
+        for row in groups
+    ]
+    # "기타"는 항상 최하위에 강제 추가 (삭제·이름변경·이동 불가).
+    result_groups.append(
+        {
+            "id": OTHERS_GROUP_ID,
+            "name": OTHERS_GROUP_NAME,
+            "fixed": True,
+            "items": [
+                {
+                    "ticker": row["ticker"],
+                    "name": row["name"],
+                    "currency": row["currency"] or ticker_currency(row["ticker"]),
+                    "category": row["category"] or None,
+                }
+                for row in others
+            ],
+        }
+    )
+    return {"groups": result_groups}
 
 
 def create_interest_group(payload: dict) -> dict:

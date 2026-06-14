@@ -13,7 +13,13 @@ from .constants import MARKET_INDEXES
 from .paths import KST
 from .tickers import kr_ticker_code, normalize_yfinance_symbol, ticker_currency
 
-FX_SYMBOLS = {"USDKRW": "USDKRW=X", "EURKRW": "EURKRW=X", "JPYKRW": "JPYKRW=X"}
+FX_SYMBOLS = {
+    "USDKRW": "USDKRW=X",
+    "EURKRW": "EURKRW=X",
+    "JPYKRW": "JPYKRW=X",
+    "CNYKRW": "CNYKRW=X",
+    "TWDKRW": "TWDKRW=X",
+}
 INVESTING_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",

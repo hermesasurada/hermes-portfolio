@@ -671,7 +671,8 @@ function syncDetailTabs() {
     document.getElementById(id)?.classList.toggle("hidden", showingChart);
   });
   document.getElementById("showIndexesControl")?.classList.toggle("hidden", showingChart || showingInterest);
-  document.getElementById("interestMainItemForm")?.classList.toggle("hidden", showingChart || !showingInterest);
+  // '기타'(자동 분류 가상 그룹)는 직접 추가 불가 → 추가 폼 숨김
+  document.getElementById("interestMainItemForm")?.classList.toggle("hidden", showingChart || !showingInterest || Boolean(activeInterestGroup()?.fixed));
 }
 
 function chartHref(ticker) {

@@ -58,10 +58,15 @@ def latest_prices(conn: sqlite3.Connection) -> dict[str, dict]:
     return prices
 
 
+def _fx_pairs() -> tuple[tuple[str, str], ...]:
+    # FX_TICKERS 기반 (USDKRW→USD …). 새 통화 추가 시 자동 반영.
+    return tuple((ticker[:-3], ticker) for ticker in FX_TICKERS if ticker.endswith("KRW"))
+
+
 def fx_rates(prices: dict[str, dict]) -> dict[str, float]:
     return {
         currency: float(prices.get(ticker, {}).get("price") or FX_DEFAULT_RATES[currency])
-        for currency, ticker in (("USD", "USDKRW"), ("EUR", "EURKRW"), ("JPY", "JPYKRW"))
+        for currency, ticker in _fx_pairs()
     } | {
         "KRW": FX_DEFAULT_RATES["KRW"],
     }
@@ -74,7 +79,7 @@ def fx_previous_rates(prices: dict[str, dict]) -> dict[str, float]:
             or prices.get(ticker, {}).get("price")
             or FX_DEFAULT_RATES[currency]
         )
-        for currency, ticker in (("USD", "USDKRW"), ("EUR", "EURKRW"), ("JPY", "JPYKRW"))
+        for currency, ticker in _fx_pairs()
     } | {
         "KRW": FX_DEFAULT_RATES["KRW"],
     }

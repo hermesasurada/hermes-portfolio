@@ -65,6 +65,17 @@ function resolveInterestTicker(value) {
 
 function interestGroupMarkup(group, index) {
   const active = group.id === activeInterestGroupId;
+  // 가상 "기타" 그룹 — 선택만 가능, 이름변경·삭제·이동 컨트롤 없음.
+  if (group.fixed) {
+    return `
+    <section class="interest-group fixed ${active ? "active" : ""}" data-interest-group="${group.id}">
+      <button class="interest-group-select" type="button" data-interest-select="${group.id}" aria-pressed="${active}">
+        <span class="interest-group-name">${esc(group.name)}</span>
+        <span class="interest-count">${group.items.length}</span>
+      </button>
+    </section>
+  `;
+  }
   if (editingInterestGroupId === group.id) {
     return `
       <form class="interest-group-rename" data-interest-rename-form="${group.id}">
@@ -82,7 +93,7 @@ function interestGroupMarkup(group, index) {
       </button>
       <span class="interest-order-controls" aria-label="${esc(group.name)} 순서 변경">
         <button type="button" data-interest-move="${group.id}" data-direction="-1" aria-label="${esc(group.name)} 위로 이동" title="위로 이동" ${index === 0 ? "disabled" : ""}>▲</button>
-        <button type="button" data-interest-move="${group.id}" data-direction="1" aria-label="${esc(group.name)} 아래로 이동" title="아래로 이동" ${index === interestWatchlists.length - 1 ? "disabled" : ""}>▼</button>
+        <button type="button" data-interest-move="${group.id}" data-direction="1" aria-label="${esc(group.name)} 아래로 이동" title="아래로 이동" ${index === interestWatchlists.length - 1 || interestWatchlists[index + 1]?.fixed ? "disabled" : ""}>▼</button>
       </span>
       <button class="interest-icon-btn" type="button" data-interest-rename="${group.id}" aria-label="${esc(group.name)} 이름 변경" title="이름 변경">✎</button>
       <button class="interest-icon-btn danger" type="button" data-interest-group-delete="${group.id}" aria-label="${esc(group.name)} 삭제" title="그룹 삭제">×</button>
@@ -107,9 +118,14 @@ function renderInterestWatchlists() {
 
 function normalizeActiveInterestGroup() {
   if (activeInterestGroupId != null && interestWatchlists.some(group => group.id === activeInterestGroupId)) return;
-  const saved = Number(storageGet(sidebarStorage.interestGroupId));
-  const savedGroup = interestWatchlists.find(group => group.id === saved);
-  activeInterestGroupId = savedGroup?.id ?? interestWatchlists[0]?.id ?? null;
+  // storageGet 미설정 시 Number(null)=0이 가상 "기타"(id=0)와 오인 매칭되지 않도록 가드.
+  const rawSaved = storageGet(sidebarStorage.interestGroupId);
+  const saved = rawSaved != null && rawSaved !== "" ? Number(rawSaved) : NaN;
+  const savedGroup = Number.isNaN(saved) ? null : interestWatchlists.find(group => group.id === saved);
+  activeInterestGroupId = savedGroup?.id
+    ?? interestWatchlists.find(group => !group.fixed)?.id
+    ?? interestWatchlists[0]?.id
+    ?? null;
   if (activeInterestGroupId != null) storageSet(sidebarStorage.interestGroupId, String(activeInterestGroupId));
 }
 
@@ -153,10 +169,12 @@ async function mutateInterestWatchlist(action, progressText, main = false) {
 
 async function moveInterestGroup(groupId, direction) {
   if (interestGroupOrderSaving) return;
-  const index = interestWatchlists.findIndex(group => group.id === groupId);
+  // 실제 그룹만 재정렬 — 가상 "기타"는 항상 최하위 고정(reorder 페이로드에서 제외).
+  const realGroups = interestWatchlists.filter(group => !group.fixed && group.id > 0);
+  const index = realGroups.findIndex(group => group.id === groupId);
   const targetIndex = index + direction;
-  if (index < 0 || targetIndex < 0 || targetIndex >= interestWatchlists.length) return;
-  const reordered = interestWatchlists.slice();
+  if (index < 0 || targetIndex < 0 || targetIndex >= realGroups.length) return;
+  const reordered = realGroups.slice();
   [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
   interestGroupOrderSaving = true;
   setInterestStatus("순서 저장 중...");
@@ -317,9 +335,11 @@ function renderInterestMainTable() {
       <td>${signedPercentText(r.perf_1y, 0)}</td>
       <td>${signedPercentText(r.perf_3y, 0)}</td>
       <td>${signedPercentText(r.perf_5y, 0)}</td>
-      <td><button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button></td>
+      <td>${group.fixed
+        ? ""
+        : `<button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button>`}</td>
     </tr>
-  `).join("") : '<tr><td colspan="28">이 그룹에 등록된 종목이 없습니다.</td></tr>';
+  `).join("") : `<tr><td colspan="28">${group.fixed ? "모든 수집 종목이 관심그룹에 분류되어 있습니다." : "이 그룹에 등록된 종목이 없습니다."}</td></tr>`;
   syncInterestVisibleColumns(rows);
   bindChartLinks();
   body.querySelectorAll("[data-dividend-history]").forEach(btn => {
@@ -416,6 +436,10 @@ function initInterestWatchlists() {
     const input = document.getElementById("interestMainTicker");
     const ticker = resolveInterestTicker(input.value);
     const group = activeInterestGroup();
+    if (group?.fixed) {
+      setInterestStatus("'기타'는 자동 분류 그룹이라 직접 추가할 수 없습니다.", true, true);
+      return;
+    }
     if (!group || !ticker) {
       setInterestStatus("가격수집 대상에서 종목을 정확히 선택하세요.", true, true);
       return;
