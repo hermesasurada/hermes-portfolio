@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import http.cookiejar
 import json
 import logging
 import sqlite3
 import threading
+import urllib.error
 import urllib.request
 from datetime import datetime
 from urllib.parse import quote
@@ -11,10 +13,41 @@ from urllib.parse import quote
 from .paths import US_EASTERN
 from .tickers import is_us_stock_ticker, ticker_currency
 
-US_LIVE_CACHE_SECONDS = 600
+# 배치 1회로 전 종목 시세를 받으므로(크럼 인증) 짧게 잡아도 외부 요청은 분당 1회 수준.
+US_LIVE_CACHE_SECONDS = 60
 US_LIVE_QUOTE_CACHE: dict[tuple[str, str], dict] = {}
 US_LIVE_QUOTE_LOCK = threading.Lock()
 US_LIVE_FALLBACK_IN_FLIGHT: set[tuple[str, str]] = set()
+
+# Yahoo 크럼+쿠키 세션 (yfinance 내부 방식). 발급 비용이 있으니 캐시·재사용.
+YAHOO_CRUMB_LOCK = threading.Lock()
+_YAHOO_OPENER: urllib.request.OpenerDirector | None = None
+_YAHOO_CRUMB: str | None = None
+
+
+def _build_yahoo_session() -> tuple[urllib.request.OpenerDirector, str]:
+    """fc.yahoo.com에서 A1 쿠키를 받고 getcrumb로 크럼 토큰을 발급한다.
+    v7/quote가 인증을 요구하도록 바뀐 뒤 배치를 되살리는 유일한 방법."""
+    jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    opener.addheaders = [("User-Agent", "Mozilla/5.0")]
+    try:  # 404를 내지만 Set-Cookie(A1/A3)는 응답 헤더에서 적재됨
+        opener.open("https://fc.yahoo.com", timeout=8).read()
+    except urllib.error.HTTPError:
+        pass
+    with opener.open("https://query1.finance.yahoo.com/v1/test/getcrumb", timeout=8) as resp:
+        crumb = resp.read().decode("utf-8").strip()
+    if not crumb or "<" in crumb:
+        raise RuntimeError("failed to obtain Yahoo crumb")
+    return opener, crumb
+
+
+def _yahoo_session(force: bool = False) -> tuple[urllib.request.OpenerDirector, str]:
+    global _YAHOO_OPENER, _YAHOO_CRUMB
+    with YAHOO_CRUMB_LOCK:
+        if force or _YAHOO_OPENER is None or not _YAHOO_CRUMB:
+            _YAHOO_OPENER, _YAHOO_CRUMB = _build_yahoo_session()
+        return _YAHOO_OPENER, _YAHOO_CRUMB
 
 
 def us_market_status() -> dict:
@@ -48,13 +81,23 @@ def yahoo_quote_batch(symbols: list[str]) -> dict[str, dict]:
             "postMarketTime",
         ]
     )
-    url = (
+    base = (
         "https://query1.finance.yahoo.com/v7/finance/quote"
         f"?symbols={quote(','.join(symbols))}&fields={quote(fields)}"
     )
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=8) as resp:
-        payload = json.loads(resp.read().decode("utf-8"))
+
+    def _call(opener: urllib.request.OpenerDirector, crumb: str) -> dict:
+        with opener.open(f"{base}&crumb={quote(crumb)}", timeout=8) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    opener, crumb = _yahoo_session()
+    try:
+        payload = _call(opener, crumb)
+    except urllib.error.HTTPError as exc:
+        if exc.code not in (401, 403):
+            raise
+        opener, crumb = _yahoo_session(force=True)  # 크럼 만료 → 1회만 재발급 후 재시도
+        payload = _call(opener, crumb)
     results = payload.get("quoteResponse", {}).get("result", [])
     return {str(item.get("symbol", "")).upper(): item for item in results if item.get("symbol")}
 

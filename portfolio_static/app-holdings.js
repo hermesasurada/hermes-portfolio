@@ -377,7 +377,7 @@ function scheduleUsPriceRefresh() {
   if (!market.use_live && (market.is_regular || !market.us_ticker_count)) return;
   usPriceTimer = setInterval(() => {
     load().catch(err => showTradeStatus(err.message || String(err), true));
-  }, 10 * 60 * 1000);
+  }, 60 * 1000);   // 서버 라이브 캐시 60s와 맞춤 (외부는 배치 1회/분)
 }
 
 function renderPriceUpdated() {
