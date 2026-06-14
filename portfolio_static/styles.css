@@ -819,6 +819,24 @@ main {
   width: 165px;
   text-align: left;
 }
+.interest-detail-list th:nth-child(3),
+.interest-detail-list td:nth-child(3) {
+  width: 86px;
+}
+.interest-detail-list th:nth-child(4),
+.interest-detail-list td:nth-child(4) {
+  width: 78px;
+}
+.interest-detail-list td:nth-child(3) .pct-chip {
+  max-width: 100%;
+  padding-left: 7px;
+  padding-right: 7px;
+}
+.interest-detail-list td:nth-child(3) .change-cell,
+.interest-detail-list td:nth-child(4) .change-cell {
+  gap: 3px;
+  white-space: nowrap;
+}
 .interest-detail-list th:nth-child(5),
 .interest-detail-list td:nth-child(5),
 .interest-detail-list th:nth-child(7),

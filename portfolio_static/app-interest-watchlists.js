@@ -183,8 +183,8 @@ function sortInterestRows(rows) {
 }
 
 const interestColumnWidths = {
-  display_change_pct: 72,
-  extended_change_pct: 62,
+  display_change_pct: 86,
+  extended_change_pct: 78,
   current_price: 112,
   next_earnings_date: 82,
   market_cap_usd: 112,
