@@ -668,7 +668,7 @@ main {
 .interest-group {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 26px 26px;
+  grid-template-columns: minmax(0, 1fr) 24px 26px 26px;
   align-items: center;
   gap: 3px;
   padding: 5px 7px;
@@ -710,6 +710,39 @@ main {
   font-size: 10px;
   font-weight: 800;
   text-align: center;
+}
+.interest-order-controls {
+  width: 24px;
+  height: 28px;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+.interest-order-controls button {
+  width: 22px;
+  min-width: 22px;
+  height: 13px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 7px;
+  line-height: 1;
+}
+.interest-order-controls button + button {
+  border-top: 1px solid var(--line);
+}
+.interest-order-controls button:hover:not(:disabled) {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.interest-order-controls button:disabled {
+  opacity: .25;
+  cursor: default;
 }
 .interest-icon-btn {
   width: 26px;

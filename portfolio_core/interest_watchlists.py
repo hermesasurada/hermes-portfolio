@@ -210,6 +210,33 @@ def rename_interest_group(payload: dict) -> dict:
     return load_interest_watchlists()
 
 
+def reorder_interest_groups(payload: dict) -> dict:
+    raw_ids = payload.get("group_ids")
+    if not isinstance(raw_ids, list):
+        raise ValueError("그룹 순서가 올바르지 않습니다.")
+    try:
+        group_ids = [int(group_id) for group_id in raw_ids]
+    except (TypeError, ValueError) as exc:
+        raise ValueError("그룹 순서가 올바르지 않습니다.") from exc
+    if not group_ids or len(group_ids) != len(set(group_ids)):
+        raise ValueError("그룹 순서가 올바르지 않습니다.")
+    with connect() as conn:
+        ensure_interest_watchlist_tables(conn)
+        existing_ids = {
+            int(row["id"])
+            for row in conn.execute("SELECT id FROM interest_watchlist_groups").fetchall()
+        }
+        if set(group_ids) != existing_ids:
+            raise ValueError("전체 관심그룹 순서가 필요합니다.")
+        for index, group_id in enumerate(group_ids, start=1):
+            conn.execute(
+                "UPDATE interest_watchlist_groups SET sort_order = ? WHERE id = ?",
+                (index * 10, group_id),
+            )
+        conn.commit()
+    return load_interest_watchlists()
+
+
 def delete_interest_group(payload: dict) -> dict:
     group_id = int(payload.get("group_id") or 0)
     if group_id <= 0:

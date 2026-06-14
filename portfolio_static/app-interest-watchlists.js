@@ -4,6 +4,7 @@ let interestWatchlistsInFlight = null;
 let activeSidebarTab = "accounts";
 let activeInterestGroupId = null;
 let editingInterestGroupId = null;
+let interestGroupOrderSaving = false;
 const interestSortState = { key: "name", dir: 1 };
 
 function interestModeActive() {
@@ -62,7 +63,7 @@ function resolveInterestTicker(value) {
   return matches.length === 1 ? matches[0].ticker : null;
 }
 
-function interestGroupMarkup(group) {
+function interestGroupMarkup(group, index) {
   const active = group.id === activeInterestGroupId;
   if (editingInterestGroupId === group.id) {
     return `
@@ -79,6 +80,10 @@ function interestGroupMarkup(group) {
         <span class="interest-group-name">${esc(group.name)}</span>
         <span class="interest-count">${group.items.length}</span>
       </button>
+      <span class="interest-order-controls" aria-label="${esc(group.name)} 순서 변경">
+        <button type="button" data-interest-move="${group.id}" data-direction="-1" aria-label="${esc(group.name)} 위로 이동" title="위로 이동" ${index === 0 ? "disabled" : ""}>▲</button>
+        <button type="button" data-interest-move="${group.id}" data-direction="1" aria-label="${esc(group.name)} 아래로 이동" title="아래로 이동" ${index === interestWatchlists.length - 1 ? "disabled" : ""}>▼</button>
+      </span>
       <button class="interest-icon-btn" type="button" data-interest-rename="${group.id}" aria-label="${esc(group.name)} 이름 변경" title="이름 변경">✎</button>
       <button class="interest-icon-btn danger" type="button" data-interest-group-delete="${group.id}" aria-label="${esc(group.name)} 삭제" title="그룹 삭제">×</button>
     </section>
@@ -143,6 +148,27 @@ async function mutateInterestWatchlist(action, progressText, main = false) {
     setInterestStatus("", false, main);
   } catch (err) {
     setInterestStatus(err.message || String(err), true, main);
+  }
+}
+
+async function moveInterestGroup(groupId, direction) {
+  if (interestGroupOrderSaving) return;
+  const index = interestWatchlists.findIndex(group => group.id === groupId);
+  const targetIndex = index + direction;
+  if (index < 0 || targetIndex < 0 || targetIndex >= interestWatchlists.length) return;
+  const reordered = interestWatchlists.slice();
+  [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+  interestGroupOrderSaving = true;
+  setInterestStatus("순서 저장 중...");
+  try {
+    applyInterestWatchlistPayload(
+      await apiReorderInterestGroups(reordered.map(group => group.id))
+    );
+    setInterestStatus("");
+  } catch (err) {
+    setInterestStatus(err.message || String(err), true);
+  } finally {
+    interestGroupOrderSaving = false;
   }
 }
 
@@ -337,6 +363,11 @@ function initInterestWatchlists() {
   });
 
   document.getElementById("interestGroups")?.addEventListener("click", event => {
+    const move = event.target.closest("[data-interest-move]");
+    if (move) {
+      moveInterestGroup(Number(move.dataset.interestMove), Number(move.dataset.direction));
+      return;
+    }
     const select = event.target.closest("[data-interest-select]");
     if (select) {
       activeInterestGroupId = Number(select.dataset.interestSelect);
