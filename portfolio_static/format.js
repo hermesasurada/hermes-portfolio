@@ -36,8 +36,15 @@ function unitMoney(v, cur, ticker = "") {
 function unitKrw(v) {
   return Number.isFinite(v) ? `${fmt.format(v)}원` : '<span class="missing">조회불가</span>';
 }
+// 환율 행: 시세가 곧 "원/외화 1단위" → 통화기호·KRW환산 없이 원 단위로만 표기.
+function fxRateText(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '<span class="missing">조회불가</span>';
+  return `${(Math.abs(n) < 100 ? fmt2 : fmt1).format(n)}원`;
+}
 function currentPriceMarkup(row) {
   if (row.current_price == null) return '<span class="missing">조회불가</span>';
+  if (row.category === "fx") return fxRateText(row.current_price);
   const local = unitMoney(row.current_price, row.currency, row.ticker);
   // KRW 종목·환산 불가 시엔 현지가 한 줄만 (이전엔 별도 컬럼이라 따로 보였음)
   if (row.currency === "KRW" || !Number.isFinite(row.current_price_krw)) return local;
