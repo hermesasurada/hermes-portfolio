@@ -433,6 +433,7 @@ def test_fetch_us_live_quotes_uses_stale_cache_when_batch_fails():
     import portfolio_core.us_live_quotes as price_module
 
     original_batch = price_module.yahoo_quote_batch
+    original_shared = price_module.load_shared_quote_rows
     original_cache = dict(price_module.US_LIVE_QUOTE_CACHE)
     original_schedule = price_module.schedule_us_live_fallback
     scheduled = []
@@ -449,6 +450,7 @@ def test_fetch_us_live_quotes_uses_stale_cache_when_batch_fails():
     try:
         price_module.US_LIVE_QUOTE_CACHE.clear()
         price_module.US_LIVE_QUOTE_CACHE[("AAPL", "extended")] = stale_item
+        price_module.load_shared_quote_rows = lambda symbols: {}
         price_module.yahoo_quote_batch = lambda symbols: (_ for _ in ()).throw(RuntimeError("blocked"))
         price_module.schedule_us_live_fallback = lambda *args: scheduled.append(args)
         result = price_module.fetch_us_live_quotes(["AAPL"], include_extended=True, regular_hours=False)
@@ -456,6 +458,7 @@ def test_fetch_us_live_quotes_uses_stale_cache_when_batch_fails():
         assert scheduled == [(["AAPL"], "extended", True, False)]
     finally:
         price_module.yahoo_quote_batch = original_batch
+        price_module.load_shared_quote_rows = original_shared
         price_module.schedule_us_live_fallback = original_schedule
         price_module.US_LIVE_QUOTE_CACHE.clear()
         price_module.US_LIVE_QUOTE_CACHE.update(original_cache)

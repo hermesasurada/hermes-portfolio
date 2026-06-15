@@ -12,7 +12,8 @@
 | 웹 서버 | `portfolio_web_server.py` (HTTP, `ThreadingHTTPServer`) |
 | 프런트엔드 | `portfolio_static/` (index.html, app.js, app-charts.js, styles.css …) |
 | 코어 패키지 | `portfolio_core/` (portfolio, transactions, prices, charts, stats, watchlist, logos, db, tickers, constants …) |
-| 시세 수집 | `collect_prices.py` |
+| 분 단위 시세 | `collect_quotes.py` (Yahoo/Naver 배치 스냅샷) |
+| 일봉·통계 보정 | `collect_prices.py` |
 | 유틸 | `download_portfolio_logos.py` |
 | 테스트 | `tests/test_portfolio_core.py` (의존성 없이 `python3 tests/test_portfolio_core.py`) |
 
@@ -28,7 +29,11 @@
 # 웹 대시보드 (launchd: com.yhandhs.portfolio-web 로 상시 구동)
 python3 portfolio_web_server.py --host 127.0.0.1 --port 8765
 
-# 시세 수집 (cron)
+# 저호출 현재가 스냅샷 (분 단위 cron)
+python3 collect_quotes.py --category fx,crypto,overseas,index
+python3 collect_quotes.py --category kr
+
+# 일봉·기술지표·펀더멘털·실적일 보정 (일 배치)
 python3 collect_prices.py --category fx,crypto,overseas,index
 python3 collect_prices.py --category kr
 ```

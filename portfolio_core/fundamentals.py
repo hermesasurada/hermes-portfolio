@@ -213,6 +213,9 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
         if fetched:
             data["next_earnings_date"] = earnings_by_ticker.get(ticker)
             save_stats_cache_item(conn, ticker, source, data, raw)
+            # 펀더멘털 네트워크 조회는 종목 수에 따라 오래 걸린다. 종목별로
+            # 커밋해 분 단위 가격 스냅샷의 SQLite 쓰기를 장시간 막지 않는다.
+            conn.commit()
         result[ticker] = data
     conn.commit()
     return result

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 from typing import Iterable
 
@@ -126,22 +127,49 @@ def history_backfill_status(tickers: Iterable[str]) -> dict[str, tuple[int, bool
     return {row["ticker"]: (int(row["n"] or 0), bool(row["backfilled"])) for row in rows}
 
 
-def update_price_cache(entries: Iterable[tuple[str, float, str, str]]) -> None:
-    clean_entries = list(entries)
+def update_collector_run(name: str, item_count: int, meta: dict | None = None) -> None:
     with connect() as conn:
         ensure_collector_runs_table(conn)
         conn.execute(
             """
             INSERT INTO collector_runs (name, updated_at, item_count, meta_json)
-            VALUES ('price', ?, ?, NULL)
+            VALUES (?, ?, ?, ?)
             ON CONFLICT(name) DO UPDATE SET
                 updated_at = excluded.updated_at,
                 item_count = excluded.item_count,
                 meta_json = excluded.meta_json
             """,
-            (datetime.now(timezone.utc).isoformat(), len(clean_entries)),
+            (
+                name,
+                datetime.now(timezone.utc).isoformat(),
+                item_count,
+                json.dumps(meta, ensure_ascii=False) if meta is not None else None,
+            ),
         )
         conn.commit()
+
+
+def collector_run_due(name: str, max_age_seconds: float) -> bool:
+    with connect() as conn:
+        ensure_collector_runs_table(conn)
+        row = conn.execute(
+            "SELECT updated_at FROM collector_runs WHERE name = ?",
+            (name,),
+        ).fetchone()
+    if not row or not row["updated_at"]:
+        return True
+    try:
+        updated_at = datetime.fromisoformat(str(row["updated_at"]).replace("Z", "+00:00"))
+    except ValueError:
+        return True
+    if updated_at.tzinfo is None:
+        updated_at = updated_at.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - updated_at).total_seconds() >= max_age_seconds
+
+
+def update_price_cache(entries: Iterable[tuple[str, float, str, str]]) -> None:
+    clean_entries = list(entries)
+    update_collector_run("price", len(clean_entries))
 
 
 def update_earnings_dates(entries: Iterable[tuple[str, str | None]]) -> int:

@@ -19,6 +19,7 @@ from portfolio_core.collectors import (
 from portfolio_core.corporate_actions import refresh_stock_splits
 from portfolio_core.db import connect, ensure_dividend_tables
 from portfolio_core.dividends import refresh_dividend_events
+from portfolio_core.fundamentals import fetch_fundamentals
 from portfolio_core.price_store import (
     CATEGORIES,
     earnings_update_due_tickers,
@@ -201,6 +202,19 @@ def collect_stock_splits(tickers: list[str] | None = None) -> int:
     return len(updated)
 
 
+def collect_fundamentals(categories: list[str], tickers: list[str] | None = None) -> int:
+    selected_categories = [category for category in categories if category in ("overseas", "kr")]
+    if not selected_categories:
+        return 0
+    watch = load_watch(categories=selected_categories, tickers=tickers)
+    selected = sorted({ticker for category in selected_categories for ticker in watch.get(category, [])})
+    if not selected:
+        return 0
+    with connect() as conn:
+        fetched = fetch_fundamentals(conn, selected, refresh_stale=True)
+    return sum(1 for ticker in selected if fetched.get(ticker))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Collect portfolio prices into stock_history.db.")
     parser.add_argument(
@@ -211,6 +225,7 @@ def main() -> int:
     parser.add_argument("--ticker", action="append", help="Limit to a ticker. Can be repeated.")
     parser.add_argument("--history-start", default="20250101", help="FDR start date for Korean stock history.")
     parser.add_argument("--skip-earnings", action="store_true", help="Do not update earnings dates.")
+    parser.add_argument("--skip-fundamentals", action="store_true", help="Do not refresh fundamental statistics.")
     parser.add_argument("--skip-dividends", action="store_true", help="Do not update dividend event cache.")
     parser.add_argument("--skip-splits", action="store_true", help="Do not update stock split history.")
     parser.add_argument("--force-earnings", action="store_true", help="Refresh earnings dates even if recently updated.")
@@ -245,6 +260,10 @@ def main() -> int:
     technical_updated = refresh_technical_stats_cache(technical_tickers)
     if technical_updated:
         print(f"Updated {technical_updated} technical stats")
+    if not args.skip_fundamentals:
+        fundamentals_updated = collect_fundamentals(categories, args.ticker)
+        if fundamentals_updated:
+            print(f"Updated {fundamentals_updated} fundamentals")
     earnings_errors: list[str] = []
     if not args.skip_earnings:
         earnings_entries, earnings_errors = collect_earnings_dates(

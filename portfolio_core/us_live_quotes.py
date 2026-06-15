@@ -10,11 +10,13 @@ import urllib.request
 from datetime import datetime
 from urllib.parse import quote
 
+from .db import connect, ensure_live_quote_cache_table
 from .paths import US_EASTERN
 from .tickers import is_us_stock_ticker, ticker_currency
 
 # 배치 1회로 전 종목 시세를 받으므로(크럼 인증) 짧게 잡아도 외부 요청은 분당 1회 수준.
 US_LIVE_CACHE_SECONDS = 60
+SHARED_LIVE_CACHE_SECONDS = 90
 US_LIVE_QUOTE_CACHE: dict[tuple[str, str], dict] = {}
 US_LIVE_QUOTE_LOCK = threading.Lock()
 US_LIVE_FALLBACK_IN_FLIGHT: set[tuple[str, str]] = set()
@@ -187,6 +189,33 @@ def cache_us_live_quote(symbol: str, mode: str, item: dict) -> None:
         US_LIVE_QUOTE_CACHE[(symbol, mode)] = item
 
 
+def load_shared_quote_rows(symbols: list[str], max_age_seconds: int = SHARED_LIVE_CACHE_SECONDS) -> dict[str, dict]:
+    clean = sorted({symbol.upper() for symbol in symbols if symbol})
+    if not clean:
+        return {}
+    placeholders = ",".join("?" for _ in clean)
+    cutoff = datetime.now().timestamp() - max_age_seconds
+    with connect() as conn:
+        ensure_live_quote_cache_table(conn)
+        rows = conn.execute(
+            f"""
+            SELECT ticker, fetched_ts, payload_json
+            FROM ticker_live_quotes
+            WHERE ticker IN ({placeholders}) AND fetched_ts >= ?
+            """,
+            [*clean, cutoff],
+        ).fetchall()
+    result: dict[str, dict] = {}
+    for row in rows:
+        try:
+            payload = json.loads(row["payload_json"])
+        except (TypeError, json.JSONDecodeError):
+            continue
+        payload["_shared_fetched_ts"] = float(row["fetched_ts"])
+        result[row["ticker"].upper()] = payload
+    return result
+
+
 def schedule_us_live_fallback(symbols: list[str], mode: str, include_extended: bool, regular_hours: bool) -> None:
     unique_symbols = sorted({symbol.upper() for symbol in symbols if symbol})
     if not unique_symbols:
@@ -248,6 +277,27 @@ def fetch_us_live_quotes(symbols: list[str], include_extended: bool, regular_hou
                 if cached:
                     stale[symbol] = cached
                 missing.append(symbol)
+
+    if missing:
+        shared_rows = load_shared_quote_rows(missing)
+        still_missing: list[str] = []
+        for symbol in missing:
+            quote_row = shared_rows.get(symbol.upper())
+            if not quote_row:
+                still_missing.append(symbol)
+                continue
+            item = live_quote_item_from_row(
+                quote_row,
+                include_extended,
+                regular_hours,
+                float(quote_row.get("_shared_fetched_ts") or now_ts),
+            )
+            if not item:
+                still_missing.append(symbol)
+                continue
+            cache_us_live_quote(symbol, mode, item)
+            fresh[symbol] = item
+        missing = still_missing
 
     if missing:
         try:

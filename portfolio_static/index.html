@@ -476,18 +476,18 @@
           <h3><span class="help-section-icon">₩</span><span>가격/환율</span></h3>
           <dl>
             <dt>해외/환율/지수</dt>
-            <dd>평일 10분 주기. 토요일 00~07시에도 미국 금요일 장 마감분 보정 수집.</dd>
+            <dd>평일 1분 주기. 토요일 00~09시에도 미국 금요일 장외 가격을 수집하고, 화~토 10:05에 일봉을 보정.</dd>
             <dt>한국 종목</dt>
-            <dd>평일 08~19시 10분 주기, 20:00 1회 추가 수집.</dd>
+            <dd>평일 08~18시 1분 주기, 20:00에 일봉·펀더멘털·실적 정보를 보정.</dd>
             <dt>출처</dt>
-            <dd>Yahoo Finance(yfinance, 환율/해외/미국 지수), FinanceDataReader(한국 종목/KOSPI), Upbit(BTC).</dd>
+            <dd>Yahoo 배치 시세(환율/해외/미국 지수), Naver 다종목 시세(한국 종목/KOSPI), Upbit(BTC). 일봉 보정은 yfinance와 FinanceDataReader.</dd>
           </dl>
         </section>
         <section class="help-block">
           <h3><span class="help-section-icon">US</span><span>미국 실시간/연장</span></h3>
           <dl>
             <dt>정규장</dt>
-            <dd>Yahoo quote API의 regularMarketPrice를 10분 캐시로 반영.</dd>
+            <dd>Yahoo 배치 시세를 1분마다 DB에 저장하고 웹 화면과 공유. 캐시가 비었을 때만 웹 서버가 직접 보완 조회.</dd>
             <dt>장외</dt>
             <dd>연장 토글이 켜진 경우 preMarketPrice/postMarketPrice를 잔고와 평가액에 반영.</dd>
             <dt>연장 컬럼</dt>
@@ -498,9 +498,9 @@
           <h3><span class="help-section-icon">Σ</span><span>통계 지표</span></h3>
           <dl>
             <dt>RSI/BB/성과</dt>
-            <dd>가격 수집 직후 daily_prices 기준으로 계산해 DB 캐시에 저장. 일/주/월 RSI, BB와 1개월~5년 성과를 포함.</dd>
+            <dd>10분마다 daily_prices 기준으로 계산해 DB 캐시에 저장. 일/주/월 RSI, BB와 1개월~5년 성과를 포함.</dd>
             <dt>펀더멘털</dt>
-            <dd>해외는 yfinance info, 한국 개별주는 Naver Stock API. 시가총액·배당율·P/E·P/B(PBR) 포함(ETF·지수 제외). ADR 등 거래통화≠재무통화로 왜곡된 P/B는 표시 제외.</dd>
+            <dd>하루 1회 갱신. 해외는 yfinance info, 한국 개별주는 Naver Stock API. 시가총액·배당율·P/E·P/B(PBR) 포함(ETF·지수 제외).</dd>
             <dt>실적일</dt>
             <dd>해외는 Yahoo calendar, 한국 개별주는 Investing.com. 24시간 이상 지난 항목만 재조회.</dd>
           </dl>
@@ -511,7 +511,7 @@
             <dt>범위</dt>
             <dd>이번 달 1일부터 향후 1년, 현재 보유 종목 기준.</dd>
             <dt>주기</dt>
-            <dd>배당 이벤트 캐시는 24시간 기준. 가격 수집 작업에서 함께 점검.</dd>
+            <dd>매일 07:17 별도 작업으로 갱신. 분 단위 가격 수집과 분리되어 있음.</dd>
             <dt>출처</dt>
             <dd>미국=Polygon.io(확정 주당배당금·기준일·지급일, 권위) + Yahoo·StockAnalysis·Nasdaq 보조. 한국=OpenDART 현금·현물배당결정 공시(확정) + SEIBRO·Yahoo 이력 보조.</dd>
             <dt>주식분할</dt>

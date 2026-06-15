@@ -7,8 +7,9 @@ from .paths import DB_PATH
 
 
 def connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA busy_timeout = 30000")
     return conn
 
 
@@ -97,6 +98,32 @@ def ensure_collector_runs_table(conn: sqlite3.Connection) -> None:
             updated_at TEXT NOT NULL,
             item_count INTEGER NOT NULL DEFAULT 0,
             meta_json TEXT
+        )
+        """
+    )
+
+
+def ensure_live_quote_cache_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ticker_live_quotes (
+            ticker TEXT PRIMARY KEY,
+            fetched_ts REAL NOT NULL,
+            payload_json TEXT NOT NULL
+        )
+        """
+    )
+
+
+def ensure_quote_source_state_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS quote_source_state (
+            source TEXT PRIMARY KEY,
+            failure_count INTEGER NOT NULL DEFAULT 0,
+            blocked_until REAL,
+            last_error TEXT,
+            updated_at TEXT NOT NULL
         )
         """
     )
@@ -254,6 +281,8 @@ def initialize_schema() -> None:
         ensure_stock_split_tables(conn)
         ensure_price_indexes(conn)
         ensure_collector_runs_table(conn)
+        ensure_live_quote_cache_table(conn)
+        ensure_quote_source_state_table(conn)
         ensure_interest_watchlist_tables(conn)
         ensure_market_index_tickers(conn)
         ensure_fx_tickers(conn)
