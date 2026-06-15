@@ -3480,6 +3480,46 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 
 /* ── 반응형 ③ 모바일(≤560px) — 통계 보드·차트 ──────────────────────────── */
 @media (max-width: 560px) {
+  .watch-modal {
+    width: calc(100vw - 16px);
+  }
+  .watch-search {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 72px;
+    align-items: stretch;
+  }
+  .watch-search input {
+    min-width: 0;
+    width: 100%;
+  }
+  .watch-search button {
+    width: 100%;
+    min-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .watch-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+  .watch-actions button {
+    width: 100%;
+    min-width: 0;
+  }
+  .watch-hint {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+  .watch-pending li {
+    min-width: 0;
+  }
+  .watch-pending li span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .cstat-board {
     grid-template-columns: 1fr;
   }
