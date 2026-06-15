@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 
-from .constants import MARKET_INDEXES
+from .constants import FX_NAMES, MARKET_INDEXES
 from .paths import DB_PATH
 
 
@@ -229,6 +229,20 @@ def ensure_market_index_tickers(conn: sqlite3.Connection) -> None:
         )
 
 
+def ensure_fx_tickers(conn: sqlite3.Connection) -> None:
+    for ticker, name in FX_NAMES.items():
+        conn.execute(
+            """
+            INSERT INTO tickers (ticker, name, region, currency, added_date, category)
+            VALUES (?, ?, NULL, NULL, DATE('now'), 'fx')
+            ON CONFLICT(ticker) DO UPDATE SET
+                name = excluded.name,
+                category = 'fx'
+            """,
+            (ticker, name),
+        )
+
+
 def initialize_schema() -> None:
     with connect() as conn:
         ensure_ticker_metadata_columns(conn)
@@ -242,4 +256,5 @@ def initialize_schema() -> None:
         ensure_collector_runs_table(conn)
         ensure_interest_watchlist_tables(conn)
         ensure_market_index_tickers(conn)
+        ensure_fx_tickers(conn)
         conn.commit()
