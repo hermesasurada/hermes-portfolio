@@ -147,7 +147,8 @@ button, .account, .group-head, .tab-btn, .pill,
 header {
   position: sticky;
   top: 0;
-  z-index: 5;
+  /* 틀고정된 테이블 코너 헤더(z 6)보다 위에서 본문을 완전히 가린다. */
+  z-index: 20;
   background: var(--header-bg);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(10px);
