@@ -651,6 +651,7 @@ function syncFilterToggleControls() {
 function syncDetailTabs() {
   const showingChart = Boolean(chartTicker) || performanceChartOpen;
   const showingInterest = interestModeActive() && !showingChart;
+  const showingFxInterest = showingInterest && interestGroupIsFx();
   document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.classList.toggle("active", !showingChart && !showingInterest && btn.dataset.tab === activeDetailTab);
   });
@@ -667,12 +668,15 @@ function syncDetailTabs() {
   document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart || showingInterest);
   // 통계 지표 도움말 버튼은 통계 탭(차트 아닐 때)에서만 노출
   document.getElementById("statsHelpOpen")?.classList.toggle("hidden", showingChart || showingInterest || activeDetailTab !== "stats");
-  ["fxAdjustedControl", "currencyFilterControl", "rowCount"].forEach(id => {
-    document.getElementById(id)?.classList.toggle("hidden", showingChart);
-  });
+  document.getElementById("fxAdjustedControl")?.classList.toggle("hidden", showingChart || showingFxInterest);
+  document.getElementById("currencyFilterControl")?.classList.toggle("hidden", showingChart || showingFxInterest);
+  document.getElementById("rowCount")?.classList.toggle("hidden", showingChart);
   document.getElementById("showIndexesControl")?.classList.toggle("hidden", showingChart || showingInterest);
   // '기타'(자동 분류 가상 그룹)는 직접 추가 불가 → 추가 폼 숨김
-  document.getElementById("interestMainItemForm")?.classList.toggle("hidden", showingChart || !showingInterest || Boolean(activeInterestGroup()?.fixed));
+  document.getElementById("interestMainItemForm")?.classList.toggle(
+    "hidden",
+    showingChart || !showingInterest || showingFxInterest || Boolean(activeInterestGroup()?.fixed)
+  );
 }
 
 function chartHref(ticker) {

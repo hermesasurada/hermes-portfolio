@@ -15,6 +15,11 @@ function activeInterestGroup() {
   return interestWatchlists.find(group => group.id === activeInterestGroupId) || null;
 }
 
+function interestGroupIsFx(group = activeInterestGroup()) {
+  return Boolean(group?.items?.length)
+    && group.items.every(item => item.category === "fx");
+}
+
 function setInterestStatus(message = "", error = false, main = false) {
   const el = document.getElementById(main ? "interestMainStatus" : "interestStatus");
   if (!el) return;
@@ -193,8 +198,9 @@ async function moveInterestGroup(groupId, direction) {
 function interestBaseRows() {
   const group = activeInterestGroup();
   if (!group) return [];
-  const currencyFilter = currencyFilterValue();
-  const fxAdjusted = fxAdjustedEnabled();
+  const isFxGroup = interestGroupIsFx(group);
+  const currencyFilter = isFxGroup ? "all" : currencyFilterValue();
+  const fxAdjusted = isFxGroup ? false : fxAdjustedEnabled();
   return group.items
     .map(item => {
       const meta = findTickerMeta(item.ticker) || item;
