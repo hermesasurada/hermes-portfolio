@@ -849,7 +849,9 @@ main {
 }
 .interest-detail-list th:nth-child(2),
 .interest-detail-list td:nth-child(2) {
-  width: 165px;
+  width: var(--ticker-name-width, 165px);
+  min-width: var(--ticker-name-width, 165px);
+  max-width: var(--ticker-name-width, 165px);
   text-align: left;
 }
 .interest-detail-list th:nth-child(3),
@@ -1057,7 +1059,11 @@ table.stats-list {
 }
 /* 23컬럼: 로고·종목·시총·배당율·52주高대비·β·β″·RSI×3·BB×3·P/E(t,f)·P/B·기간수익률×7 */
 .stats-list th:nth-child(1), .stats-list td:nth-child(1) { width: 40px; }    /* 로고 (틀고정) */
-.stats-list th:nth-child(2), .stats-list td:nth-child(2) { width: 160px; }   /* 종목명 (티커·종목 헤더 동거) */
+.stats-list th:nth-child(2), .stats-list td:nth-child(2) {
+  width: var(--ticker-name-width, 160px);
+  min-width: var(--ticker-name-width, 160px);
+  max-width: var(--ticker-name-width, 160px);
+}   /* 종목명 (티커·종목 헤더 동거) */
 .stats-list th:nth-child(3), .stats-list td:nth-child(3) { width: 118px; }   /* 시가총액 */
 .stats-list th:nth-child(4), .stats-list td:nth-child(4) { width: 66px; }    /* 배당율 */
 .stats-list th:nth-child(5), .stats-list td:nth-child(5) { width: 64px; }    /* 52주高 대비 */
@@ -1456,7 +1462,11 @@ tr.dividend-month-row:hover td {
 #detailTableWrap th:first-child,
 #detailTableWrap td:first-child { min-width: 40px; width: 40px; }   /* 로고 (틀고정) */
 #detailTableWrap th:nth-child(2),
-#detailTableWrap td:nth-child(2) { min-width: 180px; }              /* 종목명 */
+#detailTableWrap td:nth-child(2) {
+  width: var(--ticker-name-width, 180px);
+  min-width: var(--ticker-name-width, 180px);
+  max-width: var(--ticker-name-width, 180px);
+}                                                                  /* 종목명 */
 /* 행 처리 단일화: 지브라+보더+호버 3중첩에서 보더+호버만 남김 */
 tr:hover td { background: var(--surface-hover); }
 tbody tr.index-row td {

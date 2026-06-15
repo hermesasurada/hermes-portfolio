@@ -118,6 +118,11 @@ function renderStatsTable(baseRows = null) {
   document.querySelectorAll("#statsRows [data-dividend-history]").forEach(btn => {
     btn.addEventListener("click", () => openDividendHistory(btn.dataset.dividendHistory));
   });
+  const statsTable = document.querySelector("#statsTableWrap .stats-list");
+  const tickerNameWidth = syncTickerNameColumnWidth(statsTable);
+  const statsTableWidth = 1270 + tickerNameWidth;
+  statsTable.style.width = `${statsTableWidth}px`;
+  statsTable.style.minWidth = `${statsTableWidth}px`;
   schedulePcFrozenColumns();
 }
 

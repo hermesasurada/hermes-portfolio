@@ -266,7 +266,8 @@ function syncInterestVisibleColumns(rows) {
   const table = document.querySelector("#interestTableWrap .interest-detail-list");
   if (!table) return;
   const headers = Array.from(table.querySelectorAll("thead tr:last-child > th"));
-  let tableWidth = 40 + 165 + 40;
+  const tickerNameWidth = syncTickerNameColumnWidth(table);
+  let tableWidth = 40 + tickerNameWidth + 40;
   headers.forEach((header, index) => {
     const field = header.dataset.interestSortKey || "";
     const hide = Boolean(field)

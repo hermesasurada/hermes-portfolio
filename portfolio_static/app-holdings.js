@@ -701,6 +701,24 @@ function schedulePcFrozenColumns() {
   frozenColumnsFrame = requestAnimationFrame(syncPcFrozenColumns);
 }
 
+function syncTickerNameColumnWidth(table, { min = 108, max = 180 } = {}) {
+  if (!table) return min;
+  const texts = Array.from(table.querySelectorAll("tbody .ticker-link .asset-name, tbody .ticker-link .ticker-symbol"));
+  const canvas = syncTickerNameColumnWidth.canvas ||= document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  const contentWidth = texts.reduce((width, element) => {
+    if (!context) return width;
+    const style = getComputedStyle(element);
+    context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    return Math.max(width, context.measureText(element.textContent || "").width);
+  }, 0);
+  const width = Math.ceil(Math.min(max, Math.max(min, contentWidth + 14)));
+  table.style.setProperty("--ticker-name-width", `${width}px`);
+  const column = table.querySelector("colgroup col:nth-child(2)");
+  if (column) column.style.width = `${width}px`;
+  return width;
+}
+
 function syncPcFrozenColumns() {
   const frozenCells = document.querySelectorAll(".pc-frozen-col, .pc-frozen-edge");
   frozenCells.forEach(cell => {
@@ -801,6 +819,7 @@ function renderTable() {
     });
   });
   bindChartLinks();
+  syncTickerNameColumnWidth(document.querySelector("#detailTableWrap table"));
   if (activeDetailTab === "stats") renderStatsTable(rows);
   if (activeDetailTab === "dividend") renderDividendTable();
   schedulePcFrozenColumns();
