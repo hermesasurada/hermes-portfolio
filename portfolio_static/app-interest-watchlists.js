@@ -399,6 +399,10 @@ function initInterestWatchlists() {
     if (select) {
       activeInterestGroupId = Number(select.dataset.interestSelect);
       storageSet(sidebarStorage.interestGroupId, String(activeInterestGroupId));
+      if (window.matchMedia("(max-width: 980px)").matches) {
+        mobileAccountsCollapsed = true;
+        syncMobileCollapsePanels();
+      }
       render();
       return;
     }
