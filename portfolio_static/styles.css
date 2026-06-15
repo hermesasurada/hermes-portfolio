@@ -906,13 +906,16 @@ main {
 /* 계좌 = 2줄 미니 카드 (이름 / 평가액·등락). 선택 상태는 좌측 브랜드 바 + 옅은 채움 */
 .account {
   width: 100%;
-  min-height: 44px;
+  height: auto;
+  min-height: 48px;
   text-align: left;
   padding: 7px 10px;
   border-radius: 7px;
   border-left-width: 3px;
   display: grid;
-  gap: 3px;
+  grid-template-rows: minmax(15px, auto) minmax(14px, auto);
+  align-content: center;
+  row-gap: 4px;
 }
 .account.active {
   background: var(--brand-soft);
@@ -921,9 +924,10 @@ main {
   border-left-color: var(--brand);
 }
 .account .name {
+  display: block;
   font-weight: 700;
   font-size: 12px;
-  line-height: 1.25;
+  line-height: 15px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -931,9 +935,10 @@ main {
 }
 .account .meta {
   width: 100%;
+  min-height: 14px;
   color: var(--muted);
   font-size: 11px;
-  line-height: 1.15;
+  line-height: 14px;
   white-space: nowrap;
   display: flex;
   align-items: center;
