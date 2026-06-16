@@ -15,7 +15,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from portfolio_core.charts import load_account_performance, load_price_chart
-from portfolio_core.constants import KOREAN_ETF_BRANDS, LOCAL_MARKET_SUFFIXES
+from portfolio_core.constants import KOREAN_ETF_BRANDS, KOREAN_SUFFIXES, LOCAL_MARKET_SUFFIXES
 from portfolio_core.db import connect, initialize_schema
 from portfolio_core.queries import load_collection_diagnostics, load_ticker_directory
 from portfolio_core.logos import is_dark_logo
@@ -64,11 +64,18 @@ SVG_PREFERRED_LOGOS = frozenset(
     {
         # FMP numeric ticker lookup can return unrelated overseas listings.
         # These have local curated SVGs and should not be shadowed by PNG.
+        "SPCX",  # SpaceX
         "018260.KS",  # 삼성SDS
         "042660.KS",  # 한화오션
         "108490.KS",  # 로보티즈
         "175330.KS",  # JB금융지주
         "263750.KS",  # 펄어비스
+        "298040.KS",  # 효성중공업
+        "079550.KS",  # LIG디펜스앤에어로스페이스
+        "010120.KS",  # LS ELECTRIC
+        "HWM",  # Howmet Aerospace
+        "MEDP",  # Medpace Holdings
+        "FSLR",  # First Solar
         *KOREAN_ETF_BRANDS,
     }
 )
@@ -98,7 +105,7 @@ def logo_hint(ticker: str, name: str) -> dict[str, str | bool | None]:
     if cls == "crypto":
         return {"kind": "crypto", "text": "₿", "url": logo_url(ticker), "dark": dark}
     for brand in KOREAN_ETF_BRANDS:
-        if brand in upper_name:
+        if ticker.endswith(KOREAN_SUFFIXES) and upper_name.startswith(brand):
             return {"kind": "etf", "text": brand[:2], "url": logo_url(brand), "dark": is_dark_logo(brand)}
     clean_ticker = ticker.replace(".KS", "").replace(".KQ", "")
     if ticker.endswith(LOCAL_MARKET_SUFFIXES):
