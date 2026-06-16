@@ -60,6 +60,18 @@ def logo_stem(ticker: str) -> str:
 # ticker on every request; new logos appear within the TTL window. (#7)
 _LOGO_URL_CACHE: dict[str, tuple[float, str | None]] = {}
 _LOGO_URL_TTL = 60.0
+SVG_PREFERRED_LOGOS = frozenset(
+    {
+        # FMP numeric ticker lookup can return unrelated overseas listings.
+        # These have local curated SVGs and should not be shadowed by PNG.
+        "018260.KS",  # 삼성SDS
+        "042660.KS",  # 한화오션
+        "108490.KS",  # 로보티즈
+        "175330.KS",  # JB금융지주
+        "263750.KS",  # 펄어비스
+        *KOREAN_ETF_BRANDS,
+    }
+)
 
 
 def logo_url(ticker: str) -> str | None:
@@ -69,7 +81,8 @@ def logo_url(ticker: str) -> str | None:
         return cached[1]
     stem = logo_stem(ticker)
     url = None
-    for ext in ("png", "svg"):
+    extensions = ("svg", "png") if ticker in SVG_PREFERRED_LOGOS else ("png", "svg")
+    for ext in extensions:
         logo_path = LOGO_DIR / f"{stem}.{ext}"
         if logo_path.exists():
             url = f"/logos/{logo_path.name}?v={int(logo_path.stat().st_mtime)}"
@@ -86,7 +99,7 @@ def logo_hint(ticker: str, name: str) -> dict[str, str | bool | None]:
         return {"kind": "crypto", "text": "₿", "url": logo_url(ticker), "dark": dark}
     for brand in KOREAN_ETF_BRANDS:
         if brand in upper_name:
-            return {"kind": "etf", "text": brand[:2], "url": logo_url(ticker), "dark": dark}
+            return {"kind": "etf", "text": brand[:2], "url": logo_url(brand), "dark": is_dark_logo(brand)}
     clean_ticker = ticker.replace(".KS", "").replace(".KQ", "")
     if ticker.endswith(LOCAL_MARKET_SUFFIXES):
         text = badge_text(ticker, name)
