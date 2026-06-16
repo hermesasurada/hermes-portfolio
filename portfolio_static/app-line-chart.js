@@ -697,7 +697,7 @@ function renderLineChart(payload) {
       cls: isBuy ? "buy" : "sell",
       x,
       y,
-      tooltip: `${tx.account || tx.member || "-"} · ${tx.side === "BUY" ? "매수" : "매도"} ${fmt2.format(tx.qty)}주 · ${chartMoney(tx.price, tx.currency || payload.currency, payload.ticker)}`,
+      tooltip: `${chartFullDateLabel(tx.date)} · ${tx.side === "BUY" ? "매수" : "매도"} ${fmt2.format(tx.qty)}주 · ${chartMoney(tx.price, tx.currency || payload.currency, payload.ticker)} · ${tx.account || tx.member || "-"}`,
     };
   });
   const extremes = chartExtremes(values).map(item => {
