@@ -1,15 +1,28 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import struct
 import urllib.error
 import urllib.request
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 from .paths import LOGO_DIR
+from .tickers import normalize_yfinance_symbol
 
 FMP_LOGO_URL = "https://financialmodelingprep.com/image-stock/{ticker}.png"
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+
+# 정방형 심볼 로고 소스 — FMP가 가로 워드마크를 줄 때 기업 도메인 파비콘으로 대체.
+FAVICON_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
+    "Accept": "image/png,image/*;q=0.8,*/*;q=0.5",
+}
+# icon.horse가 '아이콘 없음' 도메인에 돌려주는 기본 플레이스홀더(256x256, 4267B) — 채택 금지.
+ICONHORSE_GENERIC_MD5 = "3c8b6314dfa2"
+FMP_MAX_ASPECT = 1.5      # 이보다 가로로 길면 FMP 로고는 워드마크로 보고 파비콘을 시도
+FAVICON_MAX_ASPECT = 1.3  # 파비콘 결과는 사실상 정방형이어야 채택
 
 # Manual ticker -> source-ticker logo overrides (e.g. tickers FMP has no image
 # for, reusing a related listing's logo). Kept in an editable data file rather
@@ -116,7 +129,80 @@ def copy_fallback_logo(ticker: str, logo_dir: Path = LOGO_DIR) -> dict | None:
     return {"saved": True, "path": out_path.name, "source": f"copy:{source_ticker}"}
 
 
-def cache_logo(ticker: str, keep_existing: bool = True, timeout: float = 8.0) -> dict:
+def _png_dimensions(body: bytes | None) -> tuple[int, int] | None:
+    if not body or len(body) < 24 or not body.startswith(PNG_MAGIC):
+        return None
+    width, height = struct.unpack(">II", body[16:24])
+    return width, height
+
+
+def _is_square_logo(body: bytes | None, max_aspect: float) -> bool:
+    dims = _png_dimensions(body)
+    if not dims:
+        return False
+    width, height = dims
+    return height > 0 and width >= 48 and len(body) > 400 and (width / height) <= max_aspect
+
+
+def _http_get(url: str, timeout: float = 10.0) -> bytes | None:
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=FAVICON_HEADERS), timeout=timeout) as resp:
+            return resp.read()
+    except Exception:
+        return None
+
+
+def resolve_company_domain(ticker: str) -> str | None:
+    """yfinance 기업 홈페이지 도메인 — 정방형 파비콘 심볼 소스로 쓴다."""
+    try:
+        import yfinance as yf
+
+        symbol = normalize_yfinance_symbol(ticker) or ticker
+        info = yf.Ticker(symbol).info or {}
+    except Exception:
+        return None
+    website = info.get("website") or info.get("websiteUrl") or ""
+    netloc = urlparse(website if "//" in website else f"//{website}").netloc
+    return netloc.replace("www.", "").strip().lower() or None
+
+
+def fetch_square_symbol(domain: str | None, timeout: float = 10.0) -> tuple[bytes | None, str]:
+    """도메인 파비콘에서 정방형 심볼 로고 — icon.horse(고해상)→gstatic→google.
+    icon.horse '아이콘 없음' 플레이스홀더는 스킵, 정방형 PNG만 채택(가장 큰 것 우선)."""
+    if not domain:
+        return None, "no domain"
+    sources = (
+        ("icon.horse", f"https://icon.horse/icon/{domain}", min(timeout, 12.0)),
+        ("gstatic", f"https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://{domain}&size=128", timeout),
+        ("google", f"https://www.google.com/s2/favicons?domain={domain}&sz=128", timeout),
+    )
+    best: tuple[str, bytes, int] | None = None
+    for name, url, source_timeout in sources:
+        body = _http_get(url, timeout=source_timeout)
+        if not _is_square_logo(body, FAVICON_MAX_ASPECT):
+            continue
+        if name == "icon.horse" and hashlib.md5(body).hexdigest().startswith(ICONHORSE_GENERIC_MD5):
+            continue
+        width = _png_dimensions(body)[0]
+        if best is None or width > best[2]:
+            best = (name, body, width)
+    if best:
+        return best[1], f"favicon:{best[0]}"
+    return None, "no square favicon"
+
+
+def _write_logo_png(ticker: str, body: bytes, logo_dir: Path = LOGO_DIR) -> Path:
+    out_path = logo_dir / f"{logo_stem(ticker)}.png"
+    tmp_path = out_path.with_suffix(".png.tmp")
+    tmp_path.write_bytes(body)
+    tmp_path.replace(out_path)
+    svg_path = logo_dir / f"{logo_stem(ticker)}.svg"   # 잔존 플레이스홀더 제거
+    if svg_path.exists():
+        svg_path.unlink()
+    return out_path
+
+
+def cache_logo(ticker: str, domain: str | None = None, keep_existing: bool = True, timeout: float = 8.0) -> dict:
     ticker = str(ticker or "").strip().upper()
     if not ticker:
         return {"saved": False, "error": "empty ticker"}
@@ -126,18 +212,32 @@ def cache_logo(ticker: str, keep_existing: bool = True, timeout: float = 8.0) ->
     if keep_existing and existing:
         return {"saved": False, "path": existing.name, "source": "existing"}
 
-    out_path = LOGO_DIR / f"{logo_stem(ticker)}.png"
+    # 1) FMP — 정방형이면 그대로(깔끔한 심볼). 가로 워드마크면 보류.
+    fmp_body = None
     last_status = "not tried"
     for symbol in candidate_symbols(ticker):
         body, status = fetch_logo(symbol, timeout=timeout)
         last_status = f"{symbol}: {status}"
-        if body is None:
-            continue
-        tmp_path = out_path.with_suffix(".png.tmp")
-        tmp_path.write_bytes(body)
-        tmp_path.replace(out_path)
-        return {"saved": True, "path": out_path.name, "source": f"fmp:{symbol}"}
+        if body is not None:
+            fmp_body = body
+            break
+    if _is_square_logo(fmp_body, FMP_MAX_ASPECT):
+        out_path = _write_logo_png(ticker, fmp_body)
+        return {"saved": True, "path": out_path.name, "source": "fmp"}
 
+    # 2) FMP가 없거나 워드마크 → 기업 도메인 파비콘에서 정방형 심볼.
+    domain = domain or resolve_company_domain(ticker)
+    square_body, square_source = fetch_square_symbol(domain, timeout=timeout)
+    if square_body is not None:
+        out_path = _write_logo_png(ticker, square_body)
+        return {"saved": True, "path": out_path.name, "source": square_source, "domain": domain}
+
+    # 3) 정방형을 못 구하면 FMP 워드마크라도 저장(초기자 플레이스홀더보다 낫다).
+    if fmp_body is not None:
+        out_path = _write_logo_png(ticker, fmp_body)
+        return {"saved": True, "path": out_path.name, "source": "fmp-wordmark"}
+
+    # 4) 수동 폴백 복사.
     fallback = copy_fallback_logo(ticker)
     if fallback:
         return fallback
