@@ -123,7 +123,7 @@ def load_interest_watchlists() -> dict:
             SELECT
                 i.group_id,
                 i.ticker,
-                COALESCE(t.name, i.ticker) AS name,
+                COALESCE(NULLIF(t.display_name, ''), t.name, i.ticker) AS name,
                 COALESCE(t.currency, '') AS currency,
                 COALESCE(t.category, '') AS category
             FROM interest_watchlist_items i
@@ -136,7 +136,7 @@ def load_interest_watchlists() -> dict:
             """
             SELECT
                 t.ticker,
-                COALESCE(t.name, t.ticker) AS name,
+                COALESCE(NULLIF(t.display_name, ''), t.name, t.ticker) AS name,
                 COALESCE(t.currency, '') AS currency,
                 COALESCE(t.category, '') AS category
             FROM tickers t

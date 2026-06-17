@@ -9,7 +9,7 @@ from .constants import KOREAN_SUFFIXES
 from .db import connect
 from .paths import KST
 from .portfolio import load_portfolio
-from .tickers import account_scope, ticker_currency, ticker_scope
+from .tickers import account_scope, display_name, ticker_currency, ticker_scope
 
 
 def ensure_ticker(conn: sqlite3.Connection, ticker: str, name: str, currency: str) -> None:
@@ -19,14 +19,15 @@ def ensure_ticker(conn: sqlite3.Connection, ticker: str, name: str, currency: st
     region = "KR" if category == "kr" else "US"
     conn.execute(
         """
-        INSERT INTO tickers (ticker, name, region, currency, added_date, category)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO tickers (ticker, name, region, currency, added_date, category, display_name)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(ticker) DO UPDATE SET
             name = COALESCE(NULLIF(excluded.name, ''), tickers.name),
             currency = COALESCE(NULLIF(excluded.currency, ''), tickers.currency),
-            category = COALESCE(tickers.category, excluded.category)
+            category = COALESCE(tickers.category, excluded.category),
+            display_name = COALESCE(NULLIF(tickers.display_name, ''), excluded.display_name)
         """,
-        (ticker, name, region, currency, datetime.now().strftime("%Y-%m-%d"), category),
+        (ticker, name, region, currency, datetime.now().strftime("%Y-%m-%d"), category, display_name(name)),
     )
 
 

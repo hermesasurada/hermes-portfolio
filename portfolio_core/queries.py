@@ -40,7 +40,7 @@ def load_ticker_directory(conn: sqlite3.Connection) -> list[dict]:
     """DB에 등록된 전체 종목(티커·이름) — 비교 검색 자동완성용. DB 전용."""
     rows = conn.execute(
         """
-        SELECT ticker, name
+        SELECT ticker, COALESCE(NULLIF(display_name, ''), name) AS name
         FROM tickers
         WHERE ticker IS NOT NULL AND TRIM(ticker) <> ''
         ORDER BY ticker
@@ -84,7 +84,7 @@ def load_holding_rows(
             h.invested,
             h.updated_at,
             COALESCE(h.currency, tk.currency, '') AS currency,
-            COALESCE(tk.name, h.name, h.ticker) AS name
+            COALESCE(NULLIF(tk.display_name, ''), tk.name, h.name, h.ticker) AS name
         FROM holdings h
         JOIN accounts a ON a.id = h.account_id
         LEFT JOIN tickers tk ON tk.ticker = h.ticker

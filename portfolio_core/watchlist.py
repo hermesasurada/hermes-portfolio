@@ -10,7 +10,7 @@ from .constants import MARKET_INDEXES
 from .db import connect
 from .hydration import deficient_tickers, estimate_hydration_minutes, hydrate_deficient_tickers, hydrate_ticker
 from .price_store import infer_category
-from .tickers import asset_class, kr_ticker_code, normalize_yfinance_symbol, ticker_currency
+from .tickers import asset_class, display_name, kr_ticker_code, normalize_yfinance_symbol, ticker_currency
 
 # Cache the full KRX listing in-process so name-based lookups don't re-download
 # it on every search. (#4)
@@ -243,18 +243,20 @@ def upsert_ticker(item: dict) -> dict:
     currency = str(resolved.get("currency") or ticker_currency(ticker)).upper()
     region = str(resolved.get("region") or ticker_region(ticker, category)).upper()
     name = str(resolved.get("name") or ticker).strip()
+    disp = display_name(name)
     with connect() as conn:
         conn.execute(
             """
-            INSERT INTO tickers (ticker, name, region, currency, added_date, category)
-            VALUES (?, ?, ?, ?, DATE('now'), ?)
+            INSERT INTO tickers (ticker, name, region, currency, added_date, category, display_name)
+            VALUES (?, ?, ?, ?, DATE('now'), ?, ?)
             ON CONFLICT(ticker) DO UPDATE SET
                 name = COALESCE(NULLIF(excluded.name, ''), tickers.name),
                 region = COALESCE(NULLIF(excluded.region, ''), tickers.region),
                 currency = COALESCE(NULLIF(excluded.currency, ''), tickers.currency),
-                category = COALESCE(NULLIF(excluded.category, ''), tickers.category)
+                category = COALESCE(NULLIF(excluded.category, ''), tickers.category),
+                display_name = COALESCE(NULLIF(tickers.display_name, ''), excluded.display_name)
             """,
-            (ticker, name, region, currency, category),
+            (ticker, name, region, currency, category, disp),
         )
         conn.commit()
     return {"ticker": ticker, "name": name, "currency": currency, "category": category, "region": region}

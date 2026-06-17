@@ -19,6 +19,8 @@ def ensure_ticker_metadata_columns(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE tickers ADD COLUMN next_earnings_date TEXT")
     if "earnings_updated_at" not in columns:
         conn.execute("ALTER TABLE tickers ADD COLUMN earnings_updated_at TEXT")
+    if "display_name" not in columns:   # 노출명칭(법인격 수식어 제거). 비면 name 폴백.
+        conn.execute("ALTER TABLE tickers ADD COLUMN display_name TEXT")
 
 
 def ensure_stats_cache_table(conn: sqlite3.Connection) -> None:

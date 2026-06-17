@@ -107,7 +107,7 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
                 a.name AS account_name,
                 a.region,
                 h.ticker,
-                h.name AS holding_name,
+                COALESCE(NULLIF(tk.display_name, ''), tk.name, h.name) AS holding_name,
                 h.qty,
                 h.avg_price,
                 h.invested,
@@ -122,7 +122,8 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
         ).fetchall()
         ticker_rows = conn.execute(
             """
-            SELECT ticker, name, currency, category, next_earnings_date, earnings_updated_at
+            SELECT ticker, COALESCE(NULLIF(display_name, ''), name) AS name,
+                   currency, category, next_earnings_date, earnings_updated_at
             FROM tickers
             WHERE ticker IS NOT NULL AND TRIM(ticker) <> ''
             ORDER BY ticker

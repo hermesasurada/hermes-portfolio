@@ -4,6 +4,31 @@ import re
 
 from .constants import ETF_BRANDS, FX_TICKERS, KOREAN_SUFFIXES, MARKET_INDEXES, US_ETF_TICKERS
 
+# 노출명칭에서 떼어낼 법인격·구조 수식어 (해외 종목명 끝에 붙는 것들).
+_NAME_LEGAL_SUFFIXES = {
+    "inc", "incorporated", "corp", "corporation", "co", "company", "ltd", "limited",
+    "plc", "pbc", "llc", "llp", "lp", "nv", "sa", "ag", "spa", "se", "kgaa", "ab",
+    "oyj", "asa", "holding", "holdings", "group",
+}
+_NAME_CONNECTORS = {"&", "and"}
+
+
+def display_name(name: str | None) -> str:
+    """정식 종목명 → 노출명칭. 끝에 붙는 법인격 수식어(Inc·Corp·PBC·N.V.·Co.,Ltd.
+    등)와 선행 'The'를 제거한다. 비면 원본 유지."""
+    raw = (name or "").strip()
+    if not raw:
+        return raw
+    words = re.sub(r"^[Tt]he\s+", "", raw).split()
+    while len(words) > 1:
+        tail = re.sub(r"[.,]", "", words[-1]).lower()   # 내부·끝 점/콤마 제거 후 비교
+        if tail in _NAME_LEGAL_SUFFIXES or tail in _NAME_CONNECTORS or words[-1] in _NAME_CONNECTORS:
+            words.pop()
+        else:
+            break
+    cleaned = re.sub(r"\s*[&,]+\s*$", "", " ".join(words)).strip()
+    return cleaned or raw
+
 
 def ticker_currency(ticker: str) -> str:
     if ticker == "BTC":

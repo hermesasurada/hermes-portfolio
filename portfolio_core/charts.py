@@ -21,7 +21,7 @@ def load_price_chart(ticker: str) -> dict:
         ensure_daily_technical_indicators_table(conn)
         meta = conn.execute(
             """
-            SELECT ticker, name, currency, category
+            SELECT ticker, COALESCE(NULLIF(display_name, ''), name) AS name, currency, category
             FROM tickers
             WHERE ticker = ?
             """,
