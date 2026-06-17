@@ -243,7 +243,7 @@ def upsert_ticker(item: dict) -> dict:
     currency = str(resolved.get("currency") or ticker_currency(ticker)).upper()
     region = str(resolved.get("region") or ticker_region(ticker, category)).upper()
     name = str(resolved.get("name") or ticker).strip()
-    disp = display_name(name)
+    disp = display_name(name, ticker)
     with connect() as conn:
         conn.execute(
             """

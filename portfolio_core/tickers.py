@@ -12,10 +12,21 @@ _NAME_LEGAL_SUFFIXES = {
 }
 _NAME_CONNECTORS = {"&", "and"}
 
+# 자동 클리너로는 못 만드는 노출명칭 예외 (티커 기준). 정식명이 너무 길거나
+# 통칭이 다른 경우. 신규 추가·백필에서도 이 값이 우선한다.
+DISPLAY_NAME_OVERRIDES = {
+    "DE": "John Deere",                 # 정식명 'Deere & Company'
+    "P911.DE": "Porsche",               # 정식명 'Dr. Ing. h.c. F. Porsche AG'
+}
 
-def display_name(name: str | None) -> str:
-    """정식 종목명 → 노출명칭. 끝에 붙는 법인격 수식어(Inc·Corp·PBC·N.V.·Co.,Ltd.
-    등)와 선행 'The'를 제거한다. 비면 원본 유지."""
+
+def display_name(name: str | None, ticker: str | None = None) -> str:
+    """정식 종목명 → 노출명칭. 티커 오버라이드가 있으면 그것을, 없으면 끝에 붙는
+    법인격 수식어(Inc·Corp·PBC·N.V.·Co.,Ltd. 등)와 선행 'The'를 제거한다."""
+    if ticker:
+        override = DISPLAY_NAME_OVERRIDES.get(str(ticker).strip().upper())
+        if override:
+            return override
     raw = (name or "").strip()
     if not raw:
         return raw

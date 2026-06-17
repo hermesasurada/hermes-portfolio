@@ -27,7 +27,7 @@ def ensure_ticker(conn: sqlite3.Connection, ticker: str, name: str, currency: st
             category = COALESCE(tickers.category, excluded.category),
             display_name = COALESCE(NULLIF(tickers.display_name, ''), excluded.display_name)
         """,
-        (ticker, name, region, currency, datetime.now().strftime("%Y-%m-%d"), category, display_name(name)),
+        (ticker, name, region, currency, datetime.now().strftime("%Y-%m-%d"), category, display_name(name, ticker)),
     )
 
 
