@@ -97,7 +97,7 @@ def hydrate_ticker(ticker: str, years: int = 10) -> dict:
         result["earnings_error"] = str(exc)
 
     try:
-        result["logo"] = cache_logo(ticker)
+        result["logo"] = cache_logo(ticker, name=name)
     except Exception as exc:
         result["logo_error"] = str(exc)
 

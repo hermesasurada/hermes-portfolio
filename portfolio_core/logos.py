@@ -202,7 +202,53 @@ def _write_logo_png(ticker: str, body: bytes, logo_dir: Path = LOGO_DIR) -> Path
     return out_path
 
 
-def cache_logo(ticker: str, domain: str | None = None, keep_existing: bool = True, timeout: float = 8.0) -> dict:
+# 한국 ETF 운용사 브랜드 로고 — 대표 종목의 로고가 곧 브랜드 로고. 같은 브랜드의
+# 모든 ETF는 개별 로고 대신 이 운용사 브랜드 로고를 공유한다.
+KR_ETF_BRAND_SOURCES = {
+    "KODEX": "278530.KS",   # 삼성자산운용
+    "TIGER": "241180.KS",   # 미래에셋자산운용
+    "ACE": "457480.KS",     # 한국투자신탁운용
+    "SOL": "473330.KS",     # 신한자산운용
+}
+
+
+def _lookup_ticker_name(ticker: str) -> str | None:
+    try:
+        from .db import connect
+
+        with connect() as conn:
+            row = conn.execute("SELECT name FROM tickers WHERE ticker = ?", (ticker,)).fetchone()
+        return row["name"] if row else None
+    except Exception:
+        return None
+
+
+def kr_etf_brand_source(ticker: str, name: str | None) -> str | None:
+    """한국 ETF면 운용사 브랜드 대표 종목(로고 출처)을 돌려준다.
+    대표 종목 자신이거나 한국 ETF가 아니면 None."""
+    if not ticker.upper().endswith((".KS", ".KQ")):
+        return None
+    upper_name = (name or "").strip().upper()
+    for brand, source in KR_ETF_BRAND_SOURCES.items():
+        if upper_name.startswith(brand) and source.upper() != ticker.upper():
+            return source
+    return None
+
+
+def copy_ticker_logo(source_ticker: str, dest_ticker: str, logo_dir: Path = LOGO_DIR) -> dict | None:
+    source_path = existing_logo_path(source_ticker, logo_dir)
+    if not source_path:
+        return None
+    out_path = logo_dir / f"{logo_stem(dest_ticker)}{source_path.suffix}"
+    out_path.write_bytes(source_path.read_bytes())
+    for ext in ("png", "svg"):           # 다른 확장자 잔존본 제거(대체)
+        other = logo_dir / f"{logo_stem(dest_ticker)}.{ext}"
+        if other != out_path and other.exists():
+            other.unlink()
+    return {"saved": True, "path": out_path.name, "source": f"brand:{source_ticker}"}
+
+
+def cache_logo(ticker: str, name: str | None = None, domain: str | None = None, keep_existing: bool = True, timeout: float = 8.0) -> dict:
     ticker = str(ticker or "").strip().upper()
     if not ticker:
         return {"saved": False, "error": "empty ticker"}
@@ -211,6 +257,13 @@ def cache_logo(ticker: str, domain: str | None = None, keep_existing: bool = Tru
     existing = existing_logo_path(ticker)
     if keep_existing and existing:
         return {"saved": False, "path": existing.name, "source": "existing"}
+
+    # 0) 한국 ETF → 운용사 브랜드 로고 우선(개별 로고 대신 KODEX·TIGER·ACE·SOL 등).
+    brand_source = kr_etf_brand_source(ticker, name if name is not None else _lookup_ticker_name(ticker))
+    if brand_source:
+        copied = copy_ticker_logo(brand_source, ticker)
+        if copied:
+            return copied
 
     # 1) FMP — 정방형이면 그대로(깔끔한 심볼). 가로 워드마크면 보류.
     fmp_body = None
