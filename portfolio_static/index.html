@@ -138,6 +138,13 @@
                 <span class="toggle-label">지수</span>
               </label>
             </span>
+            <span class="filter-toggle-control hidden" id="interestHeldControl">
+              <label class="toggle-switch" for="interestHeldToggle">
+                <input id="interestHeldToggle" type="checkbox">
+                <span class="toggle-ui" aria-hidden="true"></span>
+                <span class="toggle-label">보유종목만</span>
+              </label>
+            </span>
             <span class="currency-filter-control" id="currencyFilterControl">
               <label for="currencyFilter">통화</label>
               <select id="currencyFilter" aria-label="통화 필터">
@@ -591,21 +598,21 @@
       </div>
     </form>
   </dialog>
-  <script src="/static/state.js?v=dividend-tax-column"></script>
+  <script src="/static/state.js?v=held-only-filter"></script>
   <script src="/static/format.js?v=fx-rate-text"></script>
   <script src="/static/api.js?v=interest-group-order"></script>
   <script src="/static/chart-utils.js?v=refactor-chart-utils"></script>
   <script src="/static/app-tabs.js?v=dynamic-ticker-column"></script>
   <script src="/static/app-charts.js?v=chart-border-controls"></script>
-  <script src="/static/app-holdings.js?v=fx-interest-controls"></script>
+  <script src="/static/app-holdings.js?v=held-only-filter"></script>
   <script src="/static/app-chart-scale.js?v=bitcoin-k-price"></script>
   <script src="/static/app-line-chart.js?v=trade-tooltip-date"></script>
   <script src="/static/app-chart-compare.js?v=bitcoin-k-price"></script>
   <script src="/static/app-transactions.js?v=bitcoin-k-price"></script>
   <script src="/static/app-trade-controls.js?v=portfolio-refactor"></script>
   <script src="/static/app-watchlist.js?v=portfolio-refactor"></script>
-  <script src="/static/app-interest-watchlists.js?v=mobile-interest-collapse"></script>
+  <script src="/static/app-interest-watchlists.js?v=held-only-filter"></script>
   <script src="/static/app-ticker-search.js?v=ticker-search"></script>
-  <script src="/static/app.js?v=interest-main-table"></script>
+  <script src="/static/app.js?v=held-only-filter"></script>
 </body>
 </html>

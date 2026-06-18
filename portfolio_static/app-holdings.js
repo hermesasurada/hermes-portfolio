@@ -88,6 +88,16 @@ function fxAdjustedEnabled() {
 function showIndexesEnabled() {
   return document.getElementById("showIndexesToggle")?.checked || false;
 }
+function interestHeldOnlyEnabled() {
+  return document.getElementById("interestHeldToggle")?.checked || false;
+}
+function heldTickerSet() {
+  const set = new Set();
+  flattenHoldings().forEach(h => {
+    if (Number(h.qty) > 0) set.add(String(h.ticker).toUpperCase());
+  });
+  return set;
+}
 function performanceDetailEnabled() {
   return document.getElementById("performanceDetailToggle")?.checked || false;
 }
@@ -639,6 +649,7 @@ function syncFilterToggleControls() {
   [
     ["fxAdjustedToggle", "fxAdjustedControl"],
     ["showIndexesToggle", "showIndexesControl"],
+    ["interestHeldToggle", "interestHeldControl"],
     ["performanceDetailToggle", "performanceDetailControl"]
   ].forEach(([toggleId, controlId]) => {
     const toggle = document.getElementById(toggleId);
@@ -672,6 +683,8 @@ function syncDetailTabs() {
   document.getElementById("currencyFilterControl")?.classList.toggle("hidden", showingChart || showingFxInterest);
   document.getElementById("rowCount")?.classList.toggle("hidden", showingChart);
   document.getElementById("showIndexesControl")?.classList.toggle("hidden", showingChart || showingInterest);
+  // '보유종목만' 필터는 관심목록 페이지에서만 노출(환율 그룹 제외 — FX는 보유개념 없음)
+  document.getElementById("interestHeldControl")?.classList.toggle("hidden", !showingInterest || showingFxInterest);
   // '기타'(자동 분류 가상 그룹)는 직접 추가 불가 → 추가 폼 숨김
   document.getElementById("interestMainItemForm")?.classList.toggle(
     "hidden",

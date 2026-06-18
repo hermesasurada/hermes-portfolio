@@ -336,6 +336,13 @@ document.getElementById("showIndexesToggle").addEventListener("change", () => {
   syncFilterToggleControls();
   render();
 });
+// '보유종목만' — 기본값 미체크
+document.getElementById("interestHeldToggle").checked = storageGet(detailStorage.interestHeldOnly) === "true";
+document.getElementById("interestHeldToggle").addEventListener("change", () => {
+  storageSet(detailStorage.interestHeldOnly, String(document.getElementById("interestHeldToggle").checked));
+  syncFilterToggleControls();
+  render();
+});
 document.getElementById("currencyFilter").value = storageGet(detailStorage.currencyFilter) || "all";
 document.getElementById("currencyFilter").addEventListener("change", () => {
   storageSet(detailStorage.currencyFilter, currencyFilterValue());

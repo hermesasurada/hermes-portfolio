@@ -201,7 +201,9 @@ function interestBaseRows() {
   const isFxGroup = interestGroupIsFx(group);
   const currencyFilter = isFxGroup ? "all" : currencyFilterValue();
   const fxAdjusted = isFxGroup ? false : fxAdjustedEnabled();
+  const held = interestHeldOnlyEnabled() ? heldTickerSet() : null;   // '보유종목만' 필터
   return group.items
+    .filter(item => !held || held.has(String(item.ticker).toUpperCase()))
     .map(item => {
       const meta = findTickerMeta(item.ticker) || item;
       const row = watchlistRowForAccount({
