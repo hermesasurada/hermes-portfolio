@@ -3371,6 +3371,14 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   /* 로고+종목명 틀고정은 .pc-frozen-col(공통)이 담당 — 모바일 단독 규칙 제거 */
   #dividendTableWrap {
     padding: 0;
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+  /* 모바일 Safari는 table-layout:fixed + width:100%에서 min-width를 무시해 테이블이
+     뷰포트로 압축됨 → 가로 스크롤이 안 생김. 명시적 px 폭으로 강제(통계탭과 동일). */
+  #dividendTableWrap .dividend-list {
+    width: 1120px;
+    min-width: 1120px;
   }
   .dividend-history-table th,
   .dividend-history-table td {
