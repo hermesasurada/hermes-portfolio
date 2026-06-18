@@ -384,11 +384,8 @@ function syncMobileCollapsePanels() {
 // 종목별 직전 렌더 현재가 — 가격 변동 셀 펄스 판정용
 const priceFlashMap = new Map();
 
-// ── 히어로 요약 (총 평가액 + 오늘 손익 + 1개월 스파크라인) ──
+// ── 히어로 요약 (총 평가액 + 오늘 손익) ──
 // 값은 renderAccounts와 동일 기준(보유분 고정, 표 필터 무관)으로 현재 선택 계좌 합계.
-let heroPerfKey = null;
-let heroPerfFetchedAt = 0;
-
 function updateHeroSummary(byAccount, totalStats, accounts) {
   const valueEl = document.getElementById("heroValue");
   const labelEl = document.getElementById("heroLabel");
@@ -422,56 +419,6 @@ function updateHeroSummary(byAccount, totalStats, accounts) {
   changeEl.textContent = `${arrow} ${krw(Math.abs(change))}${
     pct == null ? "" : ` · ${pct > 0 ? "+" : pct < 0 ? "−" : ""}${fmt2.format(Math.abs(pct))}%`
   }`;
-  updateHeroSpark();
-}
-
-async function updateHeroSpark() {
-  const svg = document.getElementById("heroSpark");
-  if (!svg) return;
-  const ids = selectionMode === "all" ? [] : Array.from(selectedAccounts).sort();
-  const key = selectionMode === "all" ? "all" : ids.join(",");
-  // 같은 선택은 10분간 재조회하지 않음 (스파크라인은 보조 정보)
-  if (heroPerfKey === key && Date.now() - heroPerfFetchedAt < 600000) return;
-  heroPerfKey = key;
-  heroPerfFetchedAt = Date.now();
-  try {
-    const payload = await apiFetchAccountPerformance(ids, selectionMode === "all");
-    if (heroPerfKey !== key) return;   // 그 사이 선택이 바뀜
-    const points = (payload.points || [])
-      .filter(point => point.date && Number.isFinite(Number(point.value)) && Number(point.value) > 0)
-      .slice(-22);   // 최근 ~1개월 거래일
-    drawHeroSpark(points.map(point => Number(point.value)));
-  } catch {
-    drawHeroSpark([]);
-  }
-}
-
-function drawHeroSpark(values) {
-  const svg = document.getElementById("heroSpark");
-  const perfEl = document.getElementById("heroPerf");
-  if (!svg || !perfEl) return;
-  if (!values || values.length < 2) {
-    svg.innerHTML = "";
-    perfEl.className = "hero-perf flat";
-    perfEl.textContent = "-";
-    return;
-  }
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const W = 132, H = 40, PAD = 3;
-  const coords = values.map((v, i) => {
-    const x = PAD + i * (W - PAD * 2) / (values.length - 1);
-    const y = H - PAD - (v - min) / range * (H - PAD * 2);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
-  const pct = values[0] > 0 ? (values[values.length - 1] / values[0] - 1) * 100 : null;
-  const cls = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
-  svg.innerHTML = `<polyline class="hero-spark-line ${cls}" points="${coords.join(" ")}"></polyline>`;
-  perfEl.className = `hero-perf ${cls}`;
-  perfEl.textContent = pct == null
-    ? "-"
-    : `${pct > 0 ? "+" : pct < 0 ? "−" : ""}${fmt2.format(Math.abs(pct))}%`;
 }
 
 function renderAccounts() {

@@ -481,26 +481,6 @@ main {
 .hero-change.up { color: var(--up); background: color-mix(in srgb, var(--up) 11%, transparent); }
 .hero-change.down { color: var(--down); background: color-mix(in srgb, var(--down) 11%, transparent); }
 .hero-change.flat { color: var(--muted); background: var(--surface-2); }
-.hero-side {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.hero-stat { text-align: right; }
-.hero-stat > span {
-  display: block;
-  color: var(--muted);
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
-  margin-bottom: 2px;
-}
-.hero-perf { font-size: 14px; font-weight: var(--fw-strong); }
-.hero-perf.up { color: var(--up); }
-.hero-perf.down { color: var(--down); }
-.hero-perf.flat { color: var(--muted); }
-.hero-spark-line { fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linejoin: round; }
-.hero-spark-line.up { stroke: var(--up); }
-.hero-spark-line.down { stroke: var(--down); }
 
 /* ── 레이아웃 · 계좌 패널 · 거래내역 패널 ────────────────────────────────── */
 .layout {
