@@ -747,7 +747,7 @@ function syncPcFrozenColumns() {
   [
     ["#detailTableWrap table", 2],
     ["#statsTableWrap table", 2],
-    ["#dividendTableWrap table", 4],
+    ["#dividendTableWrap table", 3],
     ["#interestTableWrap table", 2]
   ].forEach(([selector, columnCount]) => {
     const table = document.querySelector(selector);

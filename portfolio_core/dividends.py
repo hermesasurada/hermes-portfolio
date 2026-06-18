@@ -12,7 +12,7 @@ from .dividend_refresh import refresh_dividend_events
 from .dividend_schedule import consolidated_dividend_events, event_schedule_date
 from .prices import latest_prices
 from .queries import clean_account_ids, load_holding_rows
-from .tickers import account_label, ticker_currency
+from .tickers import ticker_currency
 
 DIVIDEND_HISTORY_START_YEAR = 2010
 
@@ -632,7 +632,7 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
                     "pay_date_estimated": bool(event.get("pay_date_estimated")),
                     "ex_date_estimated": bool(event.get("ex_date_estimated")),
                     "member": holding["member"],
-                    "target": f"{holding['member']} {account_label(holding['member'], holding['account_type'], holding['account_name'])}",
+                    "target": holding["member"],   # 대상은 사람 이름만 (계좌구분 제외)
                     "account_id": holding["account_id"],
                     "ticker": event["ticker"],
                     "currency": currency,
