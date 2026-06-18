@@ -979,14 +979,16 @@ main {
 }
 .group-head.partial .group-action { color: var(--warn); }
 .table-wrap { overflow: auto; }
-/* 스크롤바를 테마색에 맞춰 은은하게 (OS 기본 스크롤바가 주변과 동떨어져 보이는 문제) */
+/* 스크롤바를 테마색에 맞춰 은은하게 (OS 기본 스크롤바가 주변과 동떨어져 보이는 문제).
+   트랙(거터)을 헤더와 같은 surface-2로 맞춰, 세로 스크롤바가 sticky 헤더 우측을
+   더 어두운 패널색 띠로 끊어 보이게 만드는(헤더영역 침범) 현상을 제거한다. */
 .table-wrap,
 #statsTableWrap,
 #dividendTableWrap,
 .dividend-history-table-wrap,
 .tx-wrap {
   scrollbar-width: thin;
-  scrollbar-color: var(--line) transparent;
+  scrollbar-color: var(--line) var(--surface-2);
 }
 .table-wrap::-webkit-scrollbar,
 #statsTableWrap::-webkit-scrollbar,
@@ -997,14 +999,14 @@ main {
 #statsTableWrap::-webkit-scrollbar-track,
 #dividendTableWrap::-webkit-scrollbar-track,
 .dividend-history-table-wrap::-webkit-scrollbar-track,
-.tx-wrap::-webkit-scrollbar-track { background: transparent; }
+.tx-wrap::-webkit-scrollbar-track { background: var(--surface-2); }
 .table-wrap::-webkit-scrollbar-thumb,
 #statsTableWrap::-webkit-scrollbar-thumb,
 #dividendTableWrap::-webkit-scrollbar-thumb,
 .dividend-history-table-wrap::-webkit-scrollbar-thumb,
 .tx-wrap::-webkit-scrollbar-thumb {
   background: var(--line);
-  border: 3px solid var(--panel);
+  border: 3px solid var(--surface-2);
   border-radius: 999px;
 }
 .table-wrap::-webkit-scrollbar-thumb:hover,
@@ -1016,7 +1018,7 @@ main {
 #statsTableWrap::-webkit-scrollbar-corner,
 #dividendTableWrap::-webkit-scrollbar-corner,
 .dividend-history-table-wrap::-webkit-scrollbar-corner,
-.tx-wrap::-webkit-scrollbar-corner { background: transparent; }
+.tx-wrap::-webkit-scrollbar-corner { background: var(--surface-2); }
 #statsTableWrap {
   padding: 0;
   overflow-x: auto;
