@@ -1372,6 +1372,13 @@ tr.dividend-month-row:hover td {
   cursor: pointer;
 }
 .dividend-month-summary {
+  /* 가로 스크롤 시 월 라벨+합산금액은 본문과 함께 밀려나지 않고 좌측에 고정.
+     month-row td는 colspan=13이라 틀고정(.pc-frozen-col) 대상에서 제외되므로
+     summary 자체를 sticky로 고정. td padding-left(10px)와 맞춰 정지 위치 유지. */
+  position: sticky;
+  left: 10px;
+  width: max-content;
+  max-width: 100%;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -3361,6 +3368,12 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   #dividendTableWrap .dividend-list {
     width: 1120px;
     min-width: 1120px;
+  }
+  /* 대상(사람 이름)은 짧으므로 폭을 텍스트에 맞게 더 축소 — 틀고정 블록(지급일자·
+     대상·티커)을 슬림하게 해 모바일에서 본문 컬럼이 더 많이 보이도록. */
+  #dividendTableWrap .dividend-list th:nth-child(2),
+  #dividendTableWrap .dividend-list td:nth-child(2) {
+    width: 6%;
   }
   .dividend-history-table th,
   .dividend-history-table td {
