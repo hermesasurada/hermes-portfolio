@@ -23,6 +23,33 @@ def ensure_ticker_metadata_columns(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE tickers ADD COLUMN display_name TEXT")
 
 
+def backfill_ticker_display_names(conn: sqlite3.Connection) -> None:
+    from .tickers import display_name
+
+    rows = conn.execute(
+        """
+        SELECT ticker, name
+        FROM tickers
+        WHERE ticker IS NOT NULL AND TRIM(ticker) <> ''
+          AND (display_name IS NULL OR TRIM(display_name) = '')
+        """
+    ).fetchall()
+    if not rows:
+        return
+    conn.executemany(
+        """
+        UPDATE tickers
+        SET display_name = ?
+        WHERE ticker = ?
+          AND (display_name IS NULL OR TRIM(display_name) = '')
+        """,
+        [
+            (display_name(row["name"], row["ticker"]), row["ticker"])
+            for row in rows
+        ],
+    )
+
+
 def ensure_stats_cache_table(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
@@ -288,4 +315,5 @@ def initialize_schema() -> None:
         ensure_interest_watchlist_tables(conn)
         ensure_market_index_tickers(conn)
         ensure_fx_tickers(conn)
+        backfill_ticker_display_names(conn)
         conn.commit()

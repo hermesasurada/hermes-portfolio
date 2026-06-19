@@ -141,7 +141,10 @@ def _is_square_logo(body: bytes | None, max_aspect: float) -> bool:
     if not dims:
         return False
     width, height = dims
-    return height > 0 and width >= 48 and len(body) > 400 and (width / height) <= max_aspect
+    if width <= 0 or height <= 0:
+        return False
+    aspect = max(width / height, height / width)
+    return width >= 48 and height >= 48 and len(body) > 400 and aspect <= max_aspect
 
 
 def _http_get(url: str, timeout: float = 10.0) -> bytes | None:

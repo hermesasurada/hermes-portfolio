@@ -52,7 +52,7 @@ from portfolio_core.tickers import (
     ticker_currency,
     ticker_scope,
 )
-from portfolio_core.logos import candidate_symbols, logo_stem
+from portfolio_core.logos import _is_square_logo, candidate_symbols, logo_stem
 from portfolio_core.watchlist import estimate_hydration_minutes, normalize_lookup_ticker
 
 
@@ -505,6 +505,21 @@ def test_logo_stem_and_candidates():
     assert logo_stem("AAPL") == "AAPL"
     assert candidate_symbols("BTC") == ["BTC", "BTCUSD", "BTC-USD"]
     assert candidate_symbols("005930.KS") == ["005930.KS", "005930"]
+
+
+def test_square_logo_aspect_rejects_tall_and_wide_images():
+    def png_header(width: int, height: int) -> bytes:
+        return (
+            b"\x89PNG\r\n\x1a\n"
+            + b"\x00\x00\x00\rIHDR"
+            + width.to_bytes(4, "big")
+            + height.to_bytes(4, "big")
+            + b"\x00" * 420
+        )
+
+    assert _is_square_logo(png_header(100, 100), 1.3)
+    assert not _is_square_logo(png_header(85, 128), 1.3)
+    assert not _is_square_logo(png_header(220, 80), 1.5)
 
 
 def test_date_helpers():
