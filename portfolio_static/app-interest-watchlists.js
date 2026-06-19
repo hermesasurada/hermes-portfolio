@@ -5,7 +5,7 @@ let activeSidebarTab = "accounts";
 let activeInterestGroupId = null;
 let editingInterestGroupId = null;
 let interestGroupOrderSaving = false;
-const interestSortState = { key: "name", dir: 1 };
+const interestSortState = { key: "display_change_pct", dir: -1 };
 
 function interestModeActive() {
   return activeSidebarTab === "interest" && activeInterestGroupId != null;
