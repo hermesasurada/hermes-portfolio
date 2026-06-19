@@ -47,12 +47,12 @@
   --chart-selection-fill: rgba(31, 78, 121, .08);
   --chart-shadow: drop-shadow(0 2px 6px rgba(60, 64, 67, .20));
   /* type scale */
-  --fs-xs: 11px;
-  --fs-sm: 12px;
-  --fs-md: 13px;
-  --fs-lg: 16px;
-  --fs-xl: 22px;
-  --fs-hero: 30px;   /* 히어로 요약(총 평가액) 전용 */
+  --fs-xs: 10.5px;
+  --fs-sm: 11.5px;
+  --fs-md: 12.5px;
+  --fs-lg: 15px;
+  --fs-xl: 21px;
+  --fs-hero: 28px;   /* 히어로 요약(총 평가액) 전용 */
   /* weights (3 tiers) */
   --fw-md: 600;
   --fw-bold: 700;
@@ -121,6 +121,7 @@
 body {
   margin: 0;
   font-family: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12.5px;
   background: var(--bg);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -164,7 +165,7 @@ header {
   align-items: center;
 }
 /* 브랜드 텍스트는 정보가치가 낮으므로 작게 — 큰 숫자는 히어로 요약이 담당 */
-h1 { margin: 0 0 3px; font-size: 17px; letter-spacing: -0.2px; }
+h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
 .home-link {
   color: var(--ink);
   text-decoration: none;
@@ -174,7 +175,7 @@ h1 { margin: 0 0 3px; font-size: 17px; letter-spacing: -0.2px; }
 }
 .fx-top {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   line-height: 1.35;
 }
@@ -193,7 +194,7 @@ h1 { margin: 0 0 3px; font-size: 17px; letter-spacing: -0.2px; }
   border-radius: 50%;
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
   line-height: 1;
 }
@@ -263,7 +264,7 @@ h1 { margin: 0 0 3px; font-size: 17px; letter-spacing: -0.2px; }
   font-weight: var(--fw-bold);
   white-space: nowrap;
 }
-.theme-btn > span { font-size: 13px; line-height: 1; }
+.theme-btn > span { font-size: 12.5px; line-height: 1; }
 .auto-refresh-control,
 .us-price-control,
 .filter-toggle-control,
@@ -276,7 +277,7 @@ h1 { margin: 0 0 3px; font-size: 17px; letter-spacing: -0.2px; }
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--panel);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -347,7 +348,7 @@ h1 { margin: 0 0 3px; font-size: 17px; letter-spacing: -0.2px; }
   height: 22px;
   padding: 0 6px;
   text-align: right;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 700;
 }
 .us-price-control.disabled {
@@ -361,7 +362,7 @@ h1 { margin: 0 0 3px; font-size: 17px; letter-spacing: -0.2px; }
 }
 .us-market-status {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
   width: 78px;
   text-align: left;
@@ -389,13 +390,13 @@ textarea {
 .filter-toggle-control {
   height: 26px;
   padding: 0 6px;
-  font-size: 11px;
+  font-size: 10.5px;
 }
 .currency-filter-control {
   height: 26px;
   padding: 0 6px;
   gap: 5px;
-  font-size: 11px;
+  font-size: 10.5px;
 }
 .currency-filter-control label {
   color: var(--muted);
@@ -408,7 +409,7 @@ textarea {
   padding: 0 5px;
   border: 0;
   background: transparent;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
 }
 .currency-filter-control.active {
@@ -1016,7 +1017,7 @@ table.stats-list {
 .stats-list th,
 .stats-list td {
   padding: 9px 4px;
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.25;
 }
 .stats-list th {
@@ -1030,7 +1031,7 @@ table.stats-list {
   top: 0;
   height: 22px;
   padding: 3px 4px;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: .06em;
   color: var(--muted);
@@ -1090,15 +1091,15 @@ table.stats-list {
   display: block;
 }
 .stats-list .ticker-cell { gap: 10px; }
-.stats-list .asset-icon { width: 34px; height: 34px; border-radius: 7px; font-size: 11px; }
+.stats-list .asset-icon { width: 34px; height: 34px; border-radius: 7px; font-size: 10.5px; }
 .stats-list .ticker-text { overflow: hidden; }
 .stats-list .asset-name {
-  font-size: 12.5px;
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.stats-list .ticker-symbol { font-size: 11px; }
+.stats-list .ticker-symbol { font-size: 10.5px; }
 /* 지표군 경계(모멘텀|밸류|수익률)를 수직선으로 구분 — 23컬럼의 호흡 분절 */
 .stats-list th.group-start,
 .stats-list td.group-start { border-left: 1px solid var(--line); }
@@ -1112,14 +1113,14 @@ table.stats-list {
 #statsTableWrap .stats-list th:nth-child(16),
 #statsTableWrap .stats-list td:nth-child(16) { padding-right: 9px; }
 .stats-list .price-cell { gap: 1px; }
-.stats-list .price-cell .krw-sub { font-size: 10.5px; }
+.stats-list .price-cell .krw-sub { font-size: 10px; }
 .hidden { display: none !important; }
 th, td {
   padding: 10px 8px;
   border-bottom: 1px solid var(--line);
   text-align: right;
   white-space: nowrap;
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.25;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
@@ -1526,7 +1527,7 @@ th.pc-frozen-edge {
   padding: 9px 12px;
   border-bottom: 1px solid var(--line);
 }
-.toolbar strong { font-size: 16px; }
+.toolbar strong { font-size: 15px; }
 .title-tools {
   display: flex;
   align-items: center;
@@ -1550,7 +1551,7 @@ th.pc-frozen-edge {
   background: transparent;
   color: var(--muted);
   padding: 0 9px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 800;
 }
 .tab-btn.active {
@@ -1565,7 +1566,7 @@ th.pc-frozen-edge {
   border-radius: 999px;
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11.5px;
 }
 .asset-icon {
   width: 34px;
@@ -1578,7 +1579,7 @@ th.pc-frozen-edge {
   color: var(--accent);
   flex: 0 0 auto;
   overflow: hidden;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0;
   position: relative;
@@ -1651,7 +1652,7 @@ th.pc-frozen-edge {
 }
 .ticker-symbol {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -1663,7 +1664,7 @@ th.pc-frozen-edge {
 }
 .price-cell .krw-sub {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
 }
 .change-cell {
@@ -1677,7 +1678,7 @@ th.pc-frozen-edge {
 .pct-chip {
   padding: 2px 9px;
   border-radius: 999px;
-  font-size: 11.5px;
+  font-size: 11px;
 }
 .pct-chip.up { background: color-mix(in srgb, var(--up) 10%, transparent); }
 .pct-chip.down { background: color-mix(in srgb, var(--down) 10%, transparent); }
@@ -1689,7 +1690,7 @@ th.pc-frozen-edge {
   line-height: 1.2;
 }
 .change-stack .fx-sub {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
 }
 .up { color: var(--up); }
@@ -1699,7 +1700,7 @@ th.pc-frozen-edge {
 .ghost-btn {
   height: 28px;
   padding: 0 8px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
 }
 
@@ -1732,7 +1733,7 @@ th.pc-frozen-edge {
   height: 24px;
   min-width: 34px;
   padding: 0 9px;
-  font-size: 12px;
+  font-size: 11.5px;
 }
 .chart-display-controls {
   display: inline-flex;
@@ -1746,7 +1747,7 @@ th.pc-frozen-edge {
   border-radius: 6px;
   background: var(--panel);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: var(--fw-bold);
   cursor: pointer;
   flex: 0 0 auto;
@@ -1771,7 +1772,7 @@ th.pc-frozen-edge {
   width: 46px;
   height: 46px;
   border-radius: 10px;
-  font-size: 15px;
+  font-size: 14px;
 }
 .chart-id-text {
   display: grid;
@@ -1797,7 +1798,7 @@ th.pc-frozen-edge {
   border-radius: 999px;
   background: var(--panel);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: var(--fw-bold);
   text-decoration: none;
   white-space: nowrap;
@@ -1813,18 +1814,18 @@ th.pc-frozen-edge {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 800;
   line-height: 1.2;
 }
 .chart-head span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 800;
 }
 #chartTicker {
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
 }
 /* 차트 하단 통계 지표 패널 — compact market-data board */
@@ -1866,7 +1867,7 @@ th.pc-frozen-edge {
   border-right: 1px solid var(--line);
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: var(--fw-md);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1874,7 +1875,7 @@ th.pc-frozen-edge {
 .cstat-v {
   padding: 5px 11px;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: var(--fw-bold);
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -1885,7 +1886,7 @@ th.pc-frozen-edge {
 .cstat-cold { color: #6ea8e6; }
 .chart-stat-loading {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10.5px;
   padding: 7px 2px 0;
 }
 :root[data-theme="dark"] .cstat-board {
