@@ -30,6 +30,10 @@ def now_text() -> str:
 # id=0이라 모든 변경 API의 group_id<=0 가드에 자동으로 막힌다.
 OTHERS_GROUP_ID = 0
 OTHERS_GROUP_NAME = "기타"
+SPECIAL_GROUP_BY_CATEGORY = {
+    "index": "주요 지수",
+    "fx": "환율",
+}
 
 
 def initial_group_name(ticker: str, name: str, category: str | None, currency: str | None) -> str:
@@ -51,6 +55,82 @@ def initial_group_name(ticker: str, name: str, category: str | None, currency: s
     if currency == "USD":
         return "미국 ETF" if kind == "etf" else "미국 개별주"
     return "기타 해외"
+
+
+def ensure_group_by_name(conn, name: str) -> int:
+    row = conn.execute(
+        "SELECT id FROM interest_watchlist_groups WHERE name = ? COLLATE NOCASE",
+        (name,),
+    ).fetchone()
+    if row:
+        return int(row["id"])
+    order_map = dict(INITIAL_GROUPS)
+    sort_order = order_map.get(name)
+    if sort_order is None:
+        sort_order = conn.execute(
+            "SELECT COALESCE(MAX(sort_order), 0) + 10 FROM interest_watchlist_groups"
+        ).fetchone()[0]
+    cursor = conn.execute(
+        """
+        INSERT INTO interest_watchlist_groups (name, sort_order, created_at)
+        VALUES (?, ?, ?)
+        """,
+        (name, sort_order, now_text()),
+    )
+    return int(cursor.lastrowid)
+
+
+def insert_interest_item_if_missing(conn, group_id: int, ticker: str) -> bool:
+    if conn.execute(
+        "SELECT 1 FROM interest_watchlist_items WHERE group_id = ? AND ticker = ?",
+        (group_id, ticker),
+    ).fetchone():
+        return False
+    next_order = conn.execute(
+        """
+        SELECT COALESCE(MAX(sort_order), 0) + 10
+        FROM interest_watchlist_items
+        WHERE group_id = ?
+        """,
+        (group_id,),
+    ).fetchone()[0]
+    conn.execute(
+        """
+        INSERT INTO interest_watchlist_items (group_id, ticker, sort_order, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (group_id, ticker, next_order, now_text()),
+    )
+    return True
+
+
+def sync_special_interest_items(items: list[dict]) -> int:
+    targets = [
+        (
+            str(item.get("ticker") or "").strip().upper(),
+            SPECIAL_GROUP_BY_CATEGORY.get(str(item.get("category") or "").lower()),
+        )
+        for item in items
+    ]
+    targets = [(ticker, group_name) for ticker, group_name in targets if ticker and group_name]
+    if not targets:
+        return 0
+    added = 0
+    with connect() as conn:
+        ensure_interest_watchlist_tables(conn)
+        for ticker, group_name in targets:
+            group_id = ensure_group_by_name(conn, group_name)
+            if insert_interest_item_if_missing(conn, group_id, ticker):
+                added += 1
+        conn.commit()
+    return added
+
+
+def protected_group_required_category(group_name: str | None) -> str | None:
+    for category, name in SPECIAL_GROUP_BY_CATEGORY.items():
+        if str(group_name or "").casefold() == name.casefold():
+            return category
+    return None
 
 
 def seed_initial_interest_watchlists(conn) -> None:
@@ -300,13 +380,23 @@ def add_interest_item(payload: dict) -> dict:
         raise ValueError("그룹과 종목을 선택해야 합니다.")
     with connect() as conn:
         ensure_interest_watchlist_tables(conn)
-        if not conn.execute(
-            "SELECT 1 FROM interest_watchlist_groups WHERE id = ?",
+        group = conn.execute(
+            "SELECT name FROM interest_watchlist_groups WHERE id = ?",
             (group_id,),
-        ).fetchone():
+        ).fetchone()
+        if not group:
             raise ValueError("그룹을 찾지 못했습니다.")
-        if not conn.execute("SELECT 1 FROM tickers WHERE UPPER(ticker) = ?", (ticker,)).fetchone():
+        ticker_row = conn.execute(
+            "SELECT ticker, COALESCE(category, '') AS category FROM tickers WHERE UPPER(ticker) = ?",
+            (ticker,),
+        ).fetchone()
+        if not ticker_row:
             raise ValueError("가격수집 대상에 등록된 종목만 추가할 수 있습니다.")
+        required_category = protected_group_required_category(group["name"])
+        ticker_category = str(ticker_row["category"] or "").lower()
+        if required_category and ticker_category != required_category:
+            target_name = SPECIAL_GROUP_BY_CATEGORY[required_category]
+            raise ValueError(f"{target_name} 그룹에는 해당 유형의 항목만 추가할 수 있습니다.")
         if conn.execute(
             "SELECT 1 FROM interest_watchlist_items WHERE group_id = ? AND ticker = ?",
             (group_id, ticker),

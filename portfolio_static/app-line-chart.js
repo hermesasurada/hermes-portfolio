@@ -228,11 +228,15 @@ function renderChartIdentity(payload) {
 
 function chartInterestGroups(ticker) {
   const key = String(ticker || "").toUpperCase();
+  const meta = findTickerMeta(key) || {};
+  const category = String(meta.category || "").toLowerCase();
   return (interestWatchlists || [])
     .filter(group => !group.fixed && group.id > 0)
     .map(group => ({
       ...group,
       checked: group.items?.some(item => String(item.ticker || "").toUpperCase() === key) || false,
+      disabled: (group.name === "주요 지수" && category !== "index")
+        || (group.name === "환율" && category !== "fx"),
     }));
 }
 
@@ -256,7 +260,7 @@ function renderChartInterestModal(ticker) {
   }
   list.innerHTML = groups.map(group => `
     <label class="chart-interest-row">
-      <input type="checkbox" data-chart-interest-group="${group.id}" ${group.checked ? "checked" : ""}>
+      <input type="checkbox" data-chart-interest-group="${group.id}" ${group.checked ? "checked" : ""} ${group.disabled ? "disabled" : ""}>
       <span class="chart-interest-check" aria-hidden="true"></span>
       <span class="chart-interest-name">${esc(group.name)}</span>
       <span class="chart-interest-count">${(group.items || []).length}</span>
