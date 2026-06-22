@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from collect_prices import parse_categories
 from portfolio_core.price_store import (
     collector_run_due,
+    load_watch,
     save_daily_prices,
     update_collector_run,
     update_price_cache,
@@ -64,12 +65,14 @@ def main() -> int:
         if cache_entries:
             update_price_cache(cache_entries)
 
-        if (
-            fetched
-            and not args.skip_technicals
-            and collector_run_due(technical_run_name, TECHNICAL_REFRESH_SECONDS)
-        ):
-            updated = refresh_technical_stats_cache(item.ticker for item in fetched)
+        if not args.skip_technicals and collector_run_due(technical_run_name, TECHNICAL_REFRESH_SECONDS):
+            watch = load_watch(categories=categories, tickers=args.ticker)
+            technical_tickers = sorted({
+                ticker
+                for category in categories
+                for ticker in watch.get(category, [])
+            })
+            updated = refresh_technical_stats_cache(technical_tickers)
             update_collector_run(technical_run_name, updated)
             print(f"Updated {updated} technical stats")
 
