@@ -2800,6 +2800,13 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .watch-actions {
   flex-wrap: wrap;
 }
+.watch-actions > button {
+  height: 32px;
+  min-width: 72px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 800;
+}
 .modal-head {
   justify-content: space-between;
 }
