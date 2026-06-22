@@ -57,6 +57,7 @@
   --list-row-height: 38px;
   --list-cell-y: 5px;
   --list-icon-size: 28px;
+  --table-head-height: 48px;
   /* weights (3 tiers) */
   --fw-md: 600;
   --fw-bold: 700;
@@ -966,9 +967,10 @@ main {
 .table-wrap {
   overflow: auto;
   scrollbar-gutter: auto;
+  --scrollbar-head-offset: var(--table-head-height);
 }
-/* 스크롤바는 얇게, 트랙은 투명하게 둔다. 트랙 배경을 헤더색으로 칠하면
-   sticky 헤더 영역까지 우측 띠가 이어져 보인다. */
+/* 세로 스크롤바는 sticky 헤더 아래에서 시작한다. 테이블을 header/body로
+   쪼개지 않고도 Chrome/Edge/Safari 계열에서 헤더 영역 침범을 막는 처리. */
 .table-wrap,
 #statsTableWrap,
 #dividendTableWrap,
@@ -987,6 +989,13 @@ main {
 #dividendTableWrap::-webkit-scrollbar-track,
 .dividend-history-table-wrap::-webkit-scrollbar-track,
 .tx-wrap::-webkit-scrollbar-track { background: transparent; }
+.table-wrap::-webkit-scrollbar-track:vertical,
+#statsTableWrap::-webkit-scrollbar-track:vertical,
+#dividendTableWrap::-webkit-scrollbar-track:vertical,
+.dividend-history-table-wrap::-webkit-scrollbar-track:vertical,
+.tx-wrap::-webkit-scrollbar-track:vertical {
+  margin-top: var(--scrollbar-head-offset, var(--table-head-height));
+}
 .table-wrap::-webkit-scrollbar-thumb,
 #statsTableWrap::-webkit-scrollbar-thumb,
 #dividendTableWrap::-webkit-scrollbar-thumb,
@@ -1011,6 +1020,7 @@ main {
   padding: 0;
   overflow-x: auto;
   overflow-y: hidden;
+  --scrollbar-head-offset: calc(22px + var(--table-head-height));
 }
 
 /* ── 테이블 공통 · 통계/배당 테이블 ────────────────────────────────────── */
