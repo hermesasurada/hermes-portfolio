@@ -1809,6 +1809,12 @@ th.pc-frozen-edge {
   border-color: var(--brand);
   color: var(--brand);
 }
+.chart-interest-open {
+  color: var(--accent-2);
+}
+.chart-interest-open.hidden {
+  display: none;
+}
 .chart-head strong {
   min-width: 0;
   overflow: hidden;
@@ -1965,6 +1971,25 @@ th.pc-frozen-edge {
   fill: var(--chart-dot-fill);
   stroke: var(--brand);
   stroke-width: 2;
+}
+.chart-current-price-tick {
+  stroke: var(--brand);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: .75;
+  pointer-events: none;
+}
+.chart-current-price-label {
+  fill: var(--brand);
+  font-size: 10.5px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  text-anchor: end;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--chart-bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 .chart-y-label,
 .chart-x-label {
@@ -2599,6 +2624,93 @@ th.pc-frozen-edge {
 }
 .help-modal {
   width: min(860px, calc(100vw - 28px));
+}
+.chart-interest-modal {
+  width: min(420px, calc(100vw - 28px));
+}
+.chart-interest-card {
+  gap: 10px;
+}
+.chart-interest-title {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.chart-interest-title span {
+  color: var(--accent-2);
+  font-size: 12px;
+  font-weight: 800;
+}
+.chart-interest-list {
+  display: grid;
+  gap: 4px;
+  max-height: min(420px, calc(100vh - 190px));
+  overflow: auto;
+}
+.chart-interest-row {
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  cursor: pointer;
+}
+.chart-interest-row:hover {
+  background: var(--brand-soft);
+  border-color: var(--line);
+}
+.chart-interest-row input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.chart-interest-check {
+  width: 17px;
+  height: 17px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--panel);
+}
+.chart-interest-check::after {
+  content: "";
+  width: 8px;
+  height: 4px;
+  margin-top: -1px;
+  border-left: 2px solid var(--on-accent);
+  border-bottom: 2px solid var(--on-accent);
+  opacity: 0;
+  transform: rotate(-45deg);
+}
+.chart-interest-row input:checked + .chart-interest-check {
+  border-color: var(--brand);
+  background: var(--brand);
+}
+.chart-interest-row input:checked + .chart-interest-check::after {
+  opacity: 1;
+}
+.chart-interest-row input:disabled + .chart-interest-check {
+  opacity: .55;
+}
+.chart-interest-name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chart-interest-count {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ── 배당이력 모달 (연도 rowspan 표 + 요약 보드) ────────────────────────── */
@@ -3424,6 +3536,10 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     font-size: 14px;
     font-weight: 700;
     stroke-width: 3.5px;
+  }
+  .chart-current-price-label {
+    font-size: 14px;
+    stroke-width: 4px;
   }
   .chart-extreme text {
     font-size: 15px;

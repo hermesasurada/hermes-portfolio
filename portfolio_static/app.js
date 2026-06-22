@@ -391,6 +391,7 @@ initDividendHistoryModal();
 initWatchlistControls();
 initTickerSearch();
 initChartRangeModal();
+initChartInterestModal();
 initChartDisplayControls();
 initChartIntervalControl();
 initTradeSideToggle();

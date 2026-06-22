@@ -222,7 +222,102 @@ function renderChartIdentity(payload) {
   document.getElementById("chartIcon").innerHTML = logoMarkup(row);
   document.getElementById("chartTicker").textContent = row.ticker || "";
   document.getElementById("chartName").textContent = row.name || row.ticker || "";
+  document.getElementById("chartInterestOpen")?.classList.toggle("hidden", !row.ticker);
   renderChartExternalLinks(row);
+}
+
+function chartInterestGroups(ticker) {
+  const key = String(ticker || "").toUpperCase();
+  return (interestWatchlists || [])
+    .filter(group => !group.fixed && group.id > 0)
+    .map(group => ({
+      ...group,
+      checked: group.items?.some(item => String(item.ticker || "").toUpperCase() === key) || false,
+    }));
+}
+
+function setChartInterestStatus(message = "", error = false) {
+  const el = document.getElementById("chartInterestStatus");
+  if (!el) return;
+  el.textContent = message;
+  el.classList.toggle("error", error);
+}
+
+function renderChartInterestModal(ticker) {
+  const key = String(ticker || "").toUpperCase();
+  const list = document.getElementById("chartInterestList");
+  const title = document.getElementById("chartInterestTicker");
+  if (title) title.textContent = key || "-";
+  if (!list) return;
+  const groups = chartInterestGroups(key);
+  if (!groups.length) {
+    list.innerHTML = `<div class="ticker-search-empty">생성된 관심목록 그룹이 없습니다.</div>`;
+    return;
+  }
+  list.innerHTML = groups.map(group => `
+    <label class="chart-interest-row">
+      <input type="checkbox" data-chart-interest-group="${group.id}" ${group.checked ? "checked" : ""}>
+      <span class="chart-interest-check" aria-hidden="true"></span>
+      <span class="chart-interest-name">${esc(group.name)}</span>
+      <span class="chart-interest-count">${(group.items || []).length}</span>
+    </label>
+  `).join("");
+}
+
+async function openChartInterestModal() {
+  const ticker = String(chartTicker || chartPayload?.ticker || "").toUpperCase();
+  if (!ticker) return;
+  const modal = document.getElementById("chartInterestModal");
+  const list = document.getElementById("chartInterestList");
+  if (!modal || !list) return;
+  setChartInterestStatus("");
+  if (!interestWatchlistsLoaded) {
+    list.innerHTML = `<div class="ticker-search-empty">관심목록을 불러오는 중...</div>`;
+    modal.showModal();
+    try {
+      await loadInterestWatchlists();
+    } catch (err) {
+      setChartInterestStatus(err.message || String(err), true);
+      return;
+    }
+  } else if (!modal.open) {
+    modal.showModal();
+  }
+  renderChartInterestModal(ticker);
+}
+
+function initChartInterestModal() {
+  const modal = document.getElementById("chartInterestModal");
+  const open = document.getElementById("chartInterestOpen");
+  const close = document.getElementById("chartInterestClose");
+  const list = document.getElementById("chartInterestList");
+  if (!modal || !open || !close || !list) return;
+  open.addEventListener("click", openChartInterestModal);
+  close.addEventListener("click", () => modal.close());
+  modal.addEventListener("click", event => {
+    if (event.target === modal) modal.close();
+  });
+  list.addEventListener("change", async event => {
+    const input = event.target.closest?.("[data-chart-interest-group]");
+    if (!input) return;
+    const ticker = String(chartTicker || chartPayload?.ticker || "").toUpperCase();
+    const groupId = Number(input.dataset.chartInterestGroup);
+    if (!ticker || !groupId) return;
+    input.disabled = true;
+    setChartInterestStatus(input.checked ? "추가 중..." : "삭제 중...");
+    try {
+      const payload = input.checked
+        ? await apiAddInterestItem(groupId, ticker)
+        : await apiDeleteInterestItem(groupId, ticker);
+      applyInterestWatchlistPayload(payload);
+      renderChartInterestModal(ticker);
+      setChartInterestStatus("");
+    } catch (err) {
+      input.checked = !input.checked;
+      input.disabled = false;
+      setChartInterestStatus(err.message || String(err), true);
+    }
+  });
 }
 
 function renderChartStats(payload) {
@@ -683,6 +778,8 @@ function renderLineChart(payload) {
   const rsiOversoldAreas = rsiThresholdAreaPaths(points, 30, "below", xFor, rsiYFor);
   const rsiGuides = [30, 50, 70].map(value => ({ value, y: rsiYFor(value) }));
   const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
+  const currentPriceY = yFor(last);
+  const currentPriceLabel = chartMoney(last, payload.currency, payload.ticker);
   const vGrid = indexedChartVerticalGrid(points, xFor, chartRange);
   const labelEvery = Math.max(1, Math.ceil(vGrid.ticks.length / 8));
   const markers = chartTransactions.map((tx, index) => {
@@ -747,6 +844,8 @@ function renderLineChart(payload) {
       }).join("")}
       <path class="chart-area" d="${area}"></path>
       <path class="chart-line" d="${line}"></path>
+      <line class="chart-current-price-tick" x1="${(pad.left + plotW).toFixed(2)}" x2="${(width - 8).toFixed(2)}" y1="${currentPriceY.toFixed(2)}" y2="${currentPriceY.toFixed(2)}"></line>
+      <text class="chart-current-price-label" x="${width - 6}" y="${(currentPriceY + 4).toFixed(2)}">${esc(currentPriceLabel)}</text>
       ${rsiOverboughtAreas.map(path => `<path class="chart-rsi-zone overbought" d="${path}"></path>`).join("")}
       ${rsiOversoldAreas.map(path => `<path class="chart-rsi-zone oversold" d="${path}"></path>`).join("")}
       ${rsiGuides.map(guide => `

@@ -284,6 +284,7 @@
                 <strong id="chartName">-</strong>
                 <span id="chartTicker">-</span>
               </span>
+              <button class="chart-link-btn chart-interest-open" id="chartInterestOpen" type="button">관심목록</button>
               <span id="chartLinks" class="chart-links"></span>
             </div>
             <div class="chart-head-right">
@@ -447,6 +448,19 @@
       <div class="status" id="chartRangeStatus"></div>
     </form>
   </dialog>
+  <dialog class="watch-modal chart-interest-modal" id="chartInterestModal">
+    <form method="dialog" class="modal-card chart-interest-card">
+      <div class="modal-head">
+        <div class="chart-interest-title">
+          <strong>관심목록</strong>
+          <span id="chartInterestTicker">-</span>
+        </div>
+        <button class="ghost-btn" id="chartInterestClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <div class="chart-interest-list" id="chartInterestList"></div>
+      <div class="status" id="chartInterestStatus" aria-live="polite"></div>
+    </form>
+  </dialog>
   <dialog class="watch-modal dividend-history-modal" id="dividendHistoryModal">
     <form method="dialog" class="modal-card dividend-history-card">
       <div class="modal-head">
@@ -599,13 +613,13 @@
   <script src="/static/app-charts.js?v=chart-border-controls"></script>
   <script src="/static/app-holdings.js?v=remove-hero-spark"></script>
   <script src="/static/app-chart-scale.js?v=bitcoin-k-price"></script>
-  <script src="/static/app-line-chart.js?v=trade-tooltip-date"></script>
+  <script src="/static/app-line-chart.js?v=chart-interest-price-label"></script>
   <script src="/static/app-chart-compare.js?v=bitcoin-k-price"></script>
   <script src="/static/app-transactions.js?v=bitcoin-k-price"></script>
   <script src="/static/app-trade-controls.js?v=portfolio-refactor"></script>
   <script src="/static/app-watchlist.js?v=portfolio-refactor"></script>
   <script src="/static/app-interest-watchlists.js?v=interest-change-desc"></script>
   <script src="/static/app-ticker-search.js?v=ticker-search"></script>
-  <script src="/static/app.js?v=held-only-filter"></script>
+  <script src="/static/app.js?v=chart-interest-price-label"></script>
 </body>
 </html>
