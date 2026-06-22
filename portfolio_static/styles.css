@@ -53,6 +53,10 @@
   --fs-lg: 15px;
   --fs-xl: 21px;
   --fs-hero: 28px;   /* 히어로 요약(총 평가액) 전용 */
+  /* list/table rhythm */
+  --list-row-height: 38px;
+  --list-cell-y: 5px;
+  --list-icon-size: 28px;
   /* weights (3 tiers) */
   --fw-md: 600;
   --fw-bold: 700;
@@ -959,35 +963,38 @@ main {
   font-weight: 800;
 }
 .group-head.partial .group-action { color: var(--warn); }
-.table-wrap { overflow: auto; }
-/* 스크롤바를 테마색에 맞춰 은은하게 (OS 기본 스크롤바가 주변과 동떨어져 보이는 문제).
-   트랙(거터)을 헤더와 같은 surface-2로 맞춰, 세로 스크롤바가 sticky 헤더 우측을
-   더 어두운 패널색 띠로 끊어 보이게 만드는(헤더영역 침범) 현상을 제거한다. */
+.table-wrap {
+  overflow: auto;
+  scrollbar-gutter: auto;
+}
+/* 스크롤바는 얇게, 트랙은 투명하게 둔다. 트랙 배경을 헤더색으로 칠하면
+   sticky 헤더 영역까지 우측 띠가 이어져 보인다. */
 .table-wrap,
 #statsTableWrap,
 #dividendTableWrap,
 .dividend-history-table-wrap,
 .tx-wrap {
   scrollbar-width: thin;
-  scrollbar-color: var(--line) var(--surface-2);
+  scrollbar-color: var(--line) transparent;
 }
 .table-wrap::-webkit-scrollbar,
 #statsTableWrap::-webkit-scrollbar,
 #dividendTableWrap::-webkit-scrollbar,
 .dividend-history-table-wrap::-webkit-scrollbar,
-.tx-wrap::-webkit-scrollbar { width: 11px; height: 11px; }
+.tx-wrap::-webkit-scrollbar { width: 8px; height: 8px; }
 .table-wrap::-webkit-scrollbar-track,
 #statsTableWrap::-webkit-scrollbar-track,
 #dividendTableWrap::-webkit-scrollbar-track,
 .dividend-history-table-wrap::-webkit-scrollbar-track,
-.tx-wrap::-webkit-scrollbar-track { background: var(--surface-2); }
+.tx-wrap::-webkit-scrollbar-track { background: transparent; }
 .table-wrap::-webkit-scrollbar-thumb,
 #statsTableWrap::-webkit-scrollbar-thumb,
 #dividendTableWrap::-webkit-scrollbar-thumb,
 .dividend-history-table-wrap::-webkit-scrollbar-thumb,
 .tx-wrap::-webkit-scrollbar-thumb {
   background: var(--line);
-  border: 3px solid var(--surface-2);
+  background-clip: content-box;
+  border: 2px solid transparent;
   border-radius: 999px;
 }
 .table-wrap::-webkit-scrollbar-thumb:hover,
@@ -999,7 +1006,7 @@ main {
 #statsTableWrap::-webkit-scrollbar-corner,
 #dividendTableWrap::-webkit-scrollbar-corner,
 .dividend-history-table-wrap::-webkit-scrollbar-corner,
-.tx-wrap::-webkit-scrollbar-corner { background: var(--surface-2); }
+.tx-wrap::-webkit-scrollbar-corner { background: transparent; }
 #statsTableWrap {
   padding: 0;
   overflow-x: auto;
@@ -1167,6 +1174,33 @@ th:first-child, td:first-child { text-align: left; }
 .dividend-list th,
 .dividend-list th:first-child {
   text-align: center;
+}
+#detailTableWrap tbody tr,
+#statsTableWrap tbody tr,
+#interestTableWrap tbody tr,
+#dividendTableWrap tbody tr:not(.dividend-month-row):not(.dividend-today-row),
+.tx-wrap tbody tr,
+.dividend-history-table-wrap tbody tr {
+  height: var(--list-row-height);
+}
+#detailTableWrap tbody td,
+#statsTableWrap tbody td,
+#interestTableWrap tbody td,
+#dividendTableWrap tbody tr:not(.dividend-month-row):not(.dividend-today-row) td,
+.tx-wrap tbody td,
+.dividend-history-table-wrap tbody td {
+  height: var(--list-row-height);
+  padding-top: var(--list-cell-y);
+  padding-bottom: var(--list-cell-y);
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+#detailTableWrap tbody .asset-icon,
+#statsTableWrap tbody .asset-icon,
+#interestTableWrap tbody .asset-icon {
+  width: var(--list-icon-size);
+  height: var(--list-icon-size);
+  font-size: 9.5px;
 }
 #detailTableWrap th { white-space: nowrap; }
 #dividendTableWrap {
