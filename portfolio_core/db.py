@@ -60,6 +60,7 @@ def ensure_stats_cache_table(conn: sqlite3.Connection) -> None:
             fetched_at TEXT NOT NULL,
             source TEXT,
             market_cap REAL,
+            aum REAL,
             dividend_yield REAL,
             trailing_pe REAL,
             forward_pe REAL,
@@ -73,6 +74,8 @@ def ensure_stats_cache_table(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN next_earnings_date TEXT")
     if "price_to_book" not in columns:
         conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN price_to_book REAL")
+    if "aum" not in columns:
+        conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN aum REAL")
 
 
 def ensure_technical_stats_cache_table(conn: sqlite3.Connection) -> None:

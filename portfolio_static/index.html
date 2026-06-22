@@ -191,7 +191,7 @@
               <tr class="stats-col-head">
                 <th class="logo-col" aria-hidden="true"></th>
                 <th class="name-head"><span class="sort-mini" data-key="ticker">티커</span><span class="name-head-sep">·</span><span class="sort-mini" data-key="name">종목</span></th>
-                <th data-key="market_cap_usd">시가총액</th>
+                <th data-key="market_cap_usd">시총/AUM</th>
                 <th data-key="dividend_yield">배당율</th>
                 <th class="indicator-head" data-key="drawdown_52w"><span>52주高</span><span>대비</span></th>
                 <th data-key="beta">β</th>
@@ -227,7 +227,7 @@
                 <th data-interest-sort-key="extended_change_pct">연장</th>
                 <th data-interest-sort-key="current_price">현재단가</th>
                 <th data-interest-sort-key="next_earnings_date">실적</th>
-                <th data-interest-sort-key="market_cap_usd">시가총액</th>
+                <th data-interest-sort-key="market_cap_usd">시총/AUM</th>
                 <th data-interest-sort-key="dividend_yield">배당율</th>
                 <th data-interest-sort-key="drawdown_52w">52주高 대비</th>
                 <th data-interest-sort-key="beta">β</th>
@@ -514,7 +514,7 @@
             <dt>RSI/BB/성과</dt>
             <dd>10분마다 daily_prices 기준으로 계산해 DB 캐시에 저장. 일/주/월 RSI, BB와 1개월~5년 성과를 포함.</dd>
             <dt>펀더멘털</dt>
-            <dd>하루 1회 갱신. 해외는 yfinance info, 한국 개별주는 Naver Stock API. 시가총액·배당율·P/E·P/B(PBR) 포함(ETF·지수 제외).</dd>
+            <dd>하루 1회 갱신. 해외는 yfinance info, 한국 개별주는 Naver Stock API. 개별주는 시가총액·배당율·P/E·P/B(PBR), ETF는 AUM을 포함.</dd>
             <dt>실적일</dt>
             <dd>해외는 Yahoo calendar, 한국 개별주는 Investing.com. 24시간 이상 지난 항목만 재조회.</dd>
           </dl>
@@ -549,7 +549,7 @@
       <div class="help-summary">
         <span>벤치마크: S&amp;P 500</span>
         <span>RSI 14 · BB 20·2σ</span>
-        <span>ETF·지수는 펀더멘털 제외</span>
+        <span>ETF는 AUM 표시</span>
       </div>
       <p class="help-judge-legend">
         <span class="help-judge good-low">낮을수록 ↓</span> 저평가·안정
@@ -560,8 +560,8 @@
         <section class="help-block">
           <h3><span class="help-section-icon">₩</span><span>규모 · 가치</span></h3>
           <dl>
-            <dt>시가총액</dt>
-            <dd><span class="help-judge">규모</span><b>계산</b> 발행주식수 × 현재가(통화 무관 비교 위해 USD 환산 정렬). <b>해석</b> 회사 덩치. 클수록 대형주라 일반적으로 변동성이 작은 경향이지만, 좋고 나쁨이 아니라 분류 기준입니다. ETF·지수는 제외.</dd>
+            <dt>시총/AUM</dt>
+            <dd><span class="help-judge">규모</span><b>계산</b> 개별주는 발행주식수 × 현재가, ETF는 운용자산(AUM) 또는 순자산총액에 준하는 규모값. 통화 무관 비교를 위해 USD 환산 정렬. <b>해석</b> 회사 또는 펀드의 덩치입니다. 크고 작음은 좋고 나쁨이 아니라 분류 기준입니다. 지수는 제외.</dd>
             <dt>배당율</dt>
             <dd><span class="help-judge">맥락</span><b>계산</b> 최근 12개월 주당배당금 ÷ 현재가 ×100(%). <b>해석</b> 높으면 현금흐름 매력↑. 단 비정상적으로 높으면(주가 급락·감배 위험) 경고 신호일 수 있어 무조건 좋은 건 아닙니다. 후행 기준.</dd>
             <dt>P/E (t)·(f)</dt>
@@ -609,11 +609,11 @@
   <script src="/static/format.js?v=fx-rate-text"></script>
   <script src="/static/api.js?v=interest-group-order"></script>
   <script src="/static/chart-utils.js?v=refactor-chart-utils"></script>
-  <script src="/static/app-tabs.js?v=dynamic-ticker-column"></script>
+  <script src="/static/app-tabs.js?v=etf-aum"></script>
   <script src="/static/app-charts.js?v=chart-border-controls"></script>
   <script src="/static/app-holdings.js?v=remove-hero-spark"></script>
   <script src="/static/app-chart-scale.js?v=bitcoin-k-price"></script>
-  <script src="/static/app-line-chart.js?v=protected-interest-groups"></script>
+  <script src="/static/app-line-chart.js?v=etf-aum"></script>
   <script src="/static/app-chart-compare.js?v=bitcoin-k-price"></script>
   <script src="/static/app-transactions.js?v=bitcoin-k-price"></script>
   <script src="/static/app-trade-controls.js?v=portfolio-refactor"></script>

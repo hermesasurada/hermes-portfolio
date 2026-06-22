@@ -334,7 +334,11 @@ function renderChartStats(payload) {
   const bb = s.bollinger_pband || {};
   const perf = s.performance || {};
   const loaded = Boolean(statsData[ticker]);
-  const mcap = Number.isFinite(Number(s.market_cap)) ? marketCapText(s.market_cap, payload?.currency) : "-";
+  const aum = Number(s.aum);
+  const hasAum = Number.isFinite(aum);
+  const mcap = hasAum
+    ? marketCapText(aum, payload?.currency)
+    : Number.isFinite(Number(s.market_cap)) ? marketCapText(s.market_cap, payload?.currency) : "-";
 
   const percent = (value, digits = 1) => {
     const number = Number(value);
@@ -364,7 +368,7 @@ function renderChartStats(payload) {
     : dividendYieldText(s.dividend_yield);
   const columns = [
     [
-      ["시가총액", mcap],
+      [hasAum ? "AUM" : "시가총액", mcap],
       ["배당수익률", dividendYieldCell],
       ["P/E (t)", peText(s.trailing_pe)],
       ["P/E (f)", peText(s.forward_pe)],

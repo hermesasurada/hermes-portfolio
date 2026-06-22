@@ -7,11 +7,12 @@ function statsRows(rows) {
     const isEtf = (row.assetClass || row.asset_class) === "etf";
     const isIndex = (row.assetClass || row.asset_class) === "index";
     const hideFundamentals = isEtf || isIndex;
-    const marketCap = hideFundamentals ? null : Number(stats.market_cap);
+    const marketCap = isEtf ? Number(stats.aum) : isIndex ? null : Number(stats.market_cap);
     return {
       ...row,
       market_cap: marketCap,
       market_cap_usd: toUsd(marketCap, row.currency),
+      aum: isEtf ? stats.aum : null,
       dividend_yield: hideFundamentals ? null : stats.dividend_yield,
       beta: stats.beta,
       beta_adj: stats.beta_adj,

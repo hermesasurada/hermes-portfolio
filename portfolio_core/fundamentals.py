@@ -10,10 +10,10 @@ from datetime import datetime
 from urllib.parse import quote
 
 from .paths import KST
-from .tickers import is_korean_stock_ticker, kr_ticker_code, normalize_yfinance_symbol
+from .tickers import asset_class, is_korean_stock_ticker, kr_ticker_code, normalize_yfinance_symbol
 
 STATS_CACHE_SECONDS = 30 * 60
-STATS_CACHE_VERSION = 7
+STATS_CACHE_VERSION = 8
 PB_SANITY_MAX = 300  # P/B가 이 값 초과면 데이터 오류로 간주(공란)
 
 
@@ -32,7 +32,7 @@ def stats_cache_expires_today() -> bool:
 def load_stats_cache_item(conn: sqlite3.Connection, ticker: str, now_ts: float, fresh_only: bool = True) -> dict | None:
     row = conn.execute(
         """
-        SELECT version, fetched_ts, source, market_cap, dividend_yield, trailing_pe, forward_pe, price_to_book, next_earnings_date
+        SELECT version, fetched_ts, source, market_cap, aum, dividend_yield, trailing_pe, forward_pe, price_to_book, next_earnings_date
         FROM ticker_stats_cache
         WHERE ticker = ?
         """,
@@ -48,6 +48,7 @@ def load_stats_cache_item(conn: sqlite3.Connection, ticker: str, now_ts: float, 
         return None
     return {
         "market_cap": finite_number(row["market_cap"]),
+        "aum": finite_number(row["aum"]),
         "dividend_yield": finite_number(row["dividend_yield"]),
         "trailing_pe": normalize_pe(row["trailing_pe"]),
         "forward_pe": normalize_pe(row["forward_pe"]),
@@ -60,14 +61,15 @@ def save_stats_cache_item(conn: sqlite3.Connection, ticker: str, source: str, da
     conn.execute(
         """
         INSERT INTO ticker_stats_cache
-          (ticker, version, fetched_ts, fetched_at, source, market_cap, dividend_yield, trailing_pe, forward_pe, price_to_book, next_earnings_date, raw_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (ticker, version, fetched_ts, fetched_at, source, market_cap, aum, dividend_yield, trailing_pe, forward_pe, price_to_book, next_earnings_date, raw_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(ticker) DO UPDATE SET
           version = excluded.version,
           fetched_ts = excluded.fetched_ts,
           fetched_at = excluded.fetched_at,
           source = excluded.source,
           market_cap = excluded.market_cap,
+          aum = excluded.aum,
           dividend_yield = excluded.dividend_yield,
           trailing_pe = excluded.trailing_pe,
           forward_pe = excluded.forward_pe,
@@ -82,6 +84,7 @@ def save_stats_cache_item(conn: sqlite3.Connection, ticker: str, source: str, da
             datetime.now(KST).isoformat(timespec="seconds"),
             source,
             finite_number(data.get("market_cap")),
+            finite_number(data.get("aum")),
             finite_number(data.get("dividend_yield")),
             normalize_pe(data.get("trailing_pe")),
             normalize_pe(data.get("forward_pe")),
@@ -120,6 +123,7 @@ def fetch_naver_fundamentals(ticker: str) -> tuple[dict, dict]:
     if obj.get("type") == "EF":
         return {
             "market_cap": None,
+            "aum": parse_number(obj.get("marketSum")),
             "dividend_yield": None,
             "trailing_pe": None,
             "forward_pe": None,
@@ -130,6 +134,7 @@ def fetch_naver_fundamentals(ticker: str) -> tuple[dict, dict]:
     dividend_yield = dividend_amount / now_price * 100 if dividend_amount is not None and now_price not in (None, 0) else None
     return {
         "market_cap": parse_number(obj.get("marketSum")),
+        "aum": None,
         "dividend_yield": dividend_yield,
         "trailing_pe": normalize_pe(parse_number(obj.get("per"))),
         "forward_pe": normalize_pe(parse_number(obj.get("estimatedPer"))),
@@ -144,6 +149,20 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
         for row in conn.execute(
             """
             SELECT ticker, next_earnings_date
+            FROM tickers
+            WHERE ticker IS NOT NULL AND TRIM(ticker) <> ''
+            """
+        ).fetchall()
+    }
+    ticker_meta = {
+        row["ticker"]: {
+            "name": row["name"] or row["ticker"],
+            "category": row["category"],
+            "currency": row["currency"],
+        }
+        for row in conn.execute(
+            """
+            SELECT ticker, COALESCE(NULLIF(display_name, ''), name, ticker) AS name, category, currency
             FROM tickers
             WHERE ticker IS NOT NULL AND TRIM(ticker) <> ''
             """
@@ -184,6 +203,15 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
                     dividend_yield = info.get("dividendYield")
                     if dividend_yield is None:
                         dividend_yield = info.get("trailingAnnualDividendYield")
+                    info_name = info.get("longName") or info.get("shortName") or info.get("displayName")
+                    meta_name = ticker_meta.get(ticker, {}).get("name")
+                    quote_type = str(info.get("quoteType") or "").upper()
+                    is_etf = quote_type == "ETF" or asset_class(ticker, info_name or meta_name or "") == "etf"
+                    aum = None
+                    if is_etf:
+                        aum = finite_number(info.get("totalAssets"))
+                        if aum is None:
+                            aum = finite_number(info.get("netAssets"))
                     # yfinance는 거래통화 != 재무통화(ADR·해외기업)일 때 주당순자산
                     # (bookValue)을 잘못 환산해 P/B가 비현실적으로 폭발한다
                     # (예: ASML 1500, TSM 65). 통화 불일치/이상치는 신뢰 불가 → 공란.
@@ -196,6 +224,7 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
                         price_to_book = None
                     data = {
                         "market_cap": finite_number(info.get("marketCap")),
+                        "aum": aum,
                         "dividend_yield": finite_number(dividend_yield),
                         "trailing_pe": normalize_pe(info.get("trailingPE")),
                         "forward_pe": normalize_pe(info.get("forwardPE")),
