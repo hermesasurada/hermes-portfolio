@@ -230,45 +230,39 @@
               <col style="width:40px">
             </colgroup>
             <thead>
-              <tr class="interest-group-head" aria-hidden="true">
-                <th colspan="2" class="group-head-frozen" data-interest-group-head="identity"></th>
-                <th colspan="3" class="group-start" data-interest-group-head="price">가격</th>
-                <th colspan="1" class="group-start" data-interest-group-head="schedule">일정</th>
-                <th colspan="5" class="group-start" data-interest-group-head="basic">기본</th>
+              <tr class="interest-group-head">
+                <th rowspan="2" class="logo-col interest-leaf-head" data-interest-col="0" aria-hidden="true"></th>
+                <th rowspan="2" class="name-head interest-leaf-head" data-interest-col="1"><span data-interest-sort-key="ticker">티커</span><span class="name-head-sep">·</span><span data-interest-sort-key="name">종목</span></th>
+                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="2" data-interest-sort-key="display_change_pct">등락</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="3" data-interest-sort-key="extended_change_pct">연장</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="4" data-interest-sort-key="current_price">현재단가</th>
+                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="5" data-interest-sort-key="next_earnings_date">실적</th>
+                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="6" data-interest-sort-key="market_cap_usd">시총/AUM</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="7" data-interest-sort-key="dividend_yield">배당율</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="8" data-interest-sort-key="drawdown_52w">52주高 대비</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="9" data-interest-sort-key="beta">β</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="10" data-interest-sort-key="beta_adj">β″</th>
                 <th colspan="6" class="group-start" data-interest-group-head="momentum">모멘텀</th>
                 <th colspan="3" class="group-start" data-interest-group-head="value">밸류</th>
-                <th colspan="7" class="group-start" data-interest-group-head="performance">기간 수익률</th>
-                <th colspan="1" class="group-start" data-interest-group-head="manage">관리</th>
+                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="20" data-interest-sort-key="perf_1m">1개월</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="21" data-interest-sort-key="perf_3m">3개월</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="22" data-interest-sort-key="perf_6m">6개월</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="23" data-interest-sort-key="perf_ytd">YTD</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="24" data-interest-sort-key="perf_1y">1년</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="25" data-interest-sort-key="perf_3y">3년</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="26" data-interest-sort-key="perf_5y">5년</th>
+                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="27" aria-label="관심목록에서 삭제"></th>
               </tr>
               <tr class="interest-col-head">
-                <th class="logo-col" aria-hidden="true"></th>
-                <th class="name-head"><span data-interest-sort-key="ticker">티커</span><span class="name-head-sep">·</span><span data-interest-sort-key="name">종목</span></th>
-                <th class="group-start" data-interest-group="price" data-interest-sort-key="display_change_pct">등락</th>
-                <th data-interest-group="price" data-interest-sort-key="extended_change_pct">연장</th>
-                <th data-interest-group="price" data-interest-sort-key="current_price">현재단가</th>
-                <th class="group-start" data-interest-group="schedule" data-interest-sort-key="next_earnings_date">실적</th>
-                <th class="group-start" data-interest-group="basic" data-interest-sort-key="market_cap_usd">시총/AUM</th>
-                <th data-interest-group="basic" data-interest-sort-key="dividend_yield">배당율</th>
-                <th data-interest-group="basic" data-interest-sort-key="drawdown_52w">52주高 대비</th>
-                <th data-interest-group="basic" data-interest-sort-key="beta">β</th>
-                <th data-interest-group="basic" data-interest-sort-key="beta_adj">β″</th>
-                <th class="indicator-head group-start" data-interest-group="momentum" data-interest-sort-key="rsi_day"><span>RSI</span><span>(일)</span></th>
-                <th class="indicator-head" data-interest-group="momentum" data-interest-sort-key="rsi_week"><span>RSI</span><span>(주)</span></th>
-                <th class="indicator-head" data-interest-group="momentum" data-interest-sort-key="rsi_month"><span>RSI</span><span>(월)</span></th>
-                <th class="indicator-head" data-interest-group="momentum" data-interest-sort-key="bb_day"><span>BB</span><span>(일)</span></th>
-                <th class="indicator-head" data-interest-group="momentum" data-interest-sort-key="bb_week"><span>BB</span><span>(주)</span></th>
-                <th class="indicator-head" data-interest-group="momentum" data-interest-sort-key="bb_month"><span>BB</span><span>(월)</span></th>
-                <th class="indicator-head group-start" data-interest-group="value" data-interest-sort-key="trailing_pe"><span>P/E</span><span>(t)</span></th>
-                <th class="indicator-head" data-interest-group="value" data-interest-sort-key="forward_pe"><span>P/E</span><span>(f)</span></th>
-                <th data-interest-group="value" data-interest-sort-key="price_to_book">P/B</th>
-                <th class="group-start" data-interest-group="performance" data-interest-sort-key="perf_1m">1개월</th>
-                <th data-interest-group="performance" data-interest-sort-key="perf_3m">3개월</th>
-                <th data-interest-group="performance" data-interest-sort-key="perf_6m">6개월</th>
-                <th data-interest-group="performance" data-interest-sort-key="perf_ytd">YTD</th>
-                <th data-interest-group="performance" data-interest-sort-key="perf_1y">1년</th>
-                <th data-interest-group="performance" data-interest-sort-key="perf_3y">3년</th>
-                <th data-interest-group="performance" data-interest-sort-key="perf_5y">5년</th>
-                <th class="group-start" data-interest-group="manage" aria-label="관심목록에서 삭제"></th>
+                <th class="indicator-head group-start interest-leaf-head" data-interest-col="11" data-interest-group="momentum" data-interest-sort-key="rsi_day"><span>RSI</span><span>(일)</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="12" data-interest-group="momentum" data-interest-sort-key="rsi_week"><span>RSI</span><span>(주)</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="13" data-interest-group="momentum" data-interest-sort-key="rsi_month"><span>RSI</span><span>(월)</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="14" data-interest-group="momentum" data-interest-sort-key="bb_day"><span>BB</span><span>(일)</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="15" data-interest-group="momentum" data-interest-sort-key="bb_week"><span>BB</span><span>(주)</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="16" data-interest-group="momentum" data-interest-sort-key="bb_month"><span>BB</span><span>(월)</span></th>
+                <th class="indicator-head group-start interest-leaf-head" data-interest-col="17" data-interest-group="value" data-interest-sort-key="trailing_pe"><span>P/E</span><span>(t)</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="18" data-interest-group="value" data-interest-sort-key="forward_pe"><span>P/E</span><span>(f)</span></th>
+                <th class="interest-leaf-head" data-interest-col="19" data-interest-group="value" data-interest-sort-key="price_to_book">P/B</th>
               </tr>
             </thead>
             <tbody id="interestRows"></tbody>

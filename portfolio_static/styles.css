@@ -836,13 +836,22 @@ main {
 }
 .interest-detail-list thead .interest-group-head th {
   top: 0;
+  z-index: 3;
+}
+.interest-detail-list thead .interest-group-head th:not([rowspan]) {
   height: 22px;
   padding: 3px 4px;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: .06em;
   color: var(--muted);
-  z-index: 3;
+}
+.interest-detail-list thead .interest-group-head th[rowspan] {
+  height: calc(22px + var(--table-head-height));
+  padding: 8px 5px;
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--muted);
 }
 .interest-detail-list thead .interest-col-head th {
   top: 22px;
@@ -857,23 +866,29 @@ main {
 .interest-detail-list td.group-start {
   border-left: 1px solid var(--line);
 }
-.interest-detail-list .interest-col-head th:first-child,
+.interest-detail-list th.logo-col {
+  text-align: center;
+}
+.interest-detail-list th.name-head {
+  text-align: left;
+}
+.interest-detail-list th[data-interest-col="0"],
 .interest-detail-list td:first-child {
   width: 40px;
   text-align: center;
 }
-.interest-detail-list .interest-col-head th:nth-child(2),
+.interest-detail-list th[data-interest-col="1"],
 .interest-detail-list td:nth-child(2) {
   width: var(--ticker-name-width, 165px);
   min-width: var(--ticker-name-width, 165px);
   max-width: var(--ticker-name-width, 165px);
   text-align: left;
 }
-.interest-detail-list .interest-col-head th:nth-child(3),
+.interest-detail-list th[data-interest-col="2"],
 .interest-detail-list td:nth-child(3) {
   width: 86px;
 }
-.interest-detail-list .interest-col-head th:nth-child(4),
+.interest-detail-list th[data-interest-col="3"],
 .interest-detail-list td:nth-child(4) {
   width: 78px;
 }
@@ -887,13 +902,18 @@ main {
   gap: 3px;
   white-space: nowrap;
 }
-.interest-detail-list .interest-col-head th:nth-child(5),
+.interest-detail-list th[data-interest-col="4"],
 .interest-detail-list td:nth-child(5),
-.interest-detail-list .interest-col-head th:nth-child(7),
+.interest-detail-list th[data-interest-col="6"],
 .interest-detail-list td:nth-child(7) {
   width: 112px;
 }
-.interest-detail-list .interest-col-head th:nth-child(n+12):nth-child(-n+17),
+.interest-detail-list th[data-interest-col="11"],
+.interest-detail-list th[data-interest-col="12"],
+.interest-detail-list th[data-interest-col="13"],
+.interest-detail-list th[data-interest-col="14"],
+.interest-detail-list th[data-interest-col="15"],
+.interest-detail-list th[data-interest-col="16"],
 .interest-detail-list td:nth-child(n+12):nth-child(-n+17) {
   width: 48px;
   padding-left: 2px;

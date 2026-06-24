@@ -701,7 +701,10 @@ function syncPcFrozenColumns() {
     if (!table || table.closest(".hidden")) return;
     // 컬럼 헤더 행 기준으로 폭 측정 — 통계탭은 그룹 헤더(colspan)가 첫 행이라
     // tr:first-child면 폭이 그룹 폭으로 잘못 잡힌다. 단일 헤더 표는 first==last.
-    const headers = Array.from(table.querySelectorAll("thead tr:last-child > th"));
+    const headers = selector === "#interestTableWrap table"
+      ? Array.from(table.querySelectorAll("thead th[data-interest-col]"))
+        .sort((a, b) => Number(a.dataset.interestCol) - Number(b.dataset.interestCol))
+      : Array.from(table.querySelectorAll("thead tr:last-child > th"));
     let left = 0;
     for (let index = 0; index < Math.min(columnCount, headers.length); index += 1) {
       const cells = [headers[index]];

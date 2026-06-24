@@ -273,10 +273,11 @@ function hasInterestColumnValue(row, field) {
 function syncInterestVisibleColumns(rows) {
   const table = document.querySelector("#interestTableWrap .interest-detail-list");
   if (!table) return;
-  const headers = Array.from(table.querySelectorAll("thead tr:last-child > th"));
+  const headers = Array.from(table.querySelectorAll("thead th[data-interest-col]"))
+    .sort((a, b) => Number(a.dataset.interestCol) - Number(b.dataset.interestCol));
   const cols = Array.from(table.querySelectorAll("colgroup col"));
   const tickerNameWidth = syncTickerNameColumnWidth(table);
-  const groupCounts = { identity: 2 };
+  const groupCounts = {};
   let tableWidth = 40 + tickerNameWidth + 40;
   headers.forEach((header, index) => {
     const field = header.dataset.interestSortKey || "";
