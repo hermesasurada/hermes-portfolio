@@ -866,6 +866,24 @@ main {
 .interest-detail-list td.group-start {
   border-left: 1px solid var(--line);
 }
+#interestTableWrap .interest-detail-list th.group-start,
+#interestTableWrap .interest-detail-list td.group-start {
+  padding-left: 8px;
+}
+#interestTableWrap .interest-detail-list th[data-interest-col="4"],
+#interestTableWrap .interest-detail-list td:nth-child(5),
+#interestTableWrap .interest-detail-list th[data-interest-col="5"],
+#interestTableWrap .interest-detail-list td:nth-child(6),
+#interestTableWrap .interest-detail-list th[data-interest-col="10"],
+#interestTableWrap .interest-detail-list td:nth-child(11),
+#interestTableWrap .interest-detail-list th[data-interest-col="16"],
+#interestTableWrap .interest-detail-list td:nth-child(17),
+#interestTableWrap .interest-detail-list th[data-interest-col="19"],
+#interestTableWrap .interest-detail-list td:nth-child(20),
+#interestTableWrap .interest-detail-list th[data-interest-col="26"],
+#interestTableWrap .interest-detail-list td:nth-child(27) {
+  padding-right: 9px;
+}
 .interest-detail-list th.logo-col {
   text-align: center;
 }
