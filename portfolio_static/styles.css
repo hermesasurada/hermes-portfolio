@@ -1062,7 +1062,25 @@ main {
 #dividendTableWrap::-webkit-scrollbar-track:vertical,
 .dividend-history-table-wrap::-webkit-scrollbar-track:vertical,
 .tx-wrap::-webkit-scrollbar-track:vertical {
-  margin-top: var(--scrollbar-head-offset, var(--table-head-height));
+  margin-top: 0;
+}
+.table-wrap::-webkit-scrollbar-button:vertical:start:decrement,
+#statsTableWrap::-webkit-scrollbar-button:vertical:start:decrement,
+#dividendTableWrap::-webkit-scrollbar-button:vertical:start:decrement,
+.dividend-history-table-wrap::-webkit-scrollbar-button:vertical:start:decrement,
+.tx-wrap::-webkit-scrollbar-button:vertical:start:decrement {
+  display: block;
+  height: var(--scrollbar-head-offset, var(--table-head-height));
+  background: var(--surface-2);
+}
+.table-wrap::-webkit-scrollbar-button:vertical:end:increment,
+#statsTableWrap::-webkit-scrollbar-button:vertical:end:increment,
+#dividendTableWrap::-webkit-scrollbar-button:vertical:end:increment,
+.dividend-history-table-wrap::-webkit-scrollbar-button:vertical:end:increment,
+.tx-wrap::-webkit-scrollbar-button:vertical:end:increment {
+  display: block;
+  height: 0;
+  background: transparent;
 }
 .table-wrap::-webkit-scrollbar-thumb,
 #statsTableWrap::-webkit-scrollbar-thumb,
