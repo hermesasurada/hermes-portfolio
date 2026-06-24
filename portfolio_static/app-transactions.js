@@ -136,7 +136,7 @@ function txViewRow(tx) {
       <td>${esc(tx.ticker)}</td>
       <td>${esc(tx.name || "")}</td>
       <td><span class="${sideClass}">${sideText}</span></td>
-      <td>${fmt2.format(tx.qty || 0)}</td>
+      <td>${tradeQtyText(tx.qty || 0, tx.ticker)}</td>
       <td>${unitMoney(tx.price, tx.currency, tx.ticker)}</td>
       <td>${money(amount, tx.currency)}</td>
       <td>${compareText}</td>
@@ -179,7 +179,7 @@ async function saveTransactionEdit(id) {
 
 async function deleteTransactionRow(id) {
   const tx = transactionRows.find(item => Number(item.id) === id);
-  const label = tx ? `${tx.trade_date} · ${tx.ticker} ${tx.side === "BUY" ? "매수" : "매도"} ${fmt2.format(tx.qty || 0)}` : "이 거래내역";
+  const label = tx ? `${tx.trade_date} · ${tx.ticker} ${tx.side === "BUY" ? "매수" : "매도"} ${tradeQtyText(tx.qty || 0, tx.ticker)}` : "이 거래내역";
   if (!window.confirm(`${label} 을(를) 삭제할까요?\n삭제하면 되돌릴 수 없습니다.`)) return;
   try {
     showTradeStatus("삭제 중...");

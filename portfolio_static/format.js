@@ -1,6 +1,7 @@
 const fmt = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 });
 const fmt2 = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 2 });
 const fmt1 = new Intl.NumberFormat("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const btcQtyFmt = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 8 });
 
 function esc(v) {
   return String(v ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
@@ -32,6 +33,11 @@ function unitMoney(v, cur, ticker = "") {
   if (cur === "EUR") return "€" + fmt1.format(v);
   if (cur === "JPY") return "¥" + fmt.format(v);
   return fmt1.format(v) + " " + cur;
+}
+function tradeQtyText(qty, ticker = "") {
+  const n = Number(qty);
+  if (!Number.isFinite(n)) return "-";
+  return String(ticker).toUpperCase() === "BTC" ? btcQtyFmt.format(n) : fmt2.format(n);
 }
 function unitKrw(v) {
   return Number.isFinite(v) ? `${fmt.format(v)}원` : '<span class="missing">조회불가</span>';
