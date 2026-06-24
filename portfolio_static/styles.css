@@ -1034,6 +1034,8 @@ main {
   overflow: auto;
   scrollbar-gutter: auto;
   --scrollbar-head-offset: var(--table-head-height);
+  background:
+    linear-gradient(var(--surface-2), var(--surface-2)) top / 100% var(--scrollbar-head-offset) no-repeat;
 }
 /* 세로 스크롤바는 sticky 헤더 아래에서 시작한다. 테이블을 header/body로
    쪼개지 않고도 Chrome/Edge/Safari 계열에서 헤더 영역 침범을 막는 처리. */
