@@ -274,6 +274,7 @@ function syncInterestVisibleColumns(rows) {
   const table = document.querySelector("#interestTableWrap .interest-detail-list");
   if (!table) return;
   const headers = Array.from(table.querySelectorAll("thead tr:last-child > th"));
+  const cols = Array.from(table.querySelectorAll("colgroup col"));
   const tickerNameWidth = syncTickerNameColumnWidth(table);
   const groupCounts = { identity: 2 };
   let tableWidth = 40 + tickerNameWidth + 40;
@@ -283,6 +284,7 @@ function syncInterestVisibleColumns(rows) {
       && !interestAlwaysVisibleFields.has(field)
       && !rows.some(row => hasInterestColumnValue(row, field));
     header.classList.toggle("hidden", hide);
+    cols[index]?.classList.toggle("hidden", hide);
     table.querySelectorAll("tbody > tr").forEach(row => {
       row.cells[index]?.classList.toggle("hidden", hide);
     });

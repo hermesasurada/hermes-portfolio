@@ -821,6 +821,10 @@ main {
   min-width: 100%;
   table-layout: fixed;
 }
+.interest-detail-list col.hidden {
+  visibility: collapse;
+  width: 0 !important;
+}
 .interest-detail-list th,
 .interest-detail-list td {
   padding: 9px 5px;
@@ -853,23 +857,23 @@ main {
 .interest-detail-list td.group-start {
   border-left: 1px solid var(--line);
 }
-.interest-detail-list th:first-child,
+.interest-detail-list .interest-col-head th:first-child,
 .interest-detail-list td:first-child {
   width: 40px;
   text-align: center;
 }
-.interest-detail-list th:nth-child(2),
+.interest-detail-list .interest-col-head th:nth-child(2),
 .interest-detail-list td:nth-child(2) {
   width: var(--ticker-name-width, 165px);
   min-width: var(--ticker-name-width, 165px);
   max-width: var(--ticker-name-width, 165px);
   text-align: left;
 }
-.interest-detail-list th:nth-child(3),
+.interest-detail-list .interest-col-head th:nth-child(3),
 .interest-detail-list td:nth-child(3) {
   width: 86px;
 }
-.interest-detail-list th:nth-child(4),
+.interest-detail-list .interest-col-head th:nth-child(4),
 .interest-detail-list td:nth-child(4) {
   width: 78px;
 }
@@ -883,13 +887,13 @@ main {
   gap: 3px;
   white-space: nowrap;
 }
-.interest-detail-list th:nth-child(5),
+.interest-detail-list .interest-col-head th:nth-child(5),
 .interest-detail-list td:nth-child(5),
-.interest-detail-list th:nth-child(7),
+.interest-detail-list .interest-col-head th:nth-child(7),
 .interest-detail-list td:nth-child(7) {
   width: 112px;
 }
-.interest-detail-list th:nth-child(n+12):nth-child(-n+17),
+.interest-detail-list .interest-col-head th:nth-child(n+12):nth-child(-n+17),
 .interest-detail-list td:nth-child(n+12):nth-child(-n+17) {
   width: 48px;
   padding-left: 2px;
