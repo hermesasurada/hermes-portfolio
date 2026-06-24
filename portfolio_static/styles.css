@@ -815,6 +815,7 @@ main {
 }
 #interestTableWrap {
   overflow: auto;
+  --scrollbar-head-offset: calc(22px + var(--table-head-height));
 }
 .interest-detail-list {
   min-width: 100%;
@@ -828,6 +829,29 @@ main {
 .interest-detail-list th {
   cursor: pointer;
   text-align: center;
+}
+.interest-detail-list thead .interest-group-head th {
+  top: 0;
+  height: 22px;
+  padding: 3px 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: var(--muted);
+  z-index: 3;
+}
+.interest-detail-list thead .interest-col-head th {
+  top: 22px;
+}
+.interest-detail-list .interest-group-head th.group-head-frozen {
+  position: sticky;
+  left: 0;
+  z-index: 6;
+  background: var(--surface-2);
+}
+.interest-detail-list th.group-start,
+.interest-detail-list td.group-start {
+  border-left: 1px solid var(--line);
 }
 .interest-detail-list th:first-child,
 .interest-detail-list td:first-child {

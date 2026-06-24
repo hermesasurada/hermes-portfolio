@@ -275,6 +275,7 @@ function syncInterestVisibleColumns(rows) {
   if (!table) return;
   const headers = Array.from(table.querySelectorAll("thead tr:last-child > th"));
   const tickerNameWidth = syncTickerNameColumnWidth(table);
+  const groupCounts = { identity: 2 };
   let tableWidth = 40 + tickerNameWidth + 40;
   headers.forEach((header, index) => {
     const field = header.dataset.interestSortKey || "";
@@ -285,7 +286,15 @@ function syncInterestVisibleColumns(rows) {
     table.querySelectorAll("tbody > tr").forEach(row => {
       row.cells[index]?.classList.toggle("hidden", hide);
     });
+    const group = header.dataset.interestGroup || "";
+    if (group && !hide) groupCounts[group] = (groupCounts[group] || 0) + 1;
     if (field && !hide) tableWidth += interestColumnWidths[field] || 64;
+  });
+  table.querySelectorAll("[data-interest-group-head]").forEach(header => {
+    const group = header.dataset.interestGroupHead;
+    const count = groupCounts[group] || 0;
+    header.classList.toggle("hidden", count === 0);
+    if (count > 0) header.colSpan = count;
   });
   table.style.width = `${tableWidth}px`;
   table.style.minWidth = "100%";
@@ -317,34 +326,34 @@ function renderInterestMainTable() {
           </a>
         </span>
       </td>
-      <td>${changeMarkup(r)}</td>
+      <td class="group-start">${changeMarkup(r)}</td>
       <td>${extendedChangeText(r) || "-"}</td>
       <td>${currentPriceMarkup(r)}</td>
-      <td>${earningsText(r.next_earnings_date)}</td>
-      <td>${marketCapMarkup(r)}</td>
+      <td class="group-start">${earningsText(r.next_earnings_date)}</td>
+      <td class="group-start">${marketCapMarkup(r)}</td>
       <td>${Number(r.dividend_yield) > 0
         ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(r.ticker)}">${dividendYieldText(r.dividend_yield)}</button>`
         : dividendYieldText(r.dividend_yield)}</td>
       <td>${signedPercentText(r.drawdown_52w, 1)}</td>
       <td>${betaText(r.beta)}</td>
       <td>${betaText(r.beta_adj)}</td>
-      <td>${indicatorText(r.rsi_day, "rsi")}</td>
+      <td class="group-start">${indicatorText(r.rsi_day, "rsi")}</td>
       <td>${indicatorText(r.rsi_week, "rsi")}</td>
       <td>${indicatorText(r.rsi_month, "rsi")}</td>
       <td>${indicatorText(r.bb_day, "bb")}</td>
       <td>${indicatorText(r.bb_week, "bb")}</td>
       <td>${indicatorText(r.bb_month, "bb")}</td>
-      <td>${peText(r.trailing_pe)}</td>
+      <td class="group-start">${peText(r.trailing_pe)}</td>
       <td>${peText(r.forward_pe)}</td>
       <td>${peText(r.price_to_book)}</td>
-      <td>${signedPercentText(r.perf_1m, 1)}</td>
+      <td class="group-start">${signedPercentText(r.perf_1m, 1)}</td>
       <td>${signedPercentText(r.perf_3m, 0)}</td>
       <td>${signedPercentText(r.perf_6m, 0)}</td>
       <td>${signedPercentText(r.perf_ytd, 0)}</td>
       <td>${signedPercentText(r.perf_1y, 0)}</td>
       <td>${signedPercentText(r.perf_3y, 0)}</td>
       <td>${signedPercentText(r.perf_5y, 0)}</td>
-      <td>${group.fixed
+      <td class="group-start">${group.fixed
         ? ""
         : `<button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button>`}</td>
     </tr>
