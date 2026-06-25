@@ -775,6 +775,11 @@ main {
   font-weight: 700;
   line-height: 1;
 }
+.interest-icon-placeholder {
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+}
 .interest-icon-btn:hover {
   border-color: var(--brand);
   background: var(--brand-soft);

@@ -362,11 +362,14 @@ def delete_interest_group(payload: dict) -> dict:
         raise ValueError("삭제할 그룹이 올바르지 않습니다.")
     with connect() as conn:
         ensure_interest_watchlist_tables(conn)
-        if not conn.execute(
-            "SELECT 1 FROM interest_watchlist_groups WHERE id = ?",
+        group = conn.execute(
+            "SELECT name FROM interest_watchlist_groups WHERE id = ?",
             (group_id,),
-        ).fetchone():
+        ).fetchone()
+        if not group:
             raise ValueError("그룹을 찾지 못했습니다.")
+        if protected_group_required_category(group["name"]):
+            raise ValueError("지수/환율 그룹은 삭제할 수 없습니다.")
         conn.execute("DELETE FROM interest_watchlist_items WHERE group_id = ?", (group_id,))
         conn.execute("DELETE FROM interest_watchlist_groups WHERE id = ?", (group_id,))
         conn.commit()
@@ -428,6 +431,22 @@ def delete_interest_item(payload: dict) -> dict:
         raise ValueError("삭제할 종목이 올바르지 않습니다.")
     with connect() as conn:
         ensure_interest_watchlist_tables(conn)
+        row = conn.execute(
+            """
+            SELECT
+                g.name AS group_name,
+                COALESCE(t.category, '') AS category
+            FROM interest_watchlist_items i
+            JOIN interest_watchlist_groups g ON g.id = i.group_id
+            LEFT JOIN tickers t ON UPPER(t.ticker) = UPPER(i.ticker)
+            WHERE i.group_id = ? AND UPPER(i.ticker) = ?
+            """,
+            (group_id, ticker),
+        ).fetchone()
+        if not row:
+            raise ValueError("관심목록에서 종목을 찾지 못했습니다.")
+        if protected_group_required_category(row["group_name"]) or str(row["category"] or "").lower() in {"index", "fx"}:
+            raise ValueError("지수/환율 항목은 삭제할 수 없습니다.")
         cursor = conn.execute(
             "DELETE FROM interest_watchlist_items WHERE group_id = ? AND ticker = ?",
             (group_id, ticker),

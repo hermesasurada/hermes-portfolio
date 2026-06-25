@@ -86,9 +86,20 @@ function interestGroupIcon(name, fixed = false) {
   return "•";
 }
 
+function isProtectedInterestGroup(group) {
+  const name = String(group?.name || "");
+  return name === "주요 지수" || name === "환율";
+}
+
+function isProtectedInterestItem(row, group = activeInterestGroup()) {
+  const category = String(row?.category || "").toLowerCase();
+  return isProtectedInterestGroup(group) || category === "index" || category === "fx";
+}
+
 function interestGroupMarkup(group, index) {
   const active = group.id === activeInterestGroupId;
   const icon = interestGroupIcon(group.name, group.fixed);
+  const protectedGroup = isProtectedInterestGroup(group);
   // 가상 "기타" 그룹 — 선택만 가능, 이름변경·삭제·이동 컨트롤 없음.
   if (group.fixed) {
     return `
@@ -122,7 +133,9 @@ function interestGroupMarkup(group, index) {
         <button type="button" data-interest-move="${group.id}" data-direction="1" aria-label="${esc(group.name)} 아래로 이동" title="아래로 이동" ${index === interestWatchlists.length - 1 || interestWatchlists[index + 1]?.fixed ? "disabled" : ""}>▼</button>
       </span>
       <button class="interest-icon-btn" type="button" data-interest-rename="${group.id}" aria-label="${esc(group.name)} 이름 변경" title="이름 변경">✎</button>
-      <button class="interest-icon-btn danger" type="button" data-interest-group-delete="${group.id}" aria-label="${esc(group.name)} 삭제" title="그룹 삭제">×</button>
+      ${protectedGroup
+        ? '<span class="interest-icon-placeholder" aria-hidden="true"></span>'
+        : `<button class="interest-icon-btn danger" type="button" data-interest-group-delete="${group.id}" aria-label="${esc(group.name)} 삭제" title="그룹 삭제">×</button>`}
     </section>
   `;
 }
@@ -476,7 +489,7 @@ function renderInterestMainTable() {
       <td>${signedPercentText(r.perf_1y, 0)}</td>
       <td>${signedPercentText(r.perf_3y, 0)}</td>
       <td>${signedPercentText(r.perf_5y, 0)}</td>
-      <td class="group-start">${group.fixed
+      <td class="group-start">${group.fixed || isProtectedInterestItem(r, group)
         ? ""
         : `<button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button>`}</td>
     </tr>
