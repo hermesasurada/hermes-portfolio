@@ -25,7 +25,9 @@ function earningsDisplayDate(dateText) {
   const daysPast = today ? Math.floor((today - date) / 86400000) : 0;
   if (daysPast < 3) return { date, estimated: false };
   const estimated = new Date(date);
-  estimated.setFullYear(estimated.getFullYear() + 1);
+  while (today && Math.floor((today - estimated) / 86400000) >= 3) {
+    estimated.setMonth(estimated.getMonth() + 3);
+  }
   return { date: estimated, estimated: true, source: date };
 }
 function monthDayText(date) {
@@ -127,7 +129,7 @@ function earningsText(dateText) {
   if (!display) return "-";
   const text = monthDayText(display.date);
   if (!display.estimated) return text;
-  return `<span class="earnings-estimated" title="예상 실적일 · 원 데이터 ${monthDayText(display.source)}">${text}</span>`;
+  return `<span class="earnings-estimated" title="분기 예상 실적일 · 원 데이터 ${monthDayText(display.source)}">${text}</span>`;
 }
 function shortDateText(dateText) {
   if (!dateText) return "-";
