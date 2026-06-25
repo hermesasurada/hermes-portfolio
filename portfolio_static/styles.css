@@ -1841,6 +1841,9 @@ th.pc-frozen-edge {
 .down { color: var(--down); }
 .flat { color: var(--muted); }
 .missing { color: var(--warn); }
+.earnings-estimated {
+  font-style: italic;
+}
 .ghost-btn {
   height: 28px;
   padding: 0 8px;

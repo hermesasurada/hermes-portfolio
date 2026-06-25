@@ -11,6 +11,26 @@ function todayLocal() {
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().slice(0, 10);
 }
+function localDateFromIso(dateText) {
+  const text = String(dateText || "");
+  if (!/^\d{4}-\d{2}-\d{2}/.test(text)) return null;
+  const [year, month, day] = text.slice(0, 10).split("-").map(Number);
+  const value = new Date(year, month - 1, day);
+  return Number.isNaN(value.getTime()) ? null : value;
+}
+function earningsDisplayDate(dateText) {
+  const date = localDateFromIso(dateText);
+  if (!date) return null;
+  const today = localDateFromIso(todayLocal());
+  const daysPast = today ? Math.floor((today - date) / 86400000) : 0;
+  if (daysPast < 3) return { date, estimated: false };
+  const estimated = new Date(date);
+  estimated.setFullYear(estimated.getFullYear() + 1);
+  return { date: estimated, estimated: true, source: date };
+}
+function monthDayText(date) {
+  return `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
+}
 function krw(v) { return krwShort(v); }
 function krwShort(v) {
   if (v == null) return "-";
@@ -103,10 +123,11 @@ function weightText(pct) {
   return Number.isFinite(pct) ? `${fmt2.format(pct)}%` : "-";
 }
 function earningsText(dateText) {
-  if (!dateText) return "-";
-  const text = String(dateText);
-  if (!/^\d{4}-\d{2}-\d{2}/.test(text)) return "-";
-  return text.slice(5, 10).replace("-", "/");
+  const display = earningsDisplayDate(dateText);
+  if (!display) return "-";
+  const text = monthDayText(display.date);
+  if (!display.estimated) return text;
+  return `<span class="earnings-estimated" title="예상 실적일 · 원 데이터 ${monthDayText(display.source)}">${text}</span>`;
 }
 function shortDateText(dateText) {
   if (!dateText) return "-";
