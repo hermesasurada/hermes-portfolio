@@ -1632,6 +1632,8 @@ tbody tr.index-row td:first-child::before {
   left: var(--pc-frozen-left);
   z-index: 1;
   background: var(--panel);
+  overflow: hidden;
+  background-clip: padding-box;
 }
 tbody tr:hover > .pc-frozen-col {
   background: var(--surface-hover);

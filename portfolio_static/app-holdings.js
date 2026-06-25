@@ -667,6 +667,10 @@ function schedulePcFrozenColumns() {
 
 function syncTickerNameColumnWidth(table, { min = 108, max = 180 } = {}) {
   if (!table) return min;
+  if (window.matchMedia?.("(max-width: 980px)").matches) {
+    min = Math.min(min, 96);
+    max = Math.min(max, 132);
+  }
   const texts = Array.from(table.querySelectorAll("tbody .ticker-link .asset-name, tbody .ticker-link .ticker-symbol"));
   const canvas = syncTickerNameColumnWidth.canvas ||= document.createElement("canvas");
   const context = canvas.getContext("2d");
