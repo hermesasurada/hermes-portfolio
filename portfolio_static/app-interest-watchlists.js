@@ -72,13 +72,29 @@ function resolveInterestTicker(value) {
   return matches.length === 1 ? matches[0].ticker : null;
 }
 
+function interestGroupIcon(name, fixed = false) {
+  if (fixed) return "…";
+  const text = String(name || "");
+  if (text.includes("지수")) return "📈";
+  if (text.includes("환율")) return "₩";
+  if (text.includes("디지털")) return "₿";
+  if (text.includes("한국")) return "🇰🇷";
+  if (text.includes("미국")) return "🇺🇸";
+  if (text.includes("일본")) return "🇯🇵";
+  if (text.includes("유럽")) return "🇪🇺";
+  if (text.includes("투자종료")) return "✓";
+  return "•";
+}
+
 function interestGroupMarkup(group, index) {
   const active = group.id === activeInterestGroupId;
+  const icon = interestGroupIcon(group.name, group.fixed);
   // 가상 "기타" 그룹 — 선택만 가능, 이름변경·삭제·이동 컨트롤 없음.
   if (group.fixed) {
     return `
     <section class="interest-group fixed ${active ? "active" : ""}" data-interest-group="${group.id}">
       <button class="interest-group-select" type="button" data-interest-select="${group.id}" aria-pressed="${active}">
+        <span class="interest-group-icon" aria-hidden="true">${esc(icon)}</span>
         <span class="interest-group-name">${esc(group.name)}</span>
         <span class="interest-count">${group.items.length}</span>
       </button>
@@ -97,6 +113,7 @@ function interestGroupMarkup(group, index) {
   return `
     <section class="interest-group ${active ? "active" : ""}" data-interest-group="${group.id}">
       <button class="interest-group-select" type="button" data-interest-select="${group.id}" aria-pressed="${active}">
+        <span class="interest-group-icon" aria-hidden="true">${esc(icon)}</span>
         <span class="interest-group-name">${esc(group.name)}</span>
         <span class="interest-count">${group.items.length}</span>
       </button>
