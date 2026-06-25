@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=scrollbar-body-start">
+  <link rel="stylesheet" href="/static/styles.css?v=trade-apply-segmented">
 </head>
 <body>
   <header>
@@ -373,9 +373,12 @@
           </select>
         </div>
         <div class="field">
-          <label for="tradeApplyToggle">잔고</label>
+          <label>잔고</label>
           <input id="tradeApply" type="checkbox" checked hidden>
-          <button id="tradeApplyToggle" class="apply-seg active" type="button" aria-pressed="true">반영</button>
+          <div class="segmented trade-apply-toggle" role="group" aria-label="잔고 반영 여부">
+            <button class="seg-btn active" type="button" data-apply="1">반영</button>
+            <button class="seg-btn" type="button" data-apply="0">미반영</button>
+          </div>
         </div>
         <div class="trade-actions">
           <button class="primary-btn" type="submit">저장</button>
@@ -630,7 +633,7 @@
   <script src="/static/app-line-chart.js?v=etf-aum"></script>
   <script src="/static/app-chart-compare.js?v=bitcoin-k-price"></script>
   <script src="/static/app-transactions.js?v=bitcoin-k-price"></script>
-  <script src="/static/app-trade-controls.js?v=portfolio-refactor"></script>
+  <script src="/static/app-trade-controls.js?v=trade-apply-segmented"></script>
   <script src="/static/app-watchlist.js?v=watchlist-dup-check"></script>
   <script src="/static/app-interest-watchlists.js?v=interest-tab-closes-chart"></script>
   <script src="/static/app-ticker-search.js?v=ticker-search"></script>

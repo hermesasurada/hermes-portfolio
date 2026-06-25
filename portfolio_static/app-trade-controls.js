@@ -16,16 +16,17 @@ function initTradeSideToggle() {
 
 function setTradeApply(enabled) {
   const input = document.getElementById("tradeApply");
-  const button = document.getElementById("tradeApplyToggle");
   input.checked = Boolean(enabled);
-  button.classList.toggle("active", input.checked);
-  button.setAttribute("aria-pressed", String(input.checked));
-  button.textContent = input.checked ? "반영" : "미반영";
+  document.querySelectorAll(".trade-apply-toggle .seg-btn").forEach(btn => {
+    const on = (btn.dataset.apply === "1") === input.checked;
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-pressed", String(on));
+  });
 }
 
 function initTradeApplyToggle() {
-  const input = document.getElementById("tradeApply");
-  const button = document.getElementById("tradeApplyToggle");
-  button.addEventListener("click", () => setTradeApply(!input.checked));
-  setTradeApply(input.checked);
+  document.querySelectorAll(".trade-apply-toggle .seg-btn").forEach(btn => {
+    btn.addEventListener("click", () => setTradeApply(btn.dataset.apply === "1"));
+  });
+  setTradeApply(document.getElementById("tradeApply").checked);
 }
