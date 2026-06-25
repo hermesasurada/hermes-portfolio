@@ -1,16 +1,27 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 from .constants import FX_NAMES, MARKET_INDEXES
 from .paths import DB_PATH
 
 
-def connect() -> sqlite3.Connection:
+@contextmanager
+def connect() -> Iterator[sqlite3.Connection]:
+    """`with connect() as conn:` 전용. sqlite3 커넥션의 `with`는 트랜잭션만
+    커밋/롤백할 뿐 **커넥션을 닫지 않아** 장기 구동 서버에서 FD가 누수된다
+    (Errno 24: Too many open files). 여기서 finally로 확실히 close 한다.
+    내부 `with conn:`은 기존과 동일한 성공 시 커밋 / 예외 시 롤백 시맨틱 유지."""
     conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout = 30000")
-    return conn
+    try:
+        with conn:
+            yield conn
+    finally:
+        conn.close()
 
 
 def ensure_ticker_metadata_columns(conn: sqlite3.Connection) -> None:
