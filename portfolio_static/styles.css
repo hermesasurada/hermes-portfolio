@@ -1997,6 +1997,12 @@ th.pc-frozen-edge {
   border-right: 1px solid var(--line);
 }
 .cstat-column:last-child { border-right: 0; }
+#chartStats .cstat-board {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+#chartStats .cstat-column {
+  display: contents;
+}
 .cstat-row {
   min-height: 31px;
   display: grid;
@@ -2006,7 +2012,16 @@ th.pc-frozen-edge {
   padding: 0;
   border-bottom: 1px solid var(--line);
 }
-.cstat-row:last-child { border-bottom: 0; }
+#chartStats .cstat-row {
+  border-right: 1px solid var(--line);
+}
+#chartStats .cstat-row:nth-child(4n) {
+  border-right: 0;
+}
+#chartStats .cstat-row:nth-last-child(-n + 4) {
+  border-bottom: 0;
+}
+.cstat-column .cstat-row:last-child { border-bottom: 0; }
 .cstat-row.empty .cstat-k,
 .cstat-row.empty .cstat-v {
   color: transparent;
@@ -3835,6 +3850,25 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .cstat-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  #chartStats .cstat-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #chartStats .cstat-row:nth-child(4n) {
+    border-right: 1px solid var(--line);
+  }
+  #chartStats .cstat-row:nth-child(2n) {
+    border-right: 0;
+  }
+  #chartStats .cstat-row:nth-last-child(-n + 4) {
+    border-bottom: 1px solid var(--line);
+  }
+  #chartStats .cstat-row:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+  :root[data-theme="dark"] #chartStats .cstat-row:nth-child(4n),
+  :root[data-theme="dark"] #chartStats .cstat-row:nth-last-child(-n + 4) {
+    border-color: #39414f;
+  }
   .cstat-column:nth-child(2) {
     border-right: 0;
   }
@@ -3961,6 +3995,25 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   .cstat-board {
     grid-template-columns: 1fr;
+  }
+  #chartStats .cstat-board {
+    grid-template-columns: 1fr;
+  }
+  #chartStats .cstat-row,
+  #chartStats .cstat-row:nth-child(2n),
+  #chartStats .cstat-row:nth-child(4n) {
+    border-right: 0;
+  }
+  #chartStats .cstat-row:nth-last-child(-n + 2),
+  #chartStats .cstat-row:nth-last-child(-n + 4) {
+    border-bottom: 1px solid var(--line);
+  }
+  #chartStats .cstat-row:last-child {
+    border-bottom: 0;
+  }
+  :root[data-theme="dark"] #chartStats .cstat-row:nth-last-child(-n + 2),
+  :root[data-theme="dark"] #chartStats .cstat-row:nth-last-child(-n + 4) {
+    border-bottom-color: #39414f;
   }
   .cstat-column,
   .cstat-column:nth-child(2) {

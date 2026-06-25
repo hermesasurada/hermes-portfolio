@@ -404,10 +404,16 @@ function renderChartStats(payload) {
     while (filled.length < maxRows) filled.push(["", ""]);
     return filled;
   });
+  const statCells = [];
+  for (let rowIndex = 0; rowIndex < maxRows; rowIndex += 1) {
+    for (const items of normalizedColumns) {
+      statCells.push(row(items[rowIndex]));
+    }
+  }
 
   el.innerHTML = `
     <div class="cstat-board">
-      ${normalizedColumns.map(items => `<div class="cstat-column">${items.map(row).join("")}</div>`).join("")}
+      ${statCells.join("")}
     </div>
     ${loaded ? "" : `<div class="chart-stat-loading">통계 불러오는 중…</div>`}
   `;
