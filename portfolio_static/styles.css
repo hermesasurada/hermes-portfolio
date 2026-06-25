@@ -623,7 +623,7 @@ main {
 .interest-group-form {
   padding: 8px;
   border-bottom: 1px solid var(--line);
-  background: var(--surface-2);
+  background: var(--panel);
 }
 .interest-group-form input {
   width: 100%;
@@ -649,30 +649,38 @@ main {
 }
 .interest-groups {
   display: grid;
-}
-.interest-group + .interest-group {
-  border-top: 1px solid var(--line);
+  gap: 7px;
+  padding: 8px;
 }
 .interest-group {
   min-width: 0;
+  min-height: 48px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 24px 26px 26px;
   align-items: center;
-  gap: 3px;
-  padding: 5px 7px;
+  gap: 4px;
+  padding: 7px 7px 7px 9px;
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: 7px;
   background: var(--panel);
 }
 .interest-group.active {
   background: var(--brand-soft);
+  border-color: color-mix(in srgb, var(--brand) 38%, transparent);
+  border-left-color: var(--brand);
+}
+.interest-group.fixed {
+  grid-template-columns: minmax(0, 1fr);
 }
 .interest-group-select {
   min-width: 0;
-  height: 30px;
+  min-height: 32px;
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
-  padding: 0 5px;
+  padding: 0 4px 0 0;
   border: 0;
   background: transparent;
   color: var(--ink);
@@ -709,11 +717,15 @@ main {
   min-width: 24px;
   padding: 2px 6px;
   border-radius: 999px;
-  background: var(--panel);
+  background: var(--surface-2);
   color: var(--muted);
   font-size: 10px;
   font-weight: 800;
   text-align: center;
+}
+.interest-group.active .interest-count {
+  background: var(--panel);
+  color: var(--brand);
 }
 .interest-order-controls {
   width: 24px;
@@ -780,9 +792,12 @@ main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 26px 26px;
   align-items: center;
-  gap: 3px;
-  padding: 5px 7px;
-  border-top: 1px solid var(--line);
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--brand);
+  border-radius: 7px;
+  background: var(--brand-soft);
 }
 .interest-group-rename input {
   height: 30px;
