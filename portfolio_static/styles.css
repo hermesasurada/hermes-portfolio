@@ -3577,6 +3577,25 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 
 /* ── 반응형 ② 태블릿·모바일(≤980px) — 전반 레이아웃 ───────────────────────── */
 @media (max-width: 980px) {
+  /* 모바일 정보 밀도 ↑ : 전반적으로 글자를 한 단계(~1px) 줄여
+     한 화면에 더 많은 항목/글자가 보이도록 한다. */
+  :root {
+    --fs-xs: 9.5px;
+    --fs-sm: 10.5px;
+    --fs-md: 11.5px;
+    --fs-lg: 13.5px;
+    --fs-xl: 19px;
+  }
+  body { font-size: 11.5px; }
+  .account .name { font-size: 11px; line-height: 14px; }
+  .account .meta { font-size: 10px; line-height: 13px; }
+  #detailTableWrap th, #detailTableWrap td,
+  .stats-list th, .stats-list td,
+  .dividend-list th, .dividend-list td,
+  .interest-detail-list th, .interest-detail-list td,
+  .tx-list th, .tx-list td {
+    font-size: 11px;
+  }
   .bar {
     grid-template-columns: 1fr;
     padding-left: 10px;
