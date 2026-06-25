@@ -1035,7 +1035,9 @@ main {
   overflow: auto;
   scrollbar-gutter: stable;
   --scrollbar-head-offset: var(--table-head-height);
-  --scrollbar-mask-width: 12px;
+  /* 헤더 옆 거터(스크롤바 폭)만 덮는다 — 더 넓으면 헤더 마지막 컬럼을 가려
+     회색 띠처럼 보인다. scrollbar-gutter:stable 폭(=스크롤바 8px)과 일치. */
+  --scrollbar-mask-width: 8px;
   background:
     linear-gradient(var(--surface-2), var(--surface-2)) top / 100% var(--scrollbar-head-offset) no-repeat;
 }
