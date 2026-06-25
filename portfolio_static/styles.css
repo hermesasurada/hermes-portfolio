@@ -1051,15 +1051,10 @@ main {
   pointer-events: none;
 }
 /* 세로 스크롤바는 sticky 헤더 아래에서 시작한다. 테이블을 header/body로
-   쪼개지 않고도 Chrome/Edge/Safari 계열에서 헤더 영역 침범을 막는 처리. */
-.table-wrap,
-#statsTableWrap,
-#dividendTableWrap,
-.dividend-history-table-wrap,
-.tx-wrap {
-  scrollbar-width: thin;
-  scrollbar-color: var(--line) transparent;
-}
+   쪼개지 않고도 Chrome/Edge/Safari 계열에서 헤더 영역 침범을 막는 처리.
+   ⚠ scrollbar-width/scrollbar-color(표준 속성)를 선언하면 Chrome이 표준
+   스크롤바를 그리고 ::-webkit-scrollbar(=헤더 아래 시작 트릭)를 통째로
+   무시한다. 그래서 표준 속성은 일부러 선언하지 않는다(Chrome 전용 처리). */
 .table-wrap::-webkit-scrollbar,
 #statsTableWrap::-webkit-scrollbar,
 #dividendTableWrap::-webkit-scrollbar,
