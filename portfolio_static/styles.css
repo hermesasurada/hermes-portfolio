@@ -269,7 +269,8 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
   font-weight: var(--fw-bold);
   white-space: nowrap;
 }
-.theme-btn > span { font-size: 12.5px; line-height: 1; }
+.theme-btn > .theme-icon { font-size: 12.5px; line-height: 1; }
+.label-short { display: none; }
 .auto-refresh-control,
 .us-price-control,
 .filter-toggle-control,
@@ -3572,6 +3573,39 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .controls { justify-content: flex-start; row-gap: 8px; }
   /* 좁은 화면: 그룹 구분선 없이 평탄하게 줄바꿈 */
   .ctrl-group { border-right: 0; padding: 0 8px 0 0; }
+  .ctrl-group {
+    gap: 5px;
+  }
+  .auto-refresh-control,
+  .us-price-control {
+    gap: 4px;
+    padding: 0 5px;
+    font-size: 10px;
+  }
+  .auto-refresh-control label,
+  .us-price-control label,
+  .toggle-switch {
+    gap: 4px;
+  }
+  .auto-refresh-control .label-full {
+    display: none;
+  }
+  .auto-refresh-control .label-short {
+    display: inline;
+  }
+  .us-market-status {
+    display: none;
+  }
+  .theme-btn {
+    width: 30px;
+    min-width: 30px;
+    justify-content: center;
+    padding: 0;
+    gap: 0;
+  }
+  .theme-btn .theme-label {
+    display: none;
+  }
   .hero-value-row strong { font-size: 24px; }
   .hero-strip { padding: 12px 14px; }
   .summary { grid-template-columns: repeat(2, minmax(140px, 1fr)); }

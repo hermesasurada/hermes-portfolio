@@ -89,8 +89,9 @@ function applyTheme(pref) {
   const btn = document.getElementById("themeToggle");
   if (btn) {
     const meta = THEME_META[pref] || THEME_META.auto;
-    btn.innerHTML = `<span aria-hidden="true">${meta.icon}</span>${meta.label}`;
+    btn.innerHTML = `<span class="theme-icon" aria-hidden="true">${meta.icon}</span><span class="theme-label">${meta.label}</span>`;
     btn.title = `테마: ${meta.label}${pref === "auto" ? ` (현재 ${dark ? "다크" : "라이트"})` : ""}`;
+    btn.setAttribute("aria-label", btn.title);
   }
 }
 
