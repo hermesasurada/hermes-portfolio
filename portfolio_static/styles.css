@@ -1031,11 +1031,24 @@ main {
 }
 .group-head.partial .group-action { color: var(--warn); }
 .table-wrap {
+  position: relative;
   overflow: auto;
-  scrollbar-gutter: auto;
+  scrollbar-gutter: stable;
   --scrollbar-head-offset: var(--table-head-height);
+  --scrollbar-mask-width: 12px;
   background:
     linear-gradient(var(--surface-2), var(--surface-2)) top / 100% var(--scrollbar-head-offset) no-repeat;
+}
+.table-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--scrollbar-mask-width);
+  height: var(--scrollbar-head-offset);
+  background: var(--surface-2);
+  z-index: 30;
+  pointer-events: none;
 }
 /* 세로 스크롤바는 sticky 헤더 아래에서 시작한다. 테이블을 header/body로
    쪼개지 않고도 Chrome/Edge/Safari 계열에서 헤더 영역 침범을 막는 처리. */
@@ -1064,21 +1077,33 @@ main {
 .tx-wrap::-webkit-scrollbar-track:vertical {
   margin-top: 0;
 }
+.table-wrap::-webkit-scrollbar-button:vertical:start,
+#statsTableWrap::-webkit-scrollbar-button:vertical:start,
+#dividendTableWrap::-webkit-scrollbar-button:vertical:start,
+.dividend-history-table-wrap::-webkit-scrollbar-button:vertical:start,
+.tx-wrap::-webkit-scrollbar-button:vertical:start,
 .table-wrap::-webkit-scrollbar-button:vertical:start:decrement,
 #statsTableWrap::-webkit-scrollbar-button:vertical:start:decrement,
 #dividendTableWrap::-webkit-scrollbar-button:vertical:start:decrement,
 .dividend-history-table-wrap::-webkit-scrollbar-button:vertical:start:decrement,
 .tx-wrap::-webkit-scrollbar-button:vertical:start:decrement {
   display: block;
+  width: 8px;
   height: var(--scrollbar-head-offset, var(--table-head-height));
   background: var(--surface-2);
 }
+.table-wrap::-webkit-scrollbar-button:vertical:end,
+#statsTableWrap::-webkit-scrollbar-button:vertical:end,
+#dividendTableWrap::-webkit-scrollbar-button:vertical:end,
+.dividend-history-table-wrap::-webkit-scrollbar-button:vertical:end,
+.tx-wrap::-webkit-scrollbar-button:vertical:end,
 .table-wrap::-webkit-scrollbar-button:vertical:end:increment,
 #statsTableWrap::-webkit-scrollbar-button:vertical:end:increment,
 #dividendTableWrap::-webkit-scrollbar-button:vertical:end:increment,
 .dividend-history-table-wrap::-webkit-scrollbar-button:vertical:end:increment,
 .tx-wrap::-webkit-scrollbar-button:vertical:end:increment {
   display: block;
+  width: 8px;
   height: 0;
   background: transparent;
 }
