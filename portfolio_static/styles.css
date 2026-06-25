@@ -2007,6 +2007,10 @@ th.pc-frozen-edge {
   border-bottom: 1px solid var(--line);
 }
 .cstat-row:last-child { border-bottom: 0; }
+.cstat-row.empty .cstat-k,
+.cstat-row.empty .cstat-v {
+  color: transparent;
+}
 .cstat-k {
   align-self: stretch;
   display: flex;
@@ -2187,6 +2191,25 @@ th.pc-frozen-edge {
 .chart-rsi-guide.level-50 {
   stroke-dasharray: none;
   opacity: .75;
+}
+.chart-rsi-current-tick {
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: .85;
+  pointer-events: none;
+}
+.chart-rsi-current-label {
+  fill: var(--accent);
+  font-size: 10px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  text-anchor: end;
+  paint-order: stroke;
+  stroke: var(--chart-bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
 }
 .chart-rsi-title,
 .chart-rsi-axis {

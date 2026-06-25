@@ -358,7 +358,7 @@ function renderChartStats(payload) {
     return `<span class="${cls}">${Math.round(number).toLocaleString("ko-KR")}</span>`;
   };
   const row = ([label, value]) => `
-    <div class="cstat-row">
+    <div class="cstat-row${label ? "" : " empty"}">
       <span class="cstat-k">${esc(label)}</span>
       <span class="cstat-v">${value}</span>
     </div>
@@ -398,10 +398,16 @@ function renderChartStats(payload) {
       ["β″", betaText(s.beta_adj)],
     ],
   ];
+  const maxRows = Math.max(...columns.map(items => items.length));
+  const normalizedColumns = columns.map(items => {
+    const filled = [...items];
+    while (filled.length < maxRows) filled.push(["", ""]);
+    return filled;
+  });
 
   el.innerHTML = `
     <div class="cstat-board">
-      ${columns.map(items => `<div class="cstat-column">${items.map(row).join("")}</div>`).join("")}
+      ${normalizedColumns.map(items => `<div class="cstat-column">${items.map(row).join("")}</div>`).join("")}
     </div>
     ${loaded ? "" : `<div class="chart-stat-loading">통계 불러오는 중…</div>`}
   `;
@@ -785,6 +791,8 @@ function renderLineChart(payload) {
   const rsiOverboughtAreas = rsiThresholdAreaPaths(points, 70, "above", xFor, rsiYFor);
   const rsiOversoldAreas = rsiThresholdAreaPaths(points, 30, "below", xFor, rsiYFor);
   const rsiGuides = [30, 50, 70].map(value => ({ value, y: rsiYFor(value) }));
+  const latestRsi = [...points].reverse().map(point => Number(point.rsi)).find(value => Number.isFinite(value));
+  const currentRsiY = Number.isFinite(latestRsi) ? rsiYFor(latestRsi) : null;
   const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
   const currentPriceY = yFor(last);
   const currentPriceLabel = chartMoney(last, payload.currency, payload.ticker);
@@ -862,6 +870,10 @@ function renderLineChart(payload) {
       `).join("")}
       <text class="chart-rsi-title" x="${pad.left + 7}" y="${rsiTop + 14}">RSI (14)</text>
       ${rsiLine ? `<path class="chart-rsi-line" d="${rsiLine}"></path>` : ""}
+      ${currentRsiY != null ? `
+        <line class="chart-rsi-current-tick" x1="${(pad.left + plotW).toFixed(2)}" x2="${(width - 8).toFixed(2)}" y1="${currentRsiY.toFixed(2)}" y2="${currentRsiY.toFixed(2)}"></line>
+        <text class="chart-rsi-current-label" x="${width - 6}" y="${(currentRsiY + 4).toFixed(2)}">${Math.round(latestRsi)}</text>
+      ` : ""}
       ${extremes.map(item => `
         <g class="chart-extreme ${item.kind}">
           <circle cx="${item.x.toFixed(2)}" cy="${item.y.toFixed(2)}" r="${extremeRadius}"></circle>
