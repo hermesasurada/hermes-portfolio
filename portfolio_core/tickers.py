@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from .constants import ETF_BRANDS, FX_TICKERS, KOREAN_SUFFIXES, MARKET_INDEXES, US_ETF_TICKERS
+from .constants import CRYPTO_MARKETS, ETF_BRANDS, FX_TICKERS, KOREAN_SUFFIXES, MARKET_INDEXES, US_ETF_TICKERS
 
 # 노출명칭에서 떼어낼 법인격·구조 수식어 (해외 종목명 끝에 붙는 것들).
 _NAME_LEGAL_SUFFIXES = {
@@ -42,7 +42,7 @@ def display_name(name: str | None, ticker: str | None = None) -> str:
 
 
 def ticker_currency(ticker: str) -> str:
-    if ticker == "BTC":
+    if ticker in CRYPTO_MARKETS:
         return "KRW"
     if ticker.endswith(KOREAN_SUFFIXES):
         return "KRW"
@@ -80,8 +80,8 @@ def is_us_stock_ticker(ticker: str, currency: str | None) -> bool:
 
 
 def normalize_yfinance_symbol(ticker: str) -> str | None:
-    if ticker == "BTC":
-        return "BTC-KRW"
+    if ticker in CRYPTO_MARKETS:
+        return f"{ticker}-KRW"
     if ticker in FX_TICKERS:
         return None
     if ticker in MARKET_INDEXES:
@@ -122,7 +122,7 @@ def account_scope(account_type: str) -> str | None:
 
 def ticker_scope(ticker: str, name: str, category: str | None, currency: str | None) -> str | None:
     upper_ticker = ticker.upper()
-    if upper_ticker == "BTC" or category == "crypto":
+    if upper_ticker in CRYPTO_MARKETS or category == "crypto":
         return "crypto"
     if category == "index":
         return None
@@ -132,7 +132,7 @@ def ticker_scope(ticker: str, name: str, category: str | None, currency: str | N
 
 
 def asset_class(ticker: str, name: str) -> str:
-    if ticker == "BTC":
+    if ticker in CRYPTO_MARKETS:
         return "crypto"
     upper_name = (name or "").upper()
     upper_ticker = ticker.upper()

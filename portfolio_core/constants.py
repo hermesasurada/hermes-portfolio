@@ -16,6 +16,13 @@ FX_DEFAULT_RATES = {
     "TWD": 47.0,
     "KRW": 1.0,
 }
+CRYPTO_MARKETS = {
+    "BTC": {"name": "Bitcoin", "market": "KRW-BTC", "currency": "KRW"},
+    "ETH": {"name": "이더리움", "market": "KRW-ETH", "currency": "KRW"},
+    "SOL": {"name": "솔라나", "market": "KRW-SOL", "currency": "KRW"},
+    "XRP": {"name": "리플", "market": "KRW-XRP", "currency": "KRW"},
+    "DOGE": {"name": "도지코인", "market": "KRW-DOGE", "currency": "KRW"},
+}
 
 # 배당 조회 윈도우 — 과거 30일·미래 1년 (dividends/dividend_sources/dividend_schedule 공용)
 DIVIDEND_LOOKBACK_DAYS = 30

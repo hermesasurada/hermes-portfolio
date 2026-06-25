@@ -5,7 +5,7 @@ from collections.abc import Callable
 from datetime import datetime
 
 from .accounts import load_account, load_holding, load_ticker_info
-from .constants import KOREAN_SUFFIXES
+from .constants import CRYPTO_MARKETS, KOREAN_SUFFIXES
 from .db import connect
 from .paths import KST
 from .portfolio import load_portfolio
@@ -15,8 +15,8 @@ from .tickers import account_scope, display_name, ticker_currency, ticker_scope
 def ensure_ticker(conn: sqlite3.Connection, ticker: str, name: str, currency: str) -> None:
     if not ticker:
         return
-    category = "crypto" if ticker == "BTC" else "kr" if ticker.endswith(KOREAN_SUFFIXES) else "overseas"
-    region = "KR" if category == "kr" else "US"
+    category = "crypto" if ticker in CRYPTO_MARKETS else "kr" if ticker.endswith(KOREAN_SUFFIXES) else "overseas"
+    region = "KR" if category in {"crypto", "kr"} else "US"
     conn.execute(
         """
         INSERT INTO tickers (ticker, name, region, currency, added_date, category, display_name)

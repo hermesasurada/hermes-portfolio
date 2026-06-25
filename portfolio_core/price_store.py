@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Iterable
 
-from .constants import FX_TICKERS, MARKET_INDEXES
+from .constants import CRYPTO_MARKETS, FX_TICKERS, MARKET_INDEXES
 from .db import connect, ensure_collector_runs_table, ensure_ticker_metadata_columns
 from .paths import KST
 from .tickers import ticker_currency
@@ -17,7 +17,7 @@ def infer_category(ticker: str, category: str | None = None) -> str:
         return category
     if ticker in MARKET_INDEXES:
         return "index"
-    if ticker == "BTC":
+    if ticker in CRYPTO_MARKETS:
         return "crypto"
     if ticker in FX_TICKERS:
         return "fx"

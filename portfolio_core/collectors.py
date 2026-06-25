@@ -9,7 +9,7 @@ from datetime import datetime
 from html import unescape
 from urllib.parse import quote
 
-from .constants import MARKET_INDEXES
+from .constants import CRYPTO_MARKETS, MARKET_INDEXES
 from .paths import KST
 from .tickers import kr_ticker_code, normalize_yfinance_symbol, ticker_currency
 
@@ -209,10 +209,15 @@ def fetch_index_price(label: str) -> CollectedPrice | None:
     return fetch_yahoo_price(meta["symbol"], cache_ticker=label, currency=meta["currency"])
 
 
-def fetch_btc_krw() -> CollectedPrice | None:
+def fetch_crypto_krw(ticker: str) -> CollectedPrice | None:
+    ticker = str(ticker or "").strip().upper()
+    meta = CRYPTO_MARKETS.get(ticker)
+    if not meta:
+        return None
+    market = str(meta["market"])
     ctx = ssl.create_default_context()
     req = urllib.request.Request(
-        "https://api.upbit.com/v1/ticker?markets=KRW-BTC",
+        f"https://api.upbit.com/v1/ticker?markets={market}",
         headers={"Content-Type": "application/json"},
     )
     with urllib.request.urlopen(req, context=ctx, timeout=10) as resp:
@@ -223,7 +228,35 @@ def fetch_btc_krw() -> CollectedPrice | None:
     if price <= 0:
         return None
     price_date = datetime.now(KST).strftime("%Y-%m-%d")
-    return CollectedPrice("BTC", price, "KRW", "upbit", price_date, [(price_date, price)])
+    recent = fetch_crypto_daily_rows(market)
+    if recent and recent[-1][0] == price_date:
+        recent[-1] = (price_date, price)
+    elif recent:
+        recent.append((price_date, price))
+    else:
+        recent = [(price_date, price)]
+    return CollectedPrice(ticker, price, str(meta["currency"]), "upbit", price_date, recent[-7:])
+
+
+def fetch_crypto_daily_rows(market: str, count: int = 7) -> list[tuple[str, float]]:
+    ctx = ssl.create_default_context()
+    req = urllib.request.Request(
+        f"https://api.upbit.com/v1/candles/days?market={market}&count={count}",
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, context=ctx, timeout=10) as resp:
+        data = json.loads(resp.read())
+    rows = []
+    for item in data or []:
+        date_text = str(item.get("candle_date_time_kst") or "")[:10]
+        price = item.get("trade_price")
+        if date_text and price not in (None, 0):
+            rows.append((date_text, float(price)))
+    return sorted(rows)
+
+
+def fetch_btc_krw() -> CollectedPrice | None:
+    return fetch_crypto_krw("BTC")
 
 
 def fetch_price(category: str, ticker: str, history_start: str = "20250101") -> CollectedPrice | None:
@@ -233,6 +266,6 @@ def fetch_price(category: str, ticker: str, history_start: str = "20250101") -> 
         return fetch_fx_price(ticker)
     if category == "index":
         return fetch_index_price(ticker)
-    if category == "crypto" and ticker == "BTC":
-        return fetch_btc_krw()
+    if category == "crypto":
+        return fetch_crypto_krw(ticker)
     return fetch_yahoo_price(ticker)

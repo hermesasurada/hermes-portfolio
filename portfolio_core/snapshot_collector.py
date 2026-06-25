@@ -8,7 +8,7 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
-from .collectors import CollectedPrice, FX_SYMBOLS, fetch_btc_krw
+from .collectors import CollectedPrice, FX_SYMBOLS, fetch_crypto_krw
 from .constants import MARKET_INDEXES
 from .db import connect, ensure_live_quote_cache_table, ensure_quote_source_state_table
 from .paths import KST
@@ -294,15 +294,15 @@ def collect_snapshots(categories: list[str], tickers: list[str] | None = None) -
     fetched.extend(naver_rows)
     errors.extend(naver_errors)
 
-    if watch.get("crypto") and (not tickers or "BTC" in {ticker.upper() for ticker in tickers}):
+    for ticker in watch.get("crypto", []):
         try:
-            btc = fetch_btc_krw()
+            crypto = fetch_crypto_krw(ticker)
         except (urllib.error.URLError, TimeoutError) as exc:
-            print(f"  x BTC: {exc}")
-            errors.append("BTC")
+            print(f"  x {ticker}: {exc}")
+            errors.append(ticker)
         else:
-            if btc:
-                fetched.append(btc)
+            if crypto:
+                fetched.append(crypto)
             else:
-                errors.append("BTC")
+                errors.append(ticker)
     return fetched, sorted(set(errors))

@@ -6,7 +6,7 @@ import time
 from datetime import date, timedelta
 from typing import Iterable
 
-from .constants import MARKET_INDEXES
+from .constants import CRYPTO_MARKETS, MARKET_INDEXES
 from .db import connect
 from .hydration import deficient_tickers, estimate_hydration_minutes, hydrate_deficient_tickers, hydrate_ticker
 from .interest_watchlists import sync_special_interest_items
@@ -206,8 +206,9 @@ def lookup_ticker(value: str) -> dict:
             "category": "index",
             "region": meta["region"],
         }
-    if ticker == "BTC":
-        return {"ticker": "BTC", "name": "Bitcoin", "currency": "KRW", "category": "crypto", "region": "KR"}
+    if ticker in CRYPTO_MARKETS:
+        meta = CRYPTO_MARKETS[ticker]
+        return {"ticker": ticker, "name": meta["name"], "currency": meta["currency"], "category": "crypto", "region": "KR"}
     with connect() as conn:
         row = conn.execute(
             "SELECT ticker, name, currency, category, region FROM tickers WHERE UPPER(ticker) = ?",
