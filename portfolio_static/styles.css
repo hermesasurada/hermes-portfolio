@@ -1070,10 +1070,11 @@ main {
 .tx-wrap::-webkit-scrollbar-button:vertical:start:decrement {
   display: block;
   width: 8px;
-  /* 헤더 높이만큼 비워 thumb를 헤더 아래에서 시작시키되, 영역 자체는 투명 —
-     헤더 옆에 회색 띠가 보이지 않게 한다(스크롤바 자리는 비워둠). */
+  /* 헤더 높이만큼을 헤더색으로 채워 헤더가 우측 끝(스크롤바 자리)까지 꽉 차게
+     하고, 그 아래부터 thumb가 움직인다. 헤더 th와 동일한 surface-2라
+     '별도 회색 띠'가 아니라 헤더의 연장으로 보인다. */
   height: var(--scrollbar-head-offset, var(--table-head-height));
-  background: transparent;
+  background: var(--surface-2);
 }
 .table-wrap::-webkit-scrollbar-button:vertical:end,
 #statsTableWrap::-webkit-scrollbar-button:vertical:end,
