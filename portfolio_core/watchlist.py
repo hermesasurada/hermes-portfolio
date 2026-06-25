@@ -231,6 +231,19 @@ def lookup_ticker(value: str) -> dict:
     return found
 
 
+def is_registered_ticker(ticker: str) -> bool:
+    """이미 관리종목(tickers 테이블)에 등록된 심볼인지 — 중복 추가 차단용."""
+    symbol = str(ticker or "").strip().upper()
+    if not symbol:
+        return False
+    with connect() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM tickers WHERE UPPER(ticker) = ? LIMIT 1",
+            (symbol,),
+        ).fetchone()
+    return row is not None
+
+
 def upsert_ticker(item: dict) -> dict:
     ticker = normalize_lookup_ticker(item.get("ticker") or "")
     if not ticker:

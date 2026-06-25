@@ -35,7 +35,7 @@ from portfolio_core.prices import load_ticker_changes
 from portfolio_core.stats import load_stats
 from portfolio_core.tickers import asset_class
 from portfolio_core.transactions import add_transaction, delete_transaction, load_transactions, update_transaction
-from portfolio_core.watchlist import add_watchlist_async, lookup_ticker
+from portfolio_core.watchlist import add_watchlist_async, is_registered_ticker, lookup_ticker
 
 
 def badge_text(ticker: str, name: str) -> str:
@@ -309,7 +309,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def api_watchlist_lookup(self, query: dict[str, list[str]]) -> dict:
         q = (query.get("q") or [""])[0]
-        return {"ticker": lookup_ticker(q)}
+        found = lookup_ticker(q)
+        found["registered"] = is_registered_ticker(found.get("ticker", ""))
+        return {"ticker": found}
 
     def api_interest_watchlists(self, query: dict[str, list[str]]) -> dict:
         return load_interest_watchlists()

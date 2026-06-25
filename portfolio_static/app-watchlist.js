@@ -51,10 +51,12 @@ function renderWatchLookup(item = null) {
     return;
   }
   const alreadyPending = watchPending.some(row => row.ticker === item.ticker);
-  result.textContent = `${item.ticker} · ${item.name} · ${item.currency} · ${item.category}`;
-  add.disabled = alreadyPending;
-  add.textContent = alreadyPending ? "추가됨" : "추가하기";
-  add.classList.toggle("watch-add-ready", !alreadyPending);
+  const alreadyRegistered = Boolean(item.registered);
+  const blocked = alreadyPending || alreadyRegistered;
+  result.textContent = `${item.ticker} · ${item.name} · ${item.currency} · ${item.category}${alreadyRegistered ? " · 이미 등록됨" : ""}`;
+  add.disabled = blocked;
+  add.textContent = alreadyPending ? "추가됨" : alreadyRegistered ? "등록됨" : "추가하기";
+  add.classList.toggle("watch-add-ready", !blocked);
   updateWatchHint();
 }
 
@@ -75,7 +77,7 @@ function initWatchlistControls() {
     try {
       const payload = await apiLookupTicker(query);
       renderWatchLookup(payload.ticker);
-      setWatchStatus("");
+      setWatchStatus(payload.ticker?.registered ? "이미 관리종목에 등록된 종목입니다." : "");
     } catch (err) {
       renderWatchLookup(null);
       setWatchStatus(err.message || String(err), true);
