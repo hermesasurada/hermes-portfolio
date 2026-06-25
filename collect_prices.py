@@ -34,10 +34,10 @@ from portfolio_core.technical_stats import refresh_technical_stats_cache
 from portfolio_core.tickers import asset_class
 
 KR_EARNINGS_DELAY_SECONDS = 0.8
-# 신규 보유 종목 과거 이력 자동 백필: 이력이 이 행수 미만이고 아직 백필한 적
-# 없으면 1회 전체 이력을 받아 채운다. (stock 보유 카테고리 한정)
+# 신규 추적 종목 과거 이력 자동 백필: 이력이 이 행수 미만이고 아직 백필한 적
+# 없으면 1회 전체 이력을 받아 채운다. (crypto/stock 지표 계산용)
 HISTORY_BACKFILL_MIN_ROWS = 60
-HISTORY_BACKFILL_CATEGORIES = ("overseas", "kr")
+HISTORY_BACKFILL_CATEGORIES = ("crypto", "overseas", "kr")
 
 
 def backfill_new_tickers(categories: list[str], tickers: list[str] | None) -> tuple[int, list[str]]:
@@ -65,7 +65,7 @@ def backfill_new_tickers(categories: list[str], tickers: list[str] | None) -> tu
             continue
         if not rows:
             continue
-        source = "fdr-backfill" if category == "kr" else "yf-backfill"
+        source = "fdr-backfill" if category == "kr" else "upbit-backfill" if category == "crypto" else "yf-backfill"
         saved = save_daily_prices(ticker, rows, source)
         if saved:
             rows_saved += saved

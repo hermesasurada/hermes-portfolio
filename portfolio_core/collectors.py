@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 import re
 import ssl
+import time
+import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from html import unescape
 from urllib.parse import quote
 
@@ -84,6 +86,12 @@ def fetch_history_rows(category: str, ticker: str, period: str = "10y") -> list[
             for date, row in df.iterrows()
             if row["Close"] and row["Close"] > 0
         ]
+
+    if category == "crypto":
+        meta = CRYPTO_MARKETS.get(str(ticker or "").strip().upper())
+        if not meta:
+            return []
+        return fetch_crypto_history_rows(str(meta["market"]), days=3650)
 
     import yfinance as yf
 
@@ -253,6 +261,48 @@ def fetch_crypto_daily_rows(market: str, count: int = 7) -> list[tuple[str, floa
         if date_text and price not in (None, 0):
             rows.append((date_text, float(price)))
     return sorted(rows)
+
+
+def fetch_crypto_history_rows(market: str, days: int = 3650) -> list[tuple[str, float]]:
+    """Upbit KRW daily candles for long-horizon crypto technical indicators."""
+    ctx = ssl.create_default_context()
+    rows: dict[str, float] = {}
+    to_dt: datetime | None = None
+    remaining = max(1, int(days))
+    while remaining > 0:
+        count = min(200, remaining)
+        url = f"https://api.upbit.com/v1/candles/days?market={market}&count={count}"
+        if to_dt is not None:
+            url += f"&to={quote(to_dt.strftime('%Y-%m-%dT%H:%M:%S'))}"
+        req = urllib.request.Request(url, headers={"Content-Type": "application/json"})
+        data = None
+        for attempt in range(4):
+            try:
+                with urllib.request.urlopen(req, context=ctx, timeout=10) as resp:
+                    data = json.loads(resp.read())
+                break
+            except urllib.error.HTTPError as exc:
+                if exc.code != 429 or attempt == 3:
+                    raise
+                time.sleep(1.0 * (attempt + 1))
+        time.sleep(0.15)
+        if not data:
+            break
+        oldest_utc = None
+        for item in data:
+            date_text = str(item.get("candle_date_time_kst") or "")[:10]
+            price = item.get("trade_price")
+            if date_text and price not in (None, 0):
+                rows[date_text] = float(price)
+            utc_text = str(item.get("candle_date_time_utc") or "")
+            if utc_text:
+                parsed = datetime.strptime(utc_text[:19], "%Y-%m-%dT%H:%M:%S")
+                oldest_utc = parsed if oldest_utc is None else min(oldest_utc, parsed)
+        if len(data) < count or oldest_utc is None:
+            break
+        to_dt = oldest_utc - timedelta(seconds=1)
+        remaining -= len(data)
+    return sorted(rows.items())
 
 
 def fetch_btc_krw() -> CollectedPrice | None:
