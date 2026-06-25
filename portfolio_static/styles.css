@@ -479,7 +479,7 @@ main {
   font-variant-numeric: tabular-nums;
 }
 .hero-change {
-  font-size: var(--fs-md);
+  font-size: var(--fs-hero);
   font-weight: var(--fw-strong);
   padding: 3px 11px;
   border-radius: 999px;
