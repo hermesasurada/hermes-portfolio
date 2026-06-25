@@ -15,6 +15,10 @@ function activeInterestGroup() {
   return interestWatchlists.find(group => group.id === activeInterestGroupId) || null;
 }
 
+function otherInterestGroup() {
+  return interestWatchlists.find(group => group.fixed || group.name === "기타") || null;
+}
+
 function interestGroupIsFx(group = activeInterestGroup()) {
   return Boolean(group?.items?.length)
     && group.items.every(item => item.category === "fx");
@@ -192,6 +196,105 @@ async function moveInterestGroup(groupId, direction) {
     setInterestStatus(err.message || String(err), true);
   } finally {
     interestGroupOrderSaving = false;
+  }
+}
+
+function interestBulkCandidates() {
+  const group = activeInterestGroup();
+  const other = otherInterestGroup();
+  if (!group || group.fixed || !other) return [];
+  const existing = new Set((group.items || []).map(item => String(item.ticker).toUpperCase()));
+  return (other.items || [])
+    .filter(item => item.ticker && !existing.has(String(item.ticker).toUpperCase()))
+    .slice()
+    .sort((a, b) => String(a.name || a.ticker).localeCompare(String(b.name || b.ticker), "ko-KR", {
+      numeric: true,
+      sensitivity: "base",
+    }));
+}
+
+function syncInterestBulkCount() {
+  const checked = document.querySelectorAll("#interestBulkList input[type='checkbox']:checked").length;
+  const count = document.getElementById("interestBulkCount");
+  const apply = document.getElementById("interestBulkApply");
+  if (count) count.textContent = `${checked}개 선택`;
+  if (apply) apply.disabled = checked === 0;
+  const boxes = Array.from(document.querySelectorAll("#interestBulkList input[type='checkbox']"));
+  const selectAll = document.getElementById("interestBulkSelectAll");
+  if (selectAll) {
+    selectAll.checked = boxes.length > 0 && checked === boxes.length;
+    selectAll.indeterminate = checked > 0 && checked < boxes.length;
+    selectAll.disabled = boxes.length === 0;
+  }
+}
+
+function renderInterestBulkModal() {
+  const list = document.getElementById("interestBulkList");
+  const status = document.getElementById("interestBulkStatus");
+  if (!list) return;
+  if (status) {
+    status.textContent = "";
+    status.classList.remove("error");
+  }
+  const group = activeInterestGroup();
+  const other = otherInterestGroup();
+  if (!other) {
+    list.innerHTML = '<div class="interest-bulk-empty">기타 관심목록을 찾을 수 없습니다.</div>';
+    syncInterestBulkCount();
+    return;
+  }
+  if (!group || group.fixed) {
+    list.innerHTML = '<div class="interest-bulk-empty">종목을 추가할 관심그룹을 먼저 선택하세요.</div>';
+    syncInterestBulkCount();
+    return;
+  }
+  const candidates = interestBulkCandidates();
+  list.innerHTML = candidates.length ? candidates.map(item => `
+    <label class="interest-bulk-item">
+      <input type="checkbox" value="${esc(item.ticker)}">
+      <span>
+        <span class="interest-bulk-name">${esc(item.name || item.ticker)}</span>
+        <span class="interest-bulk-ticker">${esc(item.ticker)}</span>
+      </span>
+    </label>
+  `).join("") : '<div class="interest-bulk-empty">기타에서 추가할 수 있는 남은 종목이 없습니다.</div>';
+  syncInterestBulkCount();
+}
+
+function openInterestBulkModal() {
+  renderInterestBulkModal();
+  const modal = document.getElementById("interestBulkModal");
+  if (!modal) return;
+  if (typeof modal.showModal === "function") modal.showModal();
+  else modal.setAttribute("open", "");
+}
+
+async function applyInterestBulkSelection() {
+  const group = activeInterestGroup();
+  if (!group || group.fixed) return;
+  const tickers = Array.from(document.querySelectorAll("#interestBulkList input[type='checkbox']:checked"))
+    .map(input => input.value)
+    .filter(Boolean);
+  if (!tickers.length) return;
+  const apply = document.getElementById("interestBulkApply");
+  const status = document.getElementById("interestBulkStatus");
+  if (apply) apply.disabled = true;
+  let payload = null;
+  try {
+    for (let index = 0; index < tickers.length; index += 1) {
+      if (status) status.textContent = `${index + 1}/${tickers.length} 추가 중...`;
+      payload = await apiAddInterestItem(group.id, tickers[index]);
+    }
+    if (payload) applyInterestWatchlistPayload(payload);
+    document.getElementById("interestBulkModal")?.close();
+    setInterestStatus(`${tickers.length}개 추가됨`, false, true);
+  } catch (err) {
+    if (status) status.textContent = err.message || String(err);
+    status?.classList.add("error");
+    loadInterestWatchlists().catch(() => {});
+  } finally {
+    if (apply) apply.disabled = false;
+    syncInterestBulkCount();
   }
 }
 
@@ -474,6 +577,19 @@ function initInterestWatchlists() {
     mutateInterestWatchlist(() => apiAddInterestItem(group.id, ticker), "종목 추가 중...", true);
     input.value = "";
   });
+
+  document.getElementById("interestBulkOpen")?.addEventListener("click", openInterestBulkModal);
+  document.getElementById("interestBulkClose")?.addEventListener("click", () => {
+    document.getElementById("interestBulkModal")?.close();
+  });
+  document.getElementById("interestBulkSelectAll")?.addEventListener("change", event => {
+    document.querySelectorAll("#interestBulkList input[type='checkbox']").forEach(input => {
+      input.checked = event.target.checked;
+    });
+    syncInterestBulkCount();
+  });
+  document.getElementById("interestBulkList")?.addEventListener("change", syncInterestBulkCount);
+  document.getElementById("interestBulkApply")?.addEventListener("click", applyInterestBulkSelection);
 
   document.getElementById("interestRows")?.addEventListener("click", event => {
     const remove = event.target.closest("[data-interest-main-remove]");

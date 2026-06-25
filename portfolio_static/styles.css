@@ -806,6 +806,16 @@ main {
   font-size: 11.5px;
   font-weight: 800;
 }
+.interest-main-form .interest-bulk-open {
+  border-color: var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.interest-main-form .interest-bulk-open:hover {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
+}
 .interest-main-status {
   color: var(--muted);
   font-size: 11px;
@@ -2815,6 +2825,92 @@ th.pc-frozen-edge {
   font-size: 11px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+}
+.interest-bulk-modal {
+  width: min(560px, calc(100vw - 28px));
+}
+.interest-bulk-card {
+  max-height: min(720px, calc(100vh - 36px));
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+}
+.interest-bulk-toolbar {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.interest-bulk-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.interest-bulk-select-all input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--brand);
+}
+.interest-bulk-list {
+  min-height: 160px;
+  max-height: min(430px, calc(100vh - 260px));
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+.interest-bulk-item {
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.interest-bulk-item:last-child {
+  border-bottom: 0;
+}
+.interest-bulk-item:hover {
+  background: var(--brand-soft);
+}
+.interest-bulk-item input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--brand);
+}
+.interest-bulk-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.interest-bulk-ticker {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.interest-bulk-empty {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.45;
+  text-align: center;
 }
 
 /* ── 배당이력 모달 (연도 rowspan 표 + 요약 보드) ────────────────────────── */
