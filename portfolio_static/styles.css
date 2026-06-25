@@ -1035,22 +1035,6 @@ main {
   overflow: auto;
   scrollbar-gutter: stable;
   --scrollbar-head-offset: var(--table-head-height);
-  /* 헤더 옆 거터(스크롤바 폭)만 덮는다 — 더 넓으면 헤더 마지막 컬럼을 가려
-     회색 띠처럼 보인다. scrollbar-gutter:stable 폭(=스크롤바 8px)과 일치. */
-  --scrollbar-mask-width: 8px;
-  background:
-    linear-gradient(var(--surface-2), var(--surface-2)) top / 100% var(--scrollbar-head-offset) no-repeat;
-}
-.table-wrap::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: var(--scrollbar-mask-width);
-  height: var(--scrollbar-head-offset);
-  background: var(--surface-2);
-  z-index: 30;
-  pointer-events: none;
 }
 /* 세로 스크롤바는 sticky 헤더 아래에서 시작한다. 테이블을 header/body로
    쪼개지 않고도 Chrome/Edge/Safari 계열에서 헤더 영역 침범을 막는 처리.
@@ -1086,8 +1070,10 @@ main {
 .tx-wrap::-webkit-scrollbar-button:vertical:start:decrement {
   display: block;
   width: 8px;
+  /* 헤더 높이만큼 비워 thumb를 헤더 아래에서 시작시키되, 영역 자체는 투명 —
+     헤더 옆에 회색 띠가 보이지 않게 한다(스크롤바 자리는 비워둠). */
   height: var(--scrollbar-head-offset, var(--table-head-height));
-  background: var(--surface-2);
+  background: transparent;
 }
 .table-wrap::-webkit-scrollbar-button:vertical:end,
 #statsTableWrap::-webkit-scrollbar-button:vertical:end,
