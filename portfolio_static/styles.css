@@ -3593,6 +3593,12 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .auto-refresh-control .label-short {
     display: inline;
   }
+  .ctrl-group .ghost-btn .label-full {
+    display: none;
+  }
+  .ctrl-group .ghost-btn .label-short {
+    display: inline;
+  }
   .us-market-status {
     display: none;
   }
