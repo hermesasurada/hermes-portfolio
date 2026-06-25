@@ -862,6 +862,7 @@ main {
 }
 #interestTableWrap {
   overflow: auto;
+  isolation: isolate;
 }
 .interest-detail-list {
   min-width: 100%;
@@ -901,6 +902,18 @@ main {
 }
 .interest-detail-list thead .interest-col-head th {
   top: 22px;
+}
+#interestTableWrap .interest-detail-list thead th {
+  background: var(--surface-2);
+}
+#interestTableWrap .interest-detail-list thead th.pc-frozen-col {
+  z-index: 12;
+  background: var(--surface-2);
+  background-clip: border-box;
+  transform: translateZ(0);
+}
+#interestTableWrap .interest-detail-list thead th.pc-frozen-edge {
+  z-index: 13;
 }
 .interest-detail-list .interest-group-head th.group-head-frozen {
   position: sticky;
