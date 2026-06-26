@@ -349,13 +349,31 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
 .toggle-label {
   min-width: auto;
 }
-.auto-refresh-control input[type="number"] {
-  width: 42px;
+.cycle-toggle-btn {
   height: 22px;
-  padding: 0 6px;
-  text-align: right;
+  min-width: 64px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cycle-toggle-btn:hover {
+  border-color: color-mix(in srgb, var(--brand) 42%, var(--line));
+  background: color-mix(in srgb, var(--brand) 8%, var(--surface-2));
+}
+.cycle-toggle-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.auto-refresh-control.enabled .cycle-toggle-btn {
+  border-color: var(--brand);
+  background: var(--accent-2);
+  color: #fff;
 }
 .us-price-control.disabled {
   opacity: 0.72;
@@ -3789,6 +3807,11 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   .auto-refresh-control .label-short {
     display: inline;
+  }
+  .cycle-toggle-btn {
+    min-width: 54px;
+    padding: 0 6px;
+    font-size: 10px;
   }
   .ctrl-group .ghost-btn .label-full {
     display: none;

@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=stats-change-price">
+  <link rel="stylesheet" href="/static/styles.css?v=auto-refresh-cycle">
 </head>
 <body>
   <header>
@@ -29,15 +29,7 @@
       <div class="controls">
         <div class="ctrl-group" aria-label="데이터 설정">
           <div class="auto-refresh-control">
-            <label class="toggle-switch" for="autoRefreshToggle">
-              <input id="autoRefreshToggle" type="checkbox">
-              <span class="toggle-ui" aria-hidden="true"></span>
-              <span class="toggle-label"><span class="label-full">자동갱신</span><span class="label-short">갱신</span></span>
-            </label>
-            <label for="autoRefreshInterval">
-              <input id="autoRefreshInterval" type="number" min="1" max="1440" step="1" value="5" inputmode="numeric">
-              <span>분</span>
-            </label>
+            <button id="autoRefreshCycle" class="cycle-toggle-btn" type="button" data-interval="off" aria-label="자동갱신 OFF">갱신 OFF</button>
           </div>
           <div class="us-price-control" id="usPriceControl">
             <label class="toggle-switch" for="usExtendedToggle">
@@ -661,6 +653,6 @@
   <script src="/static/app-watchlist.js?v=watchlist-dup-check"></script>
   <script src="/static/app-interest-watchlists.js?v=protected-index-fx-watchlist"></script>
   <script src="/static/app-ticker-search.js?v=ticker-search"></script>
-  <script src="/static/app.js?v=stats-change-price"></script>
+  <script src="/static/app.js?v=auto-refresh-cycle"></script>
 </body>
 </html>

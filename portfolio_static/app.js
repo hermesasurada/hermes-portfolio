@@ -185,21 +185,31 @@ async function load() {
   }
 }
 
-function autoRefreshMinutes() {
-  const input = document.getElementById("autoRefreshInterval");
-  const value = Number(input.value);
-  const minutes = Number.isFinite(value) ? Math.min(1440, Math.max(1, Math.round(value))) : 5;
-  input.value = String(minutes);
-  return minutes;
+function normalizeAutoRefreshMode(value) {
+  return value === "1" || value === "5" ? value : "off";
+}
+
+function autoRefreshMode() {
+  return normalizeAutoRefreshMode(document.getElementById("autoRefreshCycle")?.dataset.interval);
+}
+
+function setAutoRefreshMode(mode) {
+  const btn = document.getElementById("autoRefreshCycle");
+  if (!btn) return;
+  const normalized = normalizeAutoRefreshMode(mode);
+  btn.dataset.interval = normalized;
+  btn.textContent = normalized === "off" ? "갱신 OFF" : `갱신 ${normalized}분`;
+  btn.setAttribute("aria-label", `자동갱신 ${normalized === "off" ? "OFF" : `${normalized}분`}`);
 }
 
 function saveAutoRefreshSettings() {
-  storageSet(autoRefreshStorage.enabled, String(document.getElementById("autoRefreshToggle").checked));
-  storageSet(autoRefreshStorage.interval, String(autoRefreshMinutes()));
+  const mode = autoRefreshMode();
+  storageSet(autoRefreshStorage.enabled, String(mode !== "off"));
+  storageSet(autoRefreshStorage.interval, mode === "off" ? "5" : mode);
 }
 
 function renderAutoRefreshControl() {
-  document.querySelector(".auto-refresh-control").classList.toggle("enabled", document.getElementById("autoRefreshToggle").checked);
+  document.querySelector(".auto-refresh-control").classList.toggle("enabled", autoRefreshMode() !== "off");
 }
 
 function scheduleAutoRefresh() {
@@ -207,27 +217,29 @@ function scheduleAutoRefresh() {
     clearInterval(autoRefreshTimer);
     autoRefreshTimer = null;
   }
-  const enabled = document.getElementById("autoRefreshToggle").checked;
-  if (!enabled) return;
-  const intervalMs = autoRefreshMinutes() * 60 * 1000;
+  const mode = autoRefreshMode();
+  if (mode === "off") return;
+  const intervalMs = Number(mode) * 60 * 1000;
   autoRefreshTimer = setInterval(() => {
     load().catch(err => showTradeStatus(err.message || String(err), true));
   }, intervalMs);
 }
 
 function initAutoRefreshControls() {
-  const toggle = document.getElementById("autoRefreshToggle");
-  const interval = document.getElementById("autoRefreshInterval");
-  interval.value = storageGet(autoRefreshStorage.interval) || interval.value || "5";
-  toggle.checked = storageGet(autoRefreshStorage.enabled) === "true";
+  const btn = document.getElementById("autoRefreshCycle");
+  const storedEnabled = storageGet(autoRefreshStorage.enabled) === "true";
+  const storedInterval = Number(storageGet(autoRefreshStorage.interval));
+  setAutoRefreshMode(storedEnabled ? (storedInterval <= 1 ? "1" : "5") : "off");
   const apply = () => {
     saveAutoRefreshSettings();
     renderAutoRefreshControl();
     scheduleAutoRefresh();
   };
-  toggle.addEventListener("change", apply);
-  interval.addEventListener("change", apply);
-  interval.addEventListener("blur", apply);
+  btn.addEventListener("click", () => {
+    const current = autoRefreshMode();
+    setAutoRefreshMode(current === "off" ? "1" : current === "1" ? "5" : "off");
+    apply();
+  });
   renderAutoRefreshControl();
   scheduleAutoRefresh();
 }
