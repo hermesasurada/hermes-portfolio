@@ -198,9 +198,7 @@ function setAutoRefreshMode(mode) {
   if (!btn) return;
   const normalized = normalizeAutoRefreshMode(mode);
   btn.dataset.interval = normalized;
-  btn.querySelectorAll("[data-mode]").forEach(part => {
-    part.classList.toggle("active", part.dataset.mode === normalized);
-  });
+  btn.textContent = normalized === "off" ? "갱신 OFF" : `갱신 ${normalized}분`;
   btn.setAttribute("aria-label", `자동갱신 ${normalized === "off" ? "OFF" : `${normalized}분`}`);
 }
 
