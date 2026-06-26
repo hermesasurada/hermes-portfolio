@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=auto-refresh-cycle">
+  <link rel="stylesheet" href="/static/styles.css?v=auto-refresh-segment">
 </head>
 <body>
   <header>
@@ -29,7 +29,9 @@
       <div class="controls">
         <div class="ctrl-group" aria-label="데이터 설정">
           <div class="auto-refresh-control">
-            <button id="autoRefreshCycle" class="cycle-toggle-btn" type="button" data-interval="off" aria-label="자동갱신 OFF">갱신 OFF</button>
+            <button id="autoRefreshCycle" class="cycle-toggle-btn" type="button" data-interval="off" aria-label="자동갱신 OFF">
+              <span data-mode="off">OFF</span><span data-mode="1">1분</span><span data-mode="5">5분</span>
+            </button>
           </div>
           <div class="us-price-control" id="usPriceControl">
             <label class="toggle-switch" for="usExtendedToggle">
@@ -653,6 +655,6 @@
   <script src="/static/app-watchlist.js?v=watchlist-dup-check"></script>
   <script src="/static/app-interest-watchlists.js?v=protected-index-fx-watchlist"></script>
   <script src="/static/app-ticker-search.js?v=ticker-search"></script>
-  <script src="/static/app.js?v=auto-refresh-cycle"></script>
+  <script src="/static/app.js?v=auto-refresh-segment"></script>
 </body>
 </html>
