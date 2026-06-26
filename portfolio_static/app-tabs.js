@@ -52,7 +52,7 @@ async function loadStatsForRows(rows) {
   if (!missing.length || statsLoadKey === key || statsInFlight) return;
   statsLoadKey = key;
   const target = interestModeActive() ? document.getElementById("interestRows") : document.getElementById("statsRows");
-  if (target && !target.children.length) target.innerHTML = skeletonRows(interestModeActive() ? 28 : 23);
+  if (target && !target.children.length) target.innerHTML = skeletonRows(interestModeActive() ? 28 : 25);
   statsInFlight = (async () => {
     const payload = await apiFetchStats(missing);
     statsData = { ...statsData, ...(payload.stats || {}) };
@@ -61,7 +61,7 @@ async function loadStatsForRows(rows) {
   try {
     await statsInFlight;
   } catch (err) {
-    if (target) target.innerHTML = `<tr><td colspan="${interestModeActive() ? 28 : 23}">${esc(err.message || String(err))}</td></tr>`;
+    if (target) target.innerHTML = `<tr><td colspan="${interestModeActive() ? 28 : 25}">${esc(err.message || String(err))}</td></tr>`;
   } finally {
     statsInFlight = null;
     // 요청 중 계좌·통화 필터나 관심그룹이 바뀌었을 수 있으므로, 캡처된
@@ -88,6 +88,8 @@ function renderStatsTable(baseRows = null) {
           </a>
         </span>
       </td>
+      <td>${changeMarkup(r)}</td>
+      <td>${currentPriceMarkup(r)}</td>
       <td>${marketCapMarkup(r)}</td>
       <td>${Number(r.dividend_yield) > 0
         ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(r.ticker)}" title="배당 이력 보기">${dividendYieldText(r.dividend_yield)}</button>`
@@ -121,7 +123,7 @@ function renderStatsTable(baseRows = null) {
   });
   const statsTable = document.querySelector("#statsTableWrap .stats-list");
   const tickerNameWidth = syncTickerNameColumnWidth(statsTable);
-  const statsTableWidth = 1270 + tickerNameWidth;
+  const statsTableWidth = 1468 + tickerNameWidth;
   statsTable.style.width = `${statsTableWidth}px`;
   statsTable.style.minWidth = `${statsTableWidth}px`;
   schedulePcFrozenColumns();

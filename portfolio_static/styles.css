@@ -1137,9 +1137,9 @@ main {
 /* ── 테이블 공통 · 통계/배당 테이블 ────────────────────────────────────── */
 table { width: 100%; border-collapse: collapse; min-width: 660px; }
 table.stats-list {
-  /* 컬럼 폭은 <colgroup>이 권위. 합(1430px)에 맞춰 균일 스케일 방지 */
-  width: 1430px;
-  min-width: 1430px;
+  /* 컬럼 폭은 <colgroup>이 권위. 합(1628px)에 맞춰 균일 스케일 방지 */
+  width: 1628px;
+  min-width: 1628px;
   table-layout: fixed;
 }
 .stats-list th,
@@ -1174,31 +1174,33 @@ table.stats-list {
   z-index: 6;
   background: var(--surface-2);
 }
-/* 23컬럼: 로고·종목·시총·배당율·52주高대비·β·β″·RSI×3·BB×3·P/E(t,f)·P/B·기간수익률×7 */
+/* 25컬럼: 로고·종목·등락·현재가·시총·배당율·52주高대비·β·β″·RSI×3·BB×3·P/E(t,f)·P/B·기간수익률×7 */
 .stats-list th:nth-child(1), .stats-list td:nth-child(1) { width: 40px; }    /* 로고 (틀고정) */
 .stats-list th:nth-child(2), .stats-list td:nth-child(2) {
   width: var(--ticker-name-width, 160px);
   min-width: var(--ticker-name-width, 160px);
   max-width: var(--ticker-name-width, 160px);
 }   /* 종목명 (티커·종목 헤더 동거) */
-.stats-list th:nth-child(3), .stats-list td:nth-child(3) { width: 118px; }   /* 시가총액 */
-.stats-list th:nth-child(4), .stats-list td:nth-child(4) { width: 66px; }    /* 배당율 */
-.stats-list th:nth-child(5), .stats-list td:nth-child(5) { width: 64px; }    /* 52주高 대비 */
-.stats-list th:nth-child(n+6), .stats-list td:nth-child(n+6) { width: 62px; }
-/* β, β″ (6,7번 컬럼) */
-.stats-list th:nth-child(6), .stats-list td:nth-child(6),
-.stats-list th:nth-child(7), .stats-list td:nth-child(7) { width: 52px; }
-/* RSI×3 + BB×3 (8~13번 컬럼) — 좁게 */
-.stats-list th:nth-child(n+8):nth-child(-n+13),
-.stats-list td:nth-child(n+8):nth-child(-n+13) {
+.stats-list th:nth-child(3), .stats-list td:nth-child(3) { width: 86px; }    /* 등락 */
+.stats-list th:nth-child(4), .stats-list td:nth-child(4) { width: 112px; }   /* 현재가 */
+.stats-list th:nth-child(5), .stats-list td:nth-child(5) { width: 118px; }   /* 시가총액 */
+.stats-list th:nth-child(6), .stats-list td:nth-child(6) { width: 66px; }    /* 배당율 */
+.stats-list th:nth-child(7), .stats-list td:nth-child(7) { width: 64px; }    /* 52주高 대비 */
+.stats-list th:nth-child(n+8), .stats-list td:nth-child(n+8) { width: 62px; }
+/* β, β″ (8,9번 컬럼) */
+.stats-list th:nth-child(8), .stats-list td:nth-child(8),
+.stats-list th:nth-child(9), .stats-list td:nth-child(9) { width: 52px; }
+/* RSI×3 + BB×3 (10~15번 컬럼) — 좁게 */
+.stats-list th:nth-child(n+10):nth-child(-n+15),
+.stats-list td:nth-child(n+10):nth-child(-n+15) {
   width: 44px;
   padding-left: 1px;
   padding-right: 1px;
 }
-/* P/E(t), P/E(f) (14,15) / P/B (16) */
-.stats-list th:nth-child(14), .stats-list td:nth-child(14),
-.stats-list th:nth-child(15), .stats-list td:nth-child(15) { width: 62px; }
-.stats-list th:nth-child(16), .stats-list td:nth-child(16) { width: 56px; }
+/* P/E(t), P/E(f) (16,17) / P/B (18) */
+.stats-list th:nth-child(16), .stats-list td:nth-child(16),
+.stats-list th:nth-child(17), .stats-list td:nth-child(17) { width: 62px; }
+.stats-list th:nth-child(18), .stats-list td:nth-child(18) { width: 56px; }
 /* 로고 셀: 가운데, 종목명 셀: 좌측 정렬 */
 .logo-cell { text-align: center; padding-left: 4px; padding-right: 4px; }
 .stats-list td:nth-child(2) { text-align: left; }
@@ -1228,18 +1230,18 @@ table.stats-list {
   white-space: nowrap;
 }
 .stats-list .ticker-symbol { font-size: 10.5px; }
-/* 지표군 경계(모멘텀|밸류|수익률)를 수직선으로 구분 — 23컬럼의 호흡 분절 */
+/* 지표군 경계(모멘텀|밸류|수익률)를 수직선으로 구분 — 25컬럼의 호흡 분절 */
 .stats-list th.group-start,
 .stats-list td.group-start { border-left: 1px solid var(--line); }
-/* 숫자가 우측정렬이라 세로선 '직전' 컬럼(7·13·16번)의 값이 선에 붙는다.
+/* 숫자가 우측정렬이라 세로선 '직전' 컬럼(9·15·18번)의 값이 선에 붙는다.
    그 셀들의 padding-right만 키워 선과 간격 확보. (#statsTableWrap 접두로
    좁은 RSI/BB 컬럼 규칙의 높은 specificity를 이긴다) */
-#statsTableWrap .stats-list th:nth-child(7),
-#statsTableWrap .stats-list td:nth-child(7),
-#statsTableWrap .stats-list th:nth-child(13),
-#statsTableWrap .stats-list td:nth-child(13),
-#statsTableWrap .stats-list th:nth-child(16),
-#statsTableWrap .stats-list td:nth-child(16) { padding-right: 9px; }
+#statsTableWrap .stats-list th:nth-child(9),
+#statsTableWrap .stats-list td:nth-child(9),
+#statsTableWrap .stats-list th:nth-child(15),
+#statsTableWrap .stats-list td:nth-child(15),
+#statsTableWrap .stats-list th:nth-child(18),
+#statsTableWrap .stats-list td:nth-child(18) { padding-right: 9px; }
 .stats-list .price-cell { gap: 1px; }
 .stats-list .price-cell .krw-sub { font-size: 10px; }
 .hidden { display: none !important; }
@@ -3824,8 +3826,8 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     overflow-y: auto;
   }
   #statsTableWrap .stats-list {
-    width: 1430px;
-    min-width: 1430px;
+    width: 1628px;
+    min-width: 1628px;
   }
   /* 로고+종목명 틀고정은 .pc-frozen-col(공통)이 담당 — 모바일 단독 규칙 제거 */
   #dividendTableWrap {
