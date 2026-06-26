@@ -3138,6 +3138,44 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .modal-head strong {
   font-size: 16px;
 }
+.trade-confirm-card {
+  width: min(420px, calc(100vw - 32px));
+}
+.trade-confirm-body {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+.trade-confirm-key,
+.trade-confirm-val {
+  min-width: 0;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.trade-confirm-key {
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 800;
+}
+.trade-confirm-val {
+  color: var(--ink);
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.trade-confirm-key:nth-last-child(-n+2),
+.trade-confirm-val:nth-last-child(-n+1) {
+  border-bottom: 0;
+}
+.trade-confirm-actions {
+  justify-content: flex-end;
+}
 .dividend-history-card {
   gap: 10px;
   grid-template-columns: minmax(0, 1fr);
@@ -3559,6 +3597,12 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   background: var(--surface-2);
   color: var(--muted);
   cursor: default;
+}
+.trade-form select:disabled {
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: default;
+  opacity: 1;
 }
 /* 거래내역 행 관리(수정/삭제) */
 .tx-actions-head { text-align: center; }

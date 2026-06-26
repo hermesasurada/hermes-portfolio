@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=auto-refresh-fill">
+  <link rel="stylesheet" href="/static/styles.css?v=trade-confirm">
 </head>
 <body>
   <header>
@@ -360,7 +360,7 @@
         </div>
         <div class="field">
           <label for="tradeCurrency">통화</label>
-          <select id="tradeCurrency">
+          <select id="tradeCurrency" disabled title="티커에 따라 자동 고정됩니다">
             <option>USD</option>
             <option>KRW</option>
             <option>EUR</option>
@@ -415,6 +415,18 @@
       </label>
       <div class="ticker-search-results" id="tickerSearchResults" role="listbox" aria-label="종목 검색 결과">
         <div class="ticker-search-empty">티커 또는 종목명을 입력하세요.</div>
+      </div>
+    </form>
+  </dialog>
+  <dialog class="watch-modal trade-confirm-modal" id="tradeConfirmModal">
+    <form method="dialog" class="modal-card trade-confirm-card">
+      <div class="modal-head">
+        <strong>거래내역 저장 확인</strong>
+      </div>
+      <div class="trade-confirm-body" id="tradeConfirmBody"></div>
+      <div class="watch-actions trade-confirm-actions">
+        <button class="ghost-btn" id="tradeConfirmNo" type="button">아니오</button>
+        <button class="primary-btn" id="tradeConfirmYes" type="button">예</button>
       </div>
     </form>
   </dialog>
@@ -648,11 +660,11 @@
   <script src="/static/app-chart-scale.js?v=bitcoin-k-price"></script>
   <script src="/static/app-line-chart.js?v=chart-stats-grid-layout"></script>
   <script src="/static/app-chart-compare.js?v=bitcoin-k-price"></script>
-  <script src="/static/app-transactions.js?v=bitcoin-k-price"></script>
+  <script src="/static/app-transactions.js?v=trade-confirm"></script>
   <script src="/static/app-trade-controls.js?v=trade-apply-segmented"></script>
   <script src="/static/app-watchlist.js?v=watchlist-dup-check"></script>
   <script src="/static/app-interest-watchlists.js?v=protected-index-fx-watchlist"></script>
   <script src="/static/app-ticker-search.js?v=ticker-search"></script>
-  <script src="/static/app.js?v=auto-refresh-tight"></script>
+  <script src="/static/app.js?v=trade-confirm"></script>
 </body>
 </html>

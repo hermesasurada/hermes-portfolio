@@ -22,6 +22,7 @@ function renderTradeControls() {
   `).join("");
   if (selectedTrade.ticker && tickerInput.value.toUpperCase() !== selectedTrade.ticker) tickerInput.value = selectedTrade.ticker;
   applyTradeHoldingDefaults(false);
+  document.getElementById("tradeCurrency").disabled = true;
   updateTradeScope();
 }
 
@@ -34,7 +35,9 @@ function applyTradeHoldingDefaults(overwriteName = false) {
   const priceInput = document.getElementById("tradePrice");
   const currency = holding?.currency || meta?.currency || "USD";
   const price = holding?.current_price ?? meta?.current_price;
-  document.getElementById("tradeCurrency").value = currency;
+  const currencyInput = document.getElementById("tradeCurrency");
+  currencyInput.value = currency;
+  currencyInput.disabled = true;
   if (overwriteName || !nameInput.value) nameInput.value = holding?.name || meta?.name || ticker;
   if (!priceInput.value && price != null) priceInput.value = Number(price).toFixed(currency === "KRW" || currency === "JPY" ? 0 : 2);
 }
@@ -52,13 +55,91 @@ async function resolveTradeName() {
     try {
       const res = await apiLookupTicker(ticker);
       name = res?.ticker?.name || "";
-      if (res?.ticker?.currency) document.getElementById("tradeCurrency").value = res.ticker.currency;
+      if (res?.ticker?.currency) {
+        const currencyInput = document.getElementById("tradeCurrency");
+        currencyInput.value = res.ticker.currency;
+        currencyInput.disabled = true;
+      }
     } catch { /* lookup 실패 시 티커로 대체 */ }
   }
   // 입력 티커가 그새 바뀌지 않았을 때만 반영
   if ((document.getElementById("tradeTicker").value || "").trim().toUpperCase() === ticker) {
     nameInput.value = name || ticker;
   }
+}
+
+function tradeAccountLabel(accountId) {
+  const account = flattenAccounts().find(item => String(item.id) === String(accountId));
+  return account ? `${account.memberName} · ${account.name}` : String(accountId || "-");
+}
+
+function tradeSideLabel(side) {
+  return side === "SELL" ? "매도" : "매수";
+}
+
+function tradeApplyLabel(enabled) {
+  return enabled ? "반영" : "미반영";
+}
+
+function tradeConfirmRows(payload) {
+  const amount = Number(payload.qty) * Number(payload.price);
+  const rows = [
+    ["거래일", payload.trade_date],
+    ["계좌", tradeAccountLabel(payload.account_id)],
+    ["티커", payload.ticker],
+    ["종목명", payload.name || payload.ticker],
+    ["유형", tradeSideLabel(payload.side)],
+    ["수량", tradeQtyText(payload.qty, payload.ticker)],
+    ["단가", unitMoney(Number(payload.price), payload.currency, payload.ticker), true],
+    ["금액", Number.isFinite(amount) ? money(amount, payload.currency) : "-", true],
+    ["통화", payload.currency],
+    ["잔고", tradeApplyLabel(payload.apply_to_holdings)]
+  ];
+  return rows.map(([key, value, isHtml]) => `
+    <div class="trade-confirm-key">${esc(key)}</div>
+    <div class="trade-confirm-val">${isHtml ? value : esc(value)}</div>
+  `).join("");
+}
+
+function confirmTradeSave(payload) {
+  const modal = document.getElementById("tradeConfirmModal");
+  const body = document.getElementById("tradeConfirmBody");
+  const yes = document.getElementById("tradeConfirmYes");
+  const no = document.getElementById("tradeConfirmNo");
+  if (!modal || !body || !yes || !no || typeof modal.showModal !== "function") {
+    const text = [
+      `${payload.trade_date} · ${tradeAccountLabel(payload.account_id)}`,
+      `${payload.ticker} ${payload.name || ""}`,
+      `${tradeSideLabel(payload.side)} ${tradeQtyText(payload.qty, payload.ticker)}주 @ ${unitMoney(Number(payload.price), payload.currency, payload.ticker)}`,
+      `잔고 ${tradeApplyLabel(payload.apply_to_holdings)}`
+    ].join("\n");
+    return Promise.resolve(window.confirm(`${text}\n\n저장할까요?`));
+  }
+  body.innerHTML = tradeConfirmRows(payload);
+  return new Promise(resolve => {
+    const cleanup = result => {
+      yes.removeEventListener("click", onYes);
+      no.removeEventListener("click", onNo);
+      modal.removeEventListener("cancel", onCancel);
+      modal.removeEventListener("click", onBackdrop);
+      if (modal.open) modal.close();
+      resolve(result);
+    };
+    const onYes = () => cleanup(true);
+    const onNo = () => cleanup(false);
+    const onCancel = event => {
+      event.preventDefault();
+      cleanup(false);
+    };
+    const onBackdrop = event => {
+      if (event.target === modal) cleanup(false);
+    };
+    yes.addEventListener("click", onYes);
+    no.addEventListener("click", onNo);
+    modal.addEventListener("cancel", onCancel);
+    modal.addEventListener("click", onBackdrop);
+    modal.showModal();
+  });
 }
 
 function updateTradeScope() {

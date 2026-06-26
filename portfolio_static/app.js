@@ -304,7 +304,10 @@ document.getElementById("tradeTicker").addEventListener("change", () => {
 });
 document.getElementById("tradeForm").addEventListener("submit", async event => {
   event.preventDefault();
-  showTradeStatus("저장 중...");
+  selectedTrade.ticker = document.getElementById("tradeTicker").value.trim().toUpperCase();
+  document.getElementById("tradeTicker").value = selectedTrade.ticker;
+  applyTradeHoldingDefaults(true);
+  await resolveTradeName();
   const payload = {
     account_id: document.getElementById("tradeAccount").value,
     ticker: document.getElementById("tradeTicker").value.trim().toUpperCase(),
@@ -317,7 +320,13 @@ document.getElementById("tradeForm").addEventListener("submit", async event => {
     apply_to_holdings: document.getElementById("tradeApply").checked,
     note: ""
   };
+  const confirmed = await confirmTradeSave(payload);
+  if (!confirmed) {
+    showTradeStatus("저장 취소");
+    return;
+  }
   try {
+    showTradeStatus("저장 중...");
     const result = await apiSaveTransaction(payload);
     data = result.portfolio;
     selectedTrade = { accountId: String(payload.account_id), ticker: payload.ticker };
