@@ -287,6 +287,11 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
   font-weight: 700;
   white-space: nowrap;
 }
+.auto-refresh-control {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
 .auto-refresh-control label,
 .us-price-control label,
 .filter-toggle-control label,
@@ -350,15 +355,15 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
   min-width: auto;
 }
 .cycle-toggle-btn {
-  height: 22px;
-  min-width: 54px;
+  height: 100%;
+  min-width: 66px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface-2);
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
   color: var(--ink);
   font-size: 11px;
   font-weight: 800;
@@ -366,7 +371,6 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
   cursor: pointer;
 }
 .cycle-toggle-btn:hover {
-  border-color: color-mix(in srgb, var(--brand) 42%, var(--line));
   background: color-mix(in srgb, var(--brand) 8%, var(--surface-2));
 }
 .cycle-toggle-btn:focus-visible {
@@ -374,7 +378,6 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
   outline-offset: 2px;
 }
 .auto-refresh-control.enabled .cycle-toggle-btn {
-  border-color: var(--brand);
   background: var(--accent-2);
   color: #fff;
 }
@@ -3812,7 +3815,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     display: inline;
   }
   .cycle-toggle-btn {
-    min-width: 48px;
+    min-width: 56px;
     font-size: 10px;
   }
   .ctrl-group .ghost-btn .label-full {
