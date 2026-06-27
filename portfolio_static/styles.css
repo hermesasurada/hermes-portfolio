@@ -2480,22 +2480,22 @@ th.pc-frozen-edge {
   fill: color-mix(in srgb, var(--chart-tooltip-bg) 88%, transparent);
   stroke: color-mix(in srgb, var(--chart-tooltip-border) 82%, transparent);
   stroke-width: 1;
-  filter: drop-shadow(0 5px 14px rgba(15, 23, 42, .08));
+  filter: drop-shadow(0 4px 10px rgba(15, 23, 42, .07));
 }
 .chart-metric-title {
   fill: var(--muted);
-  font-size: 10px;
+  font-size: 8.5px;
   font-weight: 800;
   letter-spacing: 0;
 }
 .chart-metric-label {
   fill: var(--muted);
-  font-size: 10.5px;
+  font-size: 9px;
   font-weight: 700;
 }
 .chart-metric-value {
   fill: var(--chart-ink);
-  font-size: 11.5px;
+  font-size: 10px;
   font-weight: 850;
   font-variant-numeric: tabular-nums;
 }
@@ -4179,13 +4179,13 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     stroke-width: 5px;
   }
   .chart-metric-title {
-    font-size: 13px;
+    font-size: 11px;
   }
   .chart-metric-label {
-    font-size: 14px;
+    font-size: 12px;
   }
   .chart-metric-value {
-    font-size: 15px;
+    font-size: 13px;
   }
   .trade-marker circle {
     stroke-width: 3px;

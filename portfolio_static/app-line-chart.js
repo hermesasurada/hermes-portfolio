@@ -585,13 +585,13 @@ function chartOverlayMetrics(values) {
 }
 
 function renderChartMetricsOverlay(metrics, x, y, compact = false) {
-  const width = compact ? 250 : 218;
-  const height = compact ? 124 : 102;
-  const titleY = y + (compact ? 23 : 18);
-  const rowStartY = y + (compact ? 48 : 40);
-  const rowGap = compact ? 22 : 17;
-  const labelX = x + (compact ? 16 : 13);
-  const valueX = x + width - (compact ? 16 : 13);
+  const width = compact ? 210 : 170;
+  const height = compact ? 100 : 78;
+  const titleY = y + (compact ? 19 : 15);
+  const rowStartY = y + (compact ? 39 : 31);
+  const rowGap = compact ? 18 : 13.5;
+  const labelX = x + (compact ? 13 : 10);
+  const valueX = x + width - (compact ? 13 : 10);
   const rows = metrics.map(([label, metric], index) => {
     const rowY = rowStartY + index * rowGap;
     return `
