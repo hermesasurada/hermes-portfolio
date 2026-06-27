@@ -467,7 +467,7 @@ function renderCompareChartStats(payload) {
     if (chartComparePayloads.length && chartPayload) renderLineChart(chartPayload);
   });
   const metricRows = chartStatMetricRows(payloads[0]).map(([group, label], index) => ({ group, label, index }));
-  const columnTemplate = `132px repeat(${payloads.length}, minmax(96px, 1fr))`;
+  const columnTemplate = `132px repeat(${payloads.length}, 118px)`;
   const header = `
     <div class="cstat-compare-head" style="grid-template-columns:${columnTemplate}">
       <div class="cstat-compare-corner">지표</div>
