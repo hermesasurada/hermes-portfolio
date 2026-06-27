@@ -413,6 +413,8 @@ function compareBestIndexes(values, mode) {
     })
     .filter(Boolean);
   if (!scored.length) return new Set();
+  const uniqueScores = new Set(scored.map(item => String(item.score)));
+  if (uniqueScores.size <= 1) return new Set();
   const best = Math.max(...scored.map(item => item.score));
   return new Set(scored.filter(item => Math.abs(item.score - best) < 1e-9).map(item => item.index));
 }
