@@ -2068,13 +2068,17 @@ th.pc-frozen-edge {
   border-bottom: 0;
 }
 .cstat-compare-wrap {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
   overflow-x: auto;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--panel);
+  vertical-align: top;
 }
 .cstat-compare-board {
-  min-width: max-content;
+  width: max-content;
 }
 .cstat-compare-head,
 .cstat-compare-row {
