@@ -26,6 +26,7 @@ from portfolio_core.price_store import (
     history_backfill_status,
     load_watch,
     load_ticker_profiles,
+    repair_split_adjusted_daily_prices,
     save_daily_prices,
     update_earnings_dates,
     update_price_cache,
@@ -199,6 +200,9 @@ def collect_stock_splits(tickers: list[str] | None = None) -> int:
     updated = refresh_stock_splits(split_tickers)
     for ticker, count in updated.items():
         print(f"  + {ticker} splits: {count}")
+    repaired = repair_split_adjusted_daily_prices(split_tickers)
+    for ticker, count in repaired.items():
+        print(f"  ~ {ticker} split price repairs: {count}")
     return len(updated)
 
 
@@ -257,9 +261,14 @@ def main() -> int:
         print(f"Backfilled {len(backfilled)} new tickers / {backfill_count} history rows")
 
     technical_tickers = {item.ticker for item in fetched} | set(backfilled)
-    technical_updated = refresh_technical_stats_cache(technical_tickers)
-    if technical_updated:
-        print(f"Updated {technical_updated} technical stats")
+    if not args.skip_splits:
+        split_count = collect_stock_splits(args.ticker)
+        if split_count:
+            print(f"Updated stock splits for {split_count} tracked tickers")
+    if technical_tickers:
+        technical_updated = refresh_technical_stats_cache(technical_tickers)
+        if technical_updated:
+            print(f"Updated {technical_updated} technical stats")
     if not args.skip_fundamentals:
         fundamentals_updated = collect_fundamentals(categories, args.ticker)
         if fundamentals_updated:
@@ -279,11 +288,6 @@ def main() -> int:
         dividend_count = collect_dividend_events(args.ticker)
         if dividend_count:
             print(f"Checked dividend events for {dividend_count} tracked tickers")
-    if not args.skip_splits:
-        split_count = collect_stock_splits(args.ticker)
-        if split_count:
-            print(f"Updated stock splits for {split_count} tracked tickers")
-
     print(f"Updated {len(fetched)} tickers / {row_count} daily rows")
     all_errors = errors + [f"{ticker}:earnings" for ticker in earnings_errors]
     if all_errors:

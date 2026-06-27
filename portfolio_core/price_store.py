@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Iterable
 
 from .constants import CRYPTO_MARKETS, FX_TICKERS, MARKET_INDEXES
-from .db import connect, ensure_collector_runs_table, ensure_ticker_metadata_columns
+from .db import connect, ensure_collector_runs_table, ensure_stock_split_tables, ensure_ticker_metadata_columns
 from .paths import KST
 from .tickers import ticker_currency
 
 CATEGORIES = ("fx", "crypto", "overseas", "kr", "index")
+SPLIT_REPAIR_TOLERANCE = 0.18
+SPLIT_REPAIR_MAX_DATE_DISTANCE_DAYS = 20
+SPLIT_REPAIR_MIN_MATERIAL_RATIO = 1.5
 
 
 def infer_category(ticker: str, category: str | None = None) -> str:
@@ -99,7 +102,124 @@ def save_daily_prices(ticker: str, rows: Iterable[tuple[str, float]], source: st
             clean_rows,
         )
         conn.commit()
+    repair_split_adjusted_daily_prices([ticker])
     return len(clean_rows)
+
+
+def _date_value(value: str) -> date | None:
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except ValueError:
+        return None
+
+
+def _material_split_ratio(ratio: float) -> bool:
+    return ratio >= SPLIT_REPAIR_MIN_MATERIAL_RATIO or ratio <= 1.0 / SPLIT_REPAIR_MIN_MATERIAL_RATIO
+
+
+def _split_break_ratio(price_ratio: float, break_date: str, splits: list[dict]) -> float | None:
+    if price_ratio <= 0:
+        return None
+    parsed_break_date = _date_value(break_date)
+    if parsed_break_date is None:
+        return None
+    for split in sorted(splits, key=lambda item: abs(float(item["ratio"]) - 1), reverse=True):
+        ratio = float(split["ratio"])
+        if ratio <= 0 or abs(ratio - 1.0) <= 1e-12:
+            continue
+        if not _material_split_ratio(ratio):
+            continue
+        split_date = _date_value(split["split_date"])
+        if (
+            split_date is None
+            or abs((parsed_break_date - split_date).days) > SPLIT_REPAIR_MAX_DATE_DISTANCE_DAYS
+        ):
+            continue
+        expected = 1.0 / ratio
+        if expected <= 0:
+            continue
+        if abs(price_ratio - expected) / expected <= SPLIT_REPAIR_TOLERANCE:
+            return ratio
+    return None
+
+
+def repair_split_adjusted_daily_prices(tickers: Iterable[str]) -> dict[str, int]:
+    """Repair raw-close split discontinuities in `daily_prices`.
+
+    Yahoo's `Close` can briefly mix pre-split and post-split scales during a new
+    split window. We keep price performance as pure close-to-close (not dividend
+    adjusted), so we only apply stock split ratios already stored in
+    `stock_splits`. The repair is idempotent: after previous rows are divided by
+    the split ratio, the adjacent split-like break disappears.
+    """
+    clean_tickers = sorted({str(ticker).strip().upper() for ticker in tickers if str(ticker).strip()})
+    if not clean_tickers:
+        return {}
+
+    repaired: dict[str, int] = {}
+    with connect() as conn:
+        ensure_stock_split_tables(conn)
+        for ticker in clean_tickers:
+            splits = [
+                {"split_date": row["split_date"], "ratio": float(row["ratio"])}
+                for row in conn.execute(
+                    """
+                    SELECT split_date, ratio
+                    FROM stock_splits
+                    WHERE ticker = ?
+                      AND ratio IS NOT NULL
+                      AND ABS(ratio - 1.0) > 0.000000000001
+                    """,
+                    (ticker,),
+                ).fetchall()
+                if row["ratio"] is not None
+                and float(row["ratio"]) > 0
+                and _material_split_ratio(float(row["ratio"]))
+            ]
+            if not splits:
+                continue
+
+            rows = [
+                {"date": row["date"], "close": float(row["close"])}
+                for row in conn.execute(
+                    """
+                    SELECT date, close
+                    FROM daily_prices
+                    WHERE ticker = ?
+                      AND close IS NOT NULL
+                      AND close > 0
+                    ORDER BY date
+                    """,
+                    (ticker,),
+                ).fetchall()
+            ]
+            if len(rows) < 2:
+                continue
+
+            updates = 0
+            for idx in range(1, len(rows)):
+                prev = rows[idx - 1]["close"]
+                cur = rows[idx]["close"]
+                ratio = _split_break_ratio(cur / prev, rows[idx]["date"], splits)
+                if ratio is None:
+                    continue
+                break_date = rows[idx]["date"]
+                conn.execute(
+                    """
+                    UPDATE daily_prices
+                    SET close = close / ?
+                    WHERE ticker = ?
+                      AND date < ?
+                    """,
+                    (ratio, ticker, break_date),
+                )
+                for prior in rows[:idx]:
+                    prior["close"] /= ratio
+                updates += 1
+            if updates:
+                repaired[ticker] = updates
+        conn.commit()
+    return repaired
 
 
 def history_backfill_status(tickers: Iterable[str]) -> dict[str, tuple[int, bool]]:
