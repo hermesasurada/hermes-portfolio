@@ -2121,12 +2121,47 @@ th.pc-frozen-edge {
   font-weight: 800;
 }
 .cstat-compare-ticker {
+  position: relative;
   display: grid;
   gap: 1px;
   align-content: center;
   min-height: 38px;
   text-align: center;
   font-weight: 900;
+}
+.cstat-compare-ticker.removable {
+  padding-right: 24px;
+}
+.cstat-compare-remove {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0;
+  transform: scale(.94);
+  transition: opacity .14s ease, transform .14s ease, background .14s ease, color .14s ease;
+}
+.cstat-compare-ticker:hover .cstat-compare-remove,
+.cstat-compare-remove:focus-visible {
+  opacity: .72;
+  transform: scale(1);
+}
+.cstat-compare-remove:hover,
+.cstat-compare-remove:focus-visible {
+  background: color-mix(in srgb, var(--muted) 10%, transparent);
+  color: var(--ink);
 }
 .cstat-compare-ticker small {
   overflow: hidden;
@@ -2158,13 +2193,13 @@ th.pc-frozen-edge {
   text-align: right;
 }
 .cstat-compare-val.best {
-  color: color-mix(in srgb, var(--accent) 72%, var(--ink));
+  color: color-mix(in srgb, #d97706 54%, var(--ink));
   background:
     linear-gradient(
       90deg,
       transparent 0%,
-      color-mix(in srgb, var(--accent-soft) 68%, transparent) 18%,
-      color-mix(in srgb, var(--accent-soft) 82%, transparent) 100%
+      color-mix(in srgb, #f59e0b 7%, transparent) 22%,
+      color-mix(in srgb, #f59e0b 12%, transparent) 100%
     );
 }
 .cstat-compare-ticker:last-child,
@@ -2226,13 +2261,13 @@ th.pc-frozen-edge {
 }
 :root[data-theme="dark"] .cstat-v { color: #e7e9ee; }
 :root[data-theme="dark"] .cstat-compare-val.best {
-  color: color-mix(in srgb, var(--accent) 64%, #eef2f7);
+  color: color-mix(in srgb, #fbbf24 42%, #eef2f7);
   background:
     linear-gradient(
       90deg,
       transparent 0%,
-      color-mix(in srgb, var(--accent-soft) 30%, transparent) 18%,
-      color-mix(in srgb, var(--accent-soft) 44%, transparent) 100%
+      color-mix(in srgb, #f59e0b 8%, transparent) 22%,
+      color-mix(in srgb, #f59e0b 14%, transparent) 100%
     );
 }
 .chart-icon-slot .asset-icon { color: var(--accent); }

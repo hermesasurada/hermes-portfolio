@@ -506,9 +506,10 @@ function renderCompareChartStats(payload) {
     <div class="cstat-compare-head" style="grid-template-columns:${columnTemplate}">
       <div class="cstat-compare-corner">지표</div>
       ${payloads.map((item, index) => `
-        <div class="cstat-compare-ticker" style="color:${chartCompareColors[index % chartCompareColors.length]}">
+        <div class="cstat-compare-ticker ${index === 0 ? "" : "removable"}" style="color:${chartCompareColors[index % chartCompareColors.length]}">
           <span>${esc(item.ticker)}</span>
           <small>${esc(item.name || item.ticker)}</small>
+          ${index === 0 ? "" : `<button class="cstat-compare-remove" type="button" data-compare-remove="${esc(item.ticker)}" aria-label="${esc(item.ticker)} 비교 삭제" title="비교 삭제">&times;</button>`}
         </div>
       `).join("")}
     </div>

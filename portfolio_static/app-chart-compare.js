@@ -85,6 +85,16 @@ function renderChartCompareControls() {
 }
 
 let compareTickerDirectoryCache = null;
+const compareAddPendingTickers = new Set();
+
+function compareUsedTickers() {
+  return new Set([
+    String(chartTicker || "").toUpperCase(),
+    ...chartComparePayloads.map(item => String(item.ticker || "").toUpperCase()),
+    ...compareAddPendingTickers,
+  ].filter(Boolean));
+}
+
 function compareDatalistValue(item, query) {
   const cleanQuery = String(query || "").trim();
   if (!cleanQuery) return item.ticker;
@@ -110,7 +120,7 @@ async function populateCompareDatalist(query = "") {
     compareTickerDirectoryCache = compareTickerDirectoryCache || [];
   }
   // 이미 비교에 추가됐거나 메인인 종목은 제외
-  const used = new Set([String(chartTicker || "").toUpperCase(), ...chartComparePayloads.map(item => String(item.ticker || "").toUpperCase())]);
+  const used = compareUsedTickers();
   const cleanQuery = String(query || "").trim();
   const candidates = compareTickerDirectoryCache
     .filter(item => !used.has(String(item.ticker || "").toUpperCase()))
@@ -160,14 +170,18 @@ async function addChartCompareTicker(value) {
     }
   }
   const ticker = resolveTickerFromDirectory(value, compareTickerDirectoryCache);
-  if (!ticker || ticker === chartTicker) return;
-  if (chartComparePayloads.some(item => item.ticker === ticker)) return;
+  if (!ticker) return;
+  if (compareUsedTickers().has(ticker)) {
+    showTradeStatus("이미 비교 중인 종목입니다.", true);
+    return;
+  }
   if (chartComparePayloads.length >= chartCompareLimit) {
     showTradeStatus(`비교 종목은 최대 ${chartCompareLimit}개까지 추가할 수 있습니다.`, true);
     return;
   }
   const input = document.getElementById("chartCompareInput");
   if (input) input.value = "";
+  compareAddPendingTickers.add(ticker);
   try {
     const payload = await apiFetchChart(ticker);
     const pricedPoints = (payload.points || []).filter(point => point.date && Number.isFinite(Number(point.close)));
@@ -175,10 +189,19 @@ async function addChartCompareTicker(value) {
       showTradeStatus(`${ticker} 가격 이력이 없습니다.`, true);
       return;
     }
-    chartComparePayloads = [...chartComparePayloads, payload];
+    const payloadTicker = String(payload.ticker || ticker).toUpperCase();
+    const existingTickers = new Set([
+      String(chartTicker || "").toUpperCase(),
+      ...chartComparePayloads.map(item => String(item.ticker || "").toUpperCase()),
+    ].filter(Boolean));
+    if (!existingTickers.has(payloadTicker)) {
+      chartComparePayloads = [...chartComparePayloads, payload];
+    }
     renderLineChart(chartPayload);
   } catch (err) {
     showTradeStatus(err.message || String(err), true);
+  } finally {
+    compareAddPendingTickers.delete(ticker);
   }
 }
 
