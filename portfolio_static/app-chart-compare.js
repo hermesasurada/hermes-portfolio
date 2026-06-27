@@ -85,7 +85,20 @@ function renderChartCompareControls() {
 }
 
 let compareTickerDirectoryCache = null;
-async function populateCompareDatalist() {
+function compareDatalistValue(item, query) {
+  const cleanQuery = String(query || "").trim();
+  if (!cleanQuery) return item.ticker;
+  const rawQuery = cleanQuery.toLocaleUpperCase();
+  const compactQuery = normalizeTickerSearch(cleanQuery);
+  const ticker = String(item.ticker || "").toLocaleUpperCase();
+  if (ticker.startsWith(rawQuery) || normalizeTickerSearch(ticker).startsWith(compactQuery)) return item.ticker;
+  const texts = tickerSearchTexts(item);
+  const match = texts.find(text => text.startsWith(rawQuery) || normalizeTickerSearch(text).startsWith(compactQuery))
+    || texts.find(text => text.includes(rawQuery) || normalizeTickerSearch(text).includes(compactQuery));
+  return match || item.ticker;
+}
+
+async function populateCompareDatalist(query = "") {
   const list = document.getElementById("compareTickerOptions");
   if (!list) return;
   try {
@@ -98,11 +111,18 @@ async function populateCompareDatalist() {
   }
   // 이미 비교에 추가됐거나 메인인 종목은 제외
   const used = new Set([String(chartTicker || "").toUpperCase(), ...chartComparePayloads.map(item => String(item.ticker || "").toUpperCase())]);
-  list.innerHTML = compareTickerDirectoryCache
+  const cleanQuery = String(query || "").trim();
+  const candidates = compareTickerDirectoryCache
     .filter(item => !used.has(String(item.ticker || "").toUpperCase()))
-    .map(item => {
+    .map(item => ({ item, rank: cleanQuery ? rankTickerSearchItem(item, cleanQuery) : 0 }))
+    .filter(result => Number.isFinite(result.rank))
+    .sort((a, b) => a.rank - b.rank || String(a.item.ticker).localeCompare(String(b.item.ticker)))
+    .slice(0, cleanQuery ? 20 : 300);
+  list.innerHTML = candidates
+    .map(({ item }) => {
       const aliases = Array.isArray(item.aliases) && item.aliases.length ? ` · ${item.aliases.join(", ")}` : "";
-      return `<option value="${esc(item.ticker)}">${esc(item.ticker)} · ${esc(item.name)}${esc(aliases)}</option>`;
+      const value = compareDatalistValue(item, cleanQuery);
+      return `<option value="${esc(value)}">${esc(item.ticker)} · ${esc(item.name)}${esc(aliases)}</option>`;
     })
     .join("");
 }
@@ -118,6 +138,7 @@ function bindChartCompareControls(payload) {
         addChartCompareTicker(input.value);
       }
     });
+    input.addEventListener("input", () => populateCompareDatalist(input.value));
     populateCompareDatalist();
   }
   document.querySelectorAll("[data-compare-remove]").forEach(btn => {
