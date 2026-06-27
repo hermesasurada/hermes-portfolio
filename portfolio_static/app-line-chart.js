@@ -324,11 +324,29 @@ function initChartInterestModal() {
   });
 }
 
-function renderChartStats(payload) {
-  const el = document.getElementById("chartStats");
-  if (!el) return;
+let chartStatsLoadKey = "";
+
+function chartStatPercent(value, digits = 1) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "-";
+  const cls = number > 0 ? "cstat-positive" : number < 0 ? "cstat-negative" : "";
+  return `<span class="${cls}">${number.toLocaleString("ko-KR", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  })}%</span>`;
+}
+
+function chartStatIndicator(value, kind) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "-";
+  let cls = "";
+  if (kind === "rsi") cls = number >= 70 ? "cstat-negative" : number <= 30 ? "cstat-cold" : "";
+  if (kind === "bb") cls = number >= 100 ? "cstat-negative" : number <= 0 ? "cstat-cold" : "";
+  return `<span class="${cls}">${Math.round(number).toLocaleString("ko-KR")}</span>`;
+}
+
+function chartStatMetricRows(payload) {
   const ticker = String(payload?.ticker || "").toUpperCase();
-  if (!ticker) { el.innerHTML = ""; return; }
   const s = statsData[ticker] || {};
   const rsi = s.rsi || {};
   const bb = s.bollinger_pband || {};
@@ -339,64 +357,53 @@ function renderChartStats(payload) {
   const mcap = hasAum
     ? marketCapText(aum, payload?.currency)
     : Number.isFinite(Number(s.market_cap)) ? marketCapText(s.market_cap, payload?.currency) : "-";
+  const dividendYieldCell = Number(s.dividend_yield) > 0
+    ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(ticker)}" title="배당 이력 보기">${dividendYieldText(s.dividend_yield)}</button>`
+    : dividendYieldText(s.dividend_yield);
+  return [
+    ["규모", hasAum ? "AUM" : "시가총액", mcap],
+    ["규모", "배당수익률", dividendYieldCell],
+    ["밸류", "P/E (t)", peText(s.trailing_pe)],
+    ["밸류", "P/E (f)", peText(s.forward_pe)],
+    ["밸류", "P/B", peText(s.price_to_book)],
+    ["일정", "실적일", earningsText(s.next_earnings_date)],
+    ["모멘텀", "RSI (일)", chartStatIndicator(rsi.day, "rsi")],
+    ["모멘텀", "RSI (주)", chartStatIndicator(rsi.week, "rsi")],
+    ["모멘텀", "RSI (월)", chartStatIndicator(rsi.month, "rsi")],
+    ["모멘텀", "BB (일)", chartStatIndicator(bb.day, "bb")],
+    ["모멘텀", "BB (주)", chartStatIndicator(bb.week, "bb")],
+    ["모멘텀", "BB (월)", chartStatIndicator(bb.month, "bb")],
+    ["성과", "1개월", chartStatPercent(perf.one_month)],
+    ["성과", "3개월", chartStatPercent(perf.three_month, 0)],
+    ["성과", "6개월", chartStatPercent(perf.six_month, 0)],
+    ["성과", "YTD", chartStatPercent(perf.ytd, 0)],
+    ["성과", "1년", chartStatPercent(perf.one_year, 0)],
+    ["성과", "3년", chartStatPercent(perf.three_year, 0)],
+    ["성과", "5년", chartStatPercent(perf.five_year, 0)],
+    ["위험", "52주 고점 대비", chartStatPercent(s.drawdown_52w)],
+    ["위험", "β", betaText(s.beta)],
+    ["위험", "β″", betaText(s.beta_adj)],
+  ];
+}
 
-  const percent = (value, digits = 1) => {
-    const number = Number(value);
-    if (!Number.isFinite(number)) return "-";
-    const cls = number > 0 ? "cstat-positive" : number < 0 ? "cstat-negative" : "";
-    return `<span class="${cls}">${number.toLocaleString("ko-KR", {
-      minimumFractionDigits: digits,
-      maximumFractionDigits: digits,
-    })}%</span>`;
-  };
-  const indicator = (value, kind) => {
-    const number = Number(value);
-    if (!Number.isFinite(number)) return "-";
-    let cls = "";
-    if (kind === "rsi") cls = number >= 70 ? "cstat-negative" : number <= 30 ? "cstat-cold" : "";
-    if (kind === "bb") cls = number >= 100 ? "cstat-negative" : number <= 0 ? "cstat-cold" : "";
-    return `<span class="${cls}">${Math.round(number).toLocaleString("ko-KR")}</span>`;
-  };
-  const row = ([label, value]) => `
+function renderChartStats(payload) {
+  const el = document.getElementById("chartStats");
+  if (!el) return;
+  const ticker = String(payload?.ticker || "").toUpperCase();
+  if (!ticker) { el.innerHTML = ""; return; }
+  const loaded = Boolean(statsData[ticker]);
+  const rows = chartStatMetricRows(payload);
+  const row = ([, label, value]) => `
     <div class="cstat-row${label ? "" : " empty"}">
       <span class="cstat-k">${esc(label)}</span>
       <span class="cstat-v">${value}</span>
     </div>
   `;
-  const dividendYieldCell = Number(s.dividend_yield) > 0
-    ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(ticker)}" title="배당 이력 보기">${dividendYieldText(s.dividend_yield)}</button>`
-    : dividendYieldText(s.dividend_yield);
   const columns = [
-    [
-      [hasAum ? "AUM" : "시가총액", mcap],
-      ["배당수익률", dividendYieldCell],
-      ["P/E (t)", peText(s.trailing_pe)],
-      ["P/E (f)", peText(s.forward_pe)],
-      ["P/B", peText(s.price_to_book)],
-      ["실적일", earningsText(s.next_earnings_date)],
-    ],
-    [
-      ["RSI (일)", indicator(rsi.day, "rsi")],
-      ["RSI (주)", indicator(rsi.week, "rsi")],
-      ["RSI (월)", indicator(rsi.month, "rsi")],
-      ["BB (일)", indicator(bb.day, "bb")],
-      ["BB (주)", indicator(bb.week, "bb")],
-      ["BB (월)", indicator(bb.month, "bb")],
-    ],
-    [
-      ["1개월", percent(perf.one_month)],
-      ["3개월", percent(perf.three_month, 0)],
-      ["6개월", percent(perf.six_month, 0)],
-      ["YTD", percent(perf.ytd, 0)],
-      ["1년", percent(perf.one_year, 0)],
-      ["3년", percent(perf.three_year, 0)],
-    ],
-    [
-      ["5년", percent(perf.five_year, 0)],
-      ["52주 고점 대비", percent(s.drawdown_52w)],
-      ["β", betaText(s.beta)],
-      ["β″", betaText(s.beta_adj)],
-    ],
+    rows.slice(0, 6),
+    rows.slice(6, 12),
+    rows.slice(12, 18),
+    rows.slice(18),
   ];
   const maxRows = Math.max(...columns.map(items => items.length));
   const normalizedColumns = columns.map(items => {
@@ -416,6 +423,83 @@ function renderChartStats(payload) {
       ${statCells.join("")}
     </div>
     ${loaded ? "" : `<div class="chart-stat-loading">통계 불러오는 중…</div>`}
+  `;
+  el.querySelectorAll("[data-dividend-history]").forEach(btn => {
+    btn.addEventListener("click", () => openDividendHistory(btn.dataset.dividendHistory));
+  });
+}
+
+function compareStatPayloads(payload) {
+  return [payload, ...chartComparePayloads]
+    .filter(Boolean)
+    .map(item => ({ ...item, ticker: String(item.ticker || "").toUpperCase() }))
+    .filter(item => item.ticker);
+}
+
+function ensureChartStatsForPayloads(payloads, rerender) {
+  const missing = payloads
+    .map(item => item.ticker)
+    .filter(ticker => ticker && !statsData[ticker] && !statsFetchedTickers.has(ticker));
+  const unique = Array.from(new Set(missing)).sort();
+  if (!unique.length) return;
+  const key = unique.join(",");
+  if (chartStatsLoadKey === key) return;
+  chartStatsLoadKey = key;
+  apiFetchStats(unique).then(response => {
+    statsData = { ...statsData, ...(response.stats || {}) };
+    unique.forEach(ticker => statsFetchedTickers.add(ticker));
+    chartStatsLoadKey = "";
+    rerender?.();
+  }).catch(() => {
+    chartStatsLoadKey = "";
+  });
+}
+
+function renderCompareChartStats(payload) {
+  const el = document.getElementById("chartStats");
+  if (!el) return;
+  const payloads = compareStatPayloads(payload);
+  if (payloads.length < 2) {
+    renderChartStats(payload);
+    return;
+  }
+  ensureChartStatsForPayloads(payloads, () => {
+    if (chartComparePayloads.length && chartPayload) renderLineChart(chartPayload);
+  });
+  const metricRows = chartStatMetricRows(payloads[0]).map(([group, label], index) => ({ group, label, index }));
+  const columnTemplate = `132px repeat(${payloads.length}, minmax(96px, 1fr))`;
+  const header = `
+    <div class="cstat-compare-head" style="grid-template-columns:${columnTemplate}">
+      <div class="cstat-compare-corner">지표</div>
+      ${payloads.map((item, index) => `
+        <div class="cstat-compare-ticker" style="color:${chartCompareColors[index % chartCompareColors.length]}">
+          <span>${esc(item.ticker)}</span>
+          <small>${esc(item.name || item.ticker)}</small>
+        </div>
+      `).join("")}
+    </div>
+  `;
+  const body = metricRows.map(row => {
+    const cells = payloads.map(item => {
+      const value = chartStatMetricRows(item)[row.index]?.[2] || "-";
+      return `<div class="cstat-compare-val">${value}</div>`;
+    }).join("");
+    return `
+      <div class="cstat-compare-row" style="grid-template-columns:${columnTemplate}">
+        <div class="cstat-compare-key"><small>${esc(row.group)}</small><span>${esc(row.label)}</span></div>
+        ${cells}
+      </div>
+    `;
+  }).join("");
+  const loaded = payloads.every(item => Boolean(statsData[item.ticker]));
+  el.innerHTML = `
+    <div class="cstat-compare-wrap">
+      <div class="cstat-compare-board">
+        ${header}
+        ${body}
+      </div>
+    </div>
+    ${loaded ? "" : `<div class="chart-stat-loading">비교 지표 불러오는 중…</div>`}
   `;
   el.querySelectorAll("[data-dividend-history]").forEach(btn => {
     btn.addEventListener("click", () => openDividendHistory(btn.dataset.dividendHistory));

@@ -2067,6 +2067,96 @@ th.pc-frozen-edge {
 #chartStats .cstat-row:nth-last-child(-n + 4) {
   border-bottom: 0;
 }
+.cstat-compare-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+}
+.cstat-compare-board {
+  min-width: max-content;
+}
+.cstat-compare-head,
+.cstat-compare-row {
+  display: grid;
+}
+.cstat-compare-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+.cstat-compare-row {
+  min-height: 31px;
+  border-bottom: 1px solid var(--line);
+}
+.cstat-compare-row:last-child {
+  border-bottom: 0;
+}
+.cstat-compare-corner,
+.cstat-compare-ticker,
+.cstat-compare-key,
+.cstat-compare-val {
+  min-width: 0;
+  padding: 6px 10px;
+  border-right: 1px solid var(--line);
+  font-size: 12px;
+}
+.cstat-compare-corner,
+.cstat-compare-key {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface-2);
+}
+.cstat-compare-corner {
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  font-weight: 800;
+}
+.cstat-compare-ticker {
+  display: grid;
+  gap: 1px;
+  align-content: center;
+  min-height: 38px;
+  text-align: center;
+  font-weight: 900;
+}
+.cstat-compare-ticker small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cstat-compare-key {
+  display: grid;
+  gap: 1px;
+  align-content: center;
+  color: var(--ink);
+  font-weight: 800;
+}
+.cstat-compare-key small {
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 800;
+}
+.cstat-compare-val {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  overflow: hidden;
+  color: var(--ink);
+  font-weight: 800;
+  text-align: right;
+}
+.cstat-compare-ticker:last-child,
+.cstat-compare-val:last-child {
+  border-right: 0;
+}
 .cstat-column .cstat-row:last-child { border-bottom: 0; }
 .cstat-row.empty .cstat-k,
 .cstat-row.empty .cstat-v {

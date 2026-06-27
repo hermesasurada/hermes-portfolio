@@ -220,8 +220,7 @@ function renderCompareLineChart(payload) {
   renderChartIdentity(payload);
   clearChartExternalLinks();   // 비교 모드에선 단일 종목 바로가기 숨김
   syncChartLogToggle(true);   // 비교 차트도 로그 지원 (비율 기준)
-  const statsEl = document.getElementById("chartStats");
-  if (statsEl) statsEl.innerHTML = "";   // 비교 모드에선 단일 종목 통계 숨김
+  renderCompareChartStats(payload);
   if (series.length < 2 || !series[0]?.points.length) {
     document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">비교 차트 데이터 없음</div>${renderChartCompareControls()}${renderChartRangeButtons()}`;
     bindChartCompareControls(payload);
