@@ -544,6 +544,72 @@ function renderCompareChartStats(payload) {
   });
 }
 
+function chartPctMetric(value, neutral = "0.00%") {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return { text: "-", cls: "flat" };
+  if (Math.abs(number) < 0.005) return { text: neutral, cls: "flat" };
+  const cls = number > 0 ? "up" : "down";
+  const arrow = number > 0 ? "▲" : "▼";
+  return { text: `${arrow} ${fmt2.format(Math.abs(number))}%`, cls };
+}
+
+function chartOverlayMetrics(values) {
+  const clean = (values || []).map(Number).filter(value => Number.isFinite(value));
+  if (clean.length < 2) {
+    return [
+      ["등락", { text: "-", cls: "flat" }],
+      ["MDD", { text: "-", cls: "flat" }],
+      ["고점대비", { text: "-", cls: "flat" }],
+      ["저점대비", { text: "-", cls: "flat" }],
+    ];
+  }
+  const first = clean[0];
+  const last = clean[clean.length - 1];
+  const periodChange = first ? (last - first) / first * 100 : null;
+  let peak = clean[0];
+  let mdd = 0;
+  for (const value of clean) {
+    if (value > peak) peak = value;
+    if (peak > 0) mdd = Math.min(mdd, (value - peak) / peak * 100);
+  }
+  const high = Math.max(...clean);
+  const low = Math.min(...clean);
+  const vsHigh = high ? (last - high) / high * 100 : null;
+  const vsLow = low ? (last - low) / low * 100 : null;
+  return [
+    ["등락", chartPctMetric(periodChange)],
+    ["MDD", chartPctMetric(mdd)],
+    ["고점대비", chartPctMetric(vsHigh)],
+    ["저점대비", chartPctMetric(vsLow)],
+  ];
+}
+
+function renderChartMetricsOverlay(metrics, x, y, compact = false) {
+  const width = compact ? 250 : 218;
+  const height = compact ? 124 : 102;
+  const titleY = y + (compact ? 23 : 18);
+  const rowStartY = y + (compact ? 48 : 40);
+  const rowGap = compact ? 22 : 17;
+  const labelX = x + (compact ? 16 : 13);
+  const valueX = x + width - (compact ? 16 : 13);
+  const rows = metrics.map(([label, metric], index) => {
+    const rowY = rowStartY + index * rowGap;
+    return `
+      <text class="chart-metric-label" x="${labelX}" y="${rowY}">${esc(label)}</text>
+      <text class="chart-metric-value ${metric.cls}" x="${valueX}" y="${rowY}" text-anchor="end">${esc(metric.text)}</text>
+    `;
+  }).join("");
+  return `
+    <g class="chart-metric-overlay" transform="translate(${x}, ${y})">
+      <rect class="chart-metric-box" x="0" y="0" width="${width}" height="${height}" rx="8"></rect>
+      <text class="chart-metric-title" x="${labelX - x}" y="${titleY - y}">선택 기간</text>
+    </g>
+    <g class="chart-metric-overlay-text">
+      ${rows}
+    </g>
+  `;
+}
+
 function ensureChartStats(ticker) {
   const clean = String(ticker || "").toUpperCase();
   if (!clean || statsData[clean]) return;
@@ -882,14 +948,8 @@ function renderLineChart(payload) {
   const width = 980;
   const compactChart = window.matchMedia?.("(max-width: 980px)")?.matches;
   const height = compactChart ? 900 : 530;
-  const first = values[0];
   const last = values[values.length - 1];
-  const changePct = first ? (last - first) / first * 100 : null;
-  const changeDirection = changePct > 0 ? "up" : changePct < 0 ? "down" : "flat";
-  const changeArrow = changePct > 0 ? "▲" : changePct < 0 ? "▼" : "";
-  const changeLabel = Number.isFinite(changePct)
-    ? `${changeArrow}${changeArrow ? " " : ""}${fmt2.format(Math.abs(changePct))}%`
-    : "-";
+  const overlayMetrics = chartOverlayMetrics(values);
   const extremeRadius = compactChart ? 7 : 4;
   const tradeMarkerRadius = compactChart ? 10 : 5;
   document.getElementById("chartMeta").textContent = "";
@@ -1008,7 +1068,7 @@ function renderLineChart(payload) {
           <text x="${item.labelX.toFixed(2)}" y="${item.labelY.toFixed(2)}" text-anchor="${item.anchor}">${esc(item.text)}</text>
         </g>
       `).join("")}
-      <text class="chart-change-overlay ${changeDirection}" x="${pad.left + 10}" y="${pad.top + 24}">${esc(changeLabel)}</text>
+      ${renderChartMetricsOverlay(overlayMetrics, pad.left + 10, pad.top + 10, compactChart)}
       <g id="chartSelectionGroup" class="chart-selection hidden">
         <rect id="chartSelectionRect" class="chart-selection-range" x="0" y="${pad.top}" width="0" height="${plotH}"></rect>
         <line id="chartSelectionStartLine" class="chart-selection-line" x1="0" x2="0" y1="${pad.top}" y2="${rsiBottom}"></line>
