@@ -100,7 +100,10 @@ async function populateCompareDatalist() {
   const used = new Set([String(chartTicker || "").toUpperCase(), ...chartComparePayloads.map(item => String(item.ticker || "").toUpperCase())]);
   list.innerHTML = compareTickerDirectoryCache
     .filter(item => !used.has(String(item.ticker || "").toUpperCase()))
-    .map(item => `<option value="${esc(item.ticker)}">${esc(item.ticker)} · ${esc(item.name)}</option>`)
+    .map(item => {
+      const aliases = Array.isArray(item.aliases) && item.aliases.length ? ` · ${item.aliases.join(", ")}` : "";
+      return `<option value="${esc(item.ticker)}">${esc(item.ticker)} · ${esc(item.name)}${esc(aliases)}</option>`;
+    })
     .join("");
 }
 
@@ -127,7 +130,15 @@ function bindChartCompareControls(payload) {
 }
 
 async function addChartCompareTicker(value) {
-  const ticker = String(value || "").trim().toUpperCase();
+  if (!compareTickerDirectoryCache) {
+    try {
+      const payload = await apiFetchTickerDirectory();
+      compareTickerDirectoryCache = payload.tickers || [];
+    } catch {
+      compareTickerDirectoryCache = compareTickerDirectoryCache || [];
+    }
+  }
+  const ticker = resolveTickerFromDirectory(value, compareTickerDirectoryCache);
   if (!ticker || ticker === chartTicker) return;
   if (chartComparePayloads.some(item => item.ticker === ticker)) return;
   if (chartComparePayloads.length >= chartCompareLimit) {

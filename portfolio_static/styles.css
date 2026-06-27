@@ -2154,7 +2154,7 @@ th.pc-frozen-edge {
   justify-content: flex-end;
   overflow: hidden;
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 650;
   text-align: right;
 }
 .cstat-compare-val.best {

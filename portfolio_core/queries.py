@@ -4,6 +4,101 @@ import sqlite3
 from typing import Iterable
 
 
+TICKER_SEARCH_ALIASES = {
+    "AAPL": ("애플",),
+    "ABNB": ("에어비앤비",),
+    "ADI": ("아날로그디바이시스",),
+    "AMAT": ("어플라이드머티어리얼즈", "어플라이드 머티리얼즈"),
+    "AMD": ("에이엠디",),
+    "AMZN": ("아마존",),
+    "ANET": ("아리스타네트웍스", "아리스타"),
+    "APH": ("암페놀",),
+    "ARM": ("암",),
+    "ASML": ("에이에스엠엘",),
+    "AVGO": ("브로드컴",),
+    "BA": ("보잉",),
+    "BLK": ("블랙록",),
+    "BX": ("블랙스톤",),
+    "CAT": ("캐터필러",),
+    "COHR": ("코히런트",),
+    "COST": ("코스트코",),
+    "CRWD": ("크라우드스트라이크",),
+    "CRWV": ("코어위브",),
+    "CSCO": ("시스코",),
+    "DE": ("디어", "존디어"),
+    "DELL": ("델",),
+    "DIS": ("디즈니",),
+    "DPZ": ("도미노피자", "도미노"),
+    "EME": ("엠코어",),
+    "ENPH": ("엔페이즈",),
+    "F": ("포드",),
+    "FIX": ("컴포트시스템즈",),
+    "FSLR": ("퍼스트솔라",),
+    "GD": ("제너럴다이내믹스",),
+    "GE": ("지이", "GE에어로스페이스"),
+    "GEV": ("GE버노바", "지이버노바"),
+    "GLW": ("코닝",),
+    "GM": ("제너럴모터스",),
+    "GOOGL": ("구글", "알파벳"),
+    "GS": ("골드만삭스",),
+    "HON": ("허니웰",),
+    "HOOD": ("로빈후드",),
+    "HWM": ("하우멧", "하우멧에어로스페이스"),
+    "INTC": ("인텔",),
+    "IRDM": ("이리듐",),
+    "ISRG": ("인튜이티브서지컬",),
+    "JNJ": ("존슨앤존슨",),
+    "JPM": ("제이피모건", "JP모건"),
+    "KLAC": ("KLA", "케이엘에이"),
+    "KO": ("코카콜라",),
+    "LLY": ("일라이릴리", "릴리"),
+    "LMT": ("록히드마틴",),
+    "LRCX": ("램리서치",),
+    "MA": ("마스터카드",),
+    "MAR": ("메리어트",),
+    "MCD": ("맥도날드",),
+    "MEDP": ("메드페이스",),
+    "META": ("메타", "페이스북"),
+    "MMM": ("쓰리엠", "3M"),
+    "MP": ("MP머티리얼즈",),
+    "MRK": ("머크",),
+    "MRVL": ("마벨", "마벨테크놀로지"),
+    "MS": ("모건스탠리",),
+    "MSFT": ("마이크로소프트",),
+    "MU": ("마이크론",),
+    "NBIS": ("네비우스",),
+    "NKE": ("나이키",),
+    "NOC": ("노스롭그루먼",),
+    "NVDA": ("엔비디아",),
+    "ORCL": ("오라클",),
+    "PANW": ("팔로알토", "팔로알토네트웍스"),
+    "PEP": ("펩시", "펩시코"),
+    "PG": ("프록터앤갬블", "P&G"),
+    "PH": ("파커하니핀",),
+    "PL": ("플래닛랩스",),
+    "PLTR": ("팔란티어",),
+    "PWR": ("콴타서비스",),
+    "PYPL": ("페이팔",),
+    "QCOM": ("퀄컴",),
+    "RACE": ("페라리",),
+    "RKLB": ("로켓랩",),
+    "RTX": ("RTX", "레이시온"),
+    "SOFI": ("소파이",),
+    "SPCX": ("스페이스엑스",),
+    "SYM": ("심보틱",),
+    "TSLA": ("테슬라",),
+    "TSM": ("TSMC", "티에스엠씨", "대만반도체"),
+    "TXN": ("텍사스인스트루먼트",),
+    "UBER": ("우버",),
+    "UNH": ("유나이티드헬스",),
+    "V": ("비자",),
+    "VRT": ("버티브",),
+    "WM": ("웨이스트매니지먼트",),
+    "WMT": ("월마트",),
+    "XOM": ("엑슨모빌",),
+}
+
+
 def clean_account_ids(account_ids: Iterable[str] | None) -> list[int]:
     return [int(value) for value in (account_ids or []) if str(value).strip()]
 
@@ -46,7 +141,14 @@ def load_ticker_directory(conn: sqlite3.Connection) -> list[dict]:
         ORDER BY ticker
         """
     ).fetchall()
-    return [{"ticker": row["ticker"], "name": row["name"] or row["ticker"]} for row in rows]
+    return [
+        {
+            "ticker": row["ticker"],
+            "name": row["name"] or row["ticker"],
+            "aliases": list(TICKER_SEARCH_ALIASES.get(str(row["ticker"]).upper(), ())),
+        }
+        for row in rows
+    ]
 
 
 def account_filter_clause(account_ids: list[int], alias: str = "a") -> tuple[str, list[object]]:

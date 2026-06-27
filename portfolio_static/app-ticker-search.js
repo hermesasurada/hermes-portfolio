@@ -9,21 +9,41 @@ function normalizeTickerSearch(value) {
     .replace(/[\s._-]+/g, "");
 }
 
+function tickerSearchTexts(item) {
+  return [
+    item?.name,
+    ...(Array.isArray(item?.aliases) ? item.aliases : []),
+  ].filter(Boolean).map(value => String(value).toLocaleUpperCase());
+}
+
 function rankTickerSearchItem(item, query) {
   const rawQuery = String(query || "").trim().toLocaleUpperCase();
   const compactQuery = normalizeTickerSearch(query);
   const ticker = String(item.ticker || "").toLocaleUpperCase();
-  const name = String(item.name || "").toLocaleUpperCase();
   const compactTicker = normalizeTickerSearch(ticker);
-  const compactName = normalizeTickerSearch(name);
+  const names = tickerSearchTexts(item).map(text => ({
+    raw: text,
+    compact: normalizeTickerSearch(text),
+  }));
 
   if (ticker === rawQuery || compactTicker === compactQuery) return 0;
-  if (name === rawQuery || compactName === compactQuery) return 1;
+  if (names.some(name => name.raw === rawQuery || name.compact === compactQuery)) return 1;
   if (ticker.startsWith(rawQuery) || compactTicker.startsWith(compactQuery)) return 2;
-  if (name.startsWith(rawQuery) || compactName.startsWith(compactQuery)) return 3;
+  if (names.some(name => name.raw.startsWith(rawQuery) || name.compact.startsWith(compactQuery))) return 3;
   if (ticker.includes(rawQuery) || compactTicker.includes(compactQuery)) return 4;
-  if (name.includes(rawQuery) || compactName.includes(compactQuery)) return 5;
+  if (names.some(name => name.raw.includes(rawQuery) || name.compact.includes(compactQuery))) return 5;
   return Number.POSITIVE_INFINITY;
+}
+
+function resolveTickerFromDirectory(value, directory, allowRaw = true) {
+  const query = String(value || "").trim();
+  if (!query) return "";
+  const matches = (directory || [])
+    .map(item => ({ item, rank: rankTickerSearchItem(item, query) }))
+    .filter(result => Number.isFinite(result.rank))
+    .sort((a, b) => a.rank - b.rank
+      || String(a.item.ticker).localeCompare(String(b.item.ticker)));
+  return matches.length ? String(matches[0].item.ticker || "").toUpperCase() : (allowRaw ? query.toUpperCase() : "");
 }
 
 function renderTickerSearchResults(query) {

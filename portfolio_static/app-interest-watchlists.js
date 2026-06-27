@@ -52,24 +52,16 @@ function renderInterestTickerOptions() {
   const options = document.getElementById("interestTickerOptions");
   if (!options) return;
   options.innerHTML = trackedTickerOptions()
-    .map(item => `<option value="${esc(item.ticker)}">${esc(item.name || item.ticker)}</option>`)
+    .map(item => {
+      const aliases = Array.isArray(item.aliases) && item.aliases.length ? ` · ${item.aliases.join(", ")}` : "";
+      return `<option value="${esc(item.ticker)}">${esc(item.name || item.ticker)}${esc(aliases)}</option>`;
+    })
     .join("");
 }
 
 function resolveInterestTicker(value) {
-  const query = String(value || "").trim();
-  if (!query) return null;
-  const upper = query.toUpperCase();
-  const compact = query.replace(/\s+/g, "").toUpperCase();
-  const options = trackedTickerOptions();
-  const exact = options.find(item => String(item.ticker).toUpperCase() === upper)
-    || options.find(item => String(item.name || "").replace(/\s+/g, "").toUpperCase() === compact);
-  if (exact) return exact.ticker;
-  const matches = options.filter(item =>
-    String(item.ticker).toUpperCase().includes(upper)
-    || String(item.name || "").replace(/\s+/g, "").toUpperCase().includes(compact)
-  );
-  return matches.length === 1 ? matches[0].ticker : null;
+  const ticker = resolveTickerFromDirectory(value, trackedTickerOptions(), false);
+  return ticker ? ticker : null;
 }
 
 function interestGroupIcon(name, fixed = false) {
