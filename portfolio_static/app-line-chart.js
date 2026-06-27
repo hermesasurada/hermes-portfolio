@@ -353,37 +353,68 @@ function chartStatMetricRows(payload) {
   const perf = s.performance || {};
   const loaded = Boolean(statsData[ticker]);
   const aum = Number(s.aum);
-  const hasAum = Number.isFinite(aum);
+  const hasAum = s.aum != null && Number.isFinite(aum) && aum > 0;
+  const scaleValue = hasAum ? aum : Number(s.market_cap);
+  const scaleRaw = Number.isFinite(scaleValue) ? toUsd(scaleValue, payload?.currency) : null;
   const mcap = hasAum
     ? marketCapText(aum, payload?.currency)
     : Number.isFinite(Number(s.market_cap)) ? marketCapText(s.market_cap, payload?.currency) : "-";
+  const dividendYield = Number(s.dividend_yield);
   const dividendYieldCell = Number(s.dividend_yield) > 0
     ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(ticker)}" title="배당 이력 보기">${dividendYieldText(s.dividend_yield)}</button>`
     : dividendYieldText(s.dividend_yield);
   return [
-    ["규모", hasAum ? "AUM" : "시가총액", mcap],
-    ["규모", "배당수익률", dividendYieldCell],
-    ["밸류", "P/E (t)", peText(s.trailing_pe)],
-    ["밸류", "P/E (f)", peText(s.forward_pe)],
-    ["밸류", "P/B", peText(s.price_to_book)],
-    ["일정", "실적일", earningsText(s.next_earnings_date)],
-    ["모멘텀", "RSI (일)", chartStatIndicator(rsi.day, "rsi")],
-    ["모멘텀", "RSI (주)", chartStatIndicator(rsi.week, "rsi")],
-    ["모멘텀", "RSI (월)", chartStatIndicator(rsi.month, "rsi")],
-    ["모멘텀", "BB (일)", chartStatIndicator(bb.day, "bb")],
-    ["모멘텀", "BB (주)", chartStatIndicator(bb.week, "bb")],
-    ["모멘텀", "BB (월)", chartStatIndicator(bb.month, "bb")],
-    ["성과", "1개월", chartStatPercent(perf.one_month)],
-    ["성과", "3개월", chartStatPercent(perf.three_month, 0)],
-    ["성과", "6개월", chartStatPercent(perf.six_month, 0)],
-    ["성과", "YTD", chartStatPercent(perf.ytd, 0)],
-    ["성과", "1년", chartStatPercent(perf.one_year, 0)],
-    ["성과", "3년", chartStatPercent(perf.three_year, 0)],
-    ["성과", "5년", chartStatPercent(perf.five_year, 0)],
-    ["위험", "52주 고점 대비", chartStatPercent(s.drawdown_52w)],
-    ["위험", "β", betaText(s.beta)],
-    ["위험", "β″", betaText(s.beta_adj)],
+    ["규모", "시총/AUM", mcap, scaleRaw, "high"],
+    ["규모", "배당수익률", dividendYieldCell, Number.isFinite(dividendYield) ? dividendYield : null, "high"],
+    ["밸류", "P/E (t)", peText(s.trailing_pe), positiveMetric(s.trailing_pe), "low"],
+    ["밸류", "P/E (f)", peText(s.forward_pe), positiveMetric(s.forward_pe), "low"],
+    ["밸류", "P/B", peText(s.price_to_book), positiveMetric(s.price_to_book), "low"],
+    ["일정", "실적일", earningsText(s.next_earnings_date), null, null],
+    ["모멘텀", "RSI (일)", chartStatIndicator(rsi.day, "rsi"), finiteMetric(rsi.day), "near50"],
+    ["모멘텀", "RSI (주)", chartStatIndicator(rsi.week, "rsi"), finiteMetric(rsi.week), "near50"],
+    ["모멘텀", "RSI (월)", chartStatIndicator(rsi.month, "rsi"), finiteMetric(rsi.month), "near50"],
+    ["모멘텀", "BB (일)", chartStatIndicator(bb.day, "bb"), finiteMetric(bb.day), "near50"],
+    ["모멘텀", "BB (주)", chartStatIndicator(bb.week, "bb"), finiteMetric(bb.week), "near50"],
+    ["모멘텀", "BB (월)", chartStatIndicator(bb.month, "bb"), finiteMetric(bb.month), "near50"],
+    ["성과", "1개월", chartStatPercent(perf.one_month), finiteMetric(perf.one_month), "high"],
+    ["성과", "3개월", chartStatPercent(perf.three_month, 0), finiteMetric(perf.three_month), "high"],
+    ["성과", "6개월", chartStatPercent(perf.six_month, 0), finiteMetric(perf.six_month), "high"],
+    ["성과", "YTD", chartStatPercent(perf.ytd, 0), finiteMetric(perf.ytd), "high"],
+    ["성과", "1년", chartStatPercent(perf.one_year, 0), finiteMetric(perf.one_year), "high"],
+    ["성과", "3년", chartStatPercent(perf.three_year, 0), finiteMetric(perf.three_year), "high"],
+    ["성과", "5년", chartStatPercent(perf.five_year, 0), finiteMetric(perf.five_year), "high"],
+    ["위험", "52주 고점 대비", chartStatPercent(s.drawdown_52w), finiteMetric(s.drawdown_52w), "high"],
+    ["위험", "β", betaText(s.beta), finiteMetric(s.beta), "lowAbs"],
+    ["위험", "β″", betaText(s.beta_adj), finiteMetric(s.beta_adj), "lowAbs"],
   ];
+}
+
+function finiteMetric(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function positiveMetric(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : null;
+}
+
+function compareBestIndexes(values, mode) {
+  if (!mode) return new Set();
+  const scored = values
+    .map((value, index) => {
+      if (value == null || !Number.isFinite(Number(value))) return null;
+      const number = Number(value);
+      if (mode === "high") return { index, score: number };
+      if (mode === "low") return { index, score: -number };
+      if (mode === "near50") return { index, score: -Math.abs(number - 50) };
+      if (mode === "lowAbs") return { index, score: -Math.abs(number) };
+      return null;
+    })
+    .filter(Boolean);
+  if (!scored.length) return new Set();
+  const best = Math.max(...scored.map(item => item.score));
+  return new Set(scored.filter(item => Math.abs(item.score - best) < 1e-9).map(item => item.index));
 }
 
 function renderChartStats(payload) {
@@ -466,7 +497,8 @@ function renderCompareChartStats(payload) {
   ensureChartStatsForPayloads(payloads, () => {
     if (chartComparePayloads.length && chartPayload) renderLineChart(chartPayload);
   });
-  const metricRows = chartStatMetricRows(payloads[0]).map(([group, label], index) => ({ group, label, index }));
+  const rowsByTicker = new Map(payloads.map(item => [item.ticker, chartStatMetricRows(item)]));
+  const metricRows = (rowsByTicker.get(payloads[0].ticker) || []).map(([group, label,,, mode], index) => ({ group, label, index, mode }));
   const columnTemplate = `132px repeat(${payloads.length}, 118px)`;
   const header = `
     <div class="cstat-compare-head" style="grid-template-columns:${columnTemplate}">
@@ -480,9 +512,12 @@ function renderCompareChartStats(payload) {
     </div>
   `;
   const body = metricRows.map(row => {
-    const cells = payloads.map(item => {
-      const value = chartStatMetricRows(item)[row.index]?.[2] || "-";
-      return `<div class="cstat-compare-val">${value}</div>`;
+    const rowItems = payloads.map(item => (rowsByTicker.get(item.ticker) || [])[row.index] || []);
+    const bestIndexes = compareBestIndexes(rowItems.map(item => item[3]), row.mode);
+    const cells = rowItems.map((item, index) => {
+      const value = item[2] || "-";
+      const bestClass = bestIndexes.has(index) ? " best" : "";
+      return `<div class="cstat-compare-val${bestClass}">${value}</div>`;
     }).join("");
     return `
       <div class="cstat-compare-row" style="grid-template-columns:${columnTemplate}">
