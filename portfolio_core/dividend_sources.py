@@ -515,7 +515,9 @@ def _fetch_yahoo_dividends(ticker: str) -> list[dict]:
     currency = ticker_currency(ticker)
     events: dict[str, dict] = {}
 
-    hist = stock.history(period="18mo", actions=True)
+    # 배당 상세 팝업은 최근 10년 이력만 보여준다. 18개월은 너무 짧고,
+    # max는 불필요하게 오래된 분할/배당 이력을 끌어온다.
+    hist = stock.history(period="10y", actions=True)
     if hist is not None and not hist.empty and "Dividends" in hist:
         dividends = hist[hist["Dividends"].fillna(0) > 0]["Dividends"]
         for idx, amount in dividends.items():

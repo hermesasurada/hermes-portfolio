@@ -3364,7 +3364,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   justify-content: flex-end;
 }
 .dividend-history-card {
-  gap: 10px;
+  gap: 8px;
   grid-template-columns: minmax(0, 1fr);
   overflow: hidden;
 }
@@ -3376,7 +3376,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   min-width: 0;
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 6px;
 }
 .dividend-history-title strong {
   overflow: hidden;
@@ -3389,7 +3389,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   font-weight: 800;
 }
 .dividend-history-table-wrap {
-  max-height: min(510px, calc(100vh - 245px));
+  max-height: min(570px, calc(100vh - 205px));
   overflow-x: hidden;   /* 데스크톱: 팝업 폭이 충분해 가로 스크롤 불필요 */
   overflow-y: auto;
   border: 1px solid var(--line);
@@ -3400,13 +3400,13 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   min-width: 0;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 12px;
+  font-size: 11.5px;
   font-variant-numeric: tabular-nums;
 }
 .dividend-history-table th,
 .dividend-history-table td {
-  height: 34px;
-  padding: 6px 9px;
+  height: 27px;
+  padding: 3px 6px;
   border-bottom: 1px solid var(--line);
   text-align: right;
   white-space: nowrap;
@@ -3417,7 +3417,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   z-index: 1;
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
   text-align: center;
 }
@@ -3441,8 +3441,8 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 .history-ytd {
   display: inline-flex;
-  margin-left: 5px;
-  padding: 1px 4px;
+  margin-left: 3px;
+  padding: 0 3px;
   border-radius: 3px;
   background: var(--brand-soft);
   color: var(--brand);
@@ -3455,15 +3455,15 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   display: block;
 }
 .history-estimate {
-  margin-top: 2px;
+  margin-top: 1px;
   color: var(--accent);
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
 }
 .dividend-history-table.detailed .history-year-cell,
 .dividend-history-table.detailed .history-annual-cell {
   vertical-align: top;
-  padding-top: 8px;
+  padding-top: 5px;
   background: var(--surface-1);
 }
 .dividend-history-table.detailed tr.history-year-start td {
@@ -3488,7 +3488,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .history-growth-basis {
   margin-left: 1px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
   vertical-align: 3px;
 }
@@ -3498,14 +3498,16 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   font-weight: 700;
 }
 .dividend-history-stats {
-  margin-top: 10px;
+  margin-top: 8px;
 }
 /* 모달 폭(780px)에 맞춰 3열 — 통계지표와 동일한 보드 스타일, 열만 넓게 */
 .dividend-history-stats .cstat-board {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .dividend-history-stats .cstat-row {
-  grid-template-columns: 108px minmax(0, 1fr);
+  grid-template-columns: 96px minmax(0, 1fr);
+  min-height: 26px;
+  padding: 4px 6px;
 }
 
 /* ── 반응형 ① 모바일(≤560px) — 배당이력 모달 ───────────────────────────── */
@@ -3515,9 +3517,9 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
 }
 .dividend-history-stats .cstat-v small {
-  margin-left: 3px;
+  margin-left: 2px;
   color: var(--muted);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
 }
 .dividend-history-empty {

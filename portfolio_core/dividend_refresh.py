@@ -15,15 +15,20 @@ from .dividend_sources import (
     _seibro_candidate,
     _stockanalysis_attempt_due,
 )
+from .dates import today_kst
 from .tickers import ticker_currency
 
-DIVIDEND_HISTORY_START = date(2010, 1, 1)
+DIVIDEND_HISTORY_YEARS = 10
+
+
+def dividend_history_start() -> date:
+    return date(today_kst().year - DIVIDEND_HISTORY_YEARS, 1, 1)
 
 
 def _in_retention_window(event: dict) -> bool:
     schedule_text = event.get("record_date") or event.get("ex_date") or event.get("pay_date")
     try:
-        return date.fromisoformat(str(schedule_text)) >= DIVIDEND_HISTORY_START
+        return date.fromisoformat(str(schedule_text)) >= dividend_history_start()
     except (TypeError, ValueError):
         return False
 

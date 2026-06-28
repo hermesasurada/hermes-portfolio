@@ -8,13 +8,11 @@ from typing import Any
 from .constants import DIVIDEND_LOOKAHEAD_DAYS, DIVIDEND_LOOKBACK_DAYS, FX_DEFAULT_RATES, KOREAN_SUFFIXES
 from .dates import positive_float, today_kst
 from .db import connect, ensure_dividend_tables, ensure_stock_split_tables
-from .dividend_refresh import refresh_dividend_events
+from .dividend_refresh import dividend_history_start, refresh_dividend_events
 from .dividend_schedule import consolidated_dividend_events, event_schedule_date
 from .prices import latest_prices
 from .queries import clean_account_ids, load_holding_rows
 from .tickers import ticker_currency
-
-DIVIDEND_HISTORY_START_YEAR = 2010
 
 # 공용 헬퍼 위임 (중복 제거)
 _today = today_kst
@@ -452,6 +450,7 @@ def load_dividend_history(ticker: str) -> dict:
         raise ValueError("ticker is required")
 
     today = _today()
+    history_start = dividend_history_start()
     with connect() as conn:
         ensure_dividend_tables(conn)
         ensure_stock_split_tables(conn)
@@ -472,7 +471,7 @@ def load_dividend_history(ticker: str) -> dict:
               AND date(COALESCE(record_date, ex_date, pay_date)) <= ?
             ORDER BY date(COALESCE(record_date, ex_date, pay_date))
             """,
-            (ticker_row["ticker"], f"{DIVIDEND_HISTORY_START_YEAR}-01-01", today.isoformat()),
+            (ticker_row["ticker"], history_start.isoformat(), today.isoformat()),
         ).fetchall()
         split_rows = [
             dict(row) for row in conn.execute(
@@ -530,7 +529,7 @@ def load_dividend_history(ticker: str) -> dict:
         "ticker": ticker_row["ticker"],
         "name": ticker_row["name"] or ticker_row["ticker"],
         "currency": ticker_row["currency"] or ticker_currency(ticker_row["ticker"]),
-        "start_year": DIVIDEND_HISTORY_START_YEAR,
+        "start_year": history_start.year,
         "rows": _history_year_rows(
             annual, totals, complete_years, frequency, current_estimate, active_year, is_korean
         ),
