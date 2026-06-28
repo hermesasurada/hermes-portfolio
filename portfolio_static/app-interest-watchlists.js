@@ -388,6 +388,14 @@ const interestColumnWidths = {
 };
 
 const interestAlwaysVisibleFields = new Set(["display_change_pct", "current_price"]);
+const INTEREST_TABLE_COLUMN_COUNT = 28;
+
+function interestEmptyRow(message) {
+  return `<tr class="interest-empty-row">${Array.from({ length: INTEREST_TABLE_COLUMN_COUNT }, (_, index) => {
+    if (index === 1) return `<td class="interest-empty-cell">${esc(message)}</td>`;
+    return "<td></td>";
+  }).join("")}</tr>`;
+}
 
 function hasInterestColumnValue(row, field) {
   if (field === "next_earnings_date") return Boolean(row[field]);
@@ -433,7 +441,7 @@ function renderInterestMainTable() {
   const body = document.getElementById("interestRows");
   if (!body) return;
   if (!group) {
-    body.innerHTML = '<tr><td colspan="28">선택할 관심그룹이 없습니다.</td></tr>';
+    body.innerHTML = interestEmptyRow("선택할 관심그룹이 없습니다.");
     return;
   }
   const rows = statsRows(interestBaseRows());
@@ -485,7 +493,7 @@ function renderInterestMainTable() {
         ? ""
         : `<button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button>`}</td>
     </tr>
-  `).join("") : `<tr><td colspan="28">${group.fixed ? "모든 수집 종목이 관심그룹에 분류되어 있습니다." : "이 그룹에 등록된 종목이 없습니다."}</td></tr>`;
+  `).join("") : interestEmptyRow(group.fixed ? "모든 수집 종목이 관심그룹에 분류되어 있습니다." : "이 그룹에 등록된 종목이 없습니다.");
   syncInterestVisibleColumns(rows);
   bindChartLinks();
   body.querySelectorAll("[data-dividend-history]").forEach(btn => {

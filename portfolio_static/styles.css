@@ -1023,6 +1023,14 @@ main {
 .interest-detail-list .indicator-head span {
   display: block;
 }
+.interest-detail-list .interest-empty-row td {
+  height: 45px;
+  color: var(--muted);
+}
+.interest-detail-list .interest-empty-row .interest-empty-cell {
+  font-weight: 700;
+  white-space: nowrap;
+}
 .interest-row-delete {
   width: 26px;
   min-width: 26px;
