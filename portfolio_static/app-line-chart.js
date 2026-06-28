@@ -339,10 +339,7 @@ function chartStatPercent(value, digits = 1) {
 function chartStatIndicator(value, kind) {
   const number = Number(value);
   if (!Number.isFinite(number)) return "-";
-  let cls = "";
-  if (kind === "rsi") cls = number >= 70 ? "cstat-negative" : number <= 30 ? "cstat-cold" : "";
-  if (kind === "bb") cls = number >= 100 ? "cstat-negative" : number <= 0 ? "cstat-cold" : "";
-  return `<span class="${cls}">${Math.round(number).toLocaleString("ko-KR")}</span>`;
+  return `<span class="indicator-tone" ${indicatorToneAttr(number, kind)}>${Math.round(number).toLocaleString("ko-KR")}</span>`;
 }
 
 function chartStatMetricRows(payload) {

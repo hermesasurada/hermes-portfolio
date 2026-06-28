@@ -180,16 +180,21 @@ function peText(v) {
 function betaText(v) {
   return v != null && Number.isFinite(Number(v)) ? Number(v).toFixed(2) : "-";
 }
+function indicatorToneAttr(v, kind) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "";
+  const center = kind === "rsi" ? 50 : 50;
+  const span = kind === "rsi" ? 20 : 50;
+  const intensity = Math.max(0, Math.min(1, Math.abs(n - center) / span));
+  const tone = n < center ? "var(--down)" : n > center ? "var(--up)" : "var(--muted)";
+  const pct = Math.round(intensity * 100);
+  const weight = intensity >= 0.72 ? 800 : intensity >= 0.36 ? 700 : 600;
+  return `style="color: color-mix(in srgb, ${tone} ${pct}%, var(--muted)); font-weight: ${weight}"`;
+}
 function indicatorText(v, kind) {
   if (v == null || !Number.isFinite(Number(v))) return "-";
   const n = Number(v);
-  let cls = "flat";
-  if (kind === "rsi") {
-    cls = n >= 70 ? "up" : n <= 30 ? "down" : "flat";
-  } else {
-    cls = n >= 100 ? "up" : n <= 0 ? "down" : "flat";
-  }
-  return `<span class="${cls}">${fmt.format(Math.round(n))}</span>`;
+  return `<span class="indicator-tone" ${indicatorToneAttr(n, kind)}>${fmt.format(Math.round(n))}</span>`;
 }
 function fxRateForCurrency(currency) {
   return Number(data.fx?.[currency] || 1);
