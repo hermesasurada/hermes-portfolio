@@ -4004,7 +4004,28 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   gap: 6px;
 }
 .trade-modal-card.trade-form {
+  grid-template-columns: repeat(4, minmax(128px, 1fr));
+  align-items: end;
+  gap: 10px;
+  padding: 14px;
   border-bottom: 0;
+}
+.trade-modal-card .trade-modal-head,
+.trade-modal-card .trade-actions {
+  grid-column: 1 / -1;
+}
+.trade-modal-card .field-wide {
+  grid-column: span 2;
+}
+.trade-modal-card .trade-actions {
+  justify-content: flex-end;
+}
+.trade-modal-card .trade-actions .primary-btn {
+  width: 96px;
+}
+.trade-modal-head .ghost-btn {
+  width: auto;
+  min-width: 64px;
 }
 .trade-form.compact .field-wide { grid-column: span 1; }
 .trade-form.compact .trade-actions { align-items: end; }
@@ -4365,5 +4386,21 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   :root[data-theme="dark"] .cstat-column {
     border-bottom-color: #39414f;
+  }
+}
+
+@media (max-width: 560px) {
+  .trade-modal {
+    width: min(520px, calc(100vw - 16px));
+  }
+  .trade-modal-card.trade-form {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+  .trade-modal-card .field-wide {
+    grid-column: span 1;
+  }
+  .trade-modal-card .trade-actions .primary-btn {
+    width: 100%;
   }
 }
