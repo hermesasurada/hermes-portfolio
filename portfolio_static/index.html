@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=trade-dialog-compact">
+  <link rel="stylesheet" href="/static/styles.css?v=trade-dialog-vertical">
 </head>
 <body>
   <header>
@@ -361,60 +361,68 @@
       <div class="trade-dialog-body">
         <section class="trade-dialog-section">
           <div class="trade-dialog-section-title">기본 정보</div>
-          <div class="trade-dialog-grid">
-            <div class="field">
-              <label for="tradeDate">거래일</label>
-              <input id="tradeDate" type="date" required>
+          <div class="trade-dialog-stack">
+            <div class="trade-dialog-row trade-row-context">
+              <div class="field">
+                <label for="tradeDate">거래일</label>
+                <input id="tradeDate" type="date" required>
+              </div>
+              <div class="field">
+                <label for="tradeAccount">계좌</label>
+                <select id="tradeAccount" required></select>
+              </div>
             </div>
-            <div class="field field-wide">
-              <label for="tradeAccount">계좌</label>
-              <select id="tradeAccount" required></select>
-            </div>
-            <div class="field">
-              <label for="tradeTicker">티커</label>
-              <input id="tradeTicker" list="tickerOptions" required>
-              <datalist id="tickerOptions"></datalist>
-            </div>
-            <div class="field field-wide">
-              <label for="tradeName">종목명</label>
-              <input id="tradeName" readonly tabindex="-1" title="티커에 따라 자동 입력됩니다" placeholder="티커 입력 시 자동">
+            <div class="trade-dialog-row trade-row-ticker">
+              <div class="field">
+                <label for="tradeTicker">티커</label>
+                <input id="tradeTicker" list="tickerOptions" required>
+                <datalist id="tickerOptions"></datalist>
+              </div>
+              <div class="field">
+                <label for="tradeName">종목명</label>
+                <input id="tradeName" readonly tabindex="-1" title="티커에 따라 자동 입력됩니다" placeholder="티커 입력 시 자동">
+              </div>
             </div>
           </div>
         </section>
         <section class="trade-dialog-section">
           <div class="trade-dialog-section-title">거래 내용</div>
-          <div class="trade-dialog-grid trade-dialog-order-grid">
-            <div class="field">
-              <label>유형</label>
-              <input id="tradeSide" type="hidden" value="BUY">
-              <div class="segmented trade-side-toggle" role="group" aria-label="거래 유형">
-                <button class="seg-btn active" type="button" data-side="BUY">매수</button>
-                <button class="seg-btn" type="button" data-side="SELL">매도</button>
+          <div class="trade-dialog-stack">
+            <div class="trade-dialog-row trade-row-options">
+              <div class="field">
+                <label>유형</label>
+                <input id="tradeSide" type="hidden" value="BUY">
+                <div class="segmented trade-side-toggle" role="group" aria-label="거래 유형">
+                  <button class="seg-btn active" type="button" data-side="BUY">매수</button>
+                  <button class="seg-btn" type="button" data-side="SELL">매도</button>
+                </div>
+              </div>
+              <div class="field">
+                <label>잔고</label>
+                <input id="tradeApply" type="checkbox" checked hidden>
+                <div class="segmented trade-apply-toggle" role="group" aria-label="잔고 반영 여부">
+                  <button class="seg-btn active" type="button" data-apply="1">반영</button>
+                  <button class="seg-btn" type="button" data-apply="0">미반영</button>
+                </div>
               </div>
             </div>
-            <div class="field">
-              <label for="tradeQty">수량</label>
-              <input id="tradeQty" type="number" min="0" step="any" required>
-            </div>
-            <div class="field">
-              <label for="tradePrice">단가</label>
-              <input id="tradePrice" type="number" min="0" step="any" required>
-            </div>
-            <div class="field">
-              <label for="tradeCurrency">통화</label>
-              <select id="tradeCurrency" disabled title="티커에 따라 자동 고정됩니다">
-                <option>USD</option>
-                <option>KRW</option>
-                <option>EUR</option>
-                <option>JPY</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>잔고</label>
-              <input id="tradeApply" type="checkbox" checked hidden>
-              <div class="segmented trade-apply-toggle" role="group" aria-label="잔고 반영 여부">
-                <button class="seg-btn active" type="button" data-apply="1">반영</button>
-                <button class="seg-btn" type="button" data-apply="0">미반영</button>
+            <div class="trade-dialog-row trade-row-amount">
+              <div class="field">
+                <label for="tradeQty">수량</label>
+                <input id="tradeQty" type="number" min="0" step="any" required>
+              </div>
+              <div class="field">
+                <label for="tradePrice">단가</label>
+                <input id="tradePrice" type="number" min="0" step="any" required>
+              </div>
+              <div class="field">
+                <label for="tradeCurrency">통화</label>
+                <select id="tradeCurrency" disabled title="티커에 따라 자동 고정됩니다">
+                  <option value="USD">$</option>
+                  <option value="KRW">₩</option>
+                  <option value="EUR">€</option>
+                  <option value="JPY">¥</option>
+                </select>
               </div>
             </div>
           </div>
