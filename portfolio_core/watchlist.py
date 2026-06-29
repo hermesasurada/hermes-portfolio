@@ -55,10 +55,24 @@ def _recent_krx_listing_cache():
     return None
 
 
+def resolve_kr_suffix(code: str) -> str:
+    """6자리 KR 단축코드의 거래소를 KRX 상장목록으로 판정해 .KS(KOSPI)/.KQ(KOSDAQ)를
+    부여한다. 과거엔 무조건 .KS를 붙여 코스닥 종목(로보티즈·펄어비스 등)이 잘못
+    등록되는 버그가 있었음. 조회 실패 시에만 .KS로 폴백."""
+    try:
+        listing = lookup_krx_listing(code)
+        resolved = (listing or {}).get("ticker")
+        if resolved and resolved.endswith((".KS", ".KQ")):
+            return resolved
+    except Exception:
+        pass
+    return f"{code}.KS"
+
+
 def normalize_lookup_ticker(value: str) -> str:
     ticker = re.sub(r"\s+", "", str(value or "")).upper()
     if re.fullmatch(r"\d{6}", ticker):
-        return f"{ticker}.KS"
+        return resolve_kr_suffix(ticker)
     return ticker
 
 

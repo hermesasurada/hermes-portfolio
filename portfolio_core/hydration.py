@@ -19,7 +19,14 @@ from .tickers import asset_class, kr_ticker_code, normalize_yfinance_symbol, tic
 def normalize_hydration_ticker(value: str) -> str:
     ticker = re.sub(r"\s+", "", str(value or "")).upper()
     if re.fullmatch(r"\d{6}", ticker):
-        return f"{ticker}.KS"
+        # 거래소(KOSPI/.KS vs KOSDAQ/.KQ) 자동판정. watchlist는 hydration을 import하므로
+        # 순환참조를 피하려 호출시점 지연 import. 조회 실패 시 .KS 폴백.
+        try:
+            from .watchlist import resolve_kr_suffix
+
+            return resolve_kr_suffix(ticker)
+        except Exception:
+            return f"{ticker}.KS"
     return ticker
 
 
