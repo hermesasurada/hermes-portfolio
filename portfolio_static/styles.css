@@ -2955,6 +2955,9 @@ th.pc-frozen-edge {
   font-weight: 800;
 }
 .transaction-panel { margin-top: 16px; }
+.trade-modal {
+  width: min(1040px, calc(100vw - 28px));
+}
 
 /* ── 모달 공통 · 관리종목 · 도움말 ────────────────────────────────────── */
 .watch-modal {
@@ -3338,6 +3341,12 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 .trade-confirm-card {
   width: min(420px, calc(100vw - 32px));
+}
+.trade-modal-card {
+  width: 100%;
+}
+.trade-modal-head {
+  grid-column: 1 / -1;
 }
 .trade-confirm-body {
   display: grid;
@@ -3952,7 +3961,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   flex-wrap: wrap;
   justify-content: flex-end;
 }
-.transaction-panel.collapsed .trade-form,
 .transaction-panel.collapsed .tx-wrap {
   display: none;
 }
@@ -3994,6 +4002,9 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   grid-template-columns: minmax(112px, .85fr) minmax(155px, 1.18fr) minmax(88px, .72fr) minmax(150px, 1.14fr) minmax(70px, .56fr) minmax(70px, .54fr) minmax(86px, .64fr) minmax(70px, .54fr) minmax(70px, .54fr) 62px;
   align-items: end;
   gap: 6px;
+}
+.trade-modal-card.trade-form {
+  border-bottom: 0;
 }
 .trade-form.compact .field-wide { grid-column: span 1; }
 .trade-form.compact .trade-actions { align-items: end; }

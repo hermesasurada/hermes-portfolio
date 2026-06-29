@@ -293,14 +293,16 @@ document.querySelector(".transaction-panel > .toolbar").addEventListener("click"
 document.getElementById("tradeAccount").addEventListener("change", () => {
   selectedTrade.accountId = document.getElementById("tradeAccount").value;
   renderTradeControls();
-  loadTransactions().catch(showTradeError);
 });
 document.getElementById("tradeTicker").addEventListener("change", () => {
   selectedTrade.ticker = document.getElementById("tradeTicker").value.trim().toUpperCase();
   document.getElementById("tradeTicker").value = selectedTrade.ticker;
   applyTradeHoldingDefaults(true);
   resolveTradeName();   // 티커→종목명 자동완성 (DB에 없으면 lookup)
-  loadTransactions().catch(showTradeError);
+});
+document.getElementById("tradeModalClose")?.addEventListener("click", closeTradeModal);
+document.getElementById("tradeModal")?.addEventListener("click", event => {
+  if (event.target === event.currentTarget) closeTradeModal();
 });
 document.getElementById("tradeForm").addEventListener("submit", async event => {
   event.preventDefault();
@@ -332,6 +334,7 @@ document.getElementById("tradeForm").addEventListener("submit", async event => {
     selectedTrade = { accountId: String(payload.account_id), ticker: payload.ticker };
     document.getElementById("tradeQty").value = "";
     setTradeApply(true);
+    closeTradeModal();
     render();
     await loadTransactions();
     showTradeStatus("저장됨");

@@ -144,9 +144,8 @@ function confirmTradeSave(payload) {
 
 function updateTradeScope() {
   const accounts = visibleAccounts();
-  const ticker = (document.getElementById("tradeTicker").value || "").trim().toUpperCase();
   const accountText = selectionMode === "all" ? "전체 계좌" : accounts.length === 1 ? `${accounts[0].memberName} · ${accounts[0].name}` : `${accounts.length}개 계좌`;
-  document.getElementById("tradeScope").textContent = ticker ? `${accountText} · 입력 ${ticker}` : accountText;
+  document.getElementById("tradeScope").textContent = accountText;
 }
 
 function renderTransactionPager(totalRows) {
@@ -306,8 +305,6 @@ async function loadTransactions() {
   if (!data) return;
   const accounts = visibleAccounts();
   const accountIds = accounts.map(a => a.id);
-  const ticker = (document.getElementById("tradeTicker").value || "").trim().toUpperCase();
-  selectedTrade = { accountId: document.getElementById("tradeAccount").value, ticker };
   updateTradeScope();
   if (accountIds.length === 0) {
     renderTransactions([]);
@@ -317,16 +314,31 @@ async function loadTransactions() {
   renderTransactions(payload.transactions);
 }
 
+function openTradeModal() {
+  const modal = document.getElementById("tradeModal");
+  if (modal?.open) {
+    document.getElementById("tradeQty")?.focus();
+    return;
+  }
+  if (modal && typeof modal.showModal === "function") {
+    modal.showModal();
+    requestAnimationFrame(() => document.getElementById("tradeQty")?.focus());
+  }
+}
+
+function closeTradeModal() {
+  const modal = document.getElementById("tradeModal");
+  if (modal?.open) modal.close();
+}
+
 function selectTradeTarget(accountId, ticker) {
   selectedTrade = { accountId: String(accountId || ""), ticker: String(ticker || "").toUpperCase() };
-  setTransactionsExpanded(true);
   document.getElementById("tradeAccount").value = selectedTrade.accountId;
   document.getElementById("tradeTicker").value = selectedTrade.ticker;
   document.getElementById("tradeName").value = "";
   document.getElementById("tradePrice").value = "";
   renderTradeControls();
-  loadTransactions().catch(showTradeError);
-  document.querySelector(".transaction-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+  openTradeModal();
 }
 
 function showTradeStatus(message, isError = false) {

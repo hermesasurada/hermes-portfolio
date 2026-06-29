@@ -14,7 +14,7 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="/static/styles.css?v=detail-fundamentals">
+  <link rel="stylesheet" href="/static/styles.css?v=trade-modal">
 </head>
 <body>
   <header>
@@ -326,61 +326,6 @@
           <button class="ghost-btn" id="transactionToggle" type="button" aria-expanded="false">펼치기</button>
         </div>
       </div>
-      <form id="tradeForm" class="trade-form compact">
-        <div class="field">
-          <label for="tradeDate">거래일</label>
-          <input id="tradeDate" type="date" required>
-        </div>
-        <div class="field field-wide">
-          <label for="tradeAccount">계좌</label>
-          <select id="tradeAccount" required></select>
-        </div>
-        <div class="field">
-          <label for="tradeTicker">티커</label>
-          <input id="tradeTicker" list="tickerOptions" required>
-          <datalist id="tickerOptions"></datalist>
-        </div>
-        <div class="field">
-          <label for="tradeName">종목명</label>
-          <input id="tradeName" readonly tabindex="-1" title="티커에 따라 자동 입력됩니다" placeholder="티커 입력 시 자동">
-        </div>
-        <div class="field">
-          <label>유형</label>
-          <input id="tradeSide" type="hidden" value="BUY">
-          <div class="segmented trade-side-toggle" role="group" aria-label="거래 유형">
-            <button class="seg-btn active" type="button" data-side="BUY">매수</button>
-            <button class="seg-btn" type="button" data-side="SELL">매도</button>
-          </div>
-        </div>
-        <div class="field">
-          <label for="tradeQty">수량</label>
-          <input id="tradeQty" type="number" min="0" step="any" required>
-        </div>
-        <div class="field">
-          <label for="tradePrice">단가</label>
-          <input id="tradePrice" type="number" min="0" step="any" required>
-        </div>
-        <div class="field">
-          <label for="tradeCurrency">통화</label>
-          <select id="tradeCurrency" disabled title="티커에 따라 자동 고정됩니다">
-            <option>USD</option>
-            <option>KRW</option>
-            <option>EUR</option>
-            <option>JPY</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>잔고</label>
-          <input id="tradeApply" type="checkbox" checked hidden>
-          <div class="segmented trade-apply-toggle" role="group" aria-label="잔고 반영 여부">
-            <button class="seg-btn active" type="button" data-apply="1">반영</button>
-            <button class="seg-btn" type="button" data-apply="0">미반영</button>
-          </div>
-        </div>
-        <div class="trade-actions">
-          <button class="primary-btn" type="submit">저장</button>
-        </div>
-      </form>
       <div class="table-wrap tx-wrap">
         <table class="tx-list">
           <thead>
@@ -405,6 +350,67 @@
       </div>
     </section>
   </main>
+  <dialog class="watch-modal trade-modal" id="tradeModal">
+    <form id="tradeForm" class="modal-card trade-modal-card trade-form compact">
+      <div class="modal-head trade-modal-head">
+        <strong>거래 입력</strong>
+        <button class="ghost-btn" id="tradeModalClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <div class="field">
+        <label for="tradeDate">거래일</label>
+        <input id="tradeDate" type="date" required>
+      </div>
+      <div class="field field-wide">
+        <label for="tradeAccount">계좌</label>
+        <select id="tradeAccount" required></select>
+      </div>
+      <div class="field">
+        <label for="tradeTicker">티커</label>
+        <input id="tradeTicker" list="tickerOptions" required>
+        <datalist id="tickerOptions"></datalist>
+      </div>
+      <div class="field">
+        <label for="tradeName">종목명</label>
+        <input id="tradeName" readonly tabindex="-1" title="티커에 따라 자동 입력됩니다" placeholder="티커 입력 시 자동">
+      </div>
+      <div class="field">
+        <label>유형</label>
+        <input id="tradeSide" type="hidden" value="BUY">
+        <div class="segmented trade-side-toggle" role="group" aria-label="거래 유형">
+          <button class="seg-btn active" type="button" data-side="BUY">매수</button>
+          <button class="seg-btn" type="button" data-side="SELL">매도</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="tradeQty">수량</label>
+        <input id="tradeQty" type="number" min="0" step="any" required>
+      </div>
+      <div class="field">
+        <label for="tradePrice">단가</label>
+        <input id="tradePrice" type="number" min="0" step="any" required>
+      </div>
+      <div class="field">
+        <label for="tradeCurrency">통화</label>
+        <select id="tradeCurrency" disabled title="티커에 따라 자동 고정됩니다">
+          <option>USD</option>
+          <option>KRW</option>
+          <option>EUR</option>
+          <option>JPY</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>잔고</label>
+        <input id="tradeApply" type="checkbox" checked hidden>
+        <div class="segmented trade-apply-toggle" role="group" aria-label="잔고 반영 여부">
+          <button class="seg-btn active" type="button" data-apply="1">반영</button>
+          <button class="seg-btn" type="button" data-apply="0">미반영</button>
+        </div>
+      </div>
+      <div class="trade-actions">
+        <button class="primary-btn" type="submit">저장</button>
+      </div>
+    </form>
+  </dialog>
   <dialog class="watch-modal ticker-search-modal" id="tickerSearchModal">
     <form method="dialog" class="modal-card ticker-search-card">
       <div class="modal-head">
@@ -662,11 +668,11 @@
   <script src="/static/app-chart-scale.js?v=bitcoin-k-price"></script>
   <script src="/static/app-line-chart.js?v=ath-atl-overlay"></script>
   <script src="/static/app-chart-compare.js?v=compare-duplicate-guard"></script>
-  <script src="/static/app-transactions.js?v=trade-confirm"></script>
+  <script src="/static/app-transactions.js?v=trade-modal"></script>
   <script src="/static/app-trade-controls.js?v=trade-apply-segmented"></script>
   <script src="/static/app-watchlist.js?v=watchlist-dup-check"></script>
   <script src="/static/app-interest-watchlists.js?v=interest-empty-row"></script>
   <script src="/static/app-ticker-search.js?v=korean-alias-search"></script>
-  <script src="/static/app.js?v=detail-fundamentals"></script>
+  <script src="/static/app.js?v=trade-modal"></script>
 </body>
 </html>
