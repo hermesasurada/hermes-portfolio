@@ -23,6 +23,7 @@ TAX_FREE_ACCOUNT_TYPES = {"pension_kr", "retirement_kr"}
 FISCAL_END_MONTH_OVERRIDES = {
     "NVDA": 3,
 }
+PAY_DATE_YEAR_TICKERS = {"DIS"}
 UNADJUSTED_DIVIDEND_SOURCES = {"polygon", "nasdaq", "opendart", "seibro"}
 
 
@@ -138,6 +139,10 @@ def _dividend_attribution(
         return None, None, False
 
     declaration_date = _history_date(event["declaration_date"])
+    pay_date = _history_date(event["pay_date"])
+    if ticker.upper() in PAY_DATE_YEAR_TICKERS and pay_date is not None:
+        return entitlement_date, pay_date.year, False
+
     is_korean = ticker.upper().endswith(KOREAN_SUFFIXES)
     if is_korean:
         is_final = entitlement_date.month == 12
@@ -282,7 +287,11 @@ def _attributed_history_events(
     # 가장 많은 역년으로 재라벨한다. 묶음은 그대로 유지되므로 같은 금액 N분기는
     # 한 그룹으로 남고, 라벨만 직관적인 역년이 된다(애플 2025, 구글 2024 …).
     # 동률이면 더 늦은 해. 한국·오버라이드(예: NVDA)는 기존 라벨 유지.
-    relabel = not is_korean and str(ticker or "").upper() not in FISCAL_END_MONTH_OVERRIDES
+    relabel = (
+        not is_korean
+        and str(ticker or "").upper() not in FISCAL_END_MONTH_OVERRIDES
+        and str(ticker or "").upper() not in PAY_DATE_YEAR_TICKERS
+    )
     if relabel and events:
         cycles: dict[int, list[dict]] = {}
         for event in events:
@@ -497,7 +506,8 @@ def load_dividend_history(ticker: str) -> dict:
             )
             adjusted_events.append({"date": event_date, "amount": amount})
         adjusted_events.sort(key=lambda item: item["date"])
-        fiscal_end_month = None if is_korean else _dividend_fiscal_end_month(
+        pay_date_year_ticker = ticker_row["ticker"].upper() in PAY_DATE_YEAR_TICKERS
+        fiscal_end_month = None if is_korean or pay_date_year_ticker else _dividend_fiscal_end_month(
             ticker_row["ticker"], adjusted_events
         )
 
