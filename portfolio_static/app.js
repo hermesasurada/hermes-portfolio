@@ -301,6 +301,7 @@ document.getElementById("tradeTicker").addEventListener("change", () => {
   resolveTradeName();   // 티커→종목명 자동완성 (DB에 없으면 lookup)
 });
 document.getElementById("tradeModalClose")?.addEventListener("click", closeTradeModal);
+document.getElementById("tradeModalCancel")?.addEventListener("click", closeTradeModal);
 document.getElementById("tradeModal")?.addEventListener("click", event => {
   if (event.target === event.currentTarget) closeTradeModal();
 });

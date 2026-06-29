@@ -2955,9 +2955,6 @@ th.pc-frozen-edge {
   font-weight: 800;
 }
 .transaction-panel { margin-top: 16px; }
-.trade-modal {
-  width: min(1040px, calc(100vw - 28px));
-}
 
 /* ── 모달 공통 · 관리종목 · 도움말 ────────────────────────────────────── */
 .watch-modal {
@@ -2966,6 +2963,9 @@ th.pc-frozen-edge {
   border: 0;
   border-radius: var(--radius);
   background: transparent;
+}
+.watch-modal.trade-modal {
+  width: min(760px, calc(100vw - 28px));
 }
 .ticker-search-modal {
   width: min(520px, calc(100vw - 28px));
@@ -3341,12 +3341,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 .trade-confirm-card {
   width: min(420px, calc(100vw - 32px));
-}
-.trade-modal-card {
-  width: 100%;
-}
-.trade-modal-head {
-  grid-column: 1 / -1;
 }
 .trade-confirm-body {
   display: grid;
@@ -3778,12 +3772,66 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   padding: 0 7px;
   font-size: 11px;
 }
-.trade-form {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(90px, 1fr));
-  gap: 9px;
-  padding: 12px;
+.trade-dialog-card {
+  width: 100%;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.trade-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.trade-dialog-title {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.trade-dialog-title strong {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 800;
+}
+.trade-dialog-title span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+.trade-dialog-head .ghost-btn {
+  width: auto;
+  min-width: 64px;
+  flex: 0 0 auto;
+}
+.trade-dialog-body {
+  display: grid;
+  gap: 14px;
+  padding: 15px 16px 14px;
+}
+.trade-dialog-section {
+  display: grid;
+  gap: 10px;
+}
+.trade-dialog-section-title {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+.trade-dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 12px;
+  align-items: end;
+}
+.trade-dialog-grid .field-wide {
+  grid-column: span 2;
+}
+.trade-dialog-order-grid {
+  grid-template-columns: 1.05fr .8fr .9fr .72fr .82fr;
 }
 .field {
   display: grid;
@@ -3796,10 +3844,12 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   font-weight: 800;
 }
 .field input, .field select, .field textarea { width: 100%; }
-.trade-form input, .trade-form select, .trade-form button {
-  height: 32px;
+.trade-dialog-card input,
+.trade-dialog-card select,
+.trade-dialog-card button {
+  height: 34px;
   min-width: 0;
-  padding: 0 7px;
+  padding: 0 9px;
   font-size: 12px;
 }
 #tradeName[readonly] {
@@ -3807,11 +3857,45 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   color: var(--muted);
   cursor: default;
 }
-.trade-form select:disabled {
+.trade-dialog-card select:disabled {
   background: var(--surface-2);
   color: var(--muted);
   cursor: default;
   opacity: 1;
+}
+.trade-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 58px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.trade-dialog-status {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.trade-dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.trade-dialog-actions button {
+  min-width: 76px;
+}
+.trade-dialog-actions .primary-btn {
+  min-width: 88px;
+}
+.trade-dialog-card .segmented {
+  height: 34px;
+}
+.trade-dialog-card .seg-btn {
+  height: 28px;
+  padding: 0 8px;
 }
 /* 거래내역 행 관리(수정/삭제) */
 .tx-actions-head { text-align: center; }
@@ -3937,11 +4021,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .apply-toggle input:checked + .toggle-ui::after { transform: translateX(12px); }
 .apply-toggle input:checked ~ .toggle-label { color: var(--brand); }
 .field-wide { grid-column: span 2; }
-.trade-actions {
-  display: flex;
-  align-items: end;
-  gap: 8px;
-}
 .primary-btn {
   background: var(--accent);
   border-color: var(--accent);
@@ -3998,38 +4077,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   color: var(--accent);
   font-weight: 800;
 }
-.trade-form.compact {
-  grid-template-columns: minmax(112px, .85fr) minmax(155px, 1.18fr) minmax(88px, .72fr) minmax(150px, 1.14fr) minmax(70px, .56fr) minmax(70px, .54fr) minmax(86px, .64fr) minmax(70px, .54fr) minmax(70px, .54fr) 62px;
-  align-items: end;
-  gap: 6px;
-}
-.trade-modal-card.trade-form {
-  grid-template-columns: repeat(4, minmax(128px, 1fr));
-  align-items: end;
-  gap: 10px;
-  padding: 14px;
-  border-bottom: 0;
-}
-.trade-modal-card .trade-modal-head,
-.trade-modal-card .trade-actions {
-  grid-column: 1 / -1;
-}
-.trade-modal-card .field-wide {
-  grid-column: span 2;
-}
-.trade-modal-card .trade-actions {
-  justify-content: flex-end;
-}
-.trade-modal-card .trade-actions .primary-btn {
-  width: 96px;
-}
-.trade-modal-head .ghost-btn {
-  width: auto;
-  min-width: 64px;
-}
-.trade-form.compact .field-wide { grid-column: span 1; }
-.trade-form.compact .trade-actions { align-items: end; }
-.trade-form.compact button { width: 100%; }
 .holdings-section .table-wrap {
   max-height: calc(100vh - 190px);
   overflow: auto;
@@ -4120,9 +4167,11 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   #interestSidebarPane {
     max-height: none;
   }
-  .trade-form, .trade-form.compact { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+  .trade-dialog-grid,
+  .trade-dialog-order-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .field-wide { grid-column: span 2; }
-  .trade-form.compact .field-wide { grid-column: span 2; }
   input { width: 100%; }
   #statsTableWrap {
     padding: 0;
@@ -4390,17 +4439,38 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 
 @media (max-width: 560px) {
-  .trade-modal {
+  .watch-modal.trade-modal {
     width: min(520px, calc(100vw - 16px));
   }
-  .trade-modal-card.trade-form {
-    grid-template-columns: 1fr;
-    padding: 12px;
+  .trade-dialog-card {
+    border-radius: 10px;
   }
-  .trade-modal-card .field-wide {
+  .trade-dialog-head,
+  .trade-dialog-body,
+  .trade-dialog-footer {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .trade-dialog-title span {
+    display: none;
+  }
+  .trade-dialog-grid,
+  .trade-dialog-order-grid {
+    grid-template-columns: 1fr;
+  }
+  .trade-dialog-grid .field-wide,
+  .field-wide {
     grid-column: span 1;
   }
-  .trade-modal-card .trade-actions .primary-btn {
+  .trade-dialog-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .trade-dialog-actions {
+    width: 100%;
+  }
+  .trade-dialog-actions button {
+    flex: 1 1 0;
     width: 100%;
   }
 }
