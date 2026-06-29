@@ -736,7 +736,9 @@ function renderTable() {
     renderInterestMainTable();
     return;
   }
-  const rows = filteredRows();
+  const rows = statsRows(filteredRows());
+  sortRows(rows, "detail");
+  if (rows.some(row => row.ticker && !statsData[row.ticker])) loadStatsForRows(rows);
   const hideExtendedColumn = Boolean(data?.us_market?.is_regular);
   const accounts = flattenAccounts();
   const selected = selectionMode === "all" ? accounts : accounts.filter(a => selectedAccounts.has(a.id));
@@ -774,6 +776,10 @@ function renderTable() {
       <td>${noPosition ? "-" : fmt2.format(r.qty)}</td>
       <td>${noPosition ? "-" : valueMarkup(r)}</td>
       <td>${noPosition ? "-" : weightText(r.weight_pct)}</td>
+      <td>${marketCapMarkup(r)}</td>
+      <td>${Number(r.dividend_yield) > 0
+        ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(r.ticker)}" title="배당 이력 보기">${dividendYieldText(r.dividend_yield)}</button>`
+        : dividendYieldText(r.dividend_yield)}</td>
       <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
       <td>${r.is_watchlist ? "-" : `<button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button>`}</td>
     </tr>
@@ -790,6 +796,7 @@ function renderTable() {
     });
   });
   bindChartLinks();
+  bindDividendHistoryLinks();
   syncTickerNameColumnWidth(document.querySelector("#detailTableWrap table"));
   if (activeDetailTab === "stats") renderStatsTable(rows);
   if (activeDetailTab === "dividend") renderDividendTable();

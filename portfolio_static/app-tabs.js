@@ -67,7 +67,8 @@ async function loadStatsForRows(rows) {
     // 요청 중 계좌·통화 필터나 관심그룹이 바뀌었을 수 있으므로, 캡처된
     // 이전 rows가 아니라 현재 화면 기준으로 다시 그려 누락 종목을 후속 조회한다.
     if (interestModeActive()) renderInterestMainTable();
-    else renderStatsTable();
+    else if (activeDetailTab === "stats") renderStatsTable();
+    else renderTable();
   }
 }
 
