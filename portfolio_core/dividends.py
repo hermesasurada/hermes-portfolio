@@ -544,6 +544,7 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
 
     start = _today().replace(day=1)   # 이번 달 1일부터
     end = _today() + timedelta(days=DIVIDEND_LOOKAHEAD_DAYS)
+    raw_start = start - timedelta(days=140)  # 지급일 없는 일본 배당락 이벤트 후보 포함
 
     with connect() as conn:
         ensure_dividend_tables(conn)
@@ -577,7 +578,7 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
               AND date(COALESCE(pay_date, ex_date)) BETWEEN ? AND ?
             ORDER BY date(COALESCE(pay_date, ex_date)), ticker
             """,
-            [*tickers, start.isoformat(), end.isoformat()] if tickers else [start.isoformat(), end.isoformat()],
+            [*tickers, raw_start.isoformat(), end.isoformat()] if tickers else [raw_start.isoformat(), end.isoformat()],
         ).fetchall()
         history_rows = conn.execute(
             f"""

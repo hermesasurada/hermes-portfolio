@@ -66,6 +66,27 @@ def previous_kr_business_day(value: date) -> date:
     return current
 
 
+def previous_weekday(value: date) -> date:
+    current = value - timedelta(days=1)
+    while current.weekday() >= 5:
+        current -= timedelta(days=1)
+    return current
+
+
+def last_day_of_month(year: int, month: int) -> date:
+    if month == 12:
+        return date(year, 12, 31)
+    return date(year, month + 1, 1) - timedelta(days=1)
+
+
+def add_months(value: date, months: int) -> date:
+    month_index = value.month - 1 + months
+    year = value.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(value.day, last_day_of_month(year, month).day)
+    return date(year, month, day)
+
+
 def nth_kr_business_day(year: int, month: int, nth: int) -> date:
     current = date(year, month, 1)
     count = 0
@@ -87,6 +108,22 @@ def next_month(value: date) -> tuple[int, int]:
 def estimated_kr_monthly_etf_pay_date(record_date: date) -> date:
     year, month = next_month(record_date)
     return nth_kr_business_day(year, month, 2)
+
+
+def estimated_jp_pay_date(record_date: date) -> date:
+    target = add_months(record_date, 3)
+    return previous_weekday(last_day_of_month(target.year, target.month))
+
+
+def apply_jp_pay_date(candidate: dict) -> None:
+    ticker = str(candidate.get("ticker") or "").upper()
+    if not ticker.endswith(".T") or candidate.get("pay_date"):
+        return
+    record_date = parse_date(candidate.get("record_date") or candidate.get("ex_date"))
+    if not record_date:
+        return
+    candidate["pay_date"] = estimated_jp_pay_date(record_date).isoformat()
+    candidate["pay_date_estimated"] = True
 
 
 def event_schedule_date(event) -> date | None:
@@ -164,16 +201,20 @@ def estimated_events(history_rows, start: date, end: date, actual_rows) -> list[
     # 경계를 넘나드는 경우까지 잡기 위해 월 단위가 아닌 날짜 근접으로 판정).
     actual_dates_by_ticker: dict[str, list[date]] = {}
     for event in actual_rows:
-        for text in (event["pay_date"], event["ex_date"]):
+        actual = dict(event)
+        apply_jp_pay_date(actual)
+        for text in (actual["pay_date"], actual["ex_date"]):
             actual_date = parse_date(text)
             if actual_date:
-                actual_dates_by_ticker.setdefault(event["ticker"], []).append(actual_date)
+                actual_dates_by_ticker.setdefault(actual["ticker"], []).append(actual_date)
 
     estimates = []
     seen: set[tuple[str, str]] = set()
     today_value = today()
     latest_amount_by_ticker: dict[str, tuple[date, float, str]] = {}
     for row in history_rows:
+        row = dict(row)
+        apply_jp_pay_date(row)
         row_date = event_schedule_date(row)
         amount = float_value(row["amount"])
         if not row_date or row_date > end or amount is None:
@@ -184,6 +225,8 @@ def estimated_events(history_rows, start: date, end: date, actual_rows) -> list[
             latest_amount_by_ticker[ticker] = (row_date, amount, row["currency"])
 
     for event in history_rows:
+        event = dict(event)
+        apply_jp_pay_date(event)
         base_date = event_schedule_date(event)
         if not base_date or base_date > today_value:
             continue
@@ -222,6 +265,7 @@ def consolidated_dividend_events(event_rows, history_rows) -> list[dict]:
     for event in [*event_rows, *estimated_events(history_rows, start, end, event_rows)]:
         candidate = dict(event)
         normalize_seibro_record_date(candidate)
+        apply_jp_pay_date(candidate)
         candidate_amount = float_value(candidate.get("amount"))
         if candidate_amount is None:
             reference = closest_same_period_event(candidate, history_rows)
