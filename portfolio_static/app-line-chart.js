@@ -541,10 +541,10 @@ function renderCompareChartStats(payload) {
   });
 }
 
-function chartPctMetric(value, neutral = "0.00%") {
+function chartPctMetric(value, neutral = "0.00%", neutralCls = "flat") {
   const number = Number(value);
   if (!Number.isFinite(number)) return { text: "-", cls: "flat" };
-  if (Math.abs(number) < 0.005) return { text: neutral, cls: "flat" };
+  if (Math.abs(number) < 0.005) return { text: neutral, cls: neutralCls };
   const cls = number > 0 ? "up" : "down";
   const arrow = number > 0 ? "▲" : "▼";
   return { text: `${arrow} ${fmt2.format(Math.abs(number))}%`, cls };
@@ -576,8 +576,8 @@ function chartOverlayMetrics(values) {
   return [
     ["등락", chartPctMetric(periodChange)],
     ["MDD", chartPctMetric(mdd)],
-    ["고점대비", chartPctMetric(vsHigh)],
-    ["저점대비", chartPctMetric(vsLow)],
+    ["고점대비", chartPctMetric(vsHigh, "ATH", "up")],
+    ["저점대비", chartPctMetric(vsLow, "ATL", "down")],
   ];
 }
 
