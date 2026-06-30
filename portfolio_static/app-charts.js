@@ -32,6 +32,11 @@ function normalizePerformancePoints(points, rangeKey, bounds = null) {
   }));
 }
 
+function performanceValueText(point) {
+  const value = Number(point?.value);
+  return Number.isFinite(value) ? krwShort(value) : "";
+}
+
 function performanceSeries(payload) {
   const portfolioRaw = payload?.points || [];
   const accountSeries = payload?.account_series || [];
@@ -46,6 +51,7 @@ function performanceSeries(payload) {
       color: "var(--brand)",
       points: normalizePerformancePoints(portfolioRaw, chartRange, bounds),
       primary: true,
+      amount: true,
     },
   ];
   if (performanceDetailEnabled() && accountSeries.length > 1) {
@@ -57,6 +63,7 @@ function performanceSeries(payload) {
         points: normalizePerformancePoints(account.points || [], chartRange, bounds),
         primary: false,
         detail: true,
+        amount: true,
       });
     });
   }
@@ -132,7 +139,8 @@ function bindPerformanceHover(series, geometry) {
       const point = nearestChartPoint(item.points, targetTime);
       if (!point) return "";
       const cls = point.close > 0 ? "up" : point.close < 0 ? "down" : "flat";
-      return `<div class="ct-row simple"><span class="ct-name" style="color:${item.color}">${esc(item.name)}</span><span class="ct-pct ${cls}">${esc(pctChartLabel(point.close))}</span></div>`;
+      const value = item.amount ? performanceValueText(point) : "";
+      return `<div class="ct-row simple perf-tooltip-row${item.amount ? " with-value" : ""}"><span class="ct-name" style="color:${item.color}">${esc(item.name)}</span><span class="ct-pct ${cls}">${esc(pctChartLabel(point.close))}</span><span class="ct-value">${esc(value)}</span></div>`;
     }).join("");
     tooltip.innerHTML = `<div class="ct-date">${esc(chartFullDateLabel(dateText))}</div>${rows}`;
     tooltip.classList.remove("hidden");
@@ -173,7 +181,8 @@ function renderPerformanceChart(payload) {
   const width = 980;
   const isMobileChart = Boolean(window.matchMedia?.("(max-width: 980px)")?.matches);
   const height = isMobileChart ? 864 : 432;
-  const pad = { top: 26, right: 104, bottom: 34, left: 56 };
+  const hasAmountLabels = series.some(item => item.amount);
+  const pad = { top: 26, right: hasAmountLabels ? 146 : 104, bottom: 34, left: 56 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const range = max - min || 1;
@@ -191,8 +200,14 @@ function renderPerformanceChart(payload) {
   // (#3) per-line total performance shown at each line's right end, de-collided vertically
   const endLabels = series
     .map(item => {
-      const last = item.points[item.points.length - 1].close;
-      return { color: item.color, close: last, y: yFor(last) };
+      const lastPoint = item.points[item.points.length - 1];
+      const last = lastPoint.close;
+      return {
+        color: item.color,
+        close: last,
+        value: item.amount ? performanceValueText(lastPoint) : "",
+        y: yFor(last),
+      };
     })
     .sort((a, b) => a.y - b.y);
   const minGap = 13;
@@ -230,7 +245,7 @@ function renderPerformanceChart(payload) {
         <path class="perf-line ${item.primary ? "primary" : "index"}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>
       `).join("")}
       ${endLabels.map(label => `
-        <text class="perf-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(pctChartLabel(label.close))}</text>
+        <text class="perf-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(label.value ? `${pctChartLabel(label.close)} · ${label.value}` : pctChartLabel(label.close))}</text>
       `).join("")}
       <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
       <g id="chartHoverGroup" class="chart-hover hidden">

@@ -2880,11 +2880,20 @@ th.pc-frozen-edge {
   column-gap: 8px;
   line-height: 1.75;
 }
-/* 로고·주가 없는 행(성과 차트): 이름 + % 만 */
+/* 로고 없는 성과 차트 행: 이름 + % + 선택계좌 환산금액 */
 .compare-tooltip .ct-row.simple {
-  display: flex;
-  justify-content: space-between;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: minmax(84px, auto) auto;
+  justify-content: stretch;
+  column-gap: 12px;
+}
+.compare-tooltip .ct-row.simple.with-value {
+  grid-template-columns: minmax(84px, auto) auto auto;
+}
+.compare-tooltip .ct-row.simple .ct-value {
+  text-align: right;
+  color: var(--muted);
+  font-weight: 750;
 }
 .compare-tooltip .ct-logo {
   width: 18px;
