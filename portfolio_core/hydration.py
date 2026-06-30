@@ -52,7 +52,12 @@ def fetch_history_rows(ticker: str, years: int = 10) -> tuple[list[tuple[str, fl
         import yfinance as yf
 
         symbol = normalize_yfinance_symbol(ticker) or ticker
-        df = yf.Ticker(symbol).history(start=f"{start[:4]}-{start[4:6]}-{start[6:]}")
+        # auto_adjust=False → 'Close' is the raw market price, matching the daily
+        # collector (collectors.py). Without this, .history() defaults to
+        # auto_adjust=True and back-loads dividend-ADJUSTED closes, which warps
+        # low-volatility dividend/bond ETFs (e.g. SGOV): ex-div drops vanish, the
+        # series only rises, and every new distribution silently rewrites history.
+        df = yf.Ticker(symbol).history(start=f"{start[:4]}-{start[4:6]}-{start[6:]}", auto_adjust=False)
         source = "yf-history"
     if df is None or df.empty or "Close" not in df:
         return [], source
