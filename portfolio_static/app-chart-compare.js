@@ -12,9 +12,8 @@ function compareCommonStartTime() {
 }
 
 function compareAvailableMonths() {
-  const start = compareCommonStartTime();
-  if (!start) return Infinity;
-  return (Date.now() - start) / (1000 * 60 * 60 * 24 * 30.44);
+  const extent = chartPayloadExtent([chartPayload, ...chartComparePayloads], true);
+  return extent ? extent.months : Infinity;
 }
 
 function chartCompareSeries(payload) {
@@ -269,8 +268,7 @@ function bindCompareHover(series, geometry) {
 
 function renderCompareLineChart(payload) {
   // 선택된 기간이 공통 가용기간을 초과하면 '최대'로 자동 보정 (해당 버튼은 비활성)
-  const currentRange = chartRanges.find(range => range.key === chartRange);
-  if (currentRange && currentRange.months && currentRange.months > compareAvailableMonths() + 0.5) chartRange = "cmax";
+  normalizeChartRangeForPayloads([payload, ...chartComparePayloads], true, "cmax");
   const series = chartCompareSeries(payload);
   renderChartIdentity(payload);
   clearChartExternalLinks();   // 비교 모드에선 단일 종목 바로가기 숨김

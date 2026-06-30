@@ -1,18 +1,67 @@
 // 단일 종목 가격차트 + 통계 패널 + 기간/모달 컨트롤. (공용=app-chart-scale.js, 비교=app-chart-compare.js)
+function chartPayloadExtent(payloads, common = false) {
+  const items = (Array.isArray(payloads) ? payloads : [payloads]).filter(Boolean);
+  const extents = items.map(item => {
+    const pts = aggregateChartPoints(item.points || [])
+      .filter(point => point.date && Number.isFinite(Number(point.close)) && Number(point.close) > 0)
+      .map(point => new Date(`${point.date}T00:00:00`).getTime())
+      .filter(time => Number.isFinite(time))
+      .sort((a, b) => a - b);
+    return pts.length >= 2 ? { start: pts[0], end: pts[pts.length - 1] } : null;
+  }).filter(Boolean);
+  if (!extents.length) return null;
+  const start = common ? Math.max(...extents.map(item => item.start)) : Math.min(...extents.map(item => item.start));
+  const end = common ? Math.min(...extents.map(item => item.end)) : Math.max(...extents.map(item => item.end));
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return null;
+  return {
+    start,
+    end,
+    startDate: new Date(start),
+    endDate: new Date(end),
+    months: (end - start) / (1000 * 60 * 60 * 24 * 30.44),
+  };
+}
+
+function chartRangeUnavailable(range, extent) {
+  if (!range || !extent || range.all || range.key === "cmax" || range.key === "custom") return false;
+  if (range.months) return range.months > extent.months + 0.5;
+  if (range.ytd) {
+    const yearStart = new Date(extent.endDate.getFullYear(), 0, 1).getTime();
+    return extent.start > yearStart;
+  }
+  return false;
+}
+
+function currentChartRangeExtent() {
+  const isCompare = chartComparePayloads.length > 0;
+  return chartPayloadExtent(
+    isCompare ? [chartPayload, ...chartComparePayloads] : [chartPayload],
+    isCompare
+  );
+}
+
+function normalizeChartRangeForPayloads(payloads, common = false, fallback = "all") {
+  const range = chartRanges.find(item => item.key === chartRange);
+  const extent = chartPayloadExtent(payloads, common);
+  if (chartRange !== "custom" && chartRangeUnavailable(range, extent)) {
+    chartRange = fallback;
+  }
+}
+
 function renderChartRangeButtons() {
   // 비교 모드: '전체' 대신 공통기간 '최대' 노출 (상장일 차이로 못 쓰는 구간 제외)
   const isCompare = chartComparePayloads.length > 0;
   const ranges = isCompare ? chartRanges.filter(range => range.key !== "all") : chartRanges;
-  // 비교 모드: 공통 가용기간보다 긴 기간(예: 상장 5년 미만 종목과 비교 시 '5년')은 비활성화
-  const availMonths = isCompare ? compareAvailableMonths() : Infinity;
+  const extent = currentChartRangeExtent();
   const maxBtn = isCompare
     ? `<button class="chart-range-btn ${chartRange === "cmax" ? "active" : ""}" type="button" data-chart-range="cmax">최대</button>`
     : "";
   return `
     <div class="chart-ranges" role="group" aria-label="차트 기간">
       ${ranges.map(range => {
-        const disabled = isCompare && range.months && range.months > availMonths + 0.5;
-        return `<button class="chart-range-btn ${range.key === chartRange ? "active" : ""}${disabled ? " disabled" : ""}" type="button" data-chart-range="${range.key}"${disabled ? " disabled" : ""}>${range.label}</button>`;
+        const disabled = chartRangeUnavailable(range, extent);
+        const title = disabled ? `가격 이력이 부족해 ${range.label} 기간을 선택할 수 없습니다.` : "";
+        return `<button class="chart-range-btn ${range.key === chartRange ? "active" : ""}${disabled ? " disabled" : ""}" type="button" data-chart-range="${range.key}"${disabled ? ` disabled title="${esc(title)}"` : ""}>${range.label}</button>`;
       }).join("")}
       ${maxBtn}
       <button class="chart-range-btn ${chartRange === "custom" ? "active" : ""}" type="button" data-chart-custom>직접설정</button>
@@ -658,6 +707,7 @@ function ensureChartStats(ticker) {
 function bindLineChartControls(payload) {
   document.querySelectorAll(".chart-range-btn").forEach(btn => {
     btn.addEventListener("click", () => {
+      if (btn.disabled) return;
       if (btn.dataset.markerToggle != null) {
         if (btn.dataset.markerToggle === "buy") {
           chartShowBuys = !chartShowBuys;
@@ -954,6 +1004,7 @@ function renderLineChart(payload) {
   }
   const allPoints = aggregateChartPoints(payload.points || [])
     .filter(point => Number.isFinite(Number(point.close)));
+  normalizeChartRangeForPayloads([payload], false, "all");
   const points = filterChartPoints(allPoints, chartRange);
   // 매수/매도 마커 표시 토글 반영 (꺼진 쪽은 마커·스케일에서 제외)
   const chartTransactions = chartInterval === "day"
