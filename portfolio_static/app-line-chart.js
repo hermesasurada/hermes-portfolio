@@ -170,10 +170,30 @@ function chartLogoRow(payload) {
 }
 
 const KR_ETF_ISSUERS = [
-  { brand: "KODEX", label: "삼성 KODEX", url: "https://www.samsungfund.com/etf/main.do" },
-  { brand: "TIGER", label: "미래에셋 TIGER", url: "https://www.tigeretf.com/" },
-  { brand: "ACE", label: "한국투자 ACE", url: "https://www.aceetf.co.kr/" },
-  { brand: "SOL", label: "신한 SOL", url: "https://www.soletf.com/" },
+  {
+    brand: "KODEX",
+    label: "KODEX ETF",
+    icon: "K",
+    url: code => `https://www.samsungfund.com/etf/product/view.do?id=${encodeURIComponent(code)}`,
+  },
+  {
+    brand: "TIGER",
+    label: "TIGER ETF",
+    icon: "T",
+    url: code => `https://www.tigeretf.com/ko/product/search/detail/index.do?ksdFund=${encodeURIComponent(code)}`,
+  },
+  {
+    brand: "ACE",
+    label: "ACE ETF",
+    icon: "A",
+    url: code => `https://www.aceetf.co.kr/fund/${encodeURIComponent(code)}`,
+  },
+  {
+    brand: "SOL",
+    label: "SOL ETF",
+    icon: "S",
+    url: code => `https://www.soletf.co.kr/ko/fund?keyword=${encodeURIComponent(code)}`,
+  },
 ];
 
 function isKoreanTicker(ticker) {
@@ -196,18 +216,25 @@ function renderChartExternalLinks(payload) {
   const links = [];
   links.push({
     label: "네이버 증권",
+    icon: "N",
+    kind: "naver",
     url: `https://finance.naver.com/item/main.naver?code=${code}`,
   });
   const issuer = KR_ETF_ISSUERS.find(it =>
     name.toUpperCase().includes(it.brand)
   );
   if (issuer) {
-    links.push({ label: issuer.label, url: issuer.url });
+    links.push({
+      label: issuer.label,
+      icon: issuer.icon,
+      kind: "etf",
+      url: typeof issuer.url === "function" ? issuer.url(code) : issuer.url,
+    });
   }
   el.innerHTML = links
     .map(
       link =>
-        `<a class="chart-link-btn" href="${esc(link.url)}" target="_blank" rel="noopener noreferrer">${esc(link.label)}</a>`
+        `<a class="chart-link-btn chart-link-icon-btn ${esc(link.kind || "")}" href="${esc(link.url)}" target="_blank" rel="noopener noreferrer" title="${esc(link.label)}" aria-label="${esc(link.label)}"><span aria-hidden="true">${esc(link.icon || "↗")}</span></a>`
     )
     .join("");
 }

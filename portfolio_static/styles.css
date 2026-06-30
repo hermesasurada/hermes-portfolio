@@ -1929,6 +1929,7 @@ th.pc-frozen-edge {
   align-items: center;
   gap: 10px;
   flex: 0 0 auto;
+  justify-content: flex-end;
 }
 .chart-interval-control {
   height: 30px;
@@ -1989,7 +1990,6 @@ th.pc-frozen-edge {
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
-  margin-left: 4px;
 }
 .chart-links:empty {
   display: none;
@@ -2013,6 +2013,30 @@ th.pc-frozen-edge {
   background: var(--brand-soft);
   border-color: var(--brand);
   color: var(--brand);
+}
+.chart-link-icon-btn {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1;
+}
+.chart-link-icon-btn.naver {
+  color: #03c75a;
+  border-color: color-mix(in srgb, #03c75a 34%, var(--line));
+}
+.chart-link-icon-btn.etf {
+  color: var(--accent-2);
+}
+.chart-link-icon-btn span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  font-weight: 900;
 }
 .chart-interest-open {
   color: var(--accent-2);
@@ -4224,9 +4248,71 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .chart-head {
     align-items: flex-start;
     display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 8px;
   }
-  .chart-identity { white-space: normal; }
+  .chart-identity {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    white-space: normal;
+  }
+  .chart-id-text {
+    min-width: 0;
+  }
+  .chart-head strong,
+  #chartTicker {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .chart-interest-open {
+    grid-column: 2;
+    justify-self: start;
+    width: max-content;
+    max-width: 100%;
+    margin-top: 1px;
+  }
+  .chart-head-right {
+    align-self: start;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-width: min(46vw, 210px);
+  }
+  .chart-links {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 5px;
+    order: -1;
+  }
+  .chart-link-icon-btn {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+  }
+  .chart-display-controls,
+  .chart-interval-control {
+    max-width: 100%;
+  }
+  .chart-head-toggle {
+    height: 26px;
+    padding: 0 7px;
+    font-size: 10.5px;
+  }
+  .chart-interval-control {
+    height: 28px;
+  }
+  .chart-interval-control .seg-btn {
+    height: 22px;
+    min-width: 30px;
+    padding: 0 7px;
+    font-size: 10.5px;
+  }
   .chart-meta {
+    grid-column: 1 / -1;
     justify-content: flex-start;
     flex-wrap: wrap;
     white-space: normal;
