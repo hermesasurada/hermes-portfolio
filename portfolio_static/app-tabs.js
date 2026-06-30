@@ -13,7 +13,7 @@ function statsRows(rows) {
       market_cap: marketCap,
       market_cap_usd: toUsd(marketCap, row.currency),
       aum: isEtf ? stats.aum : null,
-      dividend_yield: hideFundamentals ? null : stats.dividend_yield,
+      dividend_yield: isIndex ? null : stats.dividend_yield,
       beta: stats.beta,
       beta_adj: stats.beta_adj,
       next_earnings_date: stats.next_earnings_date || row.next_earnings_date || null,
