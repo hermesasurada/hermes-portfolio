@@ -174,24 +174,28 @@ const KR_ETF_ISSUERS = [
     brand: "KODEX",
     label: "KODEX ETF",
     icon: "K",
+    logoUrl: "/logos/KODEX.png",
     url: code => `https://www.samsungfund.com/etf/product/view.do?id=${encodeURIComponent(code)}`,
   },
   {
     brand: "TIGER",
     label: "TIGER ETF",
     icon: "T",
+    logoUrl: "/logos/TIGER.png",
     url: code => `https://www.tigeretf.com/ko/product/search/detail/index.do?ksdFund=${encodeURIComponent(code)}`,
   },
   {
     brand: "ACE",
     label: "ACE ETF",
     icon: "A",
+    logoUrl: "/logos/ACE.png",
     url: code => `https://www.aceetf.co.kr/fund/${encodeURIComponent(code)}`,
   },
   {
     brand: "SOL",
     label: "SOL ETF",
     icon: "S",
+    logoUrl: "/logos/SOL.svg",
     url: code => `https://www.soletf.co.kr/ko/fund?keyword=${encodeURIComponent(code)}`,
   },
 ];
@@ -217,6 +221,7 @@ function renderChartExternalLinks(payload) {
   links.push({
     label: "네이버 증권",
     icon: "N",
+    logoText: "N",
     kind: "naver",
     url: `https://finance.naver.com/item/main.naver?code=${code}`,
   });
@@ -227,14 +232,19 @@ function renderChartExternalLinks(payload) {
     links.push({
       label: issuer.label,
       icon: issuer.icon,
+      logoUrl: issuer.logoUrl,
       kind: "etf",
       url: typeof issuer.url === "function" ? issuer.url(code) : issuer.url,
     });
   }
   el.innerHTML = links
     .map(
-      link =>
-        `<a class="chart-link-btn chart-link-icon-btn ${esc(link.kind || "")}" href="${esc(link.url)}" target="_blank" rel="noopener noreferrer" title="${esc(link.label)}" aria-label="${esc(link.label)}"><span aria-hidden="true">${esc(link.icon || "↗")}</span></a>`
+      link => {
+        const icon = link.logoUrl
+          ? `<img src="${esc(link.logoUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentElement.classList.add('logo-fallback');this.remove()"><span class="chart-link-fallback" aria-hidden="true">${esc(link.icon || "↗")}</span>`
+          : `<span class="chart-link-symbol" aria-hidden="true">${esc(link.logoText || link.icon || "↗")}</span>`;
+        return `<a class="chart-link-btn chart-link-icon-btn ${esc(link.kind || "")}" href="${esc(link.url)}" target="_blank" rel="noopener noreferrer" title="${esc(link.label)}" aria-label="${esc(link.label)}">${icon}</a>`;
+      }
     )
     .join("");
 }
@@ -609,13 +619,13 @@ function chartOverlayMetrics(values) {
 }
 
 function renderChartMetricsOverlay(metrics, x, y, compact = false) {
-  const width = compact ? 210 : 170;
+  const width = compact ? 178 : 148;
   const height = compact ? 100 : 78;
   const titleY = y + (compact ? 19 : 15);
   const rowStartY = y + (compact ? 39 : 31);
   const rowGap = compact ? 18 : 13.5;
   const labelX = x + (compact ? 13 : 10);
-  const valueX = x + width - (compact ? 13 : 10);
+  const valueX = x + width - (compact ? 11 : 9);
   const rows = metrics.map(([label, metric], index) => {
     const rowY = rowStartY + index * rowGap;
     return `
