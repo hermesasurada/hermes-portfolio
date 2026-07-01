@@ -275,7 +275,8 @@ function renderCompareLineChart(payload) {
   syncChartLogToggle(true);   // 비교 차트도 로그 지원 (비율 기준)
   renderCompareChartStats(payload);
   if (series.length < 2 || !series[0]?.points.length) {
-    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">비교 차트 데이터 없음</div>${renderChartCompareControls()}${renderChartRangeButtons()}`;
+    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">비교 차트 데이터 없음</div>${renderChartCompareControls()}`;
+    renderChartRangeControls();
     bindChartCompareControls(payload);
     bindLineChartControls(payload);
     return;
@@ -397,8 +398,8 @@ function renderCompareLineChart(payload) {
     </svg>
     <div id="compareTooltip" class="compare-tooltip hidden" aria-hidden="true"></div>
     ${renderChartCompareControls()}
-    ${renderChartRangeButtons()}
   `;
+  renderChartRangeControls();
   bindCompareHover(series, { width, height, pad, plotW, plotH, minTime, maxTime, xForTime, yFor, rsiYFor });
   bindChartCompareControls(payload);
   bindLineChartControls(payload);

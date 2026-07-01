@@ -299,19 +299,23 @@
             </div>
             <div class="chart-head-right">
               <span id="chartLinks" class="chart-links"></span>
-              <div class="chart-display-controls hidden" id="chartDisplayControls" role="group" aria-label="차트 표시">
-                <button class="chart-head-toggle" id="chartSmoothToggle" type="button" aria-pressed="true">부드럽게</button>
-                <button class="chart-head-toggle" id="chartLogToggle" type="button" aria-pressed="false">로그</button>
-              </div>
-              <div class="segmented chart-interval-control hidden" id="chartIntervalControl" role="group" aria-label="차트 단위">
-                <button class="seg-btn" type="button" data-chart-interval="day" aria-pressed="true">일</button>
-                <button class="seg-btn" type="button" data-chart-interval="week" aria-pressed="false">주</button>
-                <button class="seg-btn" type="button" data-chart-interval="month" aria-pressed="false">월</button>
-              </div>
+              <div class="chart-price-summary" id="chartPriceSummary"></div>
               <div class="chart-meta" id="chartMeta">-</div>
             </div>
           </div>
           <div class="chart-canvas" id="chartCanvas"></div>
+          <div class="chart-bottom-controls hidden" id="chartBottomControls">
+            <div class="chart-display-controls hidden" id="chartDisplayControls" role="group" aria-label="차트 표시">
+              <button class="chart-head-toggle" id="chartSmoothToggle" type="button" aria-pressed="true">부드럽게</button>
+              <button class="chart-head-toggle" id="chartLogToggle" type="button" aria-pressed="false">로그</button>
+            </div>
+            <div class="segmented chart-interval-control hidden" id="chartIntervalControl" role="group" aria-label="차트 단위">
+              <button class="seg-btn" type="button" data-chart-interval="day" aria-pressed="true">일</button>
+              <button class="seg-btn" type="button" data-chart-interval="week" aria-pressed="false">주</button>
+              <button class="seg-btn" type="button" data-chart-interval="month" aria-pressed="false">월</button>
+            </div>
+            <div class="chart-range-host" id="chartRangeHost"></div>
+          </div>
           <div class="chart-stats" id="chartStats"></div>
         </div>
       </section>

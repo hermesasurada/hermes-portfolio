@@ -156,17 +156,21 @@ function bindPerformanceHover(series, geometry) {
 function renderPerformanceChart(payload) {
   performancePayload = payload;
   const series = performanceSeries(payload);
+  if (typeof syncChartBottomControls === "function") syncChartBottomControls(true);
   if (typeof syncChartLogToggle === "function") syncChartLogToggle(false);   // 성과 차트는 로그 미적용
   const statsEl = document.getElementById("chartStats");
   if (statsEl) statsEl.innerHTML = "";   // 성과 차트엔 종목별 지표 패널 숨김
   document.getElementById("chartIcon").innerHTML = `<span class="asset-icon">%</span>`;
   document.getElementById("chartTicker").textContent = "성과";
   document.getElementById("chartName").textContent = accountPerformanceTitle(payload);
+  const priceSummary = document.getElementById("chartPriceSummary");
+  if (priceSummary) priceSummary.innerHTML = "";
   if (typeof clearChartExternalLinks === "function") clearChartExternalLinks();
 
   if (!series.length || !series[0]?.points.length) {
     document.getElementById("chartMeta").textContent = `${payload?.holdings_count || 0}개 종목`;
-    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">성과 차트 데이터 없음</div>${renderPerformanceControls()}${renderChartRangeButtons()}`;
+    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">성과 차트 데이터 없음</div>${renderPerformanceControls()}`;
+    renderChartRangeControls();
     bindPerformanceChartControls();
     return;
   }
@@ -254,8 +258,8 @@ function renderPerformanceChart(payload) {
       </g>
     </svg>
     <div id="compareTooltip" class="compare-tooltip hidden" aria-hidden="true"></div>
-    ${renderChartRangeButtons()}
   `;
+  renderChartRangeControls();
   bindPerformanceHover(series, { width, height, pad, plotW, plotH, minTime, maxTime, xForTime, yFor });
   bindPerformanceChartControls();
 }
@@ -290,6 +294,10 @@ async function openPerformanceChart() {
   document.getElementById("chartTicker").textContent = "성과";
   document.getElementById("chartName").textContent = "계좌 퍼포먼스";
   if (typeof clearChartExternalLinks === "function") clearChartExternalLinks();
+  const perfPriceSummary = document.getElementById("chartPriceSummary");
+  if (perfPriceSummary) perfPriceSummary.innerHTML = "";
+  const perfRangeHost = document.getElementById("chartRangeHost");
+  if (perfRangeHost) perfRangeHost.innerHTML = "";
   document.getElementById("chartMeta").textContent = "loading...";
   document.getElementById("chartCanvas").innerHTML = `<div class="chart-skeleton"></div>`;
   const accounts = visibleAccounts();
@@ -318,6 +326,8 @@ async function openChart(ticker) {
   syncDetailTabs();
   document.getElementById("tableTitle").textContent = cleanTicker;
   renderChartIdentity({ ticker: cleanTicker, name: cleanTicker });
+  const rangeHost = document.getElementById("chartRangeHost");
+  if (rangeHost) rangeHost.innerHTML = "";
   document.getElementById("chartMeta").textContent = "loading...";
   document.getElementById("chartCanvas").innerHTML = `<div class="chart-skeleton"></div>`;
   chartLoadInFlight = apiFetchChart(cleanTicker);

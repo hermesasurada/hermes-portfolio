@@ -1931,6 +1931,49 @@ th.pc-frozen-edge {
   flex: 0 0 auto;
   justify-content: flex-end;
 }
+.chart-price-summary {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 7px;
+}
+.chart-price-summary:empty {
+  display: none;
+}
+.chart-price-card {
+  min-width: 132px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 2px 8px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.chart-price-label {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 800;
+}
+.chart-price-card strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.05;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.chart-price-change {
+  grid-column: 1 / -1;
+  text-align: right;
+  font-size: 11.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.chart-price-change .up { color: var(--up); }
+.chart-price-change .down { color: var(--down); }
+.chart-price-change .flat { color: var(--muted); }
 .chart-interval-control {
   height: 30px;
   padding: 2px;
@@ -2360,9 +2403,24 @@ th.pc-frozen-edge {
 }
 .chart-canvas > svg,
 .chart-canvas > .chart-empty { order: 0; }
-.chart-canvas > .chart-ranges { order: -1; }
 .chart-canvas > .chart-compare-panel,
 .chart-canvas > .perf-controls { order: 1; }
+.chart-bottom-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  flex-wrap: wrap;
+}
+.chart-bottom-controls.hidden {
+  display: none;
+}
+.chart-range-host {
+  min-width: 0;
+}
 
 /* ── 단일 가격 차트 (SVG·RSI 패널·거래 마커) ───────────────────────────── */
 .line-chart {
@@ -2572,9 +2630,8 @@ th.pc-frozen-edge {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px 12px;
+  padding: 0;
   flex-wrap: wrap;
-  border-bottom: 1px solid var(--line);   /* 상단 컨트롤 바 → 차트와 분리 */
 }
 .chart-range-btn {
   height: 30px;
@@ -4307,19 +4364,39 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     margin-top: 1px;
   }
   .chart-head-right {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: none;
+    display: flex;
     align-self: start;
-    justify-content: flex-end;
-    justify-items: end;
-    gap: 5px;
-    max-width: min(52vw, 220px);
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
   }
   .chart-links {
-    width: 100%;
+    width: auto;
     justify-content: flex-end;
     gap: 5px;
-    order: -1;
+    order: 0;
+    margin-left: auto;
+  }
+  .chart-price-summary {
+    order: 1;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .chart-price-card {
+    min-width: 0;
+    padding: 6px 8px;
+  }
+  .chart-price-card strong {
+    font-size: 13.5px;
+  }
+  .chart-price-change {
+    font-size: 10.5px;
   }
   .chart-link-icon-btn {
     width: 30px;
@@ -4349,10 +4426,15 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     font-size: 10.5px;
   }
   .chart-meta {
-    grid-column: 1 / -1;
+    order: 2;
     justify-content: flex-start;
     flex-wrap: wrap;
     white-space: normal;
+  }
+  .chart-bottom-controls {
+    justify-content: flex-start;
+    gap: 6px;
+    padding: 8px;
   }
   .chart-view {
     padding: 8px;

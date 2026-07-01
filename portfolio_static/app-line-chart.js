@@ -75,6 +75,18 @@ function renderChartRangeButtons() {
   `;
 }
 
+function renderChartRangeControls() {
+  const host = document.getElementById("chartRangeHost");
+  if (!host) return;
+  host.innerHTML = renderChartRangeButtons();
+}
+
+function syncChartBottomControls(visible = Boolean(chartTicker || performanceChartOpen)) {
+  const control = document.getElementById("chartBottomControls");
+  if (!control) return;
+  control.classList.toggle("hidden", !visible);
+}
+
 function syncChartIntervalControl() {
   const control = document.getElementById("chartIntervalControl");
   if (!control) return;
@@ -310,6 +322,96 @@ function renderChartIdentity(payload) {
   document.getElementById("chartName").textContent = row.name || row.ticker || "";
   document.getElementById("chartInterestOpen")?.classList.toggle("hidden", !row.ticker);
   renderChartExternalLinks(row);
+  renderChartPriceSummary(payload);
+}
+
+function finiteChartNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function chartSummaryMeta(payload) {
+  const ticker = String(payload?.ticker || "").toUpperCase();
+  const meta = findTickerMeta(ticker) || {};
+  const holding = flattenHoldings().find(row => String(row.ticker || "").toUpperCase() === ticker) || {};
+  return { ...holding, ...meta, ticker, currency: payload?.currency || meta.currency || holding.currency || "USD" };
+}
+
+function chartPriceChangeMetric(price, previous, change, changePct) {
+  const cleanPrice = finiteChartNumber(price);
+  const cleanPrevious = finiteChartNumber(previous);
+  let cleanChange = finiteChartNumber(change);
+  let cleanChangePct = finiteChartNumber(changePct);
+  if (cleanChange == null && cleanPrice != null && cleanPrevious != null && cleanPrevious !== 0) {
+    cleanChange = cleanPrice - cleanPrevious;
+  }
+  if (cleanChangePct == null && cleanChange != null && cleanPrevious) {
+    cleanChangePct = cleanChange / cleanPrevious * 100;
+  }
+  return { price: cleanPrice, change: cleanChange, changePct: cleanChangePct };
+}
+
+function chartPriceClass(change) {
+  const number = Number(change);
+  if (!Number.isFinite(number)) return "flat";
+  return number > 0 ? "up" : number < 0 ? "down" : "flat";
+}
+
+function chartPriceDeltaMarkup(metric, currency, ticker) {
+  if (metric.change == null && metric.changePct == null) return "-";
+  const cls = chartPriceClass(metric.change ?? metric.changePct);
+  const arrow = cls === "up" ? "▲" : cls === "down" ? "▼" : "→";
+  const amount = metric.change == null ? "" : signedChartMoney(metric.change, currency, ticker);
+  const pct = metric.changePct == null ? "" : `${fmt2.format(Math.abs(metric.changePct))}%`;
+  const sep = amount && pct ? " · " : "";
+  return `<span class="${cls}"><span aria-hidden="true">${arrow}</span>${amount}${sep}${pct}</span>`;
+}
+
+function chartExtendedLabel(meta) {
+  const source = String(meta.extended_source || "").toLowerCase();
+  const state = String(meta.extended_market_state || "").toUpperCase();
+  if (source.includes("pre") || state === "PRE") return "프리";
+  if (source.includes("after") || state.includes("POST")) return "애프터";
+  return "연장";
+}
+
+function renderChartPriceCard(label, metric, currency, ticker, extraClass = "") {
+  return `
+    <div class="chart-price-card ${extraClass}">
+      <span class="chart-price-label">${esc(label)}</span>
+      <strong>${metric.price == null ? "-" : esc(chartMoney(metric.price, currency, ticker))}</strong>
+      <span class="chart-price-change">${chartPriceDeltaMarkup(metric, currency, ticker)}</span>
+    </div>
+  `;
+}
+
+function renderChartPriceSummary(payload) {
+  const el = document.getElementById("chartPriceSummary");
+  if (!el) return;
+  const ticker = String(payload?.ticker || "").toUpperCase();
+  if (!ticker || performanceChartOpen) {
+    el.innerHTML = "";
+    return;
+  }
+  const meta = chartSummaryMeta(payload);
+  const currency = meta.currency || payload?.currency || "USD";
+  const dayMetric = chartPriceChangeMetric(
+    meta.regular_price ?? meta.current_price,
+    meta.regular_previous_price ?? meta.previous_price,
+    meta.regular_change ?? meta.change,
+    meta.regular_change_pct ?? meta.change_pct
+  );
+  const extendedMetric = chartPriceChangeMetric(
+    meta.extended_price,
+    meta.extended_base_price,
+    meta.extended_change,
+    meta.extended_change_pct
+  );
+  const isUsTicker = currency === "USD" && !ticker.includes(".");
+  el.innerHTML = `
+    ${renderChartPriceCard("당일", dayMetric, currency, ticker)}
+    ${isUsTicker ? renderChartPriceCard(chartExtendedLabel(meta), extendedMetric, currency, ticker, "extended") : ""}
+  `;
 }
 
 function chartInterestGroups(ticker) {
@@ -997,6 +1099,7 @@ function bindChartInteractions(points, payload, geometry) {
 }
 
 function renderLineChart(payload) {
+  syncChartBottomControls(true);
   syncChartIntervalControl();
   if (chartComparePayloads.length) {
     renderCompareLineChart(payload);
@@ -1014,7 +1117,8 @@ function renderLineChart(payload) {
   if (points.length < 2) {
     syncChartLogToggle(false);
     document.getElementById("chartMeta").textContent = `${points.length} points`;
-    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">차트 데이터 없음</div>${renderChartCompareControls()}${renderChartRangeButtons()}`;
+    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">차트 데이터 없음</div>${renderChartCompareControls()}`;
+    renderChartRangeControls();
     bindChartCompareControls(payload);
     bindLineChartControls(payload);
     renderChartStats(payload);
@@ -1178,8 +1282,8 @@ function renderLineChart(payload) {
       </g>
     </svg>
     ${renderChartCompareControls()}
-    ${renderChartRangeButtons()}
   `;
+  renderChartRangeControls();
   bindChartInteractions(points, payload, { width, height, pad, plotW, plotH, xFor, yFor, rsiYFor });
   bindChartCompareControls(payload);
   bindLineChartControls(payload);
