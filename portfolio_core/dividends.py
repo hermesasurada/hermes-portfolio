@@ -5,12 +5,12 @@ from datetime import date, timedelta
 from statistics import median
 from typing import Any
 
-from .constants import DIVIDEND_LOOKAHEAD_DAYS, DIVIDEND_LOOKBACK_DAYS, FX_DEFAULT_RATES, KOREAN_SUFFIXES
+from .constants import DIVIDEND_LOOKAHEAD_DAYS, DIVIDEND_LOOKBACK_DAYS, KOREAN_SUFFIXES
 from .dates import positive_float, today_kst
 from .db import connect, ensure_dividend_tables, ensure_stock_split_tables
 from .dividend_refresh import dividend_history_start, refresh_dividend_events
 from .dividend_schedule import consolidated_dividend_events, event_schedule_date
-from .prices import latest_prices
+from .prices import fx_rates, latest_prices
 from .queries import clean_account_ids, load_holding_rows
 from .tickers import ticker_currency
 
@@ -613,12 +613,7 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
     for holding in holdings:
         holdings_by_ticker.setdefault(holding["ticker"], []).append(holding)
 
-    rates = {
-        "KRW": 1.0,
-        "USD": float(prices.get("USDKRW", {}).get("price") or FX_DEFAULT_RATES["USD"]),
-        "EUR": float(prices.get("EURKRW", {}).get("price") or FX_DEFAULT_RATES["EUR"]),
-        "JPY": float(prices.get("JPYKRW", {}).get("price") or FX_DEFAULT_RATES["JPY"]),
-    }
+    rates = fx_rates(prices)   # FX_TICKERS 기반 전 통화 — 수동 dict는 CNY/TWD 누락 버그가 있었다
     rows = []
     dividend_events = [
         event for event in consolidated_dividend_events(event_rows, history_rows)

@@ -3,10 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from itertools import groupby
 
-from .constants import FX_DEFAULT_RATES, MARKET_INDEXES
+from .constants import MARKET_INDEXES
 from .db import connect, ensure_daily_technical_indicators_table
 from .paths import US_EASTERN
-from .prices import latest_prices
+from .prices import fx_rates, latest_prices
 from .queries import account_filter_clause, clean_account_ids, load_holding_rows
 from .tickers import account_label, is_us_stock_ticker, ticker_currency
 from .us_live_quotes import fetch_us_live_quotes, us_market_status
@@ -174,12 +174,7 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
             index_tickers,
         ).fetchall()
 
-    rates = {
-        "KRW": 1.0,
-        "USD": float(prices.get("USDKRW", {}).get("price") or FX_DEFAULT_RATES["USD"]),
-        "EUR": float(prices.get("EURKRW", {}).get("price") or FX_DEFAULT_RATES["EUR"]),
-        "JPY": float(prices.get("JPYKRW", {}).get("price") or FX_DEFAULT_RATES["JPY"]),
-    }
+    rates = fx_rates(prices)   # FX_TICKERS 기반 전 통화 — 수동 dict는 CNY/TWD 누락 버그가 있었다
     first_prices: dict[str, float] = {}
     for row in price_rows:
         first_prices.setdefault(row["ticker"], float(row["close"]))
