@@ -8,7 +8,7 @@ from typing import Iterable
 
 from .constants import CRYPTO_MARKETS, MARKET_INDEXES
 from .db import connect
-from .hydration import deficient_tickers, estimate_hydration_minutes, hydrate_deficient_tickers, hydrate_ticker
+from .hydration import estimate_hydration_minutes, hydrate_ticker
 from .interest_watchlists import sync_special_interest_items
 from .price_store import infer_category
 from .tickers import asset_class, display_name, kr_ticker_code, normalize_yfinance_symbol, ticker_currency
@@ -289,13 +289,6 @@ def upsert_ticker(item: dict) -> dict:
         )
         conn.commit()
     return {"ticker": ticker, "name": name, "currency": currency, "category": category, "region": region}
-
-
-def add_watchlist(items: Iterable[dict], hydrate: bool = True) -> dict:
-    added = [upsert_ticker(item) for item in items]
-    sync_special_interest_items(added)
-    hydration = [hydrate_ticker(item["ticker"]) for item in added] if hydrate else []
-    return {"ok": True, "tickers": added, "hydration": hydration}
 
 
 def add_watchlist_async(items: Iterable[dict]) -> dict:

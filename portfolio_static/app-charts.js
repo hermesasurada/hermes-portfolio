@@ -361,9 +361,6 @@ function closeChart(updateHash = true) {
   }
   renderTable();
 }
-window.openChart = openChart;
-window.openPerformanceChart = openPerformanceChart;
-window.closeChart = closeChart;
 
 function syncChartRoute() {
   if (performanceChartFromHash()) {

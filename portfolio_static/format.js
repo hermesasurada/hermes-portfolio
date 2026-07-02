@@ -84,23 +84,11 @@ function valueMarkup(row) {
   if (row.currency === "KRW" || !Number.isFinite(row.value_krw)) return local;
   return `<span class="price-cell"><span>${local}</span><span class="krw-sub">(${krw(row.value_krw)})</span></span>`;
 }
-function changeText(v, pct) {
-  if (v == null || pct == null) return "-";
-  const cls = v > 0 ? "up" : v < 0 ? "down" : "flat";
-  const arrow = v > 0 ? "▲" : v < 0 ? "▼" : "→";
-  return `<span class="change-cell ${cls}"><span aria-hidden="true">${arrow}</span>${fmt2.format(Math.abs(pct))}%</span>`;
-}
 function changePercentText(pct, chip = false) {
   if (!Number.isFinite(pct)) return "-";
   const cls = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
   const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "→";
   return `<span class="change-cell ${chip ? "pct-chip " : ""}${cls}"><span aria-hidden="true">${arrow}</span>${fmt2.format(Math.abs(pct))}%</span>`;
-}
-function pctChangeText(pct, label = "") {
-  if (!Number.isFinite(pct)) return "";
-  const cls = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
-  const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "→";
-  return `<span class="${cls}">${label}${arrow}${fmt2.format(Math.abs(pct))}%</span>`;
 }
 function changeMarkup(row) {
   return changePercentText(row.display_change_pct, true);   // 등락 컬럼은 칩 스타일
@@ -170,9 +158,6 @@ function dividendFxText(v) {
 }
 function dividendKrwText(v) {
   return v != null && Number.isFinite(Number(v)) ? `₩${fmt.format(Math.round(Number(v)))}` : "-";
-}
-function intText(v) {
-  return v != null && Number.isFinite(Number(v)) ? fmt.format(Math.round(Number(v))) : "-";
 }
 function peText(v) {
   return v != null && Number.isFinite(Number(v)) ? Number(v).toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : "-";

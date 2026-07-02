@@ -6,8 +6,8 @@ from datetime import datetime
 
 from .accounts import load_account, load_holding, load_ticker_info
 from .constants import CRYPTO_MARKETS, KOREAN_SUFFIXES
+from .dates import now_kst_text
 from .db import connect
-from .paths import KST
 from .portfolio import load_portfolio
 from .tickers import account_scope, display_name, ticker_currency, ticker_scope
 
@@ -40,11 +40,9 @@ def parse_trade_date(value: str | None) -> str:
         raise ValueError("거래일은 YYYY-MM-DD 형식이어야 합니다.") from exc
 
 
-def now_kst_text() -> str:
-    return datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
-
-
-def positive_float(value, label: str) -> float:
+def require_positive_float(value, label: str) -> float:
+    """dates.positive_float(실패→None)와 달리 실패 시 ValueError를 던진다 —
+    사용자 입력 검증 전용이라 이름으로 계약을 구분한다."""
     try:
         number = float(value)
     except (TypeError, ValueError) as exc:
@@ -134,8 +132,8 @@ def add_transaction(payload: dict, portfolio_loader: Callable[[], dict] | None =
     account_id = int(payload.get("account_id") or 0)
     ticker = str(payload.get("ticker") or "").strip().upper()
     side = str(payload.get("side") or "").strip().upper()
-    qty = positive_float(payload.get("qty"), "수량")
-    price = positive_float(payload.get("price"), "단가")
+    qty = require_positive_float(payload.get("qty"), "수량")
+    price = require_positive_float(payload.get("price"), "단가")
     trade_date = parse_trade_date(payload.get("trade_date"))
     note = str(payload.get("note") or "").strip()
     apply_to_holdings = parse_bool(payload.get("apply_to_holdings"), True)
@@ -240,8 +238,8 @@ def update_transaction(payload: dict) -> dict:
         side = str(payload.get("side") or row["side"]).strip().upper()
         if side not in {"BUY", "SELL"}:
             raise ValueError("거래 유형은 BUY 또는 SELL이어야 합니다.")
-        qty = positive_float(payload["qty"], "수량") if payload.get("qty") not in (None, "") else float(row["qty"])
-        price = positive_float(payload["price"], "단가") if payload.get("price") not in (None, "") else float(row["price"])
+        qty = require_positive_float(payload["qty"], "수량") if payload.get("qty") not in (None, "") else float(row["qty"])
+        price = require_positive_float(payload["price"], "단가") if payload.get("price") not in (None, "") else float(row["price"])
         note = str(payload["note"] if payload.get("note") is not None else (row["note"] or "")).strip()
         conn.execute(
             "UPDATE transactions SET trade_date = ?, side = ?, qty = ?, price = ?, note = ? WHERE id = ?",

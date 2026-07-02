@@ -472,7 +472,7 @@ main {
 .metric { padding: 14px; }
 .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
 
-/* ── 히어로 요약 (총 평가액 · 오늘 손익 · 1개월 스파크라인) ─────────────────── */
+/* ── 히어로 요약 (총 평가액 · 오늘 손익) ─────────────────── */
 .hero-strip {
   display: flex;
   align-items: center;
@@ -576,11 +576,6 @@ main {
 .sidebar-tab.active {
   background: var(--brand);
   color: var(--on-accent);
-}
-.panel-head-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
 }
 .mobile-collapse-toggle {
   display: none;
@@ -1131,35 +1126,20 @@ main {
    (Chrome/Safari = ::-webkit-scrollbar 축별 제어. 표준 scrollbar-width는
    선언하지 않는다 — 선언 시 webkit 축별 제어가 무시되어 둘 다 사라진다.) */
 .table-wrap::-webkit-scrollbar,
-#statsTableWrap::-webkit-scrollbar,
-#dividendTableWrap::-webkit-scrollbar,
-.dividend-history-table-wrap::-webkit-scrollbar,
-.tx-wrap::-webkit-scrollbar { width: 0; height: 8px; }
+.dividend-history-table-wrap::-webkit-scrollbar { width: 0; height: 8px; }
 .table-wrap::-webkit-scrollbar-track,
-#statsTableWrap::-webkit-scrollbar-track,
-#dividendTableWrap::-webkit-scrollbar-track,
-.dividend-history-table-wrap::-webkit-scrollbar-track,
-.tx-wrap::-webkit-scrollbar-track { background: transparent; }
+.dividend-history-table-wrap::-webkit-scrollbar-track { background: transparent; }
 .table-wrap::-webkit-scrollbar-thumb,
-#statsTableWrap::-webkit-scrollbar-thumb,
-#dividendTableWrap::-webkit-scrollbar-thumb,
-.dividend-history-table-wrap::-webkit-scrollbar-thumb,
-.tx-wrap::-webkit-scrollbar-thumb {
+.dividend-history-table-wrap::-webkit-scrollbar-thumb {
   background: var(--line);
   background-clip: content-box;
   border: 2px solid transparent;
   border-radius: 999px;
 }
 .table-wrap::-webkit-scrollbar-thumb:hover,
-#statsTableWrap::-webkit-scrollbar-thumb:hover,
-#dividendTableWrap::-webkit-scrollbar-thumb:hover,
-.dividend-history-table-wrap::-webkit-scrollbar-thumb:hover,
-.tx-wrap::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+.dividend-history-table-wrap::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 .table-wrap::-webkit-scrollbar-corner,
-#statsTableWrap::-webkit-scrollbar-corner,
-#dividendTableWrap::-webkit-scrollbar-corner,
-.dividend-history-table-wrap::-webkit-scrollbar-corner,
-.tx-wrap::-webkit-scrollbar-corner { background: transparent; }
+.dividend-history-table-wrap::-webkit-scrollbar-corner { background: transparent; }
 #statsTableWrap {
   padding: 0;
   overflow-x: auto;
@@ -1252,7 +1232,6 @@ table.stats-list {
 .stats-list .indicator-head span {
   display: block;
 }
-.stats-list .ticker-cell { gap: 10px; }
 .stats-list .asset-icon { width: 34px; height: 34px; border-radius: 7px; font-size: 10.5px; }
 .stats-list .ticker-text { overflow: hidden; }
 .stats-list .asset-name {
@@ -1515,26 +1494,6 @@ tr.dividend-today-row:hover td {
   font-size: 11px;
   font-weight: 800;
   z-index: 1;
-}
-.dividend-history-link {
-  display: inline;
-  max-width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--ink);
-  font: inherit;
-  font-weight: 800;
-  text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.dividend-history-link:hover {
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 /* 통계탭 배당율 → 배당이력 모달 링크 (셀 우측정렬·tnum 유지) */
 .stat-yield-link {
@@ -1803,11 +1762,6 @@ th.pc-frozen-edge {
 .asset-icon img.dark-logo { filter: brightness(0); }
 .asset-icon .fallback-text { position: relative; z-index: 0; }
 .asset-icon.has-image .fallback-text { visibility: hidden; }
-.ticker-cell {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
 .ticker-text {
   display: grid;
   gap: 2px;
@@ -1885,16 +1839,6 @@ th.pc-frozen-edge {
 .pct-chip.up { background: color-mix(in srgb, var(--up) 10%, transparent); }
 .pct-chip.down { background: color-mix(in srgb, var(--down) 10%, transparent); }
 .pct-chip.flat { color: var(--muted); background: var(--surface-2); }
-.change-stack {
-  display: inline-grid;
-  justify-items: end;
-  gap: 2px;
-  line-height: 1.2;
-}
-.change-stack .fx-sub {
-  font-size: 10.5px;
-  font-weight: 700;
-}
 .up { color: var(--up); }
 .down { color: var(--down); }
 .flat { color: var(--muted); }
@@ -2348,7 +2292,6 @@ th.pc-frozen-edge {
 }
 .cstat-positive { color: #22a447; }
 .cstat-negative { color: #ef4754; }
-.cstat-cold { color: #6ea8e6; }
 .chart-stat-loading {
   color: var(--muted);
   font-size: 10.5px;
@@ -2583,18 +2526,6 @@ th.pc-frozen-edge {
   fill: var(--down);
   stroke: var(--chart-label-halo);
 }
-.chart-change-overlay {
-  fill: var(--chart-ink);
-  font-size: 14px;
-  font-weight: 800;
-  paint-order: stroke;
-  stroke: var(--chart-label-halo);
-  stroke-width: 4px;
-  stroke-linejoin: round;
-  pointer-events: none;
-}
-.chart-change-overlay.up { fill: var(--up); }
-.chart-change-overlay.down { fill: var(--down); }
 .chart-metric-overlay,
 .chart-metric-overlay-text {
   pointer-events: none;
@@ -2998,43 +2929,6 @@ th.pc-frozen-edge {
   width: min(260px, 52vw);
   height: 30px;
   font-size: 12px;
-}
-.chart-compare-list {
-  min-height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.compare-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 7px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--ink);
-  font-size: 11px;
-  font-weight: 800;
-}
-.compare-chip button {
-  width: 17px;
-  height: 17px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: var(--line);
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1;
-}
-.compare-empty {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
 }
 .trade-marker {
   cursor: pointer;
@@ -4146,7 +4040,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .apply-toggle input:checked + .toggle-ui { background: var(--brand); }
 .apply-toggle input:checked + .toggle-ui::after { transform: translateX(12px); }
 .apply-toggle input:checked ~ .toggle-label { color: var(--brand); }
-.field-wide { grid-column: span 2; }
 .primary-btn {
   background: var(--accent);
   border-color: var(--accent);
@@ -4199,10 +4092,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 .side-buy { color: var(--up); font-weight: 800; }
 .side-sell { color: var(--down); font-weight: 800; }
-.applied-badge {
-  color: var(--accent);
-  font-weight: 800;
-}
 .holdings-section .table-wrap {
   max-height: calc(100vh - 190px);
   overflow: auto;
@@ -4488,10 +4377,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   .chart-extreme text {
     font-size: 15px;
-    stroke-width: 5px;
-  }
-  .chart-change-overlay {
-    font-size: 20px;
     stroke-width: 5px;
   }
   .chart-metric-title {

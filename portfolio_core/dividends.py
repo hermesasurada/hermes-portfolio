@@ -5,8 +5,8 @@ from datetime import date, timedelta
 from statistics import median
 from typing import Any
 
-from .constants import DIVIDEND_LOOKAHEAD_DAYS, DIVIDEND_LOOKBACK_DAYS, KOREAN_SUFFIXES
-from .dates import positive_float, today_kst
+from .constants import DIVIDEND_LOOKAHEAD_DAYS, KOREAN_SUFFIXES
+from .dates import parse_iso_date, positive_float, today_kst
 from .db import connect, ensure_dividend_tables, ensure_stock_split_tables
 from .dividend_refresh import dividend_history_start, refresh_dividend_events
 from .dividend_schedule import consolidated_dividend_events, event_schedule_date
@@ -62,11 +62,8 @@ def _annual_cagr(
     return ((end_value / start_value) ** (1 / years) - 1) * 100
 
 
-def _history_date(value: str | None) -> date | None:
-    try:
-        return date.fromisoformat(str(value))
-    except (TypeError, ValueError):
-        return None
+# 공용 헬퍼 위임 (동일 기능 로컬 복제 제거)
+_history_date = parse_iso_date
 
 
 def _entitlement_date(event: Any) -> date | None:

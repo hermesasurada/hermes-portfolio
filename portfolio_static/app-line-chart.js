@@ -827,12 +827,6 @@ function bindLineChartControls(payload) {
   });
 }
 
-function tickerDisplayName(ticker) {
-  const key = String(ticker || "").toUpperCase();
-  const meta = findTickerMeta(key);
-  return meta?.name || key;
-}
-
 
 function rsiThresholdAreaPaths(points, threshold, direction, xFor, yFor) {
   const samples = points

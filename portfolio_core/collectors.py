@@ -305,10 +305,6 @@ def fetch_crypto_history_rows(market: str, days: int = 3650) -> list[tuple[str, 
     return sorted(rows.items())
 
 
-def fetch_btc_krw() -> CollectedPrice | None:
-    return fetch_crypto_krw("BTC")
-
-
 def fetch_price(category: str, ticker: str, history_start: str = "20250101") -> CollectedPrice | None:
     if category == "kr":
         return fetch_kr_price(ticker, history_start)

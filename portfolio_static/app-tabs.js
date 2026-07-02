@@ -251,13 +251,6 @@ function dividendHistoryFullDate(dateText) {
   return text.slice(0, 10).replace(/-/g, ".");
 }
 
-function dividendHistoryEstimate(value, currency) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return "-";
-  const digits = currency === "KRW" || currency === "JPY" ? 0 : 2;
-  return `${dividendCurrencyPrefix(currency)}${number.toLocaleString("ko-KR", { maximumFractionDigits: digits })}`;
-}
-
 function renderDividendHistory(payload) {
   const rows = payload.rows || [];
   const summary = payload.summary || {};
@@ -271,7 +264,7 @@ function renderDividendHistory(payload) {
   const summaryColumns = [
     [
       ["지급주기", esc(summary.frequency_label || "-")],
-      ["최근 배당 연환산", dividendHistoryEstimate(summary.annualized_run_rate, payload.currency)],
+      ["최근 배당 연환산", dividendMoneyText(summary.annualized_run_rate, payload.currency)],
     ],
     [
       ["최근 성장률", dividendHistoryPercent(summary.latest_growth_pct)],
@@ -316,7 +309,7 @@ function renderDividendHistory(payload) {
               <td class="history-annual-cell" rowspan="${span}">
                 <span class="history-amount">${dividendAmountText(row.amount, payload.currency)}</span>
                 ${row.estimated_amount != null && row.estimated_amount > row.amount
-                  ? `<span class="history-estimate">예상 ${dividendHistoryEstimate(row.estimated_amount, payload.currency)}</span>`
+                  ? `<span class="history-estimate">예상 ${dividendMoneyText(row.estimated_amount, payload.currency)}</span>`
                   : ""}
               </td>`;
             const growthCell = `<td class="history-annual-cell" rowspan="${span}">${

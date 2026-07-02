@@ -160,9 +160,8 @@ function initStatsHelpModal() {
 function render() {
   renderAccounts();
   renderInterestWatchlists();
-  const rows = filteredRows();
   document.getElementById("heroStrip")?.classList.toggle("hidden", interestModeActive());
-  renderSummary(rows);
+  renderSummary();
   renderTable();
   renderTradeControls();
   syncMobileCollapsePanels();

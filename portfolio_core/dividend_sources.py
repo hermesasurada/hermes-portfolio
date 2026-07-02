@@ -6,12 +6,12 @@ import re
 import time
 import urllib.parse
 import urllib.request
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from html import unescape
 from pathlib import Path
 from typing import Any
 
-from .constants import DIVIDEND_LOOKAHEAD_DAYS, DIVIDEND_LOOKBACK_DAYS, KOREAN_SUFFIXES
+from .constants import KOREAN_SUFFIXES
 from .dates import now_kst_text, parse_iso_date, positive_float, to_iso_text, today_kst
 from .opendart_dividends import fetch_opendart_dividends, is_opendart_candidate
 from .paths import KST
@@ -24,10 +24,7 @@ NASDAQ_HEADERS = {
     "Referer": "https://www.nasdaq.com/",
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
 }
-SEIBRO_HEADERS = {
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
-}
+KIND_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36"
 STOCKANALYSIS_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
@@ -100,34 +97,6 @@ def _fetch_text(url: str, headers: dict[str, str]) -> str:
     req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=12) as resp:
         return resp.read().decode("utf-8", "ignore")
-
-
-def _month_name_to_number(name: str) -> int | None:
-    months = {
-        "january": 1,
-        "february": 2,
-        "march": 3,
-        "april": 4,
-        "may": 5,
-        "june": 6,
-        "july": 7,
-        "august": 8,
-        "september": 9,
-        "october": 10,
-        "november": 11,
-        "december": 12,
-    }
-    return months.get(name.lower())
-
-
-def _date_from_english_text(month: str, day: str, year: str) -> str | None:
-    month_number = _month_name_to_number(month)
-    if not month_number:
-        return None
-    try:
-        return date(int(year), month_number, int(day)).isoformat()
-    except ValueError:
-        return None
 
 
 def _cache_due(fetched_at: str | None) -> bool:
@@ -304,7 +273,7 @@ def _kind_opener():
 
         jar = http.cookiejar.CookieJar()
         opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
-        opener.addheaders = [("User-Agent", SEIBRO_HEADERS["User-Agent"])]
+        opener.addheaders = [("User-Agent", KIND_USER_AGENT)]
         try:
             opener.open(KIND_ETF_ENTRY, timeout=12).read()   # JSESSIONID 적재
         except Exception:

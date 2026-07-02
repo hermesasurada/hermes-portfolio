@@ -637,7 +637,8 @@ function initInterestWatchlists() {
       if (interestSortState.key === key) interestSortState.dir *= -1;
       else {
         interestSortState.key = key;
-        interestSortState.dir = defaultSortDir[key] || 1;
+        // 통계탭(setCurrentSort)과 동일하게 기본 내림차순 — 탭 간 정렬방향 일관
+        interestSortState.dir = defaultSortDir[key] || -1;
       }
       renderInterestMainTable();
     });

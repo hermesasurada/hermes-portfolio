@@ -300,7 +300,7 @@ function aggregateRows(rows) {
   });
 }
 
-function renderSummary(rows = null) {
+function renderSummary() {
   const updated = data.fx_updated ? ` · ${data.fx_updated} 갱신` : "";
   document.getElementById("fxTop").textContent = `환율 USD ${fmt.format(data.fx.USD)} · EUR ${fmt.format(data.fx.EUR)} · JPY ${fmt2.format(data.fx.JPY)}${updated}`;
   renderUsPriceControl();

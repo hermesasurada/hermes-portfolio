@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Iterable
 
 from .constants import CRYPTO_MARKETS, FX_TICKERS, MARKET_INDEXES
+from .dates import parse_iso_date
 from .db import connect, ensure_collector_runs_table, ensure_stock_split_tables, ensure_ticker_metadata_columns
 from .paths import KST
 from .tickers import ticker_currency
@@ -116,11 +117,8 @@ def save_daily_prices(ticker: str, rows: Iterable[tuple[str, float]], source: st
     return len(clean_rows)
 
 
-def _date_value(value: str) -> date | None:
-    try:
-        return date.fromisoformat(str(value)[:10])
-    except ValueError:
-        return None
+# 공용 헬퍼 위임 (동일 기능 로컬 복제 제거)
+_date_value = parse_iso_date
 
 
 def _material_split_ratio(ratio: float) -> bool:
@@ -374,6 +372,8 @@ def collector_run_due(name: str, max_age_seconds: float) -> bool:
 
 
 def update_price_cache(entries: Iterable[tuple[str, float, str, str]]) -> None:
+    """이름과 달리 가격 캐시 저장은 없다 — 수집 run(개수·시각) 기록만 남긴다.
+    (과거 캐시 테이블 시절의 레거시 API. 호출부 호환을 위해 시그니처 유지.)"""
     clean_entries = list(entries)
     update_collector_run("price", len(clean_entries))
 
