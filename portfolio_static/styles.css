@@ -980,6 +980,33 @@ main {
   max-width: var(--ticker-name-width, 165px);
   text-align: left;
 }
+#interestTableWrap .interest-detail-list th[data-interest-col="0"],
+#interestTableWrap .interest-detail-list td:first-child,
+#interestTableWrap .interest-detail-list th[data-interest-col="1"],
+#interestTableWrap .interest-detail-list td:nth-child(2) {
+  position: sticky;
+  background: var(--panel);
+  background-clip: padding-box;
+}
+#interestTableWrap .interest-detail-list th[data-interest-col="0"],
+#interestTableWrap .interest-detail-list td:first-child {
+  left: 0;
+  z-index: 2;
+}
+#interestTableWrap .interest-detail-list th[data-interest-col="1"],
+#interestTableWrap .interest-detail-list td:nth-child(2) {
+  left: 40px;
+  z-index: 2;
+}
+#interestTableWrap .interest-detail-list thead th[data-interest-col="0"],
+#interestTableWrap .interest-detail-list thead th[data-interest-col="1"] {
+  z-index: 14;
+  background: var(--surface-2);
+}
+#interestTableWrap .interest-detail-list th[data-interest-col="1"],
+#interestTableWrap .interest-detail-list td:nth-child(2) {
+  box-shadow: 2px 0 0 color-mix(in srgb, var(--line) 85%, transparent);
+}
 .interest-detail-list th[data-interest-col="2"],
 .interest-detail-list td:nth-child(3) {
   width: 86px;

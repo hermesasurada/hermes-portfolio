@@ -24,6 +24,11 @@ function interestGroupIsFx(group = activeInterestGroup()) {
     && group.items.every(item => item.category === "fx");
 }
 
+function interestGroupIsIndex(group = activeInterestGroup()) {
+  return Boolean(group?.items?.length)
+    && group.items.every(item => item.category === "index");
+}
+
 function setInterestStatus(message = "", error = false, main = false) {
   const el = document.getElementById(main ? "interestMainStatus" : "interestStatus");
   if (!el) return;
@@ -451,8 +456,9 @@ function renderInterestMainTable() {
   if (missingStats) loadStatsForRows(rows);
   document.getElementById("tableTitle").textContent = group.name;
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
+  const suppressIndexHighlight = interestGroupIsIndex(group);
   body.innerHTML = rows.length ? rows.map(r => `
-    <tr class="${tableRowClass(r)}">
+    <tr class="${suppressIndexHighlight ? "" : tableRowClass(r)}">
       <td class="logo-cell">${logoMarkup(r)}</td>
       <td>
         <span class="ticker-text">
