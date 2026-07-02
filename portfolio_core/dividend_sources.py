@@ -6,7 +6,7 @@ import re
 import time
 import urllib.parse
 import urllib.request
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from html import unescape
 from pathlib import Path
 from typing import Any
@@ -156,8 +156,13 @@ def _polygon_candidate(ticker: str) -> bool:
     return ticker_currency(ticker) == "USD" and "." not in ticker and ticker != "BTC"
 
 
+def _source_attempt_due(source: str, status: str | None) -> bool:
+    text = status or ""
+    return source not in text or f"{source}_error" in text
+
+
 def _polygon_attempt_due(ticker: str, status: str | None) -> bool:
-    return bool(_polygon_api_key()) and _polygon_candidate(ticker) and "polygon" not in (status or "")
+    return bool(_polygon_api_key()) and _polygon_candidate(ticker) and _source_attempt_due("polygon", status)
 
 
 def _fetch_polygon_dividends(ticker: str) -> list[dict]:
@@ -203,19 +208,19 @@ def _seibro_candidate(ticker: str) -> bool:
 
 
 def _nasdaq_attempt_due(ticker: str, status: str | None) -> bool:
-    return _nasdaq_candidate(ticker) and "nasdaq" not in (status or "")
+    return _nasdaq_candidate(ticker) and _source_attempt_due("nasdaq", status)
 
 
 def _stockanalysis_attempt_due(ticker: str, status: str | None) -> bool:
-    return _stockanalysis_candidate(ticker) and "stockanalysis" not in (status or "")
+    return _stockanalysis_candidate(ticker) and _source_attempt_due("stockanalysis", status)
 
 
 def _opendart_attempt_due(ticker: str, status: str | None) -> bool:
-    return is_opendart_candidate(ticker) and "opendart" not in (status or "")
+    return is_opendart_candidate(ticker) and _source_attempt_due("opendart", status)
 
 
 def _kr_history_attempt_due(ticker: str, status: str | None) -> bool:
-    return _seibro_candidate(ticker) and "kr_history" not in (status or "")
+    return _seibro_candidate(ticker) and _source_attempt_due("kr_history", status)
 
 
 def _fetch_nasdaq_dividends(ticker: str) -> list[dict]:
@@ -388,7 +393,7 @@ def _kind_candidate(ticker: str) -> bool:
 
 
 def _kind_attempt_due(ticker: str, status: str | None) -> bool:
-    return _kind_candidate(ticker) and "kind" not in (status or "")
+    return _kind_candidate(ticker) and _source_attempt_due("kind", status)
 
 
 def _fetch_kind_etf_dividends(ticker: str, name: str | None) -> list[dict]:
