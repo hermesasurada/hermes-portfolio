@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import sys
 import time
 import urllib.error
+from contextlib import contextmanager
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -73,6 +75,24 @@ def backfill_new_tickers(categories: list[str], tickers: list[str] | None) -> tu
             backfilled.append(ticker)
             print(f"  ↺ backfilled {ticker}: {saved} history rows")
     return rows_saved, backfilled
+
+
+@contextmanager
+def collector_lock(name: str):
+    """cron 겹침 방지용 flock. 이미 실행 중이면 False를 yield하고 즉시 반환.
+    collect_quotes(quotes-{scope})·collect_prices(prices)가 공유한다."""
+    lock_path = Path(f"/tmp/hermes-portfolio-{name}.lock")
+    with lock_path.open("w") as lock_file:
+        try:
+            fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print(f"Skipped: another {name} collector is still running")
+            yield False
+            return
+        try:
+            yield True
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
 
 
 def parse_categories(values: list[str] | None) -> list[str]:
@@ -237,6 +257,15 @@ def main() -> int:
     parser.add_argument("--dividends-only", action="store_true", help="Only collect dividend events + splits (전 추적종목), skip prices/earnings. 가격 크론과 분리해 일배치로 돌릴 때 사용.")
     args = parser.parse_args()
 
+    # Polygon 스로틀 등으로 수십 분까지 늘어질 수 있어 cron 주기와 겹치면
+    # 같은 작업 2벌 + SQLite 쓰기 경합이 난다. flock으로 단일 실행 보장.
+    with collector_lock("prices") as acquired:
+        if not acquired:
+            return 0
+        return _run(args)
+
+
+def _run(args: argparse.Namespace) -> int:
     # 배당/분할 전용 모드: 가격·실적 수집을 건너뛰고 전 추적종목 배당만 갱신.
     if args.dividends_only:
         dividend_count = collect_dividend_events(args.ticker)

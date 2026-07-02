@@ -2,14 +2,12 @@
 from __future__ import annotations
 
 import argparse
-import fcntl
 import sys
-from contextlib import contextmanager
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from collect_prices import parse_categories
+from collect_prices import collector_lock, parse_categories
 from portfolio_core.price_store import (
     collector_run_due,
     load_watch,
@@ -21,22 +19,6 @@ from portfolio_core.snapshot_collector import collect_snapshots
 from portfolio_core.technical_stats import refresh_technical_stats_cache
 
 TECHNICAL_REFRESH_SECONDS = 10 * 60
-
-
-@contextmanager
-def collector_lock(scope: str):
-    lock_path = Path(f"/tmp/hermes-portfolio-quotes-{scope}.lock")
-    with lock_path.open("w") as lock_file:
-        try:
-            fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            print("Skipped: another quote collector is still running")
-            yield False
-            return
-        try:
-            yield True
-        finally:
-            fcntl.flock(lock_file, fcntl.LOCK_UN)
 
 
 def main() -> int:
@@ -52,7 +34,7 @@ def main() -> int:
     categories = parse_categories(args.category)
     technical_run_name = f"technical:{','.join(categories)}"
 
-    lock_scope = "-".join(categories)
+    lock_scope = f"quotes-{'-'.join(categories)}"
     with collector_lock(lock_scope) as acquired:
         if not acquired:
             return 0
