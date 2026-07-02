@@ -116,12 +116,7 @@ function renderStatsTable(baseRows = null) {
       <td>${signedPercentText(r.perf_5y, 0)}</td>
     </tr>
   `).join("");
-  bindChartLinks();
-  // 배당율 → 배당이력 모달 (배당탭 '상세'와 동일). #statsRows는 매번 교체되므로
-  // 여기서만 바인딩 — 중복 리스너 없음.
-  document.querySelectorAll("#statsRows [data-dividend-history]").forEach(btn => {
-    btn.addEventListener("click", () => openDividendHistory(btn.dataset.dividendHistory));
-  });
+  // 티커 링크·배당이력 버튼 클릭은 app.js의 문서 위임이 처리 (개별 바인딩 금지)
   const statsTable = document.querySelector("#statsTableWrap .stats-list");
   const tickerNameWidth = syncTickerNameColumnWidth(statsTable);
   const statsTableWidth = 1468 + tickerNameWidth;
@@ -238,8 +233,7 @@ function renderDividendTable() {
       renderDividendTable();
     });
   });
-  bindDividendHistoryLinks();
-  bindChartLinks();
+  // 티커 링크·배당이력 버튼 클릭은 app.js의 문서 위임이 처리 (개별 바인딩 금지)
   schedulePcFrozenColumns();
 }
 
@@ -376,12 +370,6 @@ async function openDividendHistory(ticker) {
   } catch (err) {
     body.innerHTML = `<div class="dividend-history-empty">${esc(err.message || String(err))}</div>`;
   }
-}
-
-function bindDividendHistoryLinks() {
-  document.querySelectorAll("[data-dividend-history]").forEach(button => {
-    button.addEventListener("click", () => openDividendHistory(button.dataset.dividendHistory));
-  });
 }
 
 function initDividendHistoryModal() {

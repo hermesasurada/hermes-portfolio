@@ -319,6 +319,8 @@ async function openPerformanceChart() {
 async function openChart(ticker) {
   const cleanTicker = String(ticker || "").trim().toUpperCase();
   if (!cleanTicker) return;
+  // 같은 티커를 이미 로딩 중이면 재진입 무시 (연타·중복 클릭 시 fetch 중복 방지)
+  if (chartTicker === cleanTicker && chartLoadInFlight) return;
   performanceChartOpen = false;
   if (chartTicker !== cleanTicker) chartComparePayloads = [];
   chartTicker = cleanTicker;

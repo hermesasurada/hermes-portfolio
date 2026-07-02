@@ -642,9 +642,7 @@ function renderChartStats(payload) {
     </div>
     ${loaded ? "" : `<div class="chart-stat-loading">통계 불러오는 중…</div>`}
   `;
-  el.querySelectorAll("[data-dividend-history]").forEach(btn => {
-    btn.addEventListener("click", () => openDividendHistory(btn.dataset.dividendHistory));
-  });
+  // 배당이력 버튼 클릭은 app.js의 문서 위임이 처리
 }
 
 function compareStatPayloads(payload) {
@@ -724,9 +722,7 @@ function renderCompareChartStats(payload) {
     </div>
     ${loaded ? "" : `<div class="chart-stat-loading">비교 지표 불러오는 중…</div>`}
   `;
-  el.querySelectorAll("[data-dividend-history]").forEach(btn => {
-    btn.addEventListener("click", () => openDividendHistory(btn.dataset.dividendHistory));
-  });
+  // 배당이력 버튼 클릭은 app.js의 문서 위임이 처리
 }
 
 function chartPctMetric(value, neutral = "0.00%", neutralCls = "flat") {

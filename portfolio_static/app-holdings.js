@@ -796,18 +796,9 @@ function renderTable() {
       selectTradeTarget(btn.dataset.account, btn.dataset.ticker);
     });
   });
-  bindChartLinks();
-  bindDividendHistoryLinks();
+  // 티커 링크·배당이력 버튼 클릭은 app.js의 문서 위임이 처리 (개별 바인딩 금지)
   syncTickerNameColumnWidth(document.querySelector("#detailTableWrap table"));
   if (activeDetailTab === "stats") renderStatsTable(rows);
   if (activeDetailTab === "dividend") renderDividendTable();
   schedulePcFrozenColumns();
-}
-
-function bindChartLinks() {
-  document.querySelectorAll(".ticker-link").forEach(btn => {
-    btn.addEventListener("click", () => {
-      openChart(btn.dataset.chartTicker);
-    });
-  });
 }
