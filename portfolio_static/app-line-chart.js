@@ -357,30 +357,64 @@ function chartPriceClass(change) {
   return number > 0 ? "up" : number < 0 ? "down" : "flat";
 }
 
-function chartPriceDeltaMarkup(metric, currency, ticker) {
-  if (metric.change == null && metric.changePct == null) return "-";
-  const cls = chartPriceClass(metric.change ?? metric.changePct);
-  const arrow = cls === "up" ? "▲" : cls === "down" ? "▼" : "→";
-  const amount = metric.change == null ? "" : signedChartMoney(metric.change, currency, ticker);
-  const pct = metric.changePct == null ? "" : `${fmt2.format(Math.abs(metric.changePct))}%`;
-  const sep = amount && pct ? " · " : "";
-  return `<span class="${cls}"><span aria-hidden="true">${arrow}</span>${amount}${sep}${pct}</span>`;
+function chartPriceDirectionSymbol(cls) {
+  if (cls === "up") return "↑";
+  if (cls === "down") return "↓";
+  return "→";
+}
+
+function chartPricePlainDelta(value, currency) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "";
+  const sign = number > 0 ? "+" : number < 0 ? "-" : "";
+  const abs = Math.abs(number);
+  const formatter = currency === "KRW" || currency === "JPY" ? fmt : fmt2;
+  return `${sign}${formatter.format(abs)}`;
+}
+
+function chartPricePctPill(metric) {
+  if (metric.changePct == null) return "";
+  const cls = chartPriceClass(metric.changePct);
+  return `<span class="chart-price-pill ${cls}">${chartPriceDirectionSymbol(cls)}${fmt2.format(Math.abs(metric.changePct))}%</span>`;
+}
+
+function chartPriceInlinePct(metric) {
+  if (metric.changePct == null) return "";
+  const cls = chartPriceClass(metric.changePct);
+  return `<span class="chart-price-sub-pct ${cls}">(${chartPriceDirectionSymbol(cls)}${fmt2.format(Math.abs(metric.changePct))}%)</span>`;
 }
 
 function chartExtendedLabel(meta) {
   const source = String(meta.extended_source || "").toLowerCase();
   const state = String(meta.extended_market_state || "").toUpperCase();
-  if (source.includes("pre") || state === "PRE") return "프리";
-  if (source.includes("after") || state.includes("POST")) return "애프터";
-  return "연장";
+  if (source.includes("pre") || state === "PRE") return "개장 전 거래";
+  if (source.includes("after") || state.includes("POST")) return "시간 외 거래";
+  return "연장 거래";
 }
 
-function renderChartPriceCard(label, metric, currency, ticker, extraClass = "") {
+function renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, isUsTicker, extendedLabel) {
+  const dayCls = chartPriceClass(dayMetric.change ?? dayMetric.changePct);
+  const dayDelta = chartPricePlainDelta(dayMetric.change, currency);
+  const extendedCls = chartPriceClass(extendedMetric.change ?? extendedMetric.changePct);
+  const extendedDelta = chartPricePlainDelta(extendedMetric.change, currency);
+  const extendedLine = isUsTicker && extendedMetric.price != null
+    ? `
+      <div class="chart-price-sub">
+        <span class="chart-price-sub-label">${esc(extendedLabel)}:</span>
+        <strong>${esc(chartMoney(extendedMetric.price, currency, ticker))}</strong>
+        ${chartPriceInlinePct(extendedMetric)}
+        ${extendedDelta ? `<span class="${extendedCls}">${esc(extendedDelta)}</span>` : ""}
+      </div>
+    `
+    : "";
   return `
-    <div class="chart-price-card ${extraClass}">
-      <span class="chart-price-label">${esc(label)}</span>
-      <strong>${metric.price == null ? "-" : esc(chartMoney(metric.price, currency, ticker))}</strong>
-      <span class="chart-price-change">${chartPriceDeltaMarkup(metric, currency, ticker)}</span>
+    <div class="chart-price-quote">
+      <div class="chart-price-main">
+        <strong class="chart-price-current">${dayMetric.price == null ? "-" : esc(chartMoney(dayMetric.price, currency, ticker))}</strong>
+        ${chartPricePctPill(dayMetric)}
+        ${dayDelta ? `<span class="chart-price-today ${dayCls}">${esc(dayDelta)} 오늘</span>` : ""}
+      </div>
+      ${extendedLine}
     </div>
   `;
 }
@@ -408,10 +442,7 @@ function renderChartPriceSummary(payload) {
     meta.extended_change_pct
   );
   const isUsTicker = currency === "USD" && !ticker.includes(".");
-  el.innerHTML = `
-    ${renderChartPriceCard("당일", dayMetric, currency, ticker)}
-    ${isUsTicker ? renderChartPriceCard(chartExtendedLabel(meta), extendedMetric, currency, ticker, "extended") : ""}
-  `;
+  el.innerHTML = renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, isUsTicker, chartExtendedLabel(meta));
 }
 
 function chartInterestGroups(ticker) {
@@ -734,6 +765,24 @@ function chartPctMetric(value, neutral = "0.00%", neutralCls = "flat") {
   return { text: `${arrow} ${fmt2.format(Math.abs(number))}%`, cls };
 }
 
+function chartMaxDrawdown(values) {
+  const clean = (values || []).map(Number).filter(value => Number.isFinite(value));
+  if (clean.length < 2) return 0;
+  let peak = clean[0];
+  let maxDrawdown = 0;
+  for (let index = 1; index < clean.length; index += 1) {
+    const value = clean[index];
+    if (value > peak) {
+      peak = value;
+      continue;
+    }
+    if (peak > 0) {
+      maxDrawdown = Math.min(maxDrawdown, (value - peak) / peak * 100);
+    }
+  }
+  return maxDrawdown;
+}
+
 function chartOverlayMetrics(values) {
   const clean = (values || []).map(Number).filter(value => Number.isFinite(value));
   if (clean.length < 2) {
@@ -747,12 +796,7 @@ function chartOverlayMetrics(values) {
   const first = clean[0];
   const last = clean[clean.length - 1];
   const periodChange = first ? (last - first) / first * 100 : null;
-  let peak = clean[0];
-  let mdd = 0;
-  for (const value of clean) {
-    if (value > peak) peak = value;
-    if (peak > 0) mdd = Math.min(mdd, (value - peak) / peak * 100);
-  }
+  const mdd = chartMaxDrawdown(clean);
   const high = Math.max(...clean);
   const low = Math.min(...clean);
   const vsHigh = high ? (last - high) / high * 100 : null;

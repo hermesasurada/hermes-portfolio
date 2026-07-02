@@ -1867,6 +1867,8 @@ th.pc-frozen-edge {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
 }
 .chart-head-right {
   display: flex;
@@ -1877,47 +1879,93 @@ th.pc-frozen-edge {
 }
 .chart-price-summary {
   display: inline-flex;
-  align-items: stretch;
-  gap: 7px;
+  align-items: center;
+  min-width: 0;
 }
 .chart-price-summary:empty {
   display: none;
 }
-.chart-price-card {
-  min-width: 132px;
+.chart-price-quote {
+  min-width: 0;
   display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: baseline;
-  gap: 2px 8px;
-  padding: 7px 9px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-2);
+  gap: 2px;
 }
-.chart-price-label {
-  color: var(--muted);
-  font-size: 10.5px;
-  font-weight: 800;
+.chart-price-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
-.chart-price-card strong {
+.chart-price-current {
   color: var(--ink);
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1.05;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-.chart-price-change {
-  grid-column: 1 / -1;
-  text-align: right;
-  font-size: 11.5px;
-  font-weight: 800;
+  font-size: 31px;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.chart-price-change .up { color: var(--up); }
-.chart-price-change .down { color: var(--down); }
-.chart-price-change .flat { color: var(--muted); }
+.chart-price-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 17px;
+  font-weight: 750;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.chart-price-pill.up {
+  color: var(--up);
+  background: color-mix(in srgb, var(--up) 11%, transparent);
+}
+.chart-price-pill.down {
+  color: var(--down);
+  background: color-mix(in srgb, var(--down) 11%, transparent);
+}
+.chart-price-pill.flat {
+  color: var(--muted);
+  background: var(--surface-2);
+}
+.chart-price-today {
+  font-size: 18px;
+  font-weight: 750;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.chart-price-sub {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.chart-price-sub strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 750;
+}
+.chart-price-sub-pct,
+.chart-price-sub .up,
+.chart-price-sub .down,
+.chart-price-sub .flat {
+  font-weight: 750;
+  white-space: nowrap;
+}
+.chart-price-sub .up,
+.chart-price-sub-pct.up { color: var(--up); }
+.chart-price-sub .down,
+.chart-price-sub-pct.down { color: var(--down); }
+.chart-price-sub .flat,
+.chart-price-sub-pct.flat { color: var(--muted); }
 .chart-interval-control {
   height: 30px;
   padding: 2px;
@@ -4252,6 +4300,34 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     max-width: 100%;
     margin-top: 1px;
   }
+  .chart-price-summary {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin-top: 2px;
+  }
+  .chart-price-main {
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+  .chart-price-current {
+    font-size: 27px;
+  }
+  .chart-price-pill {
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 15.5px;
+  }
+  .chart-price-today {
+    font-size: 15.5px;
+  }
+  .chart-price-sub {
+    gap: 5px;
+    font-size: 12.5px;
+    flex-wrap: wrap;
+  }
+  .chart-price-sub strong {
+    font-size: 13.5px;
+  }
   .chart-head-right {
     grid-column: 1 / -1;
     width: 100%;
@@ -4269,23 +4345,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     gap: 5px;
     order: 0;
     margin-left: auto;
-  }
-  .chart-price-summary {
-    order: 1;
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-  }
-  .chart-price-card {
-    min-width: 0;
-    padding: 6px 8px;
-  }
-  .chart-price-card strong {
-    font-size: 13.5px;
-  }
-  .chart-price-change {
-    font-size: 10.5px;
   }
   .chart-link-icon-btn {
     width: 30px;
