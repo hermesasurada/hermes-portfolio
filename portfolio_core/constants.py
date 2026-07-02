@@ -1,12 +1,21 @@
 from __future__ import annotations
 
-FX_TICKERS = ("USDKRW", "EURKRW", "JPYKRW", "CNYKRW", "TWDKRW")
+FX_TICKERS = (
+    "USDKRW", "EURKRW", "JPYKRW", "CNYKRW", "TWDKRW",
+    "GBPKRW", "CHFKRW", "CADKRW", "AUDKRW", "SGDKRW", "HKDKRW",
+)
 FX_NAMES = {
     "USDKRW": "달러/원",
     "EURKRW": "유로/원",
     "JPYKRW": "엔/원",
     "CNYKRW": "위안/원",
     "TWDKRW": "대만 달러/원",
+    "GBPKRW": "파운드/원",
+    "CHFKRW": "스위스 프랑/원",
+    "CADKRW": "캐나다 달러/원",
+    "AUDKRW": "호주 달러/원",
+    "SGDKRW": "싱가포르 달러/원",
+    "HKDKRW": "홍콩 달러/원",
 }
 FX_DEFAULT_RATES = {
     "USD": 1450.0,
@@ -14,6 +23,12 @@ FX_DEFAULT_RATES = {
     "JPY": 9.3,
     "CNY": 205.0,
     "TWD": 47.0,
+    "GBP": 1950.0,
+    "CHF": 1800.0,
+    "CAD": 1070.0,
+    "AUD": 950.0,
+    "SGD": 1130.0,
+    "HKD": 185.0,
     "KRW": 1.0,
 }
 CRYPTO_MARKETS = {
@@ -29,7 +44,7 @@ DIVIDEND_LOOKBACK_DAYS = 30
 DIVIDEND_LOOKAHEAD_DAYS = 365
 
 KOREAN_SUFFIXES = (".KS", ".KQ")
-LOCAL_MARKET_SUFFIXES = (".KS", ".KQ", ".T", ".TO", ".PA", ".DE")
+LOCAL_MARKET_SUFFIXES = (".KS", ".KQ", ".T", ".TO", ".PA", ".DE", ".L", ".SW", ".AX", ".SI", ".HK")
 ETF_BRANDS = ("KODEX", "TIGER", "ACE", "SOL", "ETF", "ETN", "QQQ")
 KOREAN_ETF_BRANDS = ("KODEX", "TIGER", "ACE", "SOL")
 # US ETF tickers that carry no obvious name token (used by asset_class).

@@ -21,6 +21,12 @@ FX_SYMBOLS = {
     "JPYKRW": "JPYKRW=X",
     "CNYKRW": "CNYKRW=X",
     "TWDKRW": "TWDKRW=X",
+    "GBPKRW": "GBPKRW=X",
+    "CHFKRW": "CHFKRW=X",
+    "CADKRW": "CADKRW=X",
+    "AUDKRW": "AUDKRW=X",
+    "SGDKRW": "SGDKRW=X",
+    "HKDKRW": "HKDKRW=X",
 }
 INVESTING_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",

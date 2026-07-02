@@ -44,7 +44,17 @@ function krwShort(v) {
 function money(v, cur) {
   if (v == null) return '<span class="missing">조회불가</span>';
   if (cur === "KRW") return krwShort(v);
-  const prefix = cur === "USD" ? "$" : cur === "EUR" ? "€" : cur === "JPY" ? "¥" : "";
+  const prefix = {
+    USD: "$",
+    EUR: "€",
+    JPY: "¥",
+    GBP: "£",
+    CHF: "CHF ",
+    CAD: "C$",
+    AUD: "A$",
+    SGD: "S$",
+    HKD: "HK$",
+  }[cur] || "";
   return prefix + fmt.format(v);
 }
 function unitMoney(v, cur, ticker = "") {
@@ -54,6 +64,12 @@ function unitMoney(v, cur, ticker = "") {
   if (cur === "USD") return "$" + fmt1.format(v);
   if (cur === "EUR") return "€" + fmt1.format(v);
   if (cur === "JPY") return "¥" + fmt.format(v);
+  if (cur === "GBP") return "£" + fmt1.format(v);
+  if (cur === "CHF") return "CHF " + fmt1.format(v);
+  if (cur === "CAD") return "C$" + fmt1.format(v);
+  if (cur === "AUD") return "A$" + fmt1.format(v);
+  if (cur === "SGD") return "S$" + fmt1.format(v);
+  if (cur === "HKD") return "HK$" + fmt1.format(v);
   return fmt1.format(v) + " " + cur;
 }
 function tradeQtyText(qty, ticker = "") {
@@ -141,7 +157,18 @@ function dividendYieldText(v) {
   return `${fmt2.format(Number(v))}%`;
 }
 function dividendCurrencyPrefix(currency) {
-  return { USD: "$", EUR: "€", JPY: "¥", KRW: "₩" }[currency] || (currency ? `${currency} ` : "");
+  return {
+    USD: "$",
+    EUR: "€",
+    JPY: "¥",
+    KRW: "₩",
+    GBP: "£",
+    CHF: "CHF ",
+    CAD: "C$",
+    AUD: "A$",
+    SGD: "S$",
+    HKD: "HK$",
+  }[currency] || (currency ? `${currency} ` : "");
 }
 function dividendAmountText(v, currency) {
   if (v == null || !Number.isFinite(Number(v))) return "-";
@@ -204,7 +231,17 @@ function marketCapText(v, currency) {
     if (eok > 0) return `${fmt.format(eok)}억`;
     return krwShort(n);
   }
-  const prefix = currency === "USD" ? "$" : currency === "EUR" ? "€" : currency === "JPY" ? "¥" : "";
+  const prefix = {
+    USD: "$",
+    EUR: "€",
+    JPY: "¥",
+    GBP: "£",
+    CHF: "CHF ",
+    CAD: "C$",
+    AUD: "A$",
+    SGD: "S$",
+    HKD: "HK$",
+  }[currency] || "";
   const abs = Math.abs(n);
   if (abs >= 1_000_000_000_000) return `${prefix}${fmt2.format(n / 1_000_000_000_000)}T`;
   if (abs >= 1_000_000_000) return `${prefix}${fmt2.format(n / 1_000_000_000)}B`;

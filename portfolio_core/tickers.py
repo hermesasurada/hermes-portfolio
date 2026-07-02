@@ -48,13 +48,36 @@ def ticker_currency(ticker: str) -> str:
         return "KRW"
     if ticker.endswith((".PA", ".DE")):
         return "EUR"
-    if ticker.endswith((".T", ".TO")):
+    if ticker.endswith(".L"):
+        return "GBP"
+    if ticker.endswith(".SW"):
+        return "CHF"
+    if ticker.endswith(".TO"):
+        return "CAD"
+    if ticker.endswith(".AX"):
+        return "AUD"
+    if ticker.endswith(".SI"):
+        return "SGD"
+    if ticker.endswith(".HK"):
+        return "HKD"
+    if ticker.endswith(".T"):
         return "JPY"
     return "USD"
 
 
 def currency_symbol(currency: str) -> str:
-    return {"USD": "$", "EUR": "EUR ", "JPY": "JPY ", "KRW": "KRW "}.get(currency, f"{currency} ")
+    return {
+        "USD": "$",
+        "EUR": "EUR ",
+        "JPY": "JPY ",
+        "KRW": "KRW ",
+        "GBP": "GBP ",
+        "CHF": "CHF ",
+        "CAD": "CAD ",
+        "AUD": "AUD ",
+        "SGD": "SGD ",
+        "HKD": "HKD ",
+    }.get(currency, f"{currency} ")
 
 
 def is_korean_stock_ticker(ticker: str) -> bool:
