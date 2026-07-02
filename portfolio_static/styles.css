@@ -1888,18 +1888,25 @@ th.pc-frozen-edge {
 .chart-price-quote {
   min-width: 0;
   display: grid;
-  gap: 2px;
+  gap: 4px;
 }
-.chart-price-main {
+.chart-price-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
+}
+.chart-price-row-label {
+  min-width: 28px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1;
 }
 .chart-price-current {
   color: var(--ink);
-  font-size: 31px;
-  font-weight: 650;
+  font-size: 24px;
+  font-weight: 720;
   line-height: 1;
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
@@ -1909,10 +1916,10 @@ th.pc-frozen-edge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 30px;
-  padding: 0 12px;
-  border-radius: 10px;
-  font-size: 17px;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 8px;
+  font-size: 13.5px;
   font-weight: 750;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -1931,41 +1938,25 @@ th.pc-frozen-edge {
   background: var(--surface-2);
 }
 .chart-price-today {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 750;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.chart-price-sub {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 650;
-  line-height: 1.25;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+.chart-price-row.extended .chart-price-current {
+  font-size: 18px;
+  font-weight: 720;
 }
-.chart-price-sub strong {
-  color: var(--ink);
-  font-size: 15px;
-  font-weight: 750;
+.chart-price-row.extended .chart-price-pill {
+  min-height: 21px;
+  padding: 0 7px;
+  border-radius: 7px;
+  font-size: 12px;
 }
-.chart-price-sub-pct,
-.chart-price-sub .up,
-.chart-price-sub .down,
-.chart-price-sub .flat {
-  font-weight: 750;
-  white-space: nowrap;
+.chart-price-row.extended .chart-price-today {
+  font-size: 12.5px;
 }
-.chart-price-sub .up,
-.chart-price-sub-pct.up { color: var(--up); }
-.chart-price-sub .down,
-.chart-price-sub-pct.down { color: var(--down); }
-.chart-price-sub .flat,
-.chart-price-sub-pct.flat { color: var(--muted); }
 .chart-interval-control {
   height: 30px;
   padding: 2px;
@@ -4293,40 +4284,32 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .chart-interest-open {
-    grid-column: 2;
-    justify-self: start;
-    width: max-content;
-    max-width: 100%;
-    margin-top: 1px;
-  }
   .chart-price-summary {
     grid-column: 1 / -1;
     width: 100%;
     margin-top: 2px;
   }
-  .chart-price-main {
-    gap: 7px;
+  .chart-price-row {
+    gap: 6px;
     flex-wrap: wrap;
   }
   .chart-price-current {
-    font-size: 27px;
+    font-size: 22px;
   }
   .chart-price-pill {
-    min-height: 28px;
-    padding: 0 10px;
-    font-size: 15.5px;
+    min-height: 23px;
+    padding: 0 8px;
+    font-size: 13px;
   }
   .chart-price-today {
-    font-size: 15.5px;
+    font-size: 13px;
   }
-  .chart-price-sub {
-    gap: 5px;
-    font-size: 12.5px;
-    flex-wrap: wrap;
+  .chart-price-row-label {
+    min-width: 24px;
+    font-size: 11px;
   }
-  .chart-price-sub strong {
-    font-size: 13.5px;
+  .chart-price-row.extended .chart-price-current {
+    font-size: 16px;
   }
   .chart-head-right {
     grid-column: 1 / -1;
@@ -4338,6 +4321,10 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     align-items: center;
     flex-wrap: wrap;
     gap: 6px;
+  }
+  .chart-interest-open {
+    order: 0;
+    height: 30px;
   }
   .chart-links {
     width: auto;
