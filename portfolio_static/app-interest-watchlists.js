@@ -645,3 +645,6 @@ function initInterestWatchlists() {
 
   loadInterestWatchlists().catch(() => {});
 }
+
+// 파일 끝 로드 마커 — 파스 에러·태그 미닫힘 시 이 줄이 실행되지 않아 부트 검사에 걸린다
+(window.__loaded = window.__loaded || new Set()).add("app-interest-watchlists");
