@@ -287,15 +287,16 @@ def ensure_market_index_tickers(conn: sqlite3.Connection) -> None:
     for ticker, meta in MARKET_INDEXES.items():
         conn.execute(
             """
-            INSERT INTO tickers (ticker, name, region, currency, added_date, category)
-            VALUES (?, ?, ?, ?, DATE('now'), 'index')
+            INSERT INTO tickers (ticker, name, region, currency, added_date, category, display_name)
+            VALUES (?, ?, ?, ?, DATE('now'), 'index', ?)
             ON CONFLICT(ticker) DO UPDATE SET
                 name = excluded.name,
                 region = excluded.region,
                 currency = excluded.currency,
-                category = 'index'
+                category = 'index',
+                display_name = excluded.display_name
             """,
-            (ticker, meta["name"], meta["region"], meta["currency"]),
+            (ticker, meta["name"], meta["region"], meta["currency"], meta["name"]),
         )
 
 

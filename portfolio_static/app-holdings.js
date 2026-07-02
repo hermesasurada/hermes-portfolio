@@ -219,7 +219,11 @@ function watchlistRowForAccount(tickerMeta, account) {
 }
 
 function indexRows() {
-  const order = new Map(["SP500", "NASDAQ", "KOSPI"].map((ticker, index) => [ticker, index]));
+  const order = new Map([
+    "SP500", "NASDAQ", "NASDAQ100", "DOW", "RUSSELL2000", "KOSPI",
+    "NIKKEI225", "SHANGHAI", "HANGSENG", "TAIWAN", "NIFTY50",
+    "FTSE100", "DAX", "CAC40", "EUROSTOXX50",
+  ].map((ticker, index) => [ticker, index]));
   return (data?.tickers || [])
     .filter(t => t.ticker && t.category === "index")
     .map(t => watchlistRowForAccount(t, null))

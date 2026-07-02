@@ -1908,6 +1908,7 @@ th.pc-frozen-edge {
   display: inline-flex;
   align-items: center;
   min-width: 0;
+  flex: 0 0 auto;
   padding-left: 12px;
   border-left: 1px solid var(--line);
 }
@@ -1928,14 +1929,14 @@ th.pc-frozen-edge {
 .chart-price-row-label {
   min-width: 28px;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 750;
   line-height: 1;
   text-align: right;
 }
 .chart-price-current {
   color: var(--ink);
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 720;
   line-height: 1;
   letter-spacing: 0;
@@ -1946,10 +1947,10 @@ th.pc-frozen-edge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 23px;
-  padding: 0 8px;
+  min-height: 21px;
+  padding: 0 7px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 750;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -1975,14 +1976,14 @@ th.pc-frozen-edge {
   white-space: nowrap;
 }
 .chart-price-row.extended .chart-price-current {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 720;
 }
 .chart-price-row.extended .chart-price-pill {
-  min-height: 21px;
-  padding: 0 7px;
+  min-height: 19px;
+  padding: 0 6px;
   border-radius: 7px;
-  font-size: 12px;
+  font-size: 11px;
 }
 .chart-price-row.extended .chart-price-today {
   font-size: 12px;
@@ -2122,7 +2123,7 @@ th.pc-frozen-edge {
 .chart-interest-open.hidden {
   display: none;
 }
-.chart-head strong {
+#chartName {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4308,7 +4309,13 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .chart-id-text {
     min-width: 0;
   }
-  .chart-head strong,
+  .chart-icon-slot .asset-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    font-size: 11px;
+  }
+  #chartName,
   #chartTicker {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -4317,22 +4324,23 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .chart-price-summary {
     grid-column: auto;
     width: auto;
-    max-width: 49vw;
+    max-width: none;
     margin-top: 0;
     padding-left: 8px;
+    justify-self: end;
   }
   .chart-price-row {
     gap: 5px;
     flex-wrap: nowrap;
   }
   .chart-price-current {
-    font-size: 17px;
+    font-size: 14.5px;
   }
   .chart-price-pill {
-    min-height: 20px;
-    padding: 0 6px;
+    min-height: 18px;
+    padding: 0 5px;
     border-radius: 7px;
-    font-size: 11.5px;
+    font-size: 10.5px;
   }
   .chart-price-today {
     font-size: 11.5px;
@@ -4342,7 +4350,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     font-size: 10.5px;
   }
   .chart-price-row.extended .chart-price-current {
-    font-size: 14px;
+    font-size: 12.5px;
   }
   .chart-price-row.extended .chart-price-pill,
   .chart-price-row.extended .chart-price-today {

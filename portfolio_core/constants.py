@@ -57,6 +57,18 @@ US_ETF_TICKERS = frozenset(
 )
 MARKET_INDEXES = {
     "SP500": {"name": "S&P 500", "symbol": "^GSPC", "currency": "USD", "region": "US"},
-    "NASDAQ": {"name": "NASDAQ Composite", "symbol": "^IXIC", "currency": "USD", "region": "US"},
+    "NASDAQ": {"name": "NASDAQ 종합", "symbol": "^IXIC", "currency": "USD", "region": "US"},
+    "NASDAQ100": {"name": "NASDAQ 100", "symbol": "^NDX", "currency": "USD", "region": "US"},
+    "DOW": {"name": "Dow", "symbol": "^DJI", "currency": "USD", "region": "US"},
+    "RUSSELL2000": {"name": "Russell 2000", "symbol": "^RUT", "currency": "USD", "region": "US"},
     "KOSPI": {"name": "KOSPI", "symbol": "KS11", "currency": "KRW", "region": "KR"},
+    "NIKKEI225": {"name": "Nikkei 225", "symbol": "^N225", "currency": "JPY", "region": "JP"},
+    "SHANGHAI": {"name": "Shanghai Composite", "symbol": "000001.SS", "currency": "CNY", "region": "CN"},
+    "HANGSENG": {"name": "Hang Seng", "symbol": "^HSI", "currency": "HKD", "region": "HK"},
+    "TAIWAN": {"name": "Taiwan Weighted", "symbol": "^TWII", "currency": "TWD", "region": "TW"},
+    "NIFTY50": {"name": "Nifty 50", "symbol": "^NSEI", "currency": "INR", "region": "IN"},
+    "FTSE100": {"name": "FTSE 100", "symbol": "^FTSE", "currency": "GBP", "region": "GB"},
+    "DAX": {"name": "DAX", "symbol": "^GDAXI", "currency": "EUR", "region": "DE"},
+    "CAC40": {"name": "CAC 40", "symbol": "^FCHI", "currency": "EUR", "region": "FR"},
+    "EUROSTOXX50": {"name": "Euro Stoxx 50", "symbol": "^STOXX50E", "currency": "EUR", "region": "EU"},
 }

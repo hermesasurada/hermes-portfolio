@@ -40,7 +40,7 @@ KR_EARNINGS_DELAY_SECONDS = 0.8
 # 신규 추적 종목 과거 이력 자동 백필: 이력이 이 행수 미만이고 아직 백필한 적
 # 없으면 1회 전체 이력을 받아 채운다. (crypto/stock 지표 계산용)
 HISTORY_BACKFILL_MIN_ROWS = 60
-HISTORY_BACKFILL_CATEGORIES = ("fx", "crypto", "overseas", "kr")
+HISTORY_BACKFILL_CATEGORIES = ("fx", "crypto", "overseas", "kr", "index")
 
 
 def backfill_new_tickers(categories: list[str], tickers: list[str] | None) -> tuple[int, list[str]]:

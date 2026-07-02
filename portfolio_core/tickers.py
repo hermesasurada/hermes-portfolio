@@ -77,6 +77,7 @@ def currency_symbol(currency: str) -> str:
         "AUD": "AUD ",
         "SGD": "SGD ",
         "HKD": "HKD ",
+        "INR": "INR ",
     }.get(currency, f"{currency} ")
 
 

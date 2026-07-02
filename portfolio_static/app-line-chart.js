@@ -363,15 +363,6 @@ function chartPriceDirectionSymbol(cls) {
   return "→";
 }
 
-function chartPricePlainDelta(value, currency) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return "";
-  const sign = number > 0 ? "+" : number < 0 ? "-" : "";
-  const abs = Math.abs(number);
-  const formatter = currency === "KRW" || currency === "JPY" ? fmt : fmt2;
-  return `${sign}${formatter.format(abs)}`;
-}
-
 function chartPricePctPill(metric) {
   if (metric.changePct == null) return "";
   const cls = chartPriceClass(metric.changePct);
@@ -388,23 +379,19 @@ function chartExtendedLabel(meta) {
 
 function chartShouldShowExtendedLine(meta, metric, isUsTicker) {
   if (!isUsTicker || metric.price == null) return false;
+  if (meta.category === "index") return false;
   const state = String(meta.extended_market_state || meta.market_state || "").toUpperCase();
   if (state === "REGULAR" || state === "REGULAR_MARKET") return false;
   return true;
 }
 
 function renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, isUsTicker, extendedLabel) {
-  const dayCls = chartPriceClass(dayMetric.change ?? dayMetric.changePct);
-  const dayDelta = chartPricePlainDelta(dayMetric.change, currency);
-  const extendedCls = chartPriceClass(extendedMetric.change ?? extendedMetric.changePct);
-  const extendedDelta = chartPricePlainDelta(extendedMetric.change, currency);
   const extendedLine = isUsTicker && extendedMetric.price != null
     ? `
       <div class="chart-price-row extended">
         <span class="chart-price-row-label">${esc(extendedLabel)}</span>
         <strong class="chart-price-current">${esc(chartMoney(extendedMetric.price, currency, ticker))}</strong>
         ${chartPricePctPill(extendedMetric)}
-        ${extendedDelta ? `<span class="chart-price-today ${extendedCls}">${esc(extendedDelta)}</span>` : ""}
       </div>
     `
     : "";
@@ -414,7 +401,6 @@ function renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, isUs
         <span class="chart-price-row-label">정규</span>
         <strong class="chart-price-current">${dayMetric.price == null ? "-" : esc(chartMoney(dayMetric.price, currency, ticker))}</strong>
         ${chartPricePctPill(dayMetric)}
-        ${dayDelta ? `<span class="chart-price-today ${dayCls}">${esc(dayDelta)}</span>` : ""}
       </div>
       ${extendedLine}
     </div>

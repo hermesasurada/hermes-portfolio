@@ -54,6 +54,7 @@ function money(v, cur) {
     AUD: "A$",
     SGD: "S$",
     HKD: "HK$",
+    INR: "₹",
   }[cur] || "";
   return prefix + fmt.format(v);
 }
@@ -70,6 +71,7 @@ function unitMoney(v, cur, ticker = "") {
   if (cur === "AUD") return "A$" + fmt1.format(v);
   if (cur === "SGD") return "S$" + fmt1.format(v);
   if (cur === "HKD") return "HK$" + fmt1.format(v);
+  if (cur === "INR") return "₹" + fmt1.format(v);
   return fmt1.format(v) + " " + cur;
 }
 function tradeQtyText(qty, ticker = "") {
@@ -90,6 +92,7 @@ function currentPriceMarkup(row) {
   if (row.current_price == null) return '<span class="missing">조회불가</span>';
   if (row.category === "fx") return fxRateText(row.current_price);
   const local = unitMoney(row.current_price, row.currency, row.ticker);
+  if (row.category === "index") return local;
   // KRW 종목·환산 불가 시엔 현지가 한 줄만 (이전엔 별도 컬럼이라 따로 보였음)
   if (row.currency === "KRW" || !Number.isFinite(row.current_price_krw)) return local;
   return `<span class="price-cell"><span>${local}</span><span class="krw-sub">(${unitKrw(row.current_price_krw)})</span></span>`;
