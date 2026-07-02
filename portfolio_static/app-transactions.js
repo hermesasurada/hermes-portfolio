@@ -172,14 +172,34 @@ function renderTransactionPager(totalRows) {
 
 const TX_TRASH_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/></svg>`;
 
+function txTickerMeta(tx) {
+  const ticker = String(tx.ticker || "").toUpperCase();
+  const meta = findTickerMeta(ticker) || flattenHoldings().find(h => String(h.ticker || "").toUpperCase() === ticker) || {};
+  return {
+    ...meta,
+    ticker,
+    name: tx.name || meta.name || ticker,
+  };
+}
+
+function txTickerCell(tx) {
+  const meta = txTickerMeta(tx);
+  return `
+    <span class="tx-ticker-cell">
+      ${logoMarkup(meta)}
+      <span>${esc(meta.ticker)}</span>
+    </span>
+  `;
+}
+
 function txEditRow(tx) {
   const account = `${tx.member || ""} · ${tx.account_name || tx.account_type || ""}`;
   return `
     <tr class="tx-editing" data-tx-row="${tx.id}">
       <td><input type="date" class="tx-edit-input" data-tx-field="trade_date" value="${esc(tx.trade_date)}"></td>
       <td>${esc(account)}</td>
-      <td>${esc(tx.ticker)}</td>
-      <td>${esc(tx.name || "")}</td>
+      <td>${txTickerCell(tx)}</td>
+      <td class="tx-name-cell">${esc(tx.name || "")}</td>
       <td><select class="tx-edit-input" data-tx-field="side">
         <option value="BUY" ${tx.side === "BUY" ? "selected" : ""}>매수</option>
         <option value="SELL" ${tx.side === "SELL" ? "selected" : ""}>매도</option>
@@ -213,8 +233,8 @@ function txViewRow(tx) {
     <tr>
       <td>${esc(tx.trade_date)}</td>
       <td>${esc(account)}</td>
-      <td>${esc(tx.ticker)}</td>
-      <td>${esc(tx.name || "")}</td>
+      <td>${txTickerCell(tx)}</td>
+      <td class="tx-name-cell">${esc(tx.name || "")}</td>
       <td><span class="${sideClass}">${sideText}</span></td>
       <td>${tradeQtyText(tx.qty || 0, tx.ticker)}</td>
       <td>${unitMoney(tx.price, tx.currency, tx.ticker)}</td>

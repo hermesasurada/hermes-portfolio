@@ -4138,6 +4138,21 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   font-size: 12px;
   line-height: 1.25;
 }
+.tx-ticker-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 5px;
+  min-width: 0;
+}
+.tx-ticker-cell .asset-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 8px;
+}
+.tx-name-cell {
+  text-align: left;
+}
 .tx-wrap {
   padding: 0 12px 12px;
 }
