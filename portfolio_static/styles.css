@@ -4138,6 +4138,12 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   font-size: 12px;
   line-height: 1.25;
 }
+.tx-list th:nth-child(3),
+.tx-list th:nth-child(4),
+.tx-list td:nth-child(3),
+.tx-list td:nth-child(4) {
+  text-align: left;
+}
 .tx-ticker-cell {
   display: inline-flex;
   align-items: center;
