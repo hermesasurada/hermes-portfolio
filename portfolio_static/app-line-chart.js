@@ -631,8 +631,8 @@ function renderChartStats(payload) {
   if (!ticker) { el.innerHTML = ""; return; }
   const loaded = Boolean(statsData[ticker]);
   const rows = chartStatMetricRows(payload);
-  const row = ([, label, value]) => `
-    <div class="cstat-row${label ? "" : " empty"}">
+  const row = ([, label, value], mobileOrder = 0) => `
+    <div class="cstat-row${label ? "" : " empty"}" style="--mobile-order:${mobileOrder}">
       <span class="cstat-k">${esc(label)}</span>
       <span class="cstat-v">${value}</span>
     </div>
@@ -651,9 +651,9 @@ function renderChartStats(payload) {
   });
   const statCells = [];
   for (let rowIndex = 0; rowIndex < maxRows; rowIndex += 1) {
-    for (const items of normalizedColumns) {
-      statCells.push(row(items[rowIndex]));
-    }
+    normalizedColumns.forEach((items, columnIndex) => {
+      statCells.push(row(items[rowIndex], columnIndex * maxRows + rowIndex));
+    });
   }
 
   el.innerHTML = `

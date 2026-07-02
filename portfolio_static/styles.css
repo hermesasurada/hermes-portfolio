@@ -4608,7 +4608,11 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   #chartStats .cstat-row,
   #chartStats .cstat-row:nth-child(2n),
   #chartStats .cstat-row:nth-child(4n) {
+    order: var(--mobile-order, 0);
     border-right: 0;
+  }
+  #chartStats .cstat-row.empty {
+    display: none;
   }
   #chartStats .cstat-row:nth-last-child(-n + 2),
   #chartStats .cstat-row:nth-last-child(-n + 4) {
