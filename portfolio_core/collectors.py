@@ -101,7 +101,10 @@ def fetch_history_rows(category: str, ticker: str, period: str = "10y") -> list[
 
     import yfinance as yf
 
-    symbol = normalize_yfinance_symbol(ticker) or ticker
+    if category == "fx":
+        symbol = FX_SYMBOLS.get(ticker, f"{ticker}=X")
+    else:
+        symbol = normalize_yfinance_symbol(ticker) or ticker
     hist = yf.Ticker(symbol).history(period=period, auto_adjust=False)
     if hist is None or hist.empty or "Close" not in hist:
         return []
