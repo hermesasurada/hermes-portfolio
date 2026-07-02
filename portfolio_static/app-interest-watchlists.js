@@ -5,7 +5,7 @@ let activeSidebarTab = "accounts";
 let activeInterestGroupId = null;
 let editingInterestGroupId = null;
 let interestGroupOrderSaving = false;
-const interestSortState = { key: "display_change_pct", dir: -1 };
+const interestSortState = { key: "display_change_pct", dir: -1, manual: false };
 
 function interestModeActive() {
   return activeSidebarTab === "interest" && activeInterestGroupId != null;
@@ -27,6 +27,10 @@ function interestGroupIsFx(group = activeInterestGroup()) {
 function interestGroupIsIndex(group = activeInterestGroup()) {
   return Boolean(group?.items?.length)
     && group.items.every(item => item.category === "index");
+}
+
+function interestGroupUsesManualDefault(group = activeInterestGroup()) {
+  return interestGroupIsFx(group) || interestGroupIsIndex(group);
 }
 
 function setInterestStatus(message = "", error = false, main = false) {
@@ -163,6 +167,7 @@ function normalizeActiveInterestGroup() {
     ?? interestWatchlists[0]?.id
     ?? null;
   if (activeInterestGroupId != null) storageSet(sidebarStorage.interestGroupId, String(activeInterestGroupId));
+  syncInterestDefaultSortForGroup();
 }
 
 function applyInterestWatchlistPayload(payload) {
@@ -351,7 +356,12 @@ function interestBaseRows() {
     .filter(row => currencyFilter === "all" || row.currency === currencyFilter);
 }
 
-function sortInterestRows(rows) {
+function sortInterestRows(rows, group = activeInterestGroup()) {
+  if (interestSortState.manual && interestGroupUsesManualDefault(group)) {
+    const order = new Map((group?.items || []).map((item, index) => [String(item.ticker || "").toUpperCase(), index]));
+    rows.sort((a, b) => (order.get(String(a.ticker || "").toUpperCase()) ?? 9999) - (order.get(String(b.ticker || "").toUpperCase()) ?? 9999));
+    return;
+  }
   const { key, dir } = interestSortState;
   rows.sort((a, b) => {
     const av = a[key], bv = b[key];
@@ -362,6 +372,18 @@ function sortInterestRows(rows) {
     const bn = bv != null && Number.isFinite(Number(bv)) ? Number(bv) : -Infinity;
     return (an - bn) * dir;
   });
+}
+
+function syncInterestDefaultSortForGroup(group = activeInterestGroup()) {
+  if (interestGroupUsesManualDefault(group)) {
+    interestSortState.manual = true;
+    interestSortState.key = "";
+    interestSortState.dir = 1;
+    return;
+  }
+  interestSortState.manual = false;
+  interestSortState.key = "display_change_pct";
+  interestSortState.dir = -1;
 }
 
 const interestColumnWidths = {
@@ -452,7 +474,7 @@ function renderInterestMainTable() {
     return;
   }
   const rows = statsRows(interestBaseRows());
-  sortInterestRows(rows);
+  sortInterestRows(rows, group);
   const missingStats = rows.some(row => !statsData[row.ticker]
     || (!statsFetchedTickers.has(row.ticker) && hasMissingTechnicalStats(statsData[row.ticker])));
   if (missingStats) loadStatsForRows(rows);
@@ -552,6 +574,7 @@ function initInterestWatchlists() {
     if (select) {
       activeInterestGroupId = Number(select.dataset.interestSelect);
       storageSet(sidebarStorage.interestGroupId, String(activeInterestGroupId));
+      syncInterestDefaultSortForGroup();
       if (chartTicker || performanceChartOpen) closeChart(false);
       if (window.matchMedia("(max-width: 980px)").matches) {
         mobileAccountsCollapsed = true;
@@ -642,8 +665,9 @@ function initInterestWatchlists() {
   document.querySelectorAll("[data-interest-sort-key]").forEach(header => {
     header.addEventListener("click", () => {
       const key = header.dataset.interestSortKey;
-      if (interestSortState.key === key) interestSortState.dir *= -1;
+      if (!interestSortState.manual && interestSortState.key === key) interestSortState.dir *= -1;
       else {
+        interestSortState.manual = false;
         interestSortState.key = key;
         // 통계탭(setCurrentSort)과 동일하게 기본 내림차순 — 탭 간 정렬방향 일관
         interestSortState.dir = defaultSortDir[key] || -1;
