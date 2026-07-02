@@ -14,6 +14,15 @@ SPLIT_REPAIR_TOLERANCE = 0.18
 SPLIT_REPAIR_MAX_DATE_DISTANCE_DAYS = 20
 SPLIT_REPAIR_MIN_MATERIAL_RATIO = 1.5
 
+# 야후 원본의 단발 bad tick(스파이크/딥) 정제 기준. 양끝 정상 사이에서
+# 가운데 1~N일만 극단으로 튀었다가 곧바로 복귀하는 구간만 오염으로 보고 제거.
+# '복귀' 조건 덕에 실제 급락/급등·분할(복귀 안 함)은 보존된다.
+SPIKE_EXTREME_LOW = 0.4     # 직전 정상값 대비 -60% 이하로 급락하면 이탈 후보
+SPIKE_EXTREME_HIGH = 2.5    # +150% 이상 급등하면 이탈 후보
+SPIKE_CONTINUITY_LOW = 0.6  # 오염 구간 양끝(정상↔정상)이 서로 이 범위면 '연속=복귀'로 판정
+SPIKE_CONTINUITY_HIGH = 1.7
+SPIKE_MAX_RUN_DAYS = 5       # 오염으로 간주할 최대 연속 길이(그 이상은 스케일 변화로 보고 보존)
+
 
 def infer_category(ticker: str, category: str | None = None) -> str:
     if category in CATEGORIES:
@@ -103,6 +112,7 @@ def save_daily_prices(ticker: str, rows: Iterable[tuple[str, float]], source: st
         )
         conn.commit()
     repair_split_adjusted_daily_prices([ticker])
+    sanitize_price_spikes([ticker])
     return len(clean_rows)
 
 
@@ -220,6 +230,82 @@ def repair_split_adjusted_daily_prices(tickers: Iterable[str]) -> dict[str, int]
                 repaired[ticker] = updates
         conn.commit()
     return repaired
+
+
+def sanitize_price_spikes(tickers: Iterable[str]) -> dict[str, int]:
+    """야후 원본의 단발 bad tick(스파이크/딥) 제거. 양끝이 정상 스케일로
+    이어지는데 가운데 1~SPIKE_MAX_RUN_DAYS일만 극단으로 튀었다가 곧바로
+    복귀하고, 그 구간에 stock_splits 기록도 없으면 오염으로 보고 삭제.
+    '복귀' 조건 덕에 실제 급락/급등·분할(복귀 안 함)은 보존한다. 멱등."""
+    removed: dict[str, int] = {}
+    with connect() as conn:
+        ensure_stock_split_tables(conn)
+        for raw_ticker in tickers:
+            ticker = str(raw_ticker or "").strip().upper()
+            if not ticker:
+                continue
+            rows = conn.execute(
+                "SELECT date, close FROM daily_prices WHERE ticker = ? AND close > 0 ORDER BY date",
+                (ticker,),
+            ).fetchall()
+            if len(rows) < 3:
+                continue
+            split_dates = [
+                parsed
+                for parsed in (
+                    _date_value(s["split_date"])
+                    for s in conn.execute(
+                        "SELECT split_date FROM stock_splits WHERE ticker = ?", (ticker,)
+                    ).fetchall()
+                )
+                if parsed
+            ]
+            closes = [(r["date"], float(r["close"])) for r in rows]
+            n = len(closes)
+            to_delete: list[str] = []
+            i = 1  # 시작·끝값은 양끝 비교가 불가하므로 건드리지 않는다
+            while i < n - 1:
+                prev = closes[i - 1][1]
+                ratio = closes[i][1] / prev if prev else 1.0
+                if SPIKE_EXTREME_LOW <= ratio <= SPIKE_EXTREME_HIGH:
+                    i += 1
+                    continue
+                # prev 대비 극단 이탈이 이어지는 구간[i, j)
+                j = i
+                while j < n:
+                    r = closes[j][1] / prev if prev else 1.0
+                    if SPIKE_EXTREME_LOW <= r <= SPIKE_EXTREME_HIGH:
+                        break
+                    j += 1
+                if j >= n:  # 끝까지 극단(복귀 없음) → 스케일 변화/실제로 보고 보존
+                    break
+                continuity = closes[j][1] / prev if prev else None
+                run_dates = [closes[k][0] for k in range(i, j)]
+                near_split = any(
+                    _date_value(rd) is not None
+                    and any(
+                        abs((_date_value(rd) - sd).days) <= SPLIT_REPAIR_MAX_DATE_DISTANCE_DAYS
+                        for sd in split_dates
+                    )
+                    for rd in run_dates
+                )
+                if (
+                    (j - i) <= SPIKE_MAX_RUN_DAYS
+                    and continuity is not None
+                    and SPIKE_CONTINUITY_LOW <= continuity <= SPIKE_CONTINUITY_HIGH
+                    and not near_split
+                ):
+                    to_delete.extend(run_dates)
+                i = j
+            if to_delete:
+                placeholders = ",".join("?" for _ in to_delete)
+                conn.execute(
+                    f"DELETE FROM daily_prices WHERE ticker = ? AND date IN ({placeholders})",
+                    (ticker, *to_delete),
+                )
+                removed[ticker] = len(to_delete)
+        conn.commit()
+    return removed
 
 
 def history_backfill_status(tickers: Iterable[str]) -> dict[str, tuple[int, bool]]:
