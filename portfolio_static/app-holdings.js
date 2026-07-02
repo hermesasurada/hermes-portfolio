@@ -620,6 +620,7 @@ function syncDetailTabs() {
   document.getElementById("interestTableWrap").classList.toggle("hidden", showingChart || !showingInterest);
   document.getElementById("chartView").classList.toggle("hidden", !showingChart);
   document.getElementById("chartBack").classList.toggle("hidden", !showingChart);
+  document.getElementById("chartInterestOpen")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
   document.getElementById("chartBottomControls")?.classList.toggle("hidden", !showingChart);
   document.getElementById("chartIntervalControl")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
   document.getElementById("chartDisplayControls")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);

@@ -386,6 +386,13 @@ function chartExtendedLabel(meta) {
   return "연장";
 }
 
+function chartShouldShowExtendedLine(meta, metric, isUsTicker) {
+  if (!isUsTicker || metric.price == null) return false;
+  const state = String(meta.extended_market_state || meta.market_state || "").toUpperCase();
+  if (state === "REGULAR" || state === "REGULAR_MARKET") return false;
+  return true;
+}
+
 function renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, isUsTicker, extendedLabel) {
   const dayCls = chartPriceClass(dayMetric.change ?? dayMetric.changePct);
   const dayDelta = chartPricePlainDelta(dayMetric.change, currency);
@@ -404,9 +411,10 @@ function renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, isUs
   return `
     <div class="chart-price-quote">
       <div class="chart-price-row regular">
+        <span class="chart-price-row-label">정규</span>
         <strong class="chart-price-current">${dayMetric.price == null ? "-" : esc(chartMoney(dayMetric.price, currency, ticker))}</strong>
         ${chartPricePctPill(dayMetric)}
-        ${dayDelta ? `<span class="chart-price-today ${dayCls}">${esc(dayDelta)} 오늘</span>` : ""}
+        ${dayDelta ? `<span class="chart-price-today ${dayCls}">${esc(dayDelta)}</span>` : ""}
       </div>
       ${extendedLine}
     </div>
@@ -436,7 +444,8 @@ function renderChartPriceSummary(payload) {
     meta.extended_change_pct
   );
   const isUsTicker = currency === "USD" && !ticker.includes(".");
-  el.innerHTML = renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, isUsTicker, chartExtendedLabel(meta));
+  const showExtended = chartShouldShowExtendedLine(meta, extendedMetric, isUsTicker);
+  el.innerHTML = renderChartPriceQuote(dayMetric, showExtended ? extendedMetric : {}, currency, ticker, isUsTicker, chartExtendedLabel(meta));
 }
 
 function chartInterestGroups(ticker) {
