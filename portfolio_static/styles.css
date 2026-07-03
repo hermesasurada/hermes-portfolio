@@ -1248,11 +1248,13 @@ table.stats-list {
 .logo-cell { text-align: center; padding-left: 4px; padding-right: 4px; }
 .stats-list td:nth-child(2) { text-align: left; }
 #detailTableWrap th:nth-child(2), #detailTableWrap td:nth-child(2) { text-align: left; }
-.stats-list .indicator-head {
+.stats-list .indicator-head,
+#detailTableWrap .indicator-head {
   line-height: 1.05;
   white-space: normal;
 }
-.stats-list .indicator-head::after {
+.stats-list .indicator-head::after,
+#detailTableWrap .indicator-head::after {
   position: absolute;
   right: 2px;
   top: 50%;
@@ -1260,7 +1262,8 @@ table.stats-list {
   width: auto;
   margin-left: 0;
 }
-.stats-list .indicator-head span {
+.stats-list .indicator-head span,
+#detailTableWrap .indicator-head span {
   display: block;
 }
 .stats-list .asset-icon { width: 34px; height: 34px; border-radius: 7px; font-size: 10.5px; }
@@ -1274,7 +1277,9 @@ table.stats-list {
 .stats-list .ticker-symbol { font-size: 10.5px; }
 /* 지표군 경계(모멘텀|밸류|수익률)를 수직선으로 구분 — 25컬럼의 호흡 분절 */
 .stats-list th.group-start,
-.stats-list td.group-start { border-left: 1px solid var(--line); }
+.stats-list td.group-start,
+#detailTableWrap th.group-start,
+#detailTableWrap td.group-start { border-left: 1px solid var(--line); }
 /* 숫자가 우측정렬이라 세로선 '직전' 컬럼(9·15·18번)의 값이 선에 붙는다.
    그 셀들의 padding-right만 키워 선과 간격 확보. (#statsTableWrap 접두로
    좁은 RSI/BB 컬럼 규칙의 높은 specificity를 이긴다) */
@@ -1642,17 +1647,37 @@ tr.dividend-month-row:hover td {
   min-width: var(--ticker-name-width, 180px);
   max-width: var(--ticker-name-width, 180px);
 }                                                                  /* 종목명 */
-#detailTableWrap th:nth-child(3), #detailTableWrap td:nth-child(3) { min-width: 82px; }   /* 등락 */
-#detailTableWrap th:nth-child(4), #detailTableWrap td:nth-child(4) { min-width: 62px; }   /* 연장 */
-#detailTableWrap th:nth-child(5), #detailTableWrap td:nth-child(5) { min-width: 108px; }  /* 현재단가 */
-#detailTableWrap th:nth-child(6), #detailTableWrap td:nth-child(6) { min-width: 108px; }  /* 등락금액 */
-#detailTableWrap th:nth-child(7), #detailTableWrap td:nth-child(7) { min-width: 62px; }   /* 수량 */
-#detailTableWrap th:nth-child(8), #detailTableWrap td:nth-child(8) { min-width: 118px; }  /* 평가액 */
-#detailTableWrap th:nth-child(9), #detailTableWrap td:nth-child(9) { min-width: 62px; }   /* 비중 */
-#detailTableWrap th:nth-child(10), #detailTableWrap td:nth-child(10) { min-width: 106px; } /* 시총/AUM */
-#detailTableWrap th:nth-child(11), #detailTableWrap td:nth-child(11) { min-width: 66px; }  /* 배당율 */
-#detailTableWrap th:nth-child(12), #detailTableWrap td:nth-child(12) { min-width: 76px; }  /* 실적 */
-#detailTableWrap th:nth-child(13), #detailTableWrap td:nth-child(13) { min-width: 58px; }  /* 거래 */
+#detailTableWrap th:nth-child(3), #detailTableWrap td:nth-child(3) { min-width: 76px; }   /* 등락 */
+#detailTableWrap th:nth-child(4), #detailTableWrap td:nth-child(4) { min-width: 56px; }   /* 연장 */
+#detailTableWrap th:nth-child(5), #detailTableWrap td:nth-child(5) { min-width: 100px; }  /* 현재단가 */
+#detailTableWrap th:nth-child(6), #detailTableWrap td:nth-child(6) { min-width: 98px; }   /* 등락금액 */
+#detailTableWrap th:nth-child(7), #detailTableWrap td:nth-child(7) { min-width: 56px; }   /* 수량 */
+#detailTableWrap th:nth-child(8), #detailTableWrap td:nth-child(8) { min-width: 108px; }  /* 평가액 */
+#detailTableWrap th:nth-child(9), #detailTableWrap td:nth-child(9) { min-width: 54px; }   /* 비중 */
+#detailTableWrap th:nth-child(10), #detailTableWrap td:nth-child(10) { min-width: 96px; } /* 시총/AUM */
+#detailTableWrap th:nth-child(11), #detailTableWrap td:nth-child(11) { min-width: 58px; } /* 배당율 */
+#detailTableWrap th:nth-child(12), #detailTableWrap td:nth-child(12) { min-width: 68px; } /* 실적 */
+#detailTableWrap th:nth-child(13), #detailTableWrap td:nth-child(13) { min-width: 62px; } /* 52주高 */
+#detailTableWrap th:nth-child(14), #detailTableWrap td:nth-child(14),
+#detailTableWrap th:nth-child(15), #detailTableWrap td:nth-child(15) { min-width: 46px; } /* β */
+#detailTableWrap th:nth-child(n+16):nth-child(-n+21),
+#detailTableWrap td:nth-child(n+16):nth-child(-n+21) {
+  min-width: 43px;
+  padding-left: 1px;
+  padding-right: 1px;
+} /* RSI/BB */
+#detailTableWrap th:nth-child(22), #detailTableWrap td:nth-child(22),
+#detailTableWrap th:nth-child(23), #detailTableWrap td:nth-child(23) { min-width: 56px; } /* P/E */
+#detailTableWrap th:nth-child(24), #detailTableWrap td:nth-child(24) { min-width: 48px; } /* P/B */
+#detailTableWrap th:nth-child(n+25):nth-child(-n+31),
+#detailTableWrap td:nth-child(n+25):nth-child(-n+31) { min-width: 58px; } /* 기간 수익률 */
+#detailTableWrap th:nth-child(32), #detailTableWrap td:nth-child(32) { min-width: 54px; } /* 거래 */
+#detailTableWrap th:nth-child(15),
+#detailTableWrap td:nth-child(15),
+#detailTableWrap th:nth-child(21),
+#detailTableWrap td:nth-child(21),
+#detailTableWrap th:nth-child(24),
+#detailTableWrap td:nth-child(24) { padding-right: 8px; }
 /* 행 처리 단일화: 지브라+보더+호버 3중첩에서 보더+호버만 남김 */
 tr:hover td { background: var(--surface-hover); }
 tbody tr.index-row td {

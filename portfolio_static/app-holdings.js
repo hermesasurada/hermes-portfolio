@@ -619,6 +619,7 @@ function syncFilterToggleControls() {
 }
 
 function syncDetailTabs() {
+  if (activeDetailTab === "stats") activeDetailTab = "detail";
   const showingChart = Boolean(chartTicker) || performanceChartOpen;
   const showingInterest = interestModeActive() && !showingChart;
   const showingFxInterest = showingInterest && interestGroupIsFx();
@@ -627,7 +628,7 @@ function syncDetailTabs() {
   });
   document.getElementById("tableTitle").classList.toggle("hidden", showingChart);
   document.getElementById("detailTableWrap").classList.toggle("hidden", showingChart || showingInterest || activeDetailTab !== "detail");
-  document.getElementById("statsTableWrap").classList.toggle("hidden", showingChart || showingInterest || activeDetailTab !== "stats");
+  document.getElementById("statsTableWrap").classList.add("hidden");
   document.getElementById("dividendTableWrap").classList.toggle("hidden", showingChart || showingInterest || activeDetailTab !== "dividend");
   document.getElementById("interestTableWrap").classList.toggle("hidden", showingChart || !showingInterest);
   document.getElementById("chartView").classList.toggle("hidden", !showingChart);
@@ -638,8 +639,8 @@ function syncDetailTabs() {
   document.getElementById("chartDisplayControls")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
   document.getElementById("performanceDetailControl")?.classList.toggle("hidden", !performanceChartOpen);
   document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart || showingInterest);
-  // 통계 지표 도움말 버튼은 통계 탭(차트 아닐 때)에서만 노출
-  document.getElementById("statsHelpOpen")?.classList.toggle("hidden", showingChart || showingInterest || activeDetailTab !== "stats");
+  // 통계 지표 도움말 버튼은 통합 세부내역에서 노출
+  document.getElementById("statsHelpOpen")?.classList.toggle("hidden", showingChart || showingInterest || activeDetailTab !== "detail");
   document.getElementById("fxAdjustedControl")?.classList.toggle("hidden", showingChart || showingFxInterest);
   document.getElementById("currencyFilterControl")?.classList.toggle("hidden", showingChart || showingFxInterest);
   document.getElementById("rowCount")?.classList.toggle("hidden", showingChart);
@@ -742,6 +743,7 @@ function syncPcFrozenColumns() {
 }
 
 function renderTable() {
+  if (activeDetailTab === "stats") activeDetailTab = "detail";
   syncSortGlobals(activeDetailTab);
   syncTransactionPanel();
   syncFilterToggleControls();
@@ -795,6 +797,25 @@ function renderTable() {
         ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(r.ticker)}" title="배당 이력 보기">${dividendYieldText(r.dividend_yield)}</button>`
         : dividendYieldText(r.dividend_yield)}</td>
       <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
+      <td class="group-start">${signedPercentText(r.drawdown_52w, 1)}</td>
+      <td>${betaText(r.beta)}</td>
+      <td>${betaText(r.beta_adj)}</td>
+      <td class="group-start">${indicatorText(r.rsi_day, "rsi")}</td>
+      <td>${indicatorText(r.rsi_week, "rsi")}</td>
+      <td>${indicatorText(r.rsi_month, "rsi")}</td>
+      <td>${indicatorText(r.bb_day, "bb")}</td>
+      <td>${indicatorText(r.bb_week, "bb")}</td>
+      <td>${indicatorText(r.bb_month, "bb")}</td>
+      <td class="group-start">${peText(r.trailing_pe)}</td>
+      <td>${peText(r.forward_pe)}</td>
+      <td>${peText(r.price_to_book)}</td>
+      <td class="group-start">${signedPercentText(r.perf_1m, 1)}</td>
+      <td>${signedPercentText(r.perf_3m, 0)}</td>
+      <td>${signedPercentText(r.perf_6m, 0)}</td>
+      <td>${signedPercentText(r.perf_ytd, 0)}</td>
+      <td>${signedPercentText(r.perf_1y, 0)}</td>
+      <td>${signedPercentText(r.perf_3y, 0)}</td>
+      <td>${signedPercentText(r.perf_5y, 0)}</td>
       <td>${r.is_watchlist ? "-" : `<button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button>`}</td>
     </tr>
   `;
@@ -811,7 +832,6 @@ function renderTable() {
   });
   // 티커 링크·배당이력 버튼 클릭은 app.js의 문서 위임이 처리 (개별 바인딩 금지)
   syncTickerNameColumnWidth(document.querySelector("#detailTableWrap table"));
-  if (activeDetailTab === "stats") renderStatsTable(rows);
   if (activeDetailTab === "dividend") renderDividendTable();
   schedulePcFrozenColumns();
 }
