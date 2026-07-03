@@ -11,6 +11,7 @@ from datetime import datetime
 from urllib.parse import quote
 
 from .db import connect, ensure_live_quote_cache_table
+from .market_calendar import us_equity_market_status
 from .paths import US_EASTERN
 from .tickers import is_us_stock_ticker, ticker_currency
 
@@ -53,16 +54,8 @@ def _yahoo_session(force: bool = False) -> tuple[urllib.request.OpenerDirector, 
 
 
 def us_market_status() -> dict:
-    now_et = datetime.now(US_EASTERN)
-    minutes = now_et.hour * 60 + now_et.minute
-    regular_start = 9 * 60 + 30
-    regular_end = 16 * 60
-    is_weekday = now_et.weekday() < 5
-    is_regular = is_weekday and regular_start <= minutes < regular_end
     return {
-        "is_regular": is_regular,
-        "now_et": now_et.strftime("%Y-%m-%d %H:%M ET"),
-        "label": "정규장" if is_regular else "장외",
+        **us_equity_market_status(),
         "cache_seconds": US_LIVE_CACHE_SECONDS,
     }
 
@@ -323,8 +316,15 @@ def fetch_us_live_quotes(symbols: list[str], include_extended: bool, regular_hou
     return fresh
 
 
-def apply_us_live_prices(prices: dict[str, dict], ticker_rows: list[sqlite3.Row], include_extended: bool, regular_hours: bool) -> dict:
-    use_live = regular_hours or include_extended
+def apply_us_live_prices(
+    prices: dict[str, dict],
+    ticker_rows: list[sqlite3.Row],
+    include_extended: bool,
+    market_status: dict,
+) -> dict:
+    regular_hours = bool(market_status.get("is_regular"))
+    is_closed = bool(market_status.get("is_closed"))
+    use_live = (regular_hours or include_extended) and not is_closed
     us_tickers = [
         row["ticker"]
         for row in ticker_rows
@@ -332,12 +332,13 @@ def apply_us_live_prices(prices: dict[str, dict], ticker_rows: list[sqlite3.Row]
     ]
     meta = {
         "is_regular": regular_hours,
-        "include_extended": bool(include_extended and not regular_hours),
+        "is_closed": is_closed,
+        "include_extended": bool(include_extended and not regular_hours and not is_closed),
         "use_live": use_live,
         "live_count": 0,
         "us_ticker_count": len(us_tickers),
     }
-    if not us_tickers:
+    if not us_tickers or is_closed:
         return meta
     live_quotes = fetch_us_live_quotes(us_tickers, include_extended or not regular_hours, regular_hours)
     market_today = datetime.now(US_EASTERN).strftime("%Y-%m-%d")

@@ -32,6 +32,7 @@ from portfolio_core.indicators import (
     resample_last,
     shift_months,
 )
+from portfolio_core.market_calendar import us_equity_calendar_day
 from portfolio_core.price_store import infer_category
 from portfolio_core.prices import fx_previous_rates, fx_rates
 from portfolio_core.us_live_quotes import (
@@ -419,7 +420,7 @@ def test_apply_us_live_prices_keeps_regular_change_when_extended_is_applied():
             }
         }
         rows = [{"ticker": "AAPL", "currency": "USD"}]
-        meta = apply_us_live_prices(prices, rows, include_extended=True, regular_hours=False)
+        meta = apply_us_live_prices(prices, rows, include_extended=True, market_status={"is_regular": False})
         assert meta["live_count"] == 1
         assert prices["AAPL"]["price"] == 210.0
         assert prices["AAPL"]["regular_change_pct"] != prices["AAPL"]["extended_change_pct"]
@@ -427,6 +428,35 @@ def test_apply_us_live_prices_keeps_regular_change_when_extended_is_applied():
         assert prices["AAPL"]["extended_change_pct"] == 5.0
     finally:
         price_module.fetch_us_live_quotes = original_fetch
+
+
+def test_apply_us_live_prices_skips_live_quotes_when_market_is_closed():
+    import portfolio_core.us_live_quotes as price_module
+
+    original_fetch = price_module.fetch_us_live_quotes
+    try:
+        price_module.fetch_us_live_quotes = lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("should not fetch"))
+        prices = {"AAPL": {"price": 199.0, "date": "2026-07-02", "source": "db"}}
+        rows = [{"ticker": "AAPL", "currency": "USD"}]
+        meta = apply_us_live_prices(
+            prices,
+            rows,
+            include_extended=True,
+            market_status={"is_regular": False, "is_closed": True},
+        )
+        assert meta["use_live"] is False
+        assert meta["include_extended"] is False
+        assert meta["live_count"] == 0
+        assert prices["AAPL"]["price"] == 199.0
+    finally:
+        price_module.fetch_us_live_quotes = original_fetch
+
+
+def test_us_market_calendar_observed_independence_day_and_early_close():
+    assert us_equity_calendar_day(date(2026, 7, 3))["status"] == "closed"
+    thanksgiving_after = us_equity_calendar_day(date(2026, 11, 27))
+    assert thanksgiving_after["status"] == "early_close"
+    assert thanksgiving_after["early_close_time"] == "13:00"
 
 
 def test_fetch_us_live_quotes_uses_stale_cache_when_batch_fails():

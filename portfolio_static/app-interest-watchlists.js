@@ -434,6 +434,7 @@ function syncInterestVisibleColumns(rows) {
   const table = document.querySelector("#interestTableWrap .interest-detail-list");
   if (!table) return;
   const isIndexGroup = interestGroupIsIndex();
+  const hideExtendedByMarket = Boolean(data?.us_market?.is_regular || data?.us_market?.is_closed);
   const headers = Array.from(table.querySelectorAll("thead th[data-interest-col]"))
     .sort((a, b) => Number(a.dataset.interestCol) - Number(b.dataset.interestCol));
   const cols = Array.from(table.querySelectorAll("colgroup col"));
@@ -442,7 +443,7 @@ function syncInterestVisibleColumns(rows) {
   let tableWidth = 40 + tickerNameWidth + 40;
   headers.forEach((header, index) => {
     const field = header.dataset.interestSortKey || "";
-    const hide = (isIndexGroup && field === "extended_change_pct")
+    const hide = ((isIndexGroup || hideExtendedByMarket) && field === "extended_change_pct")
       || (Boolean(field)
       && !interestAlwaysVisibleFields.has(field)
       && !rows.some(row => hasInterestColumnValue(row, field)));

@@ -320,13 +320,20 @@ function renderUsPriceControl() {
   const toggle = document.getElementById("usExtendedToggle");
   const status = document.getElementById("usMarketStatus");
   const regular = Boolean(market.is_regular);
-  toggle.disabled = regular;
-  control.classList.toggle("disabled", regular);
-  control.classList.toggle("enabled", !regular && toggle.checked);
-  if (regular) {
+  const closed = Boolean(market.is_closed);
+  const inactive = regular || closed;
+  toggle.disabled = inactive;
+  control.classList.toggle("disabled", inactive);
+  control.classList.toggle("enabled", !inactive && toggle.checked);
+  control.classList.toggle("market-closed", closed);
+  if (closed) {
     toggle.checked = false;
     control.classList.remove("enabled");
-    status.textContent = `정규장 · 실시간 반영`;
+    status.textContent = `휴장 · ${market.reason || "전 거래일 종가"}`;
+  } else if (regular) {
+    toggle.checked = false;
+    control.classList.remove("enabled");
+    status.textContent = market.is_early_close ? `조기폐장 · 실시간 반영` : `정규장 · 실시간 반영`;
   } else {
     status.textContent = toggle.checked ? `장외 · 잔고 반영` : `장외 · 표시만`;
   }
@@ -368,7 +375,8 @@ function renderPriceUpdated() {
   const priceUpdated = data.price_updated_at || data.price_updated || "-";
   const priceDate = String(data.price_updated_at || data.price_updated || "").slice(0, 10);
   const fxUpdated = data.fx_updated && data.fx_updated !== priceDate ? ` · 환율 ${data.fx_updated}` : "";
-  document.getElementById("priceUpdated").textContent = `가격 갱신: ${priceUpdated}${fxUpdated}`;
+  const usClosed = data?.us_market?.is_closed ? ` · 미국 휴장(${data.us_market.reason || "전 거래일 종가"})` : "";
+  document.getElementById("priceUpdated").textContent = `가격 갱신: ${priceUpdated}${fxUpdated}${usClosed}`;
 }
 
 function syncMobileCollapsePanels() {
@@ -745,7 +753,7 @@ function renderTable() {
   const rows = statsRows(filteredRows());
   sortRows(rows, "detail");
   if (rows.some(row => row.ticker && !statsData[row.ticker])) loadStatsForRows(rows);
-  const hideExtendedColumn = Boolean(data?.us_market?.is_regular);
+  const hideExtendedColumn = Boolean(data?.us_market?.is_regular || data?.us_market?.is_closed);
   const accounts = flattenAccounts();
   const selected = selectionMode === "all" ? accounts : accounts.filter(a => selectedAccounts.has(a.id));
   document.querySelector("#detailTableWrap thead .extended-change-col")

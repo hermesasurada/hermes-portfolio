@@ -131,7 +131,7 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
         ).fetchall()
 
     market_status = us_market_status()
-    us_market_meta = apply_us_live_prices(prices, ticker_rows, us_extended, market_status["is_regular"])
+    us_market_meta = apply_us_live_prices(prices, ticker_rows, us_extended, market_status)
 
     members: dict[str, dict] = {}
     totals = {"value_krw": 0.0}
