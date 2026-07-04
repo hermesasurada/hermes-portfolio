@@ -2279,7 +2279,7 @@ th.pc-frozen-edge {
 }
 #chartStats .cstat-row {
   min-height: 0;
-  height: 31px;
+  height: 34px;   /* grid-auto-rows(34px)와 동일 — 트랙-행 높이차로 생기던 흰 여백 제거 */
   overflow: hidden;
   border-right: 1px solid var(--line);
 }
