@@ -573,9 +573,13 @@ function initInterestWatchlists() {
     }
     const select = event.target.closest("[data-interest-select]");
     if (select) {
-      activeInterestGroupId = Number(select.dataset.interestSelect);
+      const nextGroupId = Number(select.dataset.interestSelect);
+      // 같은 그룹 재클릭이면 사용자가 고른 정렬을 유지 — 그룹이 실제로
+      // 바뀔 때만 그룹 특성(지수/환율=수동, 일반=등락) 기본정렬 적용.
+      const groupChanged = nextGroupId !== activeInterestGroupId;
+      activeInterestGroupId = nextGroupId;
       storageSet(sidebarStorage.interestGroupId, String(activeInterestGroupId));
-      syncInterestDefaultSortForGroup();
+      if (groupChanged) syncInterestDefaultSortForGroup();
       if (chartTicker || performanceChartOpen) closeChart(false);
       if (window.matchMedia("(max-width: 980px)").matches) {
         mobileAccountsCollapsed = true;
