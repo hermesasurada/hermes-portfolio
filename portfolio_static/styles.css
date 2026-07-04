@@ -2148,7 +2148,7 @@ th.pc-frozen-edge {
 .consensus-title {
   overflow: hidden;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: var(--fw-md);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2185,7 +2185,7 @@ th.pc-frozen-edge {
 }
 .consensus-cell {
   display: grid;
-  grid-template-rows: 22px 28px;
+  grid-template-rows: 24px 32px;
   min-width: 0;
   border-right: 1px solid var(--line);
 }
@@ -2201,7 +2201,7 @@ th.pc-frozen-edge {
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--surface-2) 72%, var(--panel));
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 650;
   text-align: center;
   white-space: nowrap;
@@ -2214,15 +2214,17 @@ th.pc-frozen-edge {
   overflow: hidden;
   padding: 0 9px;
   color: var(--ink);
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 680;
   font-variant-numeric: tabular-nums;
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.consensus-unit { font-size: var(--fs-xs); color: var(--muted); font-weight: 400; }
-.consensus-range { font-size: 11.5px; color: var(--ink); }
+.consensus-unit { font-size: 11px; color: var(--muted); font-weight: 400; }
+.consensus-range { font-size: 13px; color: var(--ink); }
+/* 컨센서스 값칸 안의 투자의견 칩은 값 폰트에 맞춰 키움(관심목록 표 칩은 유지) */
+.consensus-v .rating-chip { font-size: 12.5px; }
 @media (max-width: 980px) {
   .consensus-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .consensus-cell:nth-child(2n) { border-right: 0; }
@@ -2261,7 +2263,7 @@ th.pc-frozen-edge {
 .cstat-column:last-child { border-right: 0; }
 #chartStats .cstat-board {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: 31px;
+  grid-auto-rows: 34px;
 }
 #chartStats .cstat-column {
   display: contents;
@@ -2441,7 +2443,7 @@ th.pc-frozen-edge {
   border-right: 1px solid var(--line);
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: var(--fw-md);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2451,7 +2453,7 @@ th.pc-frozen-edge {
   overflow: hidden;
   padding: 5px 11px;
   color: var(--ink);
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: var(--fw-bold);
   font-variant-numeric: tabular-nums;
   text-align: right;
