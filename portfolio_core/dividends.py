@@ -24,7 +24,7 @@ FISCAL_END_MONTH_OVERRIDES = {
     "NVDA": 3,
 }
 PAY_DATE_YEAR_TICKERS = {"DIS"}
-UNADJUSTED_DIVIDEND_SOURCES = {"polygon", "nasdaq", "opendart", "seibro"}
+UNADJUSTED_DIVIDEND_SOURCES = {"polygon", "nasdaq", "opendart"}
 
 
 def _tax_rate(currency: str, account_type: str | None = None) -> float:

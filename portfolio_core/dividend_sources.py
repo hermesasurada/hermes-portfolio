@@ -203,7 +203,7 @@ def _stockanalysis_candidate(ticker: str) -> bool:
     return ticker_currency(ticker) == "USD" and "." not in ticker and ticker != "BTC"
 
 
-def _seibro_candidate(ticker: str) -> bool:
+def _kr_dividend_candidate(ticker: str) -> bool:
     return ticker_currency(ticker) == "KRW" and ticker.upper().endswith(KOREAN_SUFFIXES)
 
 
@@ -220,7 +220,7 @@ def _opendart_attempt_due(ticker: str, status: str | None) -> bool:
 
 
 def _kr_history_attempt_due(ticker: str, status: str | None) -> bool:
-    return _seibro_candidate(ticker) and _source_attempt_due("kr_history", status)
+    return _kr_dividend_candidate(ticker) and _source_attempt_due("kr_history", status)
 
 
 def _fetch_nasdaq_dividends(ticker: str) -> list[dict]:
@@ -389,7 +389,7 @@ _KRX_SHORT_CODE = re.compile(r"[0-9A-Z]{6}")   # 신규 ETF는 0167Z0처럼 영�
 
 
 def _kind_candidate(ticker: str) -> bool:
-    return _seibro_candidate(ticker) and bool(_KRX_SHORT_CODE.fullmatch(ticker.split(".", 1)[0].upper()))
+    return _kr_dividend_candidate(ticker) and bool(_KRX_SHORT_CODE.fullmatch(ticker.split(".", 1)[0].upper()))
 
 
 def _kind_attempt_due(ticker: str, status: str | None) -> bool:
@@ -541,7 +541,7 @@ def _source_error(source: str, ticker: str, exc: Exception) -> str:
 def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], str]:
     events: dict[str, dict] = {}
     sources = []
-    if _seibro_candidate(ticker):
+    if _kr_dividend_candidate(ticker):
         # OpenDART(현금배당결정 공시) = 한국 배당 권위 소스. 확정 주당배당금·
         # 배당기준일·지급예정일을 먼저 깔고(미래 확정분 포함), SEIBRO/yfinance는
         # OpenDART와 ±4일 내 겹치지 않는 ex_date만 보강(중복 방지).

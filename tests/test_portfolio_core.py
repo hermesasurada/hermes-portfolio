@@ -198,40 +198,6 @@ def test_recent_performance_keys():
     }
 
 
-def test_seibro_record_date_converts_to_ex_and_estimated_pay_date():
-    import portfolio_core.dividend_schedule as schedule
-
-    original_today = schedule.today
-    try:
-        schedule.today = lambda: date(2026, 6, 2)
-        event_rows = [
-            {
-                "ticker": "005380.KS",
-                "ex_date": "2026-05-31",
-                "pay_date": None,
-                "amount": None,
-                "currency": "KRW",
-                "source": "seibro",
-            }
-        ]
-        history_rows = [
-            {
-                "ticker": "005380.KS",
-                "ex_date": "2025-05-29",
-                "pay_date": None,
-                "amount": 2500.0,
-                "currency": "KRW",
-                "source": "kr-history",
-            }
-        ]
-        events = consolidated_dividend_events(event_rows, history_rows)
-        hyundai = next(event for event in events if event["ticker"] == "005380.KS")
-        assert hyundai["ex_date"] == "2026-05-29"
-        assert hyundai["pay_date"] == "2026-06-30"
-        assert hyundai["pay_date_estimated"] is True
-        assert hyundai["amount"] == 2500.0
-    finally:
-        schedule.today = original_today
 
 
 def test_estimated_dividend_uses_latest_amount_not_same_period_amount():

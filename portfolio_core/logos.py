@@ -28,21 +28,31 @@ FAVICON_MAX_ASPECT = 1.3  # 파비콘 결과는 사실상 정방형이어야 채
 # for, reusing a related listing's logo). Kept in an editable data file rather
 # than hardcoded so it can be tuned without code changes. (#9)
 FALLBACK_MAP_PATH = LOGO_DIR.parent / "logo_fallbacks.json"
-_fallback_cache: dict | None = None
+# 파일 mtime이 바뀌면 자동 재로드 — json을 수동 갱신해도 서버 재시작이 필요 없다.
+_fallback_cache: tuple[float, dict] | None = None
+
+
+def _file_mtime(path: Path) -> float:
+    try:
+        return path.stat().st_mtime
+    except OSError:
+        return 0.0
 
 
 def fallback_copy_sources() -> dict:
     global _fallback_cache
-    if _fallback_cache is None:
+    mtime = _file_mtime(FALLBACK_MAP_PATH)
+    if _fallback_cache is None or _fallback_cache[0] != mtime:
         try:
-            _fallback_cache = (
+            data = (
                 json.loads(FALLBACK_MAP_PATH.read_text())
                 if FALLBACK_MAP_PATH.exists()
                 else {}
             )
         except Exception:
-            _fallback_cache = {}
-    return _fallback_cache
+            data = {}
+        _fallback_cache = (mtime, data)
+    return _fallback_cache[1]
 
 
 def logo_stem(ticker: str) -> str:
@@ -52,18 +62,21 @@ def logo_stem(ticker: str) -> str:
 # 흰색/연한 로고(흰 배경 카드에서 안 보이는 것) 목록. detect_dark_logos.py 가
 # 자동 생성. 프런트엔드는 이 목록의 로고에 brightness(0) 반전을 적용한다.
 DARK_LOGO_PATH = LOGO_DIR.parent / "logo_dark.json"
-_dark_logo_cache: set[str] | None = None
+# 파일 mtime이 바뀌면 자동 재로드 — detect_dark_logos.py 실행 후 서버 재시작 불필요.
+_dark_logo_cache: tuple[float, set[str]] | None = None
 
 
 def dark_logo_stems() -> set[str]:
     global _dark_logo_cache
-    if _dark_logo_cache is None:
+    mtime = _file_mtime(DARK_LOGO_PATH)
+    if _dark_logo_cache is None or _dark_logo_cache[0] != mtime:
         try:
             data = json.loads(DARK_LOGO_PATH.read_text()) if DARK_LOGO_PATH.exists() else []
-            _dark_logo_cache = {str(stem) for stem in data}
+            stems = {str(stem) for stem in data}
         except Exception:
-            _dark_logo_cache = set()
-    return _dark_logo_cache
+            stems = set()
+        _dark_logo_cache = (mtime, stems)
+    return _dark_logo_cache[1]
 
 
 def is_dark_logo(ticker: str) -> bool:

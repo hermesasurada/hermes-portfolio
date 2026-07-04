@@ -12,7 +12,7 @@ from .dividend_sources import (
     _now_text,
     _opendart_attempt_due,
     _polygon_attempt_due,
-    _seibro_candidate,
+    _kr_dividend_candidate,
     _stockanalysis_attempt_due,
 )
 from .dates import today_kst
@@ -83,10 +83,10 @@ def refresh_dividend_events(tickers: list[str]) -> None:
         ensure_dividend_tables(conn)
         for ticker in due:
             events, status = _fetch_dividends(ticker, names.get(ticker))
-            # KR은 소스별 ex_date 관례가 달라(opendart=기준일-1영업일, seibro=배당락일,
+            # KR은 소스별 ex_date 관례가 달라(opendart=기준일-1영업일,
             # yf=ex) 근접 중복이 누적된다. _fetch_dividends가 이미 중복 억제한 완전한
             # 병합본을 주므로, 정상 수집된 경우 기존 이벤트를 통째로 교체한다.
-            if _seibro_candidate(ticker) and events:
+            if _kr_dividend_candidate(ticker) and events:
                 conn.execute("DELETE FROM dividend_events WHERE ticker = ?", (ticker,))
             for event in events:
                 if not event.get("ex_date") or not _in_retention_window(event):

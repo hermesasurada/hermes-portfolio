@@ -23,17 +23,6 @@ def add_one_year(value: date) -> date:
         return value.replace(year=value.year + 1, day=28)
 
 
-def add_one_month(value: date) -> date:
-    year, month = next_month(value)
-    day = value.day
-    while day > 28:
-        try:
-            return date(year, month, day)
-        except ValueError:
-            day -= 1
-    return date(year, month, day)
-
-
 def kr_market_holidays(year: int) -> set[date]:
     fixed_days = (
         (1, 1),
@@ -169,27 +158,13 @@ def apply_monthly_kr_pay_date(candidate: dict, monthly_tickers: set[str]) -> Non
     if candidate.get("ticker") not in monthly_tickers:
         return
     source = str(candidate.get("source") or "")
-    if not any(marker in source for marker in ("kr-history", "estimated-history", "seibro+history")):
+    if not any(marker in source for marker in ("kr-history", "estimated-history")):
         return
     record_date = parse_date(candidate.get("record_date") or candidate.get("ex_date") or candidate.get("pay_date"))
     if not record_date:
         return
     candidate["pay_date"] = estimated_kr_monthly_etf_pay_date(record_date).isoformat()
     candidate["pay_date_estimated"] = True
-
-
-def normalize_seibro_record_date(candidate: dict) -> None:
-    source = str(candidate.get("source") or "")
-    if "seibro" not in source:
-        return
-    record_date = parse_date(candidate.get("ex_date"))
-    if not record_date:
-        return
-    candidate["record_date"] = record_date.isoformat()
-    candidate["ex_date"] = previous_kr_business_day(record_date).isoformat()
-    if not candidate.get("pay_date"):
-        candidate["pay_date"] = add_one_month(record_date).isoformat()
-        candidate["pay_date_estimated"] = True
 
 
 ESTIMATE_DEDUP_WINDOW_DAYS = 45   # 확정 배당과 ±45일 내 추정은 같은 분기로 보고 제외
@@ -264,7 +239,6 @@ def consolidated_dividend_events(event_rows, history_rows) -> list[dict]:
     monthly_tickers = monthly_distribution_tickers(history_rows)
     for event in [*event_rows, *estimated_events(history_rows, start, end, event_rows)]:
         candidate = dict(event)
-        normalize_seibro_record_date(candidate)
         apply_jp_pay_date(candidate)
         candidate_amount = float_value(candidate.get("amount"))
         if candidate_amount is None:
