@@ -412,10 +412,15 @@ const interestColumnWidths = {
   perf_1y: 64,
   perf_3y: 64,
   perf_5y: 64,
+  target_price: 84,
+  upside_pct: 66,
+  dispersion_pct: 58,
+  buy_strength: 76,
+  rating_rank: 66,
 };
 
 const interestAlwaysVisibleFields = new Set(["display_change_pct", "current_price"]);
-const INTEREST_TABLE_COLUMN_COUNT = 28;
+const INTEREST_TABLE_COLUMN_COUNT = 33;
 
 function interestEmptyRow(message) {
   return `<tr class="interest-empty-row">${Array.from({ length: INTEREST_TABLE_COLUMN_COUNT }, (_, index) => {
@@ -474,11 +479,14 @@ function renderInterestMainTable() {
     body.innerHTML = interestEmptyRow("선택할 관심그룹이 없습니다.");
     return;
   }
-  const rows = statsRows(interestBaseRows());
+  const rows = statsRows(interestBaseRows()).map(attachConsensus);
   sortInterestRows(rows, group);
   const missingStats = rows.some(row => !statsData[row.ticker]
     || (!statsFetchedTickers.has(row.ticker) && hasMissingTechnicalStats(statsData[row.ticker])));
   if (missingStats) loadStatsForRows(rows);
+  // 애널리스트 컨센서스는 개별주·ETF만 대상(환율·지수·가상자산 제외). 도착하면
+  // 관심목록을 다시 그려 컨센서스 5컬럼을 채운다.
+  loadQuotesForRows(rows.filter(consensusCandidate).map(row => row.ticker), renderInterestMainTable);
   document.getElementById("tableTitle").textContent = group.name;
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
   const suppressIndexHighlight = interestGroupIsIndex(group);
@@ -520,6 +528,11 @@ function renderInterestMainTable() {
       <td>${signedPercentText(r.perf_1y, 0)}</td>
       <td>${signedPercentText(r.perf_3y, 0)}</td>
       <td>${signedPercentText(r.perf_5y, 0)}</td>
+      <td class="group-start">${consensusPriceText(r.target_price, r.consensus_currency || r.currency)}</td>
+      <td>${upsideText(r.upside_pct)}</td>
+      <td>${dispersionText(r.dispersion_pct, quoteFor(r.ticker)?.dispersion_basis)}</td>
+      <td>${buyStrengthMarkup(r.buy_strength)}</td>
+      <td>${ratingChipMarkup(r.rating_label)}</td>
       <td class="group-start">${group.fixed || isProtectedInterestItem(r, group)
         ? ""
         : `<button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button>`}</td>

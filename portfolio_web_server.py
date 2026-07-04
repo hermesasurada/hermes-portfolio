@@ -12,7 +12,8 @@ import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
+from urllib.request import Request, urlopen
 
 from portfolio_core.charts import load_account_performance, load_price_chart
 from portfolio_core.constants import KOREAN_ETF_BRANDS, KOREAN_SUFFIXES, LOCAL_MARKET_SUFFIXES
@@ -36,6 +37,26 @@ from portfolio_core.stats import load_stats
 from portfolio_core.tickers import asset_class
 from portfolio_core.transactions import add_transaction, delete_transaction, load_transactions, update_transaction
 from portfolio_core.watchlist import add_watchlist_async, is_registered_ticker, lookup_ticker
+
+
+# 애널리스트 컨센서스는 별도 서비스(analyst-reports, 8767)가 담당한다. 같은
+# 맥미니에 있으므로 서버에서 127.0.0.1로 프록시해 브라우저 CORS·IP 하드코딩을
+# 없앤다(대시보드를 localhost로 열어도 동작). 서비스가 죽어도 대시보드는 계속
+# 뜨도록 실패는 조용히 빈 결과로 처리한다.
+ANALYST_QUOTE_URL = "http://127.0.0.1:8767/api/quote"
+
+
+def fetch_analyst_quotes(tickers: list[str]) -> dict:
+    if not tickers:
+        return {}
+    param = quote(",".join(tickers), safe=",.:-")
+    request = Request(f"{ANALYST_QUOTE_URL}?ticker={param}", headers={"User-Agent": "portfolio-web/1.0"})
+    try:
+        with urlopen(request, timeout=8) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except Exception as exc:
+        logging.warning("analyst quote proxy failed: %s", exc)
+        return {}
 
 
 def badge_text(ticker: str, name: str) -> str:
@@ -274,6 +295,12 @@ class Handler(BaseHTTPRequestHandler):
     def api_stats(self, query: dict[str, list[str]]) -> dict:
         return load_stats(self.query_values(query, "tickers"))
 
+    def api_quote(self, query: dict[str, list[str]]) -> dict:
+        # 애널리스트 컨센서스(목표가·업사이드·매수강도)를 8767 서비스에서 프록시.
+        # ?ticker=A,B,C (tickers도 허용). 서비스 불가 시 {} 반환(대시보드 무영향).
+        tickers = self.query_values(query, "ticker") or self.query_values(query, "tickers")
+        return fetch_analyst_quotes(tickers)
+
     def api_changes(self, query: dict[str, list[str]]) -> dict:
         # 종목별 등락폭만 내부 DB에서 계산 (외부 호출 없음). ?tickers=A,B 로 선택 조회.
         return load_ticker_changes(self.query_values(query, "tickers") or None)
@@ -378,6 +405,7 @@ class Handler(BaseHTTPRequestHandler):
             get_routes = {
                 "/api/portfolio": self.api_portfolio,
                 "/api/stats": self.api_stats,
+                "/api/quote": self.api_quote,
                 "/api/changes": self.api_changes,
                 "/api/tickers": self.api_tickers,
                 "/api/diagnostics": self.api_diagnostics,

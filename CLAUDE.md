@@ -31,6 +31,11 @@
 - 수집 스크립트는 `collector_lock`(flock) 필수. cron 겹침 방지.
 - DB 접근은 `with connect() as conn:` — connect()는 contextmanager로 close까지 보장(FD 누수 사고 이력).
 
+## 애널리스트 컨센서스 (외부 서비스 의존)
+- 관심목록 '컨센서스' 5컬럼 + 종목 상세화면 하단 블록은 **analyst-reports 서비스(8767)** 의 `/api/quote`에 의존. 대시보드 백엔드가 `127.0.0.1:8767`로 **프록시**(`/api/quote`)해 브라우저 CORS·IP 하드코딩을 없앤다 — 프런트는 `apiFetchQuotes`로 same-origin 호출.
+- 8767이 죽어도 프록시가 `{}`를 반환해 **컨센서스만 빠지고 대시보드는 정상**. 공용 로직은 `app-consensus.js`(로드 마커·부트 검사 목록에 포함).
+- fx/index/crypto는 컨센서스 없음 → 조회 스킵, 컬럼 자동 숨김. 매수=상승=빨강 관례 유지.
+
 ## 크론/운영
 - `collect_quotes.py`(분 단위 시세), `collect_prices.py`(일배치), `collect_prices.py --dividends-only`(배당 일배치), `portfolio_healthcheck.py`.
 - 로고: 신규 종목은 hydrate가 자동 수집. 일괄은 `download_portfolio_logos.py`(core cache_logo 위임, 기본 보존 모드). 다크 로고 분류는 `detect_dark_logos.py`(/usr/bin/python3, PIL) — json 갱신 시 mtime으로 자동 반영(재시작 불필요).

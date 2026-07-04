@@ -661,6 +661,7 @@ function renderChartStats(payload) {
       ${statCells.join("")}
     </div>
     ${loaded ? "" : `<div class="chart-stat-loading">통계 불러오는 중…</div>`}
+    ${consensusBlockMarkup(ticker)}
   `;
   // 배당이력 버튼 클릭은 app.js의 문서 위임이 처리
 }
@@ -1312,6 +1313,7 @@ function renderLineChart(payload) {
   bindLineChartControls(payload);
   renderChartStats(payload);
   ensureChartStats(payload.ticker);
+  ensureChartQuote(payload.ticker);
 }
 
 // 파일 끝 로드 마커 — 파스 에러·태그 미닫힘 시 이 줄이 실행되지 않아 부트 검사에 걸린다

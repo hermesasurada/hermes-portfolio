@@ -15,6 +15,12 @@ function apiFetchStats(tickers) {
   return fetchJson(`/api/stats?tickers=${encodeURIComponent(key)}`);
 }
 
+function apiFetchQuotes(tickers) {
+  // 애널리스트 컨센서스(목표가·업사이드·매수강도). 서버가 8767에서 프록시.
+  const key = Array.from(new Set(tickers || [])).filter(Boolean).sort().join(",");
+  return fetchJson(`/api/quote?ticker=${encodeURIComponent(key)}`);
+}
+
 function apiFetchDividends(accountIds, allAccounts) {
   const query = allAccounts ? "" : `?account_ids=${encodeURIComponent((accountIds || []).join(","))}`;
   return fetchJson(`/api/dividends${query}`);

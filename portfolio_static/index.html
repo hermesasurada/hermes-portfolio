@@ -232,6 +232,7 @@
               <col style="width:48px"><col style="width:48px"><col style="width:48px"><col style="width:48px"><col style="width:48px"><col style="width:48px">
               <col style="width:62px"><col style="width:62px"><col style="width:56px">
               <col style="width:64px"><col style="width:64px"><col style="width:64px"><col style="width:64px"><col style="width:64px"><col style="width:64px"><col style="width:64px">
+              <col style="width:84px"><col style="width:66px"><col style="width:58px"><col style="width:76px"><col style="width:66px">
               <col style="width:40px">
             </colgroup>
             <thead>
@@ -256,7 +257,8 @@
                 <th rowspan="2" class="interest-leaf-head" data-interest-col="24" data-interest-sort-key="perf_1y">1년</th>
                 <th rowspan="2" class="interest-leaf-head" data-interest-col="25" data-interest-sort-key="perf_3y">3년</th>
                 <th rowspan="2" class="interest-leaf-head" data-interest-col="26" data-interest-sort-key="perf_5y">5년</th>
-                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="27" aria-label="관심목록에서 삭제"></th>
+                <th colspan="5" class="group-start" data-interest-group-head="consensus">컨센서스</th>
+                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="32" aria-label="관심목록에서 삭제"></th>
               </tr>
               <tr class="interest-col-head">
                 <th class="indicator-head group-start interest-leaf-head" data-interest-col="11" data-interest-group="momentum" data-interest-sort-key="rsi_day"><span>RSI</span><span>(일)</span></th>
@@ -268,6 +270,11 @@
                 <th class="indicator-head group-start interest-leaf-head" data-interest-col="17" data-interest-group="value" data-interest-sort-key="trailing_pe"><span>P/E</span><span>(t)</span></th>
                 <th class="indicator-head interest-leaf-head" data-interest-col="18" data-interest-group="value" data-interest-sort-key="forward_pe"><span>P/E</span><span>(f)</span></th>
                 <th class="interest-leaf-head" data-interest-col="19" data-interest-group="value" data-interest-sort-key="price_to_book">P/B</th>
+                <th class="group-start interest-leaf-head" data-interest-col="27" data-interest-group="consensus" data-interest-sort-key="target_price">목표가</th>
+                <th class="interest-leaf-head" data-interest-col="28" data-interest-group="consensus" data-interest-sort-key="upside_pct">업사이드</th>
+                <th class="interest-leaf-head" data-interest-col="29" data-interest-group="consensus" data-interest-sort-key="dispersion_pct">편차</th>
+                <th class="interest-leaf-head" data-interest-col="30" data-interest-group="consensus" data-interest-sort-key="buy_strength">매수강도</th>
+                <th class="interest-leaf-head" data-interest-col="31" data-interest-group="consensus" data-interest-sort-key="rating_rank">투자의견</th>
               </tr>
             </thead>
             <tbody id="interestRows"></tbody>
@@ -699,6 +706,7 @@
   <script src="/static/format.js"></script>
   <script src="/static/api.js"></script>
   <script src="/static/chart-utils.js"></script>
+  <script src="/static/app-consensus.js"></script>
   <script src="/static/app-tabs.js"></script>
   <script src="/static/app-charts.js"></script>
   <script src="/static/app-holdings.js"></script>
@@ -716,8 +724,8 @@
     // 에러·태그 미닫힘으로 통째로(또는 중간까지만) 실행되면 마커가 안
     // 찍혀 여기서 잡힌다. app.js 자체가 죽어도 이 인라인은 실행된다.
     (function () {
-      var expected = ["state", "format", "api", "chart-utils", "app-tabs",
-        "app-charts", "app-holdings", "app-chart-scale", "app-line-chart",
+      var expected = ["state", "format", "api", "chart-utils", "app-consensus",
+        "app-tabs", "app-charts", "app-holdings", "app-chart-scale", "app-line-chart",
         "app-chart-compare", "app-transactions", "app-trade-controls",
         "app-watchlist", "app-interest-watchlists", "app-ticker-search", "app"];
       var loaded = window.__loaded || new Set();
