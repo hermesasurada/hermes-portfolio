@@ -95,6 +95,11 @@ def load_ticker_profiles(tickers: Iterable[str]) -> dict[str, dict[str, str | No
     }
 
 
+# 저장분 최소 날짜에서 이만큼 거슬러 올라간 지점부터만 단절/스파이크를 검사.
+# 분할 단절 매칭 허용(±20일)과 스파이크 run(≤5일)을 모두 덮는 여유폭.
+REPAIR_SCAN_BUFFER_DAYS = 30
+
+
 def save_daily_prices(ticker: str, rows: Iterable[tuple[str, float]], source: str) -> int:
     clean_rows = [
         (date_str, ticker, float(price), source)
@@ -112,13 +117,48 @@ def save_daily_prices(ticker: str, rows: Iterable[tuple[str, float]], source: st
             clean_rows,
         )
         conn.commit()
-    repair_split_adjusted_daily_prices([ticker])
-    sanitize_price_spikes([ticker])
+    # 단절/스파이크는 새 데이터가 들어온 구간에서만 새로 생기므로, 검사
+    # 범위를 '이번 저장분의 최소 날짜 - 버퍼'부터로 제한한다. 스냅샷(오늘
+    # 1건)은 최근 한 달만 스캔하고, 백필(수년치)은 자연히 전체 스캔이 된다
+    # — 10분 주기 수집이 종목 전체 이력을 매번 재스캔하던 병목 제거.
+    min_saved = min(row[0] for row in clean_rows)
+    since_date = parse_iso_date(min_saved)
+    since = (since_date - timedelta(days=REPAIR_SCAN_BUFFER_DAYS)).isoformat() if since_date else None
+    repair_split_adjusted_daily_prices([ticker], since=since)
+    sanitize_price_spikes([ticker], since=since)
     return len(clean_rows)
 
 
 # 공용 헬퍼 위임 (동일 기능 로컬 복제 제거)
 _date_value = parse_iso_date
+
+
+def _load_close_rows(conn, ticker: str, since: str | None) -> list[dict]:
+    """단절/스파이크 검사용 종가 시계열. since가 있으면 그 이전의 마지막
+    1행(anchor — 첫 인접비 계산용)과 이후 전부만 가져와 스캔량을 줄인다."""
+    if since:
+        rows = conn.execute(
+            """
+            SELECT date, close FROM daily_prices
+            WHERE ticker = ? AND close IS NOT NULL AND close > 0
+              AND date >= COALESCE(
+                (SELECT MAX(date) FROM daily_prices
+                 WHERE ticker = ? AND close IS NOT NULL AND close > 0 AND date < ?),
+                ?)
+            ORDER BY date
+            """,
+            (ticker, ticker, since, since),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            """
+            SELECT date, close FROM daily_prices
+            WHERE ticker = ? AND close IS NOT NULL AND close > 0
+            ORDER BY date
+            """,
+            (ticker,),
+        ).fetchall()
+    return [{"date": row["date"], "close": float(row["close"])} for row in rows]
 
 
 def _material_split_ratio(ratio: float) -> bool:
@@ -151,7 +191,7 @@ def _split_break_ratio(price_ratio: float, break_date: str, splits: list[dict]) 
     return None
 
 
-def repair_split_adjusted_daily_prices(tickers: Iterable[str]) -> dict[str, int]:
+def repair_split_adjusted_daily_prices(tickers: Iterable[str], since: str | None = None) -> dict[str, int]:
     """Repair raw-close split discontinuities in `daily_prices`.
 
     Yahoo's `Close` can briefly mix pre-split and post-split scales during a new
@@ -159,6 +199,10 @@ def repair_split_adjusted_daily_prices(tickers: Iterable[str]) -> dict[str, int]
     adjusted), so we only apply stock split ratios already stored in
     `stock_splits`. The repair is idempotent: after previous rows are divided by
     the split ratio, the adjacent split-like break disappears.
+
+    since(ISO date)가 주어지면 단절 '탐지'를 그 날짜 이후 구간으로 제한한다
+    (직전 1행은 anchor로 포함). 발견 시 보정 UPDATE는 기존대로 단절일 이전
+    전체 이력에 적용되므로 결과는 전체 스캔과 동일하다.
     """
     clean_tickers = sorted({str(ticker).strip().upper() for ticker in tickers if str(ticker).strip()})
     if not clean_tickers:
@@ -187,20 +231,7 @@ def repair_split_adjusted_daily_prices(tickers: Iterable[str]) -> dict[str, int]
             if not splits:
                 continue
 
-            rows = [
-                {"date": row["date"], "close": float(row["close"])}
-                for row in conn.execute(
-                    """
-                    SELECT date, close
-                    FROM daily_prices
-                    WHERE ticker = ?
-                      AND close IS NOT NULL
-                      AND close > 0
-                    ORDER BY date
-                    """,
-                    (ticker,),
-                ).fetchall()
-            ]
+            rows = _load_close_rows(conn, ticker, since)
             if len(rows) < 2:
                 continue
 
@@ -212,16 +243,33 @@ def repair_split_adjusted_daily_prices(tickers: Iterable[str]) -> dict[str, int]
                 if ratio is None:
                     continue
                 break_date = rows[idx]["date"]
+                # ⚠ '이전 전체'를 나누면 안 된다. 분할 직후 야후가 옛 스케일
+                # 데이터를 '부분' 재유입하면(이미 보정된 과거 + 옛 스케일
+                # 구간 혼재), 하락 단절 앞의 정합 구간까지 부당하게 나뉘어
+                # 수집이 반복될수록 ÷4, ÷8로 무너진다(실사고: MLI 이중 보정).
+                # 과거 방향으로 역스캔해 '역단절(비율≈ratio, 옛 스케일 시작)'
+                # 을 만나면 거기서 멈춰, 옛 스케일 연속 구간만 나눈다.
+                start_idx = 0
+                for back in range(idx - 1, 0, -1):
+                    back_ratio = rows[back]["close"] / rows[back - 1]["close"]
+                    if abs(back_ratio - ratio) / ratio <= SPLIT_REPAIR_TOLERANCE:
+                        start_idx = back
+                        break
+                start_clause = ""
+                params: tuple = (ratio, ticker, break_date)
+                if start_idx > 0:
+                    start_clause = " AND date >= ?"
+                    params = (ratio, ticker, break_date, rows[start_idx]["date"])
                 conn.execute(
-                    """
+                    f"""
                     UPDATE daily_prices
                     SET close = close / ?
                     WHERE ticker = ?
-                      AND date < ?
+                      AND date < ?{start_clause}
                     """,
-                    (ratio, ticker, break_date),
+                    params,
                 )
-                for prior in rows[:idx]:
+                for prior in rows[start_idx:idx]:
                     prior["close"] /= ratio
                 updates += 1
             if updates:
@@ -230,11 +278,12 @@ def repair_split_adjusted_daily_prices(tickers: Iterable[str]) -> dict[str, int]
     return repaired
 
 
-def sanitize_price_spikes(tickers: Iterable[str]) -> dict[str, int]:
+def sanitize_price_spikes(tickers: Iterable[str], since: str | None = None) -> dict[str, int]:
     """야후 원본의 단발 bad tick(스파이크/딥) 제거. 양끝이 정상 스케일로
     이어지는데 가운데 1~SPIKE_MAX_RUN_DAYS일만 극단으로 튀었다가 곧바로
     복귀하고, 그 구간에 stock_splits 기록도 없으면 오염으로 보고 삭제.
-    '복귀' 조건 덕에 실제 급락/급등·분할(복귀 안 함)은 보존한다. 멱등."""
+    '복귀' 조건 덕에 실제 급락/급등·분할(복귀 안 함)은 보존한다. 멱등.
+    since(ISO date)가 주어지면 검사를 그 이후 구간으로 제한(직전 1행 anchor 포함)."""
     removed: dict[str, int] = {}
     with connect() as conn:
         ensure_stock_split_tables(conn)
@@ -242,10 +291,7 @@ def sanitize_price_spikes(tickers: Iterable[str]) -> dict[str, int]:
             ticker = str(raw_ticker or "").strip().upper()
             if not ticker:
                 continue
-            rows = conn.execute(
-                "SELECT date, close FROM daily_prices WHERE ticker = ? AND close > 0 ORDER BY date",
-                (ticker,),
-            ).fetchall()
+            rows = _load_close_rows(conn, ticker, since)
             if len(rows) < 3:
                 continue
             split_dates = [
