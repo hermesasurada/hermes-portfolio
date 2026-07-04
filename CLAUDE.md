@@ -35,6 +35,7 @@
 - 관심목록 '컨센서스' 5컬럼 + 종목 상세화면 하단 블록은 **analyst-reports 서비스(8767)** 의 `/api/quote`에 의존. 대시보드 백엔드가 `127.0.0.1:8767`로 **프록시**(`/api/quote`)해 브라우저 CORS·IP 하드코딩을 없앤다 — 프런트는 `apiFetchQuotes`로 same-origin 호출.
 - 8767이 죽어도 프록시가 `{}`를 반환해 **컨센서스만 빠지고 대시보드는 정상**. 공용 로직은 `app-consensus.js`(로드 마커·부트 검사 목록에 포함).
 - fx/index/crypto는 컨센서스 없음 → 조회 스킵, 컬럼 자동 숨김. 매수=상승=빨강 관례 유지.
+- 상세화면 '리포트 상세' 버튼은 **8767 대시보드의 리포트 모달을 iframe으로 그대로 임베드**(`http://{location.hostname}:8767/?embed=1&ticker=X`). 포팅 아님 — analyst-reports repo `static/index.html`의 임베드 모드(크롬 숨김·해당 티커 모달 자동 오픈·`.ov` 딤 끔)에 의존하므로 그 파일을 지우거나 임베드 분기를 건드리면 깨진다. 닫기는 iframe→`postMessage({type:"ar-modal-close"})`(포트폴리오는 `:8767` origin만 신뢰) → `openReportModal`/`closeReportModal`(app-consensus.js). 8767 모달을 개선하면 여기도 자동 반영.
 
 ## 크론/운영
 - `collect_quotes.py`(분 단위 시세), `collect_prices.py`(일배치), `collect_prices.py --dividends-only`(배당 일배치), `portfolio_healthcheck.py`.
