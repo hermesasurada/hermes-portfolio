@@ -4,7 +4,6 @@ let selectionMode = "all";
 let defaultAccountSelectionApplied = false;
 let sortState = {
   detail: { key: "value_krw", dir: -1 },
-  stats: { key: "market_cap_usd", dir: -1 },
   dividend: { key: "pay_date", dir: 1 },
 };
 let sortKey = sortState.detail.key;
@@ -60,7 +59,6 @@ const chartCompareLimit = 10;
 // 비교선 색: 1번은 브랜드(메인), 이후는 빨강(상승)·파랑(하락)으로 오인되지 않는 중립 hue
 const chartCompareColors = ["var(--brand)", "#7c3aed", "#0d9488", "#d97706", "#db2777", "#0891b2", "#65a30d", "#9333ea", "#b45309", "#0f766e", "#64748b"];
 const detailSortKeys = new Set(["ticker", "name", "display_change_pct", "extended_change_pct", "change_krw", "qty", "current_price", "current_price_krw", "value", "value_krw", "weight_pct", "market_cap_usd", "dividend_yield", "next_earnings_date", "drawdown_52w", "beta", "beta_adj", "rsi_day", "rsi_week", "rsi_month", "bb_day", "bb_week", "bb_month", "trailing_pe", "forward_pe", "price_to_book", "perf_1m", "perf_3m", "perf_6m", "perf_ytd", "perf_1y", "perf_3y", "perf_5y"]);
-const statsSortKeys = new Set(["ticker", "name", "display_change_pct", "current_price", "market_cap_usd", "dividend_yield", "drawdown_52w", "beta", "beta_adj", "rsi_day", "rsi_week", "rsi_month", "bb_day", "bb_week", "bb_month", "trailing_pe", "forward_pe", "price_to_book", "perf_1m", "perf_3m", "perf_6m", "perf_ytd", "perf_1y", "perf_3y", "perf_5y"]);
 const dividendSortKeys = new Set(["pay_date", "target", "ticker", "name", "amount", "qty", "gross", "tax", "tax_rate", "net", "fx_rate", "net_krw"]);
 
 // app-holdings.js loaded separately.
@@ -393,17 +391,7 @@ window.addEventListener("hashchange", syncChartRoute);
 window.addEventListener("resize", schedulePcFrozenColumns);
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
-    const previousTab = activeDetailTab;
-    const nextTab = btn.dataset.tab || "detail";
-    // 세부내역 ↔ 통계: 정렬순서를 양방향으로 이어받음 (대상 탭에 존재하는 정렬키일 때만)
-    const detailStats = (previousTab === "detail" && nextTab === "stats")
-      || (previousTab === "stats" && nextTab === "detail");
-    const carry = sortState[previousTab];
-    if (detailStats && carry) {
-      const targetKeys = nextTab === "stats" ? new Set([...statsSortKeys, ...detailSortKeys]) : detailSortKeys;
-      if (targetKeys.has(carry.key)) sortState[nextTab] = { ...carry };
-    }
-    activeDetailTab = nextTab;
+    activeDetailTab = btn.dataset.tab || "detail";
     syncSortGlobals(activeDetailTab);
     renderTable();
   });

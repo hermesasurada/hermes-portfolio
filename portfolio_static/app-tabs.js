@@ -51,77 +51,38 @@ async function loadStatsForRows(rows) {
   const key = missing.join(",");
   if (!missing.length || statsLoadKey === key || statsInFlight) return;
   statsLoadKey = key;
-  const target = interestModeActive() ? document.getElementById("interestRows") : document.getElementById("statsRows");
-  if (target && !target.children.length) target.innerHTML = skeletonRows(interestModeActive() ? 28 : 25);
+  // 관심목록은 통계가 표의 본체라 스켈레톤/에러를 tbody에 직접 그린다.
+  // 세부내역은 보유 데이터가 이미 그려져 있으므로 표를 덮지 않는다(통계탭
+  // 제거 후 죽은 #statsRows에 에러가 그려져 안 보이던 회귀 수정).
+  const target = interestModeActive() ? document.getElementById("interestRows") : null;
+  if (target && !target.children.length) target.innerHTML = skeletonRows(28);
   statsInFlight = (async () => {
     const payload = await apiFetchStats(missing);
     statsData = { ...statsData, ...(payload.stats || {}) };
     missing.forEach(ticker => statsFetchedTickers.add(ticker));
   })();
+  let failed = false;
   try {
     await statsInFlight;
   } catch (err) {
-    if (target) target.innerHTML = `<tr><td colspan="${interestModeActive() ? 28 : 25}">${esc(err.message || String(err))}</td></tr>`;
+    // 실패를 사용자에게 보이게 하고, 같은 key 가드에 막혀 영영 재시도
+    // 못 하는 일이 없도록 리셋한다. 단 여기서 곧바로 재렌더하면
+    // 렌더→재조회→실패→재렌더 무한 루프가 되므로, 재시도는 다음
+    // 자연 렌더(사용자 조작·자동갱신)에 맡긴다.
+    failed = true;
+    statsLoadKey = "";
+    const message = `통계 조회 실패: ${err.message || String(err)}`;
+    if (target) target.innerHTML = `<tr><td colspan="28">${esc(message)}</td></tr>`;
+    else if (window.__bootBanner) window.__bootBanner(message);
   } finally {
     statsInFlight = null;
     // 요청 중 계좌·통화 필터나 관심그룹이 바뀌었을 수 있으므로, 캡처된
     // 이전 rows가 아니라 현재 화면 기준으로 다시 그려 누락 종목을 후속 조회한다.
-    if (interestModeActive()) renderInterestMainTable();
-    else renderTable();
+    if (!failed) {
+      if (interestModeActive()) renderInterestMainTable();
+      else renderTable();
+    }
   }
-}
-
-function renderStatsTable(baseRows = null) {
-  const rows = statsRows(baseRows || filteredRows());
-  sortRows(rows, "stats");
-  const tickers = Array.from(new Set(rows.map(row => row.ticker).filter(Boolean))).sort();
-  if (tickers.some(ticker => !statsData[ticker] || (!statsFetchedTickers.has(ticker) && hasMissingTechnicalStats(statsData[ticker])))) loadStatsForRows(rows);
-  if (statsInFlight && !rows.some(row => statsData[row.ticker])) return;
-  document.getElementById("statsRows").innerHTML = rows.map(r => `
-    <tr class="${tableRowClass(r)}">
-      <td class="logo-cell">${logoMarkup(r)}</td>
-      <td>
-        <span class="ticker-text">
-          <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
-            <span class="asset-name">${r.name}</span>
-            <span class="ticker-symbol">${r.ticker}</span>
-          </a>
-        </span>
-      </td>
-      <td>${changeMarkup(r)}</td>
-      <td>${currentPriceMarkup(r)}</td>
-      <td>${marketCapMarkup(r)}</td>
-      <td>${Number(r.dividend_yield) > 0
-        ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(r.ticker)}" title="배당 이력 보기">${dividendYieldText(r.dividend_yield)}</button>`
-        : dividendYieldText(r.dividend_yield)}</td>
-      <td>${signedPercentText(r.drawdown_52w, 1)}</td>
-      <td>${betaText(r.beta)}</td>
-      <td>${betaText(r.beta_adj)}</td>
-      <td class="group-start">${indicatorText(r.rsi_day, "rsi")}</td>
-      <td>${indicatorText(r.rsi_week, "rsi")}</td>
-      <td>${indicatorText(r.rsi_month, "rsi")}</td>
-      <td>${indicatorText(r.bb_day, "bb")}</td>
-      <td>${indicatorText(r.bb_week, "bb")}</td>
-      <td>${indicatorText(r.bb_month, "bb")}</td>
-      <td class="group-start">${peText(r.trailing_pe)}</td>
-      <td>${peText(r.forward_pe)}</td>
-      <td>${peText(r.price_to_book)}</td>
-      <td class="group-start">${signedPercentText(r.perf_1m, 1)}</td>
-      <td>${signedPercentText(r.perf_3m, 0)}</td>
-      <td>${signedPercentText(r.perf_6m, 0)}</td>
-      <td>${signedPercentText(r.perf_ytd, 0)}</td>
-      <td>${signedPercentText(r.perf_1y, 0)}</td>
-      <td>${signedPercentText(r.perf_3y, 0)}</td>
-      <td>${signedPercentText(r.perf_5y, 0)}</td>
-    </tr>
-  `).join("");
-  // 티커 링크·배당이력 버튼 클릭은 app.js의 문서 위임이 처리 (개별 바인딩 금지)
-  const statsTable = document.querySelector("#statsTableWrap .stats-list");
-  const tickerNameWidth = syncTickerNameColumnWidth(statsTable);
-  const statsTableWidth = 1468 + tickerNameWidth;
-  statsTable.style.width = `${statsTableWidth}px`;
-  statsTable.style.minWidth = `${statsTableWidth}px`;
-  schedulePcFrozenColumns();
 }
 
 function dividendSelectionKey() {

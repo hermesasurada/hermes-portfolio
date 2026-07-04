@@ -1,8 +1,8 @@
 function ensureTabSortKey(tab) {
-  const currentSet = tab === "stats" ? new Set([...statsSortKeys, ...detailSortKeys]) : tab === "dividend" ? dividendSortKeys : detailSortKeys;
+  const currentSet = tab === "dividend" ? dividendSortKeys : detailSortKeys;
   const state = sortState[tab] || sortState.detail;
   if (currentSet.has(state.key)) return;
-  state.key = tab === "dividend" ? "pay_date" : tab === "stats" ? "market_cap_usd" : "value_krw";
+  state.key = tab === "dividend" ? "pay_date" : "value_krw";
   state.dir = defaultSortDir[state.key] || -1;
 }
 
@@ -628,7 +628,6 @@ function syncDetailTabs() {
   });
   document.getElementById("tableTitle").classList.toggle("hidden", showingChart);
   document.getElementById("detailTableWrap").classList.toggle("hidden", showingChart || showingInterest || activeDetailTab !== "detail");
-  document.getElementById("statsTableWrap").classList.add("hidden");
   document.getElementById("dividendTableWrap").classList.toggle("hidden", showingChart || showingInterest || activeDetailTab !== "dividend");
   document.getElementById("interestTableWrap").classList.toggle("hidden", showingChart || !showingInterest);
   document.getElementById("chartView").classList.toggle("hidden", !showingChart);
@@ -712,7 +711,6 @@ function syncPcFrozenColumns() {
 
   [
     ["#detailTableWrap table", 2],
-    ["#statsTableWrap table", 2],
     ["#dividendTableWrap table", 3],
     ["#interestTableWrap table", 2]
   ].forEach(([selector, columnCount]) => {
