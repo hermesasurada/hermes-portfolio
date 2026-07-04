@@ -929,21 +929,8 @@ main {
 #interestTableWrap .interest-detail-list thead th {
   background: var(--surface-2);
 }
-#interestTableWrap .interest-detail-list thead th.pc-frozen-col {
-  z-index: 12;
-  background: var(--surface-2);
-  background-clip: border-box;
-  transform: translateZ(0);
-}
-#interestTableWrap .interest-detail-list thead th.pc-frozen-edge {
-  z-index: 13;
-}
-.interest-detail-list .interest-group-head th.group-head-frozen {
-  position: sticky;
-  left: 0;
-  z-index: 6;
-  background: var(--surface-2);
-}
+/* 로고·종목명 틀고정은 CSS sticky(아래 data-interest-col 규칙)가 담당.
+   pc-frozen(JS)은 이 테이블에 적용하지 않는다 — 이중 시스템 금지. */
 .interest-detail-list th.group-start,
 .interest-detail-list td.group-start {
   border-left: 1px solid var(--line);
@@ -1010,6 +997,12 @@ main {
 #interestTableWrap .interest-detail-list th[data-interest-col="1"],
 #interestTableWrap .interest-detail-list td:nth-child(2) {
   box-shadow: 2px 0 0 color-mix(in srgb, var(--line) 85%, transparent);
+}
+/* hover 시 고정 셀도 행 배경과 함께 바뀌어야 스크롤 콘텐츠와 어긋나 보이지
+   않는다 (과거 pc-frozen(JS)이 해주던 처리의 CSS 대응) */
+#interestTableWrap .interest-detail-list tbody tr:hover > td:first-child,
+#interestTableWrap .interest-detail-list tbody tr:hover > td:nth-child(2) {
+  background: var(--surface-hover);
 }
 .interest-detail-list th[data-interest-col="2"],
 .interest-detail-list td:nth-child(3) {

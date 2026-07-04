@@ -708,20 +708,18 @@ function syncPcFrozenColumns() {
     cell.style.removeProperty("--pc-frozen-left");
   });
   // PC·모바일 공통: 가로 스크롤 시 로고+종목명을 틀고정 (뷰포트 제한 없음)
+  // 관심목록 테이블은 CSS sticky(df61d96, left 0/40px 고정)가 담당하므로
+  // 여기서 다루지 않는다 — 두 시스템이 같은 셀을 두고 겹치면 폭 변경 시
+  // left 값이 어긋나는 회귀의 온상이 된다.
 
   [
     ["#detailTableWrap table", 2],
-    ["#dividendTableWrap table", 3],
-    ["#interestTableWrap table", 2]
+    ["#dividendTableWrap table", 3]
   ].forEach(([selector, columnCount]) => {
     const table = document.querySelector(selector);
     if (!table || table.closest(".hidden")) return;
-    // 컬럼 헤더 행 기준으로 폭 측정 — 통계탭은 그룹 헤더(colspan)가 첫 행이라
-    // tr:first-child면 폭이 그룹 폭으로 잘못 잡힌다. 단일 헤더 표는 first==last.
-    const headers = selector === "#interestTableWrap table"
-      ? Array.from(table.querySelectorAll("thead th[data-interest-col]"))
-        .sort((a, b) => Number(a.dataset.interestCol) - Number(b.dataset.interestCol))
-      : Array.from(table.querySelectorAll("thead tr:last-child > th"));
+    // 컬럼 헤더 행 기준으로 폭 측정 (단일 헤더 표는 first==last).
+    const headers = Array.from(table.querySelectorAll("thead tr:last-child > th"));
     let left = 0;
     for (let index = 0; index < Math.min(columnCount, headers.length); index += 1) {
       const cells = [headers[index]];

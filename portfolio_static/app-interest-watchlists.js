@@ -526,8 +526,8 @@ function renderInterestMainTable() {
     </tr>
   `).join("") : interestEmptyRow(group.fixed ? "모든 수집 종목이 관심그룹에 분류되어 있습니다." : "이 그룹에 등록된 종목이 없습니다.");
   syncInterestVisibleColumns(rows);
-  // 티커 링크·배당이력 버튼 클릭은 app.js의 문서 위임이 처리 (개별 바인딩 금지)
-  schedulePcFrozenColumns();
+  // 티커 링크·배당이력 버튼 클릭은 app.js의 문서 위임이 처리 (개별 바인딩 금지).
+  // 로고·종목명 틀고정은 CSS sticky가 담당 — pc-frozen(JS) 대상 아님.
 }
 
 function initInterestWatchlists() {
