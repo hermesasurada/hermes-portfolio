@@ -6,22 +6,14 @@ function ensureTabSortKey(tab) {
   state.dir = defaultSortDir[state.key] || -1;
 }
 
-function syncSortGlobals(tab = activeDetailTab) {
-  ensureTabSortKey(tab);
-  const state = sortState[tab] || sortState.detail;
-  sortKey = state.key;
-  sortDir = state.dir;
-}
-
 function setCurrentSort(key) {
-  syncSortGlobals(activeDetailTab);
+  ensureTabSortKey(activeDetailTab);
   const state = sortState[activeDetailTab] || sortState.detail;
   if (state.key === key) state.dir *= -1;
   else {
     state.key = key;
     state.dir = defaultSortDir[key] || -1;
   }
-  syncSortGlobals(activeDetailTab);
 }
 
 function flattenAccounts() {
@@ -578,15 +570,9 @@ function filteredRows(options = {}) {
     ...row,
     weight_pct: totalKrw > 0 && Number.isFinite(row.value_krw) ? row.value_krw / totalKrw * 100 : null
   }));
-  rows.sort((a, b) => {
-    const av = a[sortKey], bv = b[sortKey];
-    if (typeof av === "string" || typeof bv === "string") {
-      return String(av ?? "").localeCompare(String(bv ?? ""), "ko-KR", { numeric: true, sensitivity: "base" }) * sortDir;
-    }
-    const an = Number.isFinite(av) ? av : -Infinity;
-    const bn = Number.isFinite(bv) ? bv : -Infinity;
-    return (an - bn) * sortDir;
-  });
+  // 정렬은 여기서 하지 않는다 — sortRows(단일 진실 sortState) 한 곳에서만.
+  // (과거엔 전역 sortKey/sortDir로 여기서도 정렬해 같은 행렬을 두 번
+  //  정렬했고, 두 상태가 어긋나면 화면이 옛 정렬로 그려지는 버그 온상이었다)
   return rows;
 }
 
@@ -740,7 +726,7 @@ function syncPcFrozenColumns() {
 
 function renderTable() {
   if (activeDetailTab === "stats") activeDetailTab = "detail";
-  syncSortGlobals(activeDetailTab);
+  ensureTabSortKey(activeDetailTab);
   syncTransactionPanel();
   syncFilterToggleControls();
   syncDetailTabs();

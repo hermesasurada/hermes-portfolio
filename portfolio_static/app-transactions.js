@@ -1,7 +1,9 @@
 function updateSortHeaders() {
+  // 정렬 상태의 단일 진실은 sortState — 전역 sortKey/sortDir는 제거됨.
+  const state = sortState[activeDetailTab] || sortState.detail;
   document.querySelectorAll("th[data-key], .name-head .sort-mini[data-key]").forEach(el => {
-    el.classList.toggle("sort-desc", el.dataset.key === sortKey && sortDir < 0);
-    el.classList.toggle("sort-asc", el.dataset.key === sortKey && sortDir > 0);
+    el.classList.toggle("sort-desc", el.dataset.key === state.key && state.dir < 0);
+    el.classList.toggle("sort-asc", el.dataset.key === state.key && state.dir > 0);
   });
 }
 

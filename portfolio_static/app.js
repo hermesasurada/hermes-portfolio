@@ -6,8 +6,6 @@ let sortState = {
   detail: { key: "value_krw", dir: -1 },
   dividend: { key: "pay_date", dir: 1 },
 };
-let sortKey = sortState.detail.key;
-let sortDir = sortState.detail.dir;
 let selectedTrade = { accountId: "", ticker: "" };
 let autoRefreshTimer = null;
 let usPriceTimer = null;
@@ -392,7 +390,7 @@ window.addEventListener("resize", schedulePcFrozenColumns);
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     activeDetailTab = btn.dataset.tab || "detail";
-    syncSortGlobals(activeDetailTab);
+    ensureTabSortKey(activeDetailTab);
     renderTable();
   });
 });
