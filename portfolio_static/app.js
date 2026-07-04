@@ -379,6 +379,11 @@ document.addEventListener("click", event => {
     openDividendHistory(dividendBtn.dataset.dividendHistory);
     return;
   }
+  const reportBtn = event.target.closest?.("[data-report-ticker]");
+  if (reportBtn) {
+    openReportModal(reportBtn.dataset.reportTicker);
+    return;
+  }
   const btn = event.target.closest?.(".ticker-link");
   if (!btn) return;
   event.preventDefault();

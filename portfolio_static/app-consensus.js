@@ -113,6 +113,7 @@ function consensusBlockMarkup(ticker) {
   const rangeText = quote.tp_low != null && quote.tp_high != null
     ? `${consensusPriceText(quote.tp_low, currency)} ~ ${consensusPriceText(quote.tp_high, currency)}`
     : "-";
+  // 한 줄(데스크톱 6열, 모바일 2열=3줄). 커버 애널·기준일은 리포트 모달에 있으므로 생략.
   const rows = [
     ["투자의견", ratingChipMarkup(quote.rating_label)],
     ["매수강도", buyStrengthMarkup(quote.buy_strength)],
@@ -120,26 +121,56 @@ function consensusBlockMarkup(ticker) {
     ["업사이드", upsideText(quote.upside_pct)],
     ["목표가 범위", `<span class="consensus-range">${rangeText}</span>`],
     ["편차", dispersionText(quote.dispersion_pct, quote.dispersion_basis)],
-    ["커버 애널", quote.n_analysts != null ? `${quote.n_analysts}명` : "-"],
-    ["기준일", esc(quote.as_of || "-")],
   ];
   const cells = rows.map(([label, value]) => `
     <div class="consensus-cell">
       <span class="consensus-k">${esc(label)}</span>
       <span class="consensus-v">${value}</span>
     </div>`).join("");
-  // 상세 리포트(증권사별·목표가 추이)는 8767 대시보드. localhost·Tailscale 어느
-  // 호스트로 열려도 같은 호스트의 8767로 연결되도록 location.hostname 사용.
-  const reportUrl = `http://${location.hostname}:8767/`;
+  // 상세 리포트(증권사별·목표가 추이)는 8767 대시보드의 모달을 iframe으로 그대로 띄운다.
   return `
     <div class="consensus-block">
       <div class="consensus-head">
         <span class="consensus-title">애널리스트 컨센서스</span>
-        <a class="consensus-report-link" href="${esc(reportUrl)}" target="_blank" rel="noopener">리포트 상세 ↗</a>
+        <button class="consensus-report-link" type="button" data-report-ticker="${esc(String(ticker).toUpperCase())}">리포트 상세 ↗</button>
       </div>
       <div class="consensus-grid">${cells}</div>
     </div>`;
 }
+
+// ── 리포트 상세 모달 (8767 대시보드 모달을 iframe 임베드로 그대로) ──────
+function openReportModal(ticker) {
+  const clean = String(ticker || "").toUpperCase();
+  if (!clean) return;
+  let host = document.getElementById("reportModalHost");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "reportModalHost";
+    host.className = "report-modal-host";
+    const frame = document.createElement("iframe");
+    frame.className = "report-modal-frame";
+    frame.title = "애널리스트 리포트 상세";
+    host.appendChild(frame);
+    document.body.appendChild(host);
+  }
+  // localhost·Tailscale 어느 호스트로 열려도 같은 호스트의 8767로 연결.
+  host.querySelector("iframe").src = `http://${location.hostname}:8767/?embed=1&ticker=${encodeURIComponent(clean)}`;
+  host.classList.add("on");
+}
+
+function closeReportModal() {
+  document.getElementById("reportModalHost")?.classList.remove("on");
+  const frame = document.querySelector("#reportModalHost iframe");
+  if (frame) frame.src = "about:blank";   // 다음 오픈에서 확실히 새로 로드
+}
+
+// iframe(8767 임베드 모달) 안에서 닫힘 → 오버레이 제거. 8767 출처만 신뢰.
+window.addEventListener("message", event => {
+  if (event.data?.type === "ar-modal-close" && /:8767$/.test(event.origin)) closeReportModal();
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") closeReportModal();
+});
 
 // 상세화면 진입 시 단일 티커 컨센서스를 받아오고 도착하면 차트 지표를 다시 그린다.
 function ensureChartQuote(ticker) {
