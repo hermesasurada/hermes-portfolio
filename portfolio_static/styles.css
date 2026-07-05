@@ -3629,8 +3629,8 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 .dividend-history-table th,
 .dividend-history-table td {
-  height: 27px;
-  padding: 3px 6px;
+  height: 23px;
+  padding: 1px 6px;
   border-bottom: 1px solid var(--line);
   text-align: right;
   white-space: nowrap;
@@ -3687,7 +3687,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .dividend-history-table.detailed .history-year-cell,
 .dividend-history-table.detailed .history-annual-cell {
   vertical-align: top;
-  padding-top: 5px;
+  padding-top: 3px;
   background: var(--surface-1);
 }
 .dividend-history-table.detailed tr.history-year-start td {
