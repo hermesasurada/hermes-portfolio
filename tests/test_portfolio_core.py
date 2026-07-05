@@ -271,6 +271,28 @@ def test_nvda_march_dividend_closes_fiscal_year():
         assert final["date"].month == 3
 
 
+def test_dividend_raise_plateau_uses_start_year_for_us_fiscal_cycle():
+    rows = [
+        {"record_date": "2023-05-30", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 1.87, "source": "test"},
+        {"record_date": "2023-08-28", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 1.87, "source": "test"},
+        {"record_date": "2023-11-27", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 1.87, "source": "test"},
+        {"record_date": "2024-02-26", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 1.87, "source": "test"},
+        {"record_date": "2024-05-28", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 2.06, "source": "test"},
+        {"record_date": "2024-09-03", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 2.06, "source": "test"},
+        {"record_date": "2024-12-02", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 2.06, "source": "test"},
+        {"record_date": "2025-03-03", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 2.06, "source": "test"},
+    ]
+
+    events, _ = _attributed_history_events(rows, "NOC", False, 5)
+    annual = _aggregate_annual_dividends(events)
+
+    assert annual[2023]["payments"] == 4
+    assert round(annual[2023]["amount"], 6) == 7.48
+    assert [event["amount"] for event in annual[2023]["events"]] == [1.87, 1.87, 1.87, 1.87]
+    assert annual[2024]["payments"] == 4
+    assert round(annual[2024]["amount"], 6) == 8.24
+
+
 def test_dividend_split_adjustment_is_source_aware():
     splits = [{"split_date": "2024-07-15", "ratio": 10.0}]
     adjusted, factor = _split_adjusted_amount(

@@ -280,9 +280,10 @@ def _attributed_history_events(
             }
         )
 
-    # 결산년도 키(회계연도/인상주기)로 묶은 한 묶음을, 그 안에서 지급 회차가
-    # 가장 많은 역년으로 재라벨한다. 묶음은 그대로 유지되므로 같은 금액 N분기는
-    # 한 그룹으로 남고, 라벨만 직관적인 역년이 된다(애플 2025, 구글 2024 …).
+    # 비역년 회계연도 종목은 인상 후 같은 주당배당금이 유지되는 plateau를
+    # 하나의 배당연도로 본다. 예: NOC 2023-05~2024-02의 $1.87 네 회차는
+    # 모두 2023년 그룹. 단순 회계연도 월 기준만 쓰면 다음 해 초 회차가
+    # 새해 그룹에 섞이는 문제가 있다.
     # 동률이면 더 늦은 해. 한국·오버라이드(예: NVDA)는 기존 라벨 유지.
     relabel = (
         not is_korean
@@ -290,14 +291,35 @@ def _attributed_history_events(
         and str(ticker or "").upper() not in PAY_DATE_YEAR_TICKERS
     )
     if relabel and events:
-        cycles: dict[int, list[dict]] = {}
-        for event in events:
-            cycles.setdefault(event["year"], []).append(event)
-        for cycle_events in cycles.values():
-            year_counts = Counter(event["date"].year for event in cycle_events)
-            majority_year = max(year_counts, key=lambda year: (year_counts[year], year))
-            for event in cycle_events:
-                event["year"] = majority_year
+        if fiscal_end_month:
+            plateau: list[dict] = []
+            previous_amount: float | None = None
+            for event in events:
+                amount = float(event["amount"])
+                same_plateau = (
+                    previous_amount is not None
+                    and abs(amount - previous_amount) <= max(0.000001, abs(previous_amount) * 0.000001)
+                )
+                if plateau and not same_plateau:
+                    label_year = plateau[0]["date"].year
+                    for item in plateau:
+                        item["year"] = label_year
+                    plateau = []
+                plateau.append(event)
+                previous_amount = amount
+            if plateau:
+                label_year = plateau[0]["date"].year
+                for item in plateau:
+                    item["year"] = label_year
+        else:
+            cycles: dict[int, list[dict]] = {}
+            for event in events:
+                cycles.setdefault(event["year"], []).append(event)
+            for cycle_events in cycles.values():
+                year_counts = Counter(event["date"].year for event in cycle_events)
+                majority_year = max(year_counts, key=lambda year: (year_counts[year], year))
+                for event in cycle_events:
+                    event["year"] = majority_year
 
     return events, final_dividend_count
 
