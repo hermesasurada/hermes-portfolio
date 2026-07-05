@@ -43,6 +43,17 @@ def _annual_growth(current: float, previous: float | None) -> float | None:
     return (current / previous - 1) * 100
 
 
+def _same_dividend_cycle_amount(current: float, previous: float | None) -> bool:
+    if previous is None:
+        return False
+    if abs(current - previous) <= max(0.000001, abs(previous) * 0.000001):
+        return True
+    # 분할 전 원천 금액을 현재 주식 수 기준으로 조정하면 5.25/10=0.525처럼
+    # 반 센트가 생긴다. 실제 다음 회차는 0.53으로 공시될 수 있으므로,
+    # 배당 사이클 판정에서는 화면 표시 단위(센트) 기준 동일 금액으로 본다.
+    return round(current, 2) == round(previous, 2)
+
+
 def _annual_cagr(
     totals: dict[int, float],
     complete_years: set[int],
@@ -296,10 +307,7 @@ def _attributed_history_events(
             previous_amount: float | None = None
             for event in events:
                 amount = float(event["amount"])
-                same_cycle = (
-                    previous_amount is not None
-                    and abs(amount - previous_amount) <= max(0.000001, abs(previous_amount) * 0.000001)
-                )
+                same_cycle = _same_dividend_cycle_amount(amount, previous_amount)
                 if cycle and (len(cycle) >= 4 or not same_cycle):
                     label_year = cycle[0]["date"].year
                     for item in cycle:

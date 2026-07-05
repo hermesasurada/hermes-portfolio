@@ -334,6 +334,29 @@ def test_quarterly_dividend_cycle_never_groups_more_than_four_payments():
     assert all(row["payments"] <= 4 for row in annual.values())
 
 
+def test_split_adjusted_half_cent_stays_in_same_dividend_cycle():
+    rows = [
+        {"record_date": "2023-12-20", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 5.25, "source": "polygon"},
+        {"record_date": "2024-03-21", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 5.25, "source": "polygon"},
+        {"record_date": "2024-06-24", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 5.25, "source": "polygon"},
+        {"record_date": "2024-09-19", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 0.53, "source": "polygon"},
+        {"record_date": "2024-12-23", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 0.59, "source": "polygon"},
+        {"record_date": "2025-03-20", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 0.59, "source": "polygon"},
+        {"record_date": "2025-06-20", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 0.59, "source": "polygon"},
+        {"record_date": "2025-09-22", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 0.59, "source": "polygon"},
+    ]
+    splits = [{"split_date": "2024-07-15", "ratio": 10.0}]
+
+    events, _ = _attributed_history_events(rows, "AVGO", False, 11, splits)
+    annual = _aggregate_annual_dividends(events)
+
+    assert annual[2023]["payments"] == 4
+    assert round(annual[2023]["amount"], 6) == 2.105
+    assert annual[2024]["payments"] == 4
+    assert round(annual[2024]["amount"], 6) == 2.36
+    assert all(row["payments"] <= 4 for row in annual.values())
+
+
 def test_dividend_split_adjustment_is_source_aware():
     splits = [{"split_date": "2024-07-15", "ratio": 10.0}]
     adjusted, factor = _split_adjusted_amount(
