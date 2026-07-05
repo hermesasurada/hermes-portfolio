@@ -293,6 +293,47 @@ def test_dividend_raise_plateau_uses_start_year_for_us_fiscal_cycle():
     assert round(annual[2024]["amount"], 6) == 8.24
 
 
+def test_quarterly_dividend_cycle_never_groups_more_than_four_payments():
+    rows = []
+    for record_date, amount in [
+        ("2023-03-31", 1.25),
+        ("2023-06-30", 1.25),
+        ("2023-09-30", 1.35),
+        ("2023-12-31", 1.47),
+        ("2024-03-31", 1.47),
+        ("2024-06-30", 1.47),
+        ("2024-09-30", 1.47),
+        ("2024-12-31", 1.62),
+        ("2025-03-31", 1.62),
+        ("2025-06-30", 1.62),
+        ("2025-09-30", 1.62),
+        ("2025-12-31", 1.62),
+        ("2026-03-31", 1.62),
+        ("2026-06-30", 1.62),
+    ]:
+        rows.append({
+            "record_date": record_date,
+            "ex_date": None,
+            "pay_date": None,
+            "declaration_date": None,
+            "amount": amount,
+            "source": "test",
+        })
+
+    events, _ = _attributed_history_events(rows, "DE", False, 11)
+    annual = _aggregate_annual_dividends(events)
+
+    assert annual[2023]["payments"] == 4
+    assert round(annual[2023]["amount"], 6) == 5.32
+    assert annual[2024]["payments"] == 4
+    assert round(annual[2024]["amount"], 6) == 6.03
+    assert annual[2025]["payments"] == 4
+    assert round(annual[2025]["amount"], 6) == 6.48
+    assert annual[2026]["payments"] == 2
+    assert round(annual[2026]["amount"], 6) == 3.24
+    assert all(row["payments"] <= 4 for row in annual.values())
+
+
 def test_dividend_split_adjustment_is_source_aware():
     splits = [{"split_date": "2024-07-15", "ratio": 10.0}]
     adjusted, factor = _split_adjusted_amount(

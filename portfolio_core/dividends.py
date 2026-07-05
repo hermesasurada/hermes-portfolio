@@ -280,10 +280,10 @@ def _attributed_history_events(
             }
         )
 
-    # 비역년 회계연도 종목은 인상 후 같은 주당배당금이 유지되는 plateau를
-    # 하나의 배당연도로 본다. 예: NOC 2023-05~2024-02의 $1.87 네 회차는
-    # 모두 2023년 그룹. 단순 회계연도 월 기준만 쓰면 다음 해 초 회차가
-    # 새해 그룹에 섞이는 문제가 있다.
+    # 비역년 회계연도 종목은 먼저 같은 주당배당금 사이클(최대 4회)을 한
+    # 배당연도로 본다. 예: NOC 2023-05~2024-02의 $1.87 네 회차는 모두
+    # 2023년 그룹. 단, DE처럼 한 해에 여러 번 증액되어 같은 라벨에 4회를
+    # 초과해 몰리면 역년 기준으로 fallback한다.
     # 동률이면 더 늦은 해. 한국·오버라이드(예: NVDA)는 기존 라벨 유지.
     relabel = (
         not is_korean
@@ -292,25 +292,55 @@ def _attributed_history_events(
     )
     if relabel and events:
         if fiscal_end_month:
-            plateau: list[dict] = []
+            cycle: list[dict] = []
             previous_amount: float | None = None
             for event in events:
                 amount = float(event["amount"])
-                same_plateau = (
+                same_cycle = (
                     previous_amount is not None
                     and abs(amount - previous_amount) <= max(0.000001, abs(previous_amount) * 0.000001)
                 )
-                if plateau and not same_plateau:
-                    label_year = plateau[0]["date"].year
-                    for item in plateau:
+                if cycle and (len(cycle) >= 4 or not same_cycle):
+                    label_year = cycle[0]["date"].year
+                    for item in cycle:
                         item["year"] = label_year
-                    plateau = []
-                plateau.append(event)
+                    cycle = []
+                cycle.append(event)
                 previous_amount = amount
-            if plateau:
-                label_year = plateau[0]["date"].year
-                for item in plateau:
+            if cycle:
+                label_year = cycle[0]["date"].year
+                for item in cycle:
                     item["year"] = label_year
+            overfull_years = {
+                year for year, count in Counter(event["year"] for event in events).items()
+                if count > 4
+            }
+            latest_event_year = max(event["date"].year for event in events)
+            if any(year >= latest_event_year - 2 for year in overfull_years):
+                for event in events:
+                    event["year"] = event["date"].year
+            elif overfull_years:
+                for event in events:
+                    if event["year"] in overfull_years:
+                        event["year"] = event["date"].year
+                if any(
+                    year >= latest_event_year - 2 and count > 4
+                    for year, count in Counter(event["year"] for event in events).items()
+                ):
+                    for event in events:
+                        event["year"] = event["date"].year
+            for _ in range(20):
+                counts = Counter(event["year"] for event in events)
+                overfull = [year for year, count in counts.items() if count > 4]
+                if not overfull:
+                    break
+                for year in overfull:
+                    year_events = sorted(
+                        (event for event in events if event["year"] == year),
+                        key=lambda item: item["date"],
+                    )
+                    for event in year_events[:max(0, len(year_events) - 4)]:
+                        event["year"] = year - 1
         else:
             cycles: dict[int, list[dict]] = {}
             for event in events:
