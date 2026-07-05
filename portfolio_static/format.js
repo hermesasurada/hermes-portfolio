@@ -41,6 +41,12 @@ function krwShort(v) {
   if (abs >= 10000) return fmt.format(v / 10000) + "만";
   return fmt.format(v) + "원";
 }
+function krwRoundedMan(v) {
+  if (v == null) return "-";
+  const abs = Math.abs(v);
+  if (abs >= 100000000) return fmt2.format(v / 100000000) + "억";
+  return fmt.format(v / 10000) + "만";
+}
 function money(v, cur) {
   if (v == null) return '<span class="missing">조회불가</span>';
   if (cur === "KRW") return krwShort(v);
@@ -126,7 +132,7 @@ function changeKrwText(v) {
   if (!Number.isFinite(v)) return "-";
   const cls = v > 0 ? "up" : v < 0 ? "down" : "flat";
   const arrow = v > 0 ? "▲" : v < 0 ? "▼" : "→";
-  return `<span class="change-cell ${cls}"><span aria-hidden="true">${arrow}</span>${krwShort(Math.abs(v))}</span>`;
+  return `<span class="change-cell ${cls}"><span aria-hidden="true">${arrow}</span>${krwRoundedMan(Math.abs(v))}</span>`;
 }
 function weightText(pct) {
   return Number.isFinite(pct) ? `${fmt2.format(pct)}%` : "-";
