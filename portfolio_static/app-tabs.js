@@ -259,16 +259,15 @@ function renderDividendHistory(payload) {
             const details = (row.payments_detail && row.payments_detail.length)
               ? row.payments_detail
               : [null];
-            const span = details.length;
             const yearCell = `
-              <td class="history-year-cell" rowspan="${span}">
+              <td class="history-year-cell">
                 <span class="history-year-anchor">
                   <strong>${row.year}</strong>
                   ${row.current_ytd ? `<span class="history-ytd">YTD</span>` : ""}
                 </span>
               </td>`;
             const amountCell = `
-              <td class="history-annual-cell" rowspan="${span}">
+              <td class="history-annual-cell">
                 <span class="history-annual-anchor history-amount-anchor">
                   <span class="history-amount">${dividendAmountText(row.amount, payload.currency)}</span>
                   ${row.estimated_amount != null && row.estimated_amount > row.amount
@@ -276,7 +275,7 @@ function renderDividendHistory(payload) {
                     : ""}
                 </span>
               </td>`;
-            const growthCell = `<td class="history-annual-cell" rowspan="${span}"><span class="history-annual-anchor">${
+            const growthCell = `<td class="history-annual-cell"><span class="history-annual-anchor">${
               row.growth_pct == null
                 ? "-"
                 : `${dividendHistoryPercent(row.growth_pct)}${
@@ -285,10 +284,15 @@ function renderDividendHistory(payload) {
                       : ""
                   }`
             }</span></td>`;
-            const countCell = `<td class="history-annual-cell" rowspan="${span}"><span class="history-annual-anchor">${fmt.format(Number(row.payments) || 0)}${row.expected_payments ? `/${fmt.format(row.expected_payments)}` : ""}</span></td>`;
+            const countCell = `<td class="history-annual-cell"><span class="history-annual-anchor">${fmt.format(Number(row.payments) || 0)}${row.expected_payments ? `/${fmt.format(row.expected_payments)}` : ""}</span></td>`;
+            const emptyGroupCells = `
+              <td class="history-group-empty"></td>
+              <td class="history-group-empty"></td>
+              <td class="history-group-empty"></td>
+              <td class="history-group-empty"></td>`;
             return details.map((detail, index) => `
               <tr class="${index === 0 && rowIndex > 0 ? "history-year-start" : ""}">
-                ${index === 0 ? `${yearCell}${amountCell}${growthCell}${countCell}` : ""}
+                ${index === 0 ? `${yearCell}${amountCell}${growthCell}${countCell}` : emptyGroupCells}
                 <td class="history-detail-date">${detail ? dividendHistoryFullDate(detail.entitlement_date) : "-"}</td>
                 <td class="history-detail-date">${detail ? dividendHistoryFullDate(detail.pay_date) : "-"}</td>
                 <td class="history-detail-amount">${detail ? dividendAmountText(detail.amount, payload.currency) : "-"}</td>

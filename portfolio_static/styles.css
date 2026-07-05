@@ -1248,15 +1248,13 @@ th:first-child, td:first-child { text-align: left; }
 #detailTableWrap tbody tr,
 #interestTableWrap tbody tr,
 #dividendTableWrap tbody tr:not(.dividend-month-row):not(.dividend-today-row),
-.tx-wrap tbody tr,
-.dividend-history-table-wrap tbody tr {
+.tx-wrap tbody tr {
   height: var(--list-row-height);
 }
 #detailTableWrap tbody td,
 #interestTableWrap tbody td,
 #dividendTableWrap tbody tr:not(.dividend-month-row):not(.dividend-today-row) td,
-.tx-wrap tbody td,
-.dividend-history-table-wrap tbody td {
+.tx-wrap tbody td {
   height: var(--list-row-height);
   padding-top: var(--list-cell-y);
   padding-bottom: var(--list-cell-y);
@@ -3632,8 +3630,10 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   height: 22px;
   padding: 0 4px;
   border-bottom: 1px solid var(--line);
+  box-sizing: border-box;
   line-height: 1.05;
   text-align: right;
+  vertical-align: middle;
   white-space: nowrap;
 }
 .dividend-history-table th {
@@ -3648,17 +3648,31 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 .dividend-history-table th:first-child,
 .dividend-history-table td:first-child {
-  width: 78px;
+  width: 12%;
   text-align: left;
+}
+.dividend-history-table th:nth-child(2),
+.dividend-history-table td:nth-child(2) {
+  width: 16%;
+}
+.dividend-history-table th:nth-child(3),
+.dividend-history-table td:nth-child(3) {
+  width: 14%;
 }
 .dividend-history-table th:nth-child(4),
 .dividend-history-table td:nth-child(4) {
-  width: 48px;
+  width: 8%;
   text-align: center;
+}
+.dividend-history-table th:nth-child(5),
+.dividend-history-table td:nth-child(5),
+.dividend-history-table th:nth-child(6),
+.dividend-history-table td:nth-child(6) {
+  width: 16%;
 }
 .dividend-history-table th:last-child,
 .dividend-history-table td:last-child {
-  width: 86px;
+  width: 18%;
   text-align: center;
 }
 .dividend-history-table tbody tr:last-child td {
@@ -3687,14 +3701,14 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 .dividend-history-table.detailed .history-year-cell,
 .dividend-history-table.detailed .history-annual-cell {
-  vertical-align: top;
-  padding-top: 0;
-  padding-bottom: 0;
+  background: var(--surface-1);
+}
+.dividend-history-table.detailed .history-group-empty {
   background: var(--surface-1);
 }
 .history-year-anchor,
 .history-annual-anchor {
-  min-height: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   line-height: 1.05;
@@ -3718,15 +3732,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 .dividend-history-table.detailed tr.history-year-start td {
   border-top: 2px solid var(--line);
-}
-/* 7열(귀속연도·연간배당·성장률·횟수·기준일·지급일·주당배당금) 폭 — fixed 레이아웃이라 헤더 행 기준 */
-.dividend-history-table.detailed th:nth-child(5),
-.dividend-history-table.detailed th:nth-child(6) {
-  width: 78px;
-}
-.dividend-history-table.detailed th:last-child {
-  width: 86px;
-  text-align: right;
 }
 /* 연/분기 셀 정렬은 위치(nth-child)가 rowspan으로 어긋나므로 클래스로 고정 */
 .dividend-history-table.detailed .history-detail-date {
