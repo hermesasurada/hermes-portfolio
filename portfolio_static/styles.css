@@ -3688,8 +3688,33 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .dividend-history-table.detailed .history-year-cell,
 .dividend-history-table.detailed .history-annual-cell {
   vertical-align: top;
-  padding-top: 4px;
+  padding-top: 0;
+  padding-bottom: 0;
   background: var(--surface-1);
+}
+.history-year-anchor,
+.history-annual-anchor {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  line-height: 1.05;
+}
+.history-year-anchor {
+  justify-content: flex-start;
+  gap: 2px;
+}
+.history-annual-anchor {
+  justify-content: flex-end;
+  text-align: right;
+}
+.history-amount-anchor {
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+}
+.history-annual-anchor .history-amount,
+.history-annual-anchor .history-estimate {
+  width: 100%;
 }
 .dividend-history-table.detailed tr.history-year-start td {
   border-top: 2px solid var(--line);

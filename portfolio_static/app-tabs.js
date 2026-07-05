@@ -262,17 +262,21 @@ function renderDividendHistory(payload) {
             const span = details.length;
             const yearCell = `
               <td class="history-year-cell" rowspan="${span}">
-                <strong>${row.year}</strong>
-                ${row.current_ytd ? `<span class="history-ytd">YTD</span>` : ""}
+                <span class="history-year-anchor">
+                  <strong>${row.year}</strong>
+                  ${row.current_ytd ? `<span class="history-ytd">YTD</span>` : ""}
+                </span>
               </td>`;
             const amountCell = `
               <td class="history-annual-cell" rowspan="${span}">
-                <span class="history-amount">${dividendAmountText(row.amount, payload.currency)}</span>
-                ${row.estimated_amount != null && row.estimated_amount > row.amount
-                  ? `<span class="history-estimate">예상 ${dividendMoneyText(row.estimated_amount, payload.currency)}</span>`
-                  : ""}
+                <span class="history-annual-anchor history-amount-anchor">
+                  <span class="history-amount">${dividendAmountText(row.amount, payload.currency)}</span>
+                  ${row.estimated_amount != null && row.estimated_amount > row.amount
+                    ? `<span class="history-estimate">예상 ${dividendMoneyText(row.estimated_amount, payload.currency)}</span>`
+                    : ""}
+                </span>
               </td>`;
-            const growthCell = `<td class="history-annual-cell" rowspan="${span}">${
+            const growthCell = `<td class="history-annual-cell" rowspan="${span}"><span class="history-annual-anchor">${
               row.growth_pct == null
                 ? "-"
                 : `${dividendHistoryPercent(row.growth_pct)}${
@@ -280,8 +284,8 @@ function renderDividendHistory(payload) {
                       ? `<span class="history-growth-basis" title="연간 미완결 — 해당 연도 최초 배당금 기준">*</span>`
                       : ""
                   }`
-            }</td>`;
-            const countCell = `<td class="history-annual-cell" rowspan="${span}">${fmt.format(Number(row.payments) || 0)}${row.expected_payments ? `/${fmt.format(row.expected_payments)}` : ""}</td>`;
+            }</span></td>`;
+            const countCell = `<td class="history-annual-cell" rowspan="${span}"><span class="history-annual-anchor">${fmt.format(Number(row.payments) || 0)}${row.expected_payments ? `/${fmt.format(row.expected_payments)}` : ""}</span></td>`;
             return details.map((detail, index) => `
               <tr class="${index === 0 && rowIndex > 0 ? "history-year-start" : ""}">
                 ${index === 0 ? `${yearCell}${amountCell}${growthCell}${countCell}` : ""}
