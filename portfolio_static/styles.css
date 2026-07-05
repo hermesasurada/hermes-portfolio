@@ -3624,14 +3624,15 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   min-width: 0;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-variant-numeric: tabular-nums;
 }
 .dividend-history-table th,
 .dividend-history-table td {
-  height: 23px;
-  padding: 1px 6px;
+  height: 24px;
+  padding: 1px 5px;
   border-bottom: 1px solid var(--line);
+  line-height: 1.15;
   text-align: right;
   white-space: nowrap;
 }
@@ -3641,23 +3642,23 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   z-index: 1;
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 800;
   text-align: center;
 }
 .dividend-history-table th:first-child,
 .dividend-history-table td:first-child {
-  width: 84px;
+  width: 78px;
   text-align: left;
 }
 .dividend-history-table th:nth-child(4),
 .dividend-history-table td:nth-child(4) {
-  width: 56px;
+  width: 48px;
   text-align: center;
 }
 .dividend-history-table th:last-child,
 .dividend-history-table td:last-child {
-  width: 92px;
+  width: 86px;
   text-align: center;
 }
 .dividend-history-table tbody tr:last-child td {
@@ -3670,7 +3671,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   border-radius: 3px;
   background: var(--brand-soft);
   color: var(--brand);
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 800;
   vertical-align: 1px;
 }
@@ -3681,7 +3682,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .history-estimate {
   margin-top: 1px;
   color: var(--accent);
-  font-size: 9.5px;
+  font-size: 10.5px;
   font-weight: 700;
 }
 .dividend-history-table.detailed .history-year-cell,
@@ -3696,10 +3697,10 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 /* 7열(귀속연도·연간배당·성장률·횟수·기준일·지급일·주당배당금) 폭 — fixed 레이아웃이라 헤더 행 기준 */
 .dividend-history-table.detailed th:nth-child(5),
 .dividend-history-table.detailed th:nth-child(6) {
-  width: 84px;
+  width: 78px;
 }
 .dividend-history-table.detailed th:last-child {
-  width: 92px;
+  width: 86px;
   text-align: right;
 }
 /* 연/분기 셀 정렬은 위치(nth-child)가 rowspan으로 어긋나므로 클래스로 고정 */
@@ -3712,7 +3713,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .history-growth-basis {
   margin-left: 1px;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 800;
   vertical-align: 3px;
 }
