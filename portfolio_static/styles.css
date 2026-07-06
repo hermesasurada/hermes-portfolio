@@ -1174,6 +1174,7 @@ table { width: 100%; border-collapse: collapse; min-width: 660px; }
 /* P/E(t), P/E(f) (16,17) / P/B (18) */
 /* 로고 셀: 가운데, 종목명 셀: 좌측 정렬 */
 .logo-cell { text-align: center; padding-left: 4px; padding-right: 4px; }
+#detailTableWrap td.logo-cell { padding-left: 9px; }
 #detailTableWrap th:nth-child(2), #detailTableWrap td:nth-child(2) { text-align: left; }
 #detailTableWrap .indicator-head {
   line-height: 1.05;
@@ -1535,7 +1536,7 @@ tr.dividend-month-row:hover td {
   text-align: right;
 }
 #detailTableWrap th:first-child,
-#detailTableWrap td:first-child { min-width: 40px; width: 40px; }   /* 로고 (틀고정) */
+#detailTableWrap td:first-child { min-width: 45px; width: 45px; }   /* 로고 (틀고정) */
 #detailTableWrap th:nth-child(2),
 #detailTableWrap td:nth-child(2) {
   width: var(--ticker-name-width, 180px);
