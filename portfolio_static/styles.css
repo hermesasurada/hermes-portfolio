@@ -3707,6 +3707,35 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .dividend-history-table.detailed .history-group-empty {
   background: var(--surface-1);
 }
+.history-year-cell {
+  text-align: left;
+}
+.history-year-toggle {
+  width: 16px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  vertical-align: middle;
+}
+.history-year-toggle:hover {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+.history-year-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.history-year-chevron {
+  font-size: 14px;
+  line-height: 1;
+  transform: translateY(-1px);
+}
 .history-year-anchor,
 .history-annual-anchor {
   height: 22px;
@@ -3715,8 +3744,11 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   line-height: 1.05;
 }
 .history-year-anchor {
+  display: inline-flex;
   justify-content: flex-start;
   gap: 2px;
+  margin-left: 2px;
+  vertical-align: middle;
 }
 .history-annual-anchor {
   justify-content: flex-end;
@@ -3730,6 +3762,13 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .history-annual-anchor .history-amount,
 .history-annual-anchor .history-estimate {
   width: 100%;
+}
+.history-collapsed-summary {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  background: var(--surface-1);
 }
 .dividend-history-table.detailed tr.history-year-start td {
   border-top: 2px solid var(--line);
