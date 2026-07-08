@@ -281,7 +281,7 @@ function renderDividendHistory(payload) {
             const detailCount = row.payments_detail?.length || 0;
             const toggleLabel = `${row.year}년 배당 상세 ${collapsed ? "펼치기" : "접기"}`;
             const yearCell = `
-              <td class="history-year-cell">
+              <td class="history-year-cell" data-dividend-history-year="${esc(yearKey)}" aria-label="${esc(toggleLabel)}">
                 <button class="history-year-toggle" type="button" data-dividend-history-year="${esc(yearKey)}" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${esc(toggleLabel)}">
                   <span class="history-year-chevron" aria-hidden="true">${collapsed ? "›" : "⌄"}</span>
                 </button>
@@ -345,14 +345,14 @@ function renderDividendHistory(payload) {
       </div>
     </div>
   `;
-  body.querySelectorAll("[data-dividend-history-year]").forEach(button => {
-    button.addEventListener("click", () => {
-      const year = button.dataset.dividendHistoryYear;
-      if (!year) return;
-      if (collapsedDividendHistoryYears.has(year)) collapsedDividendHistoryYears.delete(year);
-      else collapsedDividendHistoryYears.add(year);
-      renderDividendHistory(payload);
-    });
+  body.querySelector(".dividend-history-table")?.addEventListener("click", event => {
+    const target = event.target.closest("[data-dividend-history-year]");
+    if (!target) return;
+    const year = target.dataset.dividendHistoryYear;
+    if (!year) return;
+    if (collapsedDividendHistoryYears.has(year)) collapsedDividendHistoryYears.delete(year);
+    else collapsedDividendHistoryYears.add(year);
+    renderDividendHistory(payload);
   });
 }
 

@@ -3709,6 +3709,10 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 .history-year-cell {
   text-align: left;
+  cursor: pointer;
+}
+.dividend-history-table.detailed .history-year-cell:hover {
+  background: var(--surface-2);
 }
 .history-year-toggle {
   width: 16px;
