@@ -840,6 +840,17 @@ function bindLineChartControls(payload) {
   document.querySelectorAll(".chart-range-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       if (btn.disabled) return;
+      if (btn.dataset.chartOverlayToggle != null) {
+        if (btn.dataset.chartOverlayToggle === "bollinger") {
+          chartShowBollinger = !chartShowBollinger;
+          storageSet(detailStorage.chartShowBollinger, String(chartShowBollinger));
+        } else if (btn.dataset.chartOverlayToggle === "ichimoku") {
+          chartShowIchimoku = !chartShowIchimoku;
+          storageSet(detailStorage.chartShowIchimoku, String(chartShowIchimoku));
+        }
+        renderLineChart(payload);
+        return;
+      }
       if (btn.dataset.markerToggle != null) {
         if (btn.dataset.markerToggle === "buy") {
           chartShowBuys = !chartShowBuys;
@@ -861,6 +872,85 @@ function bindLineChartControls(payload) {
   });
 }
 
+function chartNumericValue(point, key) {
+  const value = Number(point?.[key]);
+  return Number.isFinite(value) ? value : null;
+}
+
+function chartOverlayScaleValues(points) {
+  const values = [];
+  if (chartShowBollinger) {
+    points.forEach(point => ["bb_upper", "bb_mid", "bb_lower"].forEach(key => {
+      const value = chartNumericValue(point, key);
+      if (value != null) values.push(value);
+    }));
+  }
+  if (chartShowIchimoku) {
+    points.forEach(point => ["ichi_tenkan", "ichi_kijun", "ichi_span_a", "ichi_span_b"].forEach(key => {
+      const value = chartNumericValue(point, key);
+      if (value != null) values.push(value);
+    }));
+  }
+  return values;
+}
+
+function chartSeriesPaths(points, key, xFor, yFor) {
+  const paths = [];
+  let run = [];
+  points.forEach((point, index) => {
+    const value = chartNumericValue(point, key);
+    if (value == null) {
+      if (run.length >= 2) paths.push(chartLinePath(run));
+      run = [];
+      return;
+    }
+    run.push({ x: xFor(index), y: yFor(value) });
+  });
+  if (run.length >= 2) paths.push(chartLinePath(run));
+  return paths;
+}
+
+function ichimokuCloudPaths(points, xFor, yFor) {
+  const paths = [];
+  let run = [];
+  let runBullish = null;
+  const flush = () => {
+    if (run.length >= 2) {
+      const top = run.map(item => ({ x: item.x, y: yFor(Math.max(item.a, item.b)) }));
+      const bottom = [...run].reverse().map(item => ({ x: item.x, y: yFor(Math.min(item.a, item.b)) }));
+      const d = `${straightLinePath(top)} L${bottom.map(item => `${item.x.toFixed(2)},${item.y.toFixed(2)}`).join(" L")} Z`;
+      paths.push({ d, bullish: runBullish });
+    }
+    run = [];
+    runBullish = null;
+  };
+
+  points.forEach((point, index) => {
+    const a = chartNumericValue(point, "ichi_span_a");
+    const b = chartNumericValue(point, "ichi_span_b");
+    if (a == null || b == null) {
+      flush();
+      return;
+    }
+    const bullish = a >= b;
+    if (run.length && bullish !== runBullish) flush();
+    if (!run.length) runBullish = bullish;
+    run.push({ x: xFor(index), a, b });
+  });
+  flush();
+  return paths;
+}
+
+function renderChartOverlayControls(x, y) {
+  return `
+    <foreignObject x="${x}" y="${y}" width="190" height="34" class="chart-overlay-controls-fo">
+      <div xmlns="http://www.w3.org/1999/xhtml" class="chart-overlay-controls">
+        <button class="chart-range-btn overlay-toggle ${chartShowBollinger ? "active" : ""}" type="button" data-chart-overlay-toggle="bollinger" aria-pressed="${chartShowBollinger}">BB</button>
+        <button class="chart-range-btn overlay-toggle ${chartShowIchimoku ? "active" : ""}" type="button" data-chart-overlay-toggle="ichimoku" aria-pressed="${chartShowIchimoku}">일목</button>
+      </div>
+    </foreignObject>
+  `;
+}
 
 function rsiThresholdAreaPaths(points, threshold, direction, xFor, yFor) {
   const samples = points
@@ -1152,10 +1242,12 @@ function renderLineChart(payload) {
   syncChartLogToggle(true);
 
   const values = points.map(point => Number(point.close));
+  const overlayValues = chartOverlayScaleValues(points);
   const markerValues = chartTransactions.map(tx => tx.price);
   // 로그 스케일은 모든 값이 양수일 때만 적용 (아니면 선형 폴백)
-  const useLog = chartLogScale && [...values, ...markerValues].every(value => value > 0);
-  const scale = useLog ? logChartScale([...values, ...markerValues]) : niceChartScale([...values, ...markerValues]);
+  const scaleValues = [...values, ...markerValues, ...overlayValues];
+  const useLog = chartLogScale && scaleValues.every(value => value > 0);
+  const scale = useLog ? logChartScale(scaleValues) : niceChartScale(scaleValues);
   const min = scale.min;
   const max = scale.max;
   const width = 980;
@@ -1184,6 +1276,31 @@ function renderLineChart(payload) {
   const rsiYFor = value => rsiTop + (100 - Math.max(0, Math.min(100, value))) / 100 * rsiH;
   const line = chartLinePath(points.map((point, index) => ({ x: xFor(index), y: yFor(Number(point.close)) })));
   const area = `${line} L${pad.left + plotW},${pad.top + plotH} L${pad.left},${pad.top + plotH} Z`;
+  const bbUpperPaths = chartShowBollinger ? chartSeriesPaths(points, "bb_upper", xFor, yFor) : [];
+  const bbMidPaths = chartShowBollinger ? chartSeriesPaths(points, "bb_mid", xFor, yFor) : [];
+  const bbLowerPaths = chartShowBollinger ? chartSeriesPaths(points, "bb_lower", xFor, yFor) : [];
+  const bbRuns = chartShowBollinger ? points.reduce((runs, point, index) => {
+    const upper = chartNumericValue(point, "bb_upper");
+    const lower = chartNumericValue(point, "bb_lower");
+    if (upper == null || lower == null) {
+      if (runs.current.length >= 2) runs.items.push(runs.current);
+      runs.current = [];
+      return runs;
+    }
+    runs.current.push({ x: xFor(index), upper: yFor(upper), lower: yFor(lower) });
+    return runs;
+  }, { current: [], items: [] }) : { current: [], items: [] };
+  if (bbRuns.current.length >= 2) bbRuns.items.push(bbRuns.current);
+  const bbFillAreas = bbRuns.items.map(run => {
+    const top = run.map(item => ({ x: item.x, y: item.upper }));
+    const bottom = [...run].reverse().map(item => ({ x: item.x, y: item.lower }));
+    return `${straightLinePath(top)} L${bottom.map(item => `${item.x.toFixed(2)},${item.y.toFixed(2)}`).join(" L")} Z`;
+  });
+  const ichiTenkanPaths = chartShowIchimoku ? chartSeriesPaths(points, "ichi_tenkan", xFor, yFor) : [];
+  const ichiKijunPaths = chartShowIchimoku ? chartSeriesPaths(points, "ichi_kijun", xFor, yFor) : [];
+  const ichiSpanAPaths = chartShowIchimoku ? chartSeriesPaths(points, "ichi_span_a", xFor, yFor) : [];
+  const ichiSpanBPaths = chartShowIchimoku ? chartSeriesPaths(points, "ichi_span_b", xFor, yFor) : [];
+  const ichiCloudAreas = chartShowIchimoku ? ichimokuCloudPaths(points, xFor, yFor) : [];
   const rsiLine = chartLinePath(
     points
       .map((point, index) => ({ x: xFor(index), y: rsiYFor(Number(point.rsi)), value: Number(point.rsi) }))
@@ -1242,6 +1359,9 @@ function renderLineChart(payload) {
           <stop offset="72%" stop-color="var(--brand)" stop-opacity=".045"></stop>
           <stop offset="100%" stop-color="var(--brand)" stop-opacity="0"></stop>
         </linearGradient>
+        <clipPath id="chartPlotClip">
+          <rect x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
+        </clipPath>
       </defs>
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
       <rect class="chart-plot-border" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
@@ -1260,6 +1380,17 @@ function renderLineChart(payload) {
         return `<text class="chart-x-label" x="${tick.x.toFixed(2)}" y="${height - 12}" text-anchor="${anchor}">${esc(perfGridLabel(tick.time, vGrid.unit))}</text>`;
       }).join("")}
       <path class="chart-area" d="${area}"></path>
+      <g class="chart-price-overlays" clip-path="url(#chartPlotClip)">
+        ${ichiCloudAreas.map(item => `<path class="chart-ichi-cloud ${item.bullish ? "bullish" : "bearish"}" d="${item.d}"></path>`).join("")}
+        ${ichiSpanAPaths.map(path => `<path class="chart-ichi-line span-a" d="${path}"></path>`).join("")}
+        ${ichiSpanBPaths.map(path => `<path class="chart-ichi-line span-b" d="${path}"></path>`).join("")}
+        ${ichiTenkanPaths.map(path => `<path class="chart-ichi-line tenkan" d="${path}"></path>`).join("")}
+        ${ichiKijunPaths.map(path => `<path class="chart-ichi-line kijun" d="${path}"></path>`).join("")}
+        ${bbFillAreas.map(path => `<path class="chart-bb-fill" d="${path}"></path>`).join("")}
+        ${bbUpperPaths.map(path => `<path class="chart-bb-line outer" d="${path}"></path>`).join("")}
+        ${bbMidPaths.map(path => `<path class="chart-bb-line mid" d="${path}"></path>`).join("")}
+        ${bbLowerPaths.map(path => `<path class="chart-bb-line outer" d="${path}"></path>`).join("")}
+      </g>
       <path class="chart-line" d="${line}"></path>
       <line class="chart-current-price-tick" x1="${(pad.left + plotW).toFixed(2)}" x2="${(width - 8).toFixed(2)}" y1="${currentPriceY.toFixed(2)}" y2="${currentPriceY.toFixed(2)}"></line>
       <text class="chart-current-price-label" x="${width - 6}" y="${(currentPriceY + 4).toFixed(2)}">${esc(currentPriceLabel)}</text>
@@ -1304,6 +1435,7 @@ function renderLineChart(payload) {
         <rect id="chartTooltipBox" class="chart-tooltip-box" x="0" y="0" width="0" height="0" rx="6"></rect>
         <text id="chartTooltip" class="chart-tooltip" x="0" y="0">-</text>
       </g>
+      ${renderChartOverlayControls(width - 244, pad.top + 8)}
     </svg>
     ${renderChartCompareControls()}
   `;

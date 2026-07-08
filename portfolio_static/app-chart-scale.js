@@ -79,10 +79,19 @@ function aggregateChartPoints(points, interval = chartInterval) {
   clean.forEach(point => {
     const key = chartIntervalKey(point.date, interval);
     const previous = grouped.get(key);
-    const rsi = point.rsi != null && Number.isFinite(Number(point.rsi))
-      ? Number(point.rsi)
-      : previous?.rsi;
-    grouped.set(key, { ...point, ...(Number.isFinite(rsi) ? { rsi } : {}) });
+    const carryKeys = [
+      "rsi",
+      "bb_upper", "bb_mid", "bb_lower",
+      "ichi_tenkan", "ichi_kijun", "ichi_span_a", "ichi_span_b",
+    ];
+    const carried = {};
+    carryKeys.forEach(itemKey => {
+      const value = point[itemKey] != null && Number.isFinite(Number(point[itemKey]))
+        ? Number(point[itemKey])
+        : previous?.[itemKey];
+      if (Number.isFinite(value)) carried[itemKey] = value;
+    });
+    grouped.set(key, { ...point, ...carried });
   });
   return Array.from(grouped.values());
 }

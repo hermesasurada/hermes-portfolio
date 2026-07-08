@@ -2592,6 +2592,87 @@ th.pc-frozen-edge {
   stroke-linejoin: round;
   pointer-events: none;
 }
+.chart-price-overlays,
+.chart-price-overlays * {
+  pointer-events: none;
+}
+.chart-bb-fill {
+  fill: color-mix(in srgb, var(--accent) 13%, transparent);
+}
+.chart-bb-line {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 74%, transparent);
+  stroke-width: 1.05;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.chart-bb-line.mid {
+  stroke: color-mix(in srgb, var(--accent) 52%, transparent);
+  stroke-width: .9;
+  stroke-dasharray: 4 4;
+}
+.chart-ichi-cloud {
+  opacity: .18;
+}
+.chart-ichi-cloud.bullish {
+  fill: var(--up);
+}
+.chart-ichi-cloud.bearish {
+  fill: var(--down);
+}
+.chart-ichi-line {
+  fill: none;
+  stroke-width: 1.05;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.chart-ichi-line.tenkan {
+  stroke: color-mix(in srgb, var(--up) 82%, var(--ink));
+}
+.chart-ichi-line.kijun {
+  stroke: color-mix(in srgb, var(--down) 82%, var(--ink));
+}
+.chart-ichi-line.span-a,
+.chart-ichi-line.span-b {
+  stroke-width: .85;
+  stroke-dasharray: 3 4;
+  opacity: .85;
+}
+.chart-ichi-line.span-a {
+  stroke: var(--up);
+}
+.chart-ichi-line.span-b {
+  stroke: var(--down);
+}
+.chart-overlay-controls-fo {
+  overflow: visible;
+}
+.chart-overlay-controls {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+}
+.chart-range-btn.overlay-toggle {
+  height: 24px;
+  min-width: 0;
+  padding: 0 8px;
+  border-radius: 999px;
+  border-color: color-mix(in srgb, var(--line) 82%, transparent);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 850;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, .08);
+}
+.chart-range-btn.overlay-toggle.active {
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--line));
+  color: var(--accent);
+  box-shadow: none;
+}
 .chart-grid,
 .chart-bg,
 .chart-last-dot {

@@ -13,6 +13,8 @@ const detailStorage = {
   chartInterval: "portfolio.chart.interval",
   chartLogScale: "portfolio.chart.logScale",
   chartSmoothLines: "portfolio.chart.smoothLines",
+  chartShowBollinger: "portfolio.chart.showBollinger",
+  chartShowIchimoku: "portfolio.chart.showIchimoku",
   chartShowBuys: "portfolio.chart.showBuys",
   chartShowSells: "portfolio.chart.showSells"
 };

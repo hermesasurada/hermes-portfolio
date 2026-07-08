@@ -27,6 +27,8 @@ let chartRange = "6m";
 let chartInterval = "day";
 let chartLogScale = false;
 let chartSmoothLines = true;
+let chartShowBollinger = false;
+let chartShowIchimoku = false;
 let chartShowBuys = true;
 let chartShowSells = true;
 let chartCustomRange = { start: "", end: "" };
@@ -340,6 +342,8 @@ document.getElementById("tradeForm").addEventListener("submit", async event => {
 });
 chartLogScale = storageGet(detailStorage.chartLogScale) === "true";
 chartSmoothLines = storageGet(detailStorage.chartSmoothLines) !== "false";
+chartShowBollinger = storageGet(detailStorage.chartShowBollinger) === "true";
+chartShowIchimoku = storageGet(detailStorage.chartShowIchimoku) === "true";
 chartInterval = ["day", "week", "month"].includes(storageGet(detailStorage.chartInterval))
   ? storageGet(detailStorage.chartInterval)
   : "day";

@@ -12,6 +12,66 @@ from .tickers import account_label, is_us_stock_ticker, ticker_currency
 from .us_live_quotes import fetch_us_live_quotes, us_market_status
 
 
+def _mean(values: list[float]) -> float:
+    return sum(values) / len(values)
+
+
+def _chart_overlay_series(rows) -> dict[str, dict[str, float | None]]:
+    """일봉 OHLC rows → 날짜별 Bollinger/Ichimoku overlay 값.
+
+    통계 탭용 RSI/BB 캐시는 최신값만 저장하므로, 차트용 시계열은 응답 생성 시
+    daily_prices에서 계산한다. 차트 한 종목 단위라 비용은 작고 별도 DB 컬럼을 늘리지 않는다.
+    """
+    closes: list[float] = []
+    highs: list[float] = []
+    lows: list[float] = []
+    overlay: dict[str, dict[str, float | None]] = {}
+    raw_spans: list[tuple[float | None, float | None]] = []
+
+    for index, row in enumerate(rows):
+        close = float(row["close"])
+        high = float(row["high"] if row["high"] is not None else close)
+        low = float(row["low"] if row["low"] is not None else close)
+        closes.append(close)
+        highs.append(high)
+        lows.append(low)
+
+        item: dict[str, float | None] = {}
+
+        if len(closes) >= 20:
+            window = closes[-20:]
+            avg = _mean(window)
+            variance = _mean([(value - avg) ** 2 for value in window])
+            deviation = variance ** 0.5
+            item["bb_mid"] = avg
+            item["bb_upper"] = avg + deviation * 2
+            item["bb_lower"] = avg - deviation * 2
+
+        tenkan = None
+        kijun = None
+        if len(highs) >= 9:
+            tenkan = (max(highs[-9:]) + min(lows[-9:])) / 2
+            item["ichi_tenkan"] = tenkan
+        if len(highs) >= 26:
+            kijun = (max(highs[-26:]) + min(lows[-26:])) / 2
+            item["ichi_kijun"] = kijun
+        span_a = (tenkan + kijun) / 2 if tenkan is not None and kijun is not None else None
+        span_b = (max(highs[-52:]) + min(lows[-52:])) / 2 if len(highs) >= 52 else None
+        raw_spans.append((span_a, span_b))
+
+        shifted_index = index - 26
+        if shifted_index >= 0:
+            shifted_a, shifted_b = raw_spans[shifted_index]
+            if shifted_a is not None:
+                item["ichi_span_a"] = shifted_a
+            if shifted_b is not None:
+                item["ichi_span_b"] = shifted_b
+
+        overlay[row["date"]] = item
+
+    return overlay
+
+
 def load_price_chart(ticker: str) -> dict:
     clean_ticker = (ticker or "").strip().upper()
     if not clean_ticker:
@@ -29,7 +89,7 @@ def load_price_chart(ticker: str) -> dict:
         ).fetchone()
         rows = conn.execute(
             """
-            SELECT p.date, p.close, i.rsi_14
+            SELECT p.date, p.high, p.low, p.close, i.rsi_14
             FROM daily_prices p
             LEFT JOIN daily_technical_indicators i
               ON i.ticker = p.ticker AND i.date = p.date
@@ -59,6 +119,7 @@ def load_price_chart(ticker: str) -> dict:
         ).fetchall()
 
     currency = meta["currency"] if meta and meta["currency"] else ticker_currency(clean_ticker)
+    overlays = _chart_overlay_series(rows)
     points = []
     for row in rows:
         if not row["date"] or row["close"] is None:
@@ -66,6 +127,9 @@ def load_price_chart(ticker: str) -> dict:
         point = {"date": row["date"], "close": float(row["close"])}
         if row["rsi_14"] is not None:
             point["rsi"] = float(row["rsi_14"])
+        overlay = overlays.get(row["date"]) or {}
+        if any(value is not None for value in overlay.values()):
+            point.update({key: value for key, value in overlay.items() if value is not None})
         points.append(point)
     _append_live_chart_point(clean_ticker, currency, points)
 
