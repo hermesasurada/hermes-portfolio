@@ -43,7 +43,7 @@ function portfolioKstHour() {
 function defaultAccountTypesForHour(hour) {
   const types = new Set(["bitcoin"]);
   if (hour >= 17 || hour < 8) types.add("overseas");
-  if (hour >= 8 && hour < 18) {
+  if (hour >= 8 && hour < 17) {
     types.add("kr_individual");
     types.add("pension_kr");
     types.add("retirement_kr");
