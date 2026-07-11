@@ -2582,18 +2582,17 @@ th.pc-frozen-edge {
   overflow: hidden;
   background: var(--chart-bg);
 }
-.chart-bottom-controls:not(.hidden) + .chart-canvas {
-  padding-top: 42px;
-}
 .chart-canvas > svg,
 .chart-canvas > .chart-empty { order: 0; }
 .chart-canvas > .chart-compare-panel,
 .chart-canvas > .perf-controls { order: 1; }
 .chart-bottom-controls {
   position: absolute;
-  top: 6px;
-  left: 8px;
+  top: 8px;
+  left: auto;
   right: 8px;
+  width: max-content;
+  max-width: calc(100% - 16px);
   z-index: 5;
   display: flex;
   align-items: center;
@@ -2602,7 +2601,7 @@ th.pc-frozen-edge {
   min-width: 0;
   padding: 3px 4px;
   border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
-  border-radius: 3px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--chart-bg) 90%, transparent);
   box-shadow: 0 2px 8px rgba(15, 23, 42, .06);
   backdrop-filter: blur(5px);
@@ -3017,7 +3016,7 @@ th.pc-frozen-edge {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 4px 6px 0;
+  padding: 46px 6px 0;
 }
 .perf-legend,
 .perf-controls {
@@ -4771,6 +4770,8 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     white-space: normal;
   }
   .chart-bottom-controls {
+    left: 8px;
+    width: auto;
     justify-content: flex-start;
     gap: 5px;
     padding: 3px 4px;

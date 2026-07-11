@@ -1270,7 +1270,7 @@ function renderLineChart(payload) {
   const tradeMarkerRadius = compactChart ? 10 : 5;
   document.getElementById("chartMeta").textContent = "";
 
-  const pad = { top: 42, right: 58, bottom: 22, left: 14 };
+  const pad = { top: compactChart ? 128 : 60, right: 58, bottom: 22, left: 14 };
   const plotW = width - pad.left - pad.right;
   const rsiGap = compactChart ? 24 : 18;
   const rsiH = compactChart ? 180 : 96;
