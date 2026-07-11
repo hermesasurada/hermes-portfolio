@@ -291,7 +291,7 @@ function renderCompareLineChart(payload) {
   const width = 980;
   const compactChart = window.matchMedia?.("(max-width: 980px)")?.matches;
   const height = compactChart ? 900 : 560;
-  const pad = { top: 28, right: 108, bottom: 34, left: 52 };
+  const pad = { top: 42, right: 108, bottom: 22, left: 52 };
   const plotW = width - pad.left - pad.right;
   const rsiGap = compactChart ? 24 : 18;
   const rsiH = compactChart ? 180 : 100;
@@ -371,7 +371,7 @@ function renderCompareLineChart(payload) {
         if (index % labelEvery !== 0) return "";
         const x = xForTime(time);
         const anchor = x < pad.left + 18 ? "start" : x > pad.left + plotW - 18 ? "end" : "middle";
-        return `<text class="chart-x-label" x="${x.toFixed(2)}" y="${height - 12}" text-anchor="${anchor}">${esc(perfGridLabel(time, vGrid.unit))}</text>`;
+        return `<text class="chart-x-label" x="${x.toFixed(2)}" y="${height - 6}" text-anchor="${anchor}">${esc(perfGridLabel(time, vGrid.unit))}</text>`;
       }).join("")}
       ${series.map(item => `<path class="perf-line ${item.primary ? "primary" : "index"}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>`).join("")}
       ${rsiGuides.map(guide => `

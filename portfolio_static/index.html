@@ -317,18 +317,22 @@
               <div class="chart-meta" id="chartMeta">-</div>
             </div>
           </div>
-          <div class="chart-canvas" id="chartCanvas"></div>
-          <div class="chart-bottom-controls hidden" id="chartBottomControls">
-            <div class="chart-display-controls hidden" id="chartDisplayControls" role="group" aria-label="차트 표시">
-              <button class="chart-head-toggle" id="chartSmoothToggle" type="button" aria-pressed="true">부드럽게</button>
-              <button class="chart-head-toggle" id="chartLogToggle" type="button" aria-pressed="false">로그</button>
+          <div class="chart-stage">
+            <div class="chart-bottom-controls hidden" id="chartBottomControls">
+              <div class="chart-display-controls hidden" id="chartDisplayControls" role="group" aria-label="차트 표시">
+                <button class="chart-head-toggle icon-toggle" id="chartSmoothToggle" type="button" aria-pressed="true" aria-label="부드러운 차트선" title="부드러운 차트선">&#8767;</button>
+                <button class="chart-head-toggle" id="chartLogToggle" type="button" aria-pressed="false" aria-label="로그 스케일" title="로그 스케일">log</button>
+                <button class="chart-head-toggle" id="chartBollingerToggle" type="button" aria-pressed="false" aria-label="볼린저 밴드" title="볼린저 밴드">BB</button>
+                <button class="chart-head-toggle" id="chartIchimokuToggle" type="button" aria-pressed="false" aria-label="일목균형표" title="일목균형표">일목</button>
+              </div>
+              <div class="segmented chart-interval-control hidden" id="chartIntervalControl" role="group" aria-label="차트 단위">
+                <button class="seg-btn" type="button" data-chart-interval="day" aria-pressed="true">일</button>
+                <button class="seg-btn" type="button" data-chart-interval="week" aria-pressed="false">주</button>
+                <button class="seg-btn" type="button" data-chart-interval="month" aria-pressed="false">월</button>
+              </div>
+              <div class="chart-range-host" id="chartRangeHost"></div>
             </div>
-            <div class="segmented chart-interval-control hidden" id="chartIntervalControl" role="group" aria-label="차트 단위">
-              <button class="seg-btn" type="button" data-chart-interval="day" aria-pressed="true">일</button>
-              <button class="seg-btn" type="button" data-chart-interval="week" aria-pressed="false">주</button>
-              <button class="seg-btn" type="button" data-chart-interval="month" aria-pressed="false">월</button>
-            </div>
-            <div class="chart-range-host" id="chartRangeHost"></div>
+            <div class="chart-canvas" id="chartCanvas"></div>
           </div>
           <div class="chart-stats" id="chartStats"></div>
         </div>

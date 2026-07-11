@@ -1914,14 +1914,14 @@ th.pc-frozen-edge {
   font-size: 12px;
 }
 .chart-interval-control {
-  height: 30px;
+  height: 26px;
   padding: 2px;
 }
 .chart-interval-control .seg-btn {
-  height: 24px;
-  min-width: 34px;
-  padding: 0 9px;
-  font-size: 11.5px;
+  height: 20px;
+  min-width: 25px;
+  padding: 0 5px;
+  font-size: 10.5px;
 }
 .chart-display-controls {
   display: inline-flex;
@@ -1929,17 +1929,23 @@ th.pc-frozen-edge {
   gap: 5px;
 }
 .chart-head-toggle {
-  height: 28px;
-  padding: 0 10px;
+  height: 24px;
+  min-width: 27px;
+  padding: 0 6px;
   border: 1px solid var(--line);
   border-radius: 2px;
   background: var(--panel);
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 10.5px;
   font-weight: var(--fw-bold);
   cursor: pointer;
   flex: 0 0 auto;
   transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.chart-head-toggle.icon-toggle {
+  padding: 0;
+  font-size: 17px;
+  line-height: 1;
 }
 .chart-head-toggle:hover {
   background: var(--brand-soft);
@@ -2547,25 +2553,48 @@ th.pc-frozen-edge {
   display: flex;
   flex-direction: column;
 }
+.chart-stage {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--chart-bg);
+}
+.chart-bottom-controls:not(.hidden) + .chart-canvas {
+  padding-top: 42px;
+}
 .chart-canvas > svg,
 .chart-canvas > .chart-empty { order: 0; }
 .chart-canvas > .chart-compare-panel,
 .chart-canvas > .perf-controls { order: 1; }
 .chart-bottom-controls {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  right: 8px;
+  z-index: 5;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 9px 10px;
-  border-top: 1px solid var(--line);
-  background: var(--panel);
-  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+  min-width: 0;
+  padding: 3px 4px;
+  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--chart-bg) 90%, transparent);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .06);
+  backdrop-filter: blur(5px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  white-space: nowrap;
 }
+.chart-bottom-controls::-webkit-scrollbar { display: none; }
 .chart-bottom-controls.hidden {
   display: none;
 }
 .chart-range-host {
   min-width: 0;
+  flex: 0 0 auto;
 }
 
 /* ── 단일 가격 차트 (SVG·RSI 패널·거래 마커) ───────────────────────────── */
@@ -2643,35 +2672,6 @@ th.pc-frozen-edge {
 }
 .chart-ichi-line.span-b {
   stroke: var(--down);
-}
-.chart-overlay-controls-fo {
-  overflow: visible;
-}
-.chart-overlay-controls {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
-  width: 100%;
-  height: 100%;
-}
-.chart-range-btn.overlay-toggle {
-  height: 24px;
-  min-width: 0;
-  padding: 0 8px;
-  border-radius: 999px;
-  border-color: color-mix(in srgb, var(--line) 82%, transparent);
-  background: color-mix(in srgb, var(--panel) 88%, transparent);
-  color: var(--muted);
-  font-size: 10.5px;
-  font-weight: 850;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, .08);
-}
-.chart-range-btn.overlay-toggle.active {
-  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
-  border-color: color-mix(in srgb, var(--accent) 58%, var(--line));
-  color: var(--accent);
-  box-shadow: none;
 }
 .chart-grid,
 .chart-bg,
@@ -2844,21 +2844,22 @@ th.pc-frozen-edge {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 3px;
   padding: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 .chart-range-btn {
-  height: 30px;
-  min-width: 54px;
-  padding: 0 14px;
+  height: 24px;
+  min-width: 31px;
+  padding: 0 7px;
   border: 1px solid var(--line);
   border-radius: 2px;
   background: var(--panel);
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 10.5px;
   font-weight: var(--fw-bold);
 }
+.chart-range-btn.custom-range-btn { min-width: 35px; }
 .chart-range-btn:hover {
   background: var(--brand-soft);
   border-color: var(--brand);
@@ -2888,19 +2889,19 @@ th.pc-frozen-edge {
 .chart-marker-toggles {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-left: 4px;
+  gap: 3px;
+  margin-left: 2px;
 }
 .chart-range-btn.marker-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 3px;
   min-width: 0;
-  padding: 0 12px;
+  padding: 0 6px;
 }
 .chart-range-btn.marker-toggle i {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   display: inline-block;
   flex: 0 0 auto;
@@ -4686,17 +4687,17 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     gap: 4px;
   }
   .chart-head-toggle {
-    height: 26px;
-    padding: 0 7px;
+    height: 24px;
+    padding: 0 6px;
     font-size: 10.5px;
   }
   .chart-interval-control {
-    height: 28px;
+    height: 26px;
   }
   .chart-interval-control .seg-btn {
-    height: 22px;
-    min-width: 30px;
-    padding: 0 7px;
+    height: 20px;
+    min-width: 25px;
+    padding: 0 5px;
     font-size: 10.5px;
   }
   .chart-meta {
@@ -4707,8 +4708,8 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   .chart-bottom-controls {
     justify-content: flex-start;
-    gap: 6px;
-    padding: 8px;
+    gap: 5px;
+    padding: 3px 4px;
   }
   .chart-view {
     padding: 8px;

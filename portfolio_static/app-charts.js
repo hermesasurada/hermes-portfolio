@@ -186,7 +186,7 @@ function renderPerformanceChart(payload) {
   const isMobileChart = Boolean(window.matchMedia?.("(max-width: 980px)")?.matches);
   const height = isMobileChart ? 864 : 432;
   const hasAmountLabels = series.some(item => item.amount);
-  const pad = { top: 26, right: hasAmountLabels ? 146 : 104, bottom: 34, left: 56 };
+  const pad = { top: 40, right: hasAmountLabels ? 146 : 104, bottom: 22, left: 56 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const range = max - min || 1;
@@ -243,7 +243,7 @@ function renderPerformanceChart(payload) {
         if (index % labelEvery !== 0) return "";
         const x = xForTime(time);
         const anchor = x < pad.left + 18 ? "start" : x > pad.left + plotW - 18 ? "end" : "middle";
-        return `<text class="chart-x-label" x="${x.toFixed(2)}" y="${height - 12}" text-anchor="${anchor}">${esc(perfGridLabel(time, vGrid.unit))}</text>`;
+        return `<text class="chart-x-label" x="${x.toFixed(2)}" y="${height - 6}" text-anchor="${anchor}">${esc(perfGridLabel(time, vGrid.unit))}</text>`;
       }).join("")}
       ${series.map(item => `
         <path class="perf-line ${item.primary ? "primary" : "index"}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>

@@ -64,11 +64,11 @@ function renderChartRangeButtons() {
         return `<button class="chart-range-btn ${range.key === chartRange ? "active" : ""}${disabled ? " disabled" : ""}" type="button" data-chart-range="${range.key}"${disabled ? ` disabled title="${esc(title)}"` : ""}>${range.label}</button>`;
       }).join("")}
       ${maxBtn}
-      <button class="chart-range-btn ${chartRange === "custom" ? "active" : ""}" type="button" data-chart-custom>직접설정</button>
+      <button class="chart-range-btn custom-range-btn ${chartRange === "custom" ? "active" : ""}" type="button" data-chart-custom aria-label="기간 직접 설정" title="기간 직접 설정">기간</button>
       ${(!isCompare && !performanceChartOpen) ? `
         <span class="chart-marker-toggles" role="group" aria-label="거래 마커 표시">
-          <button class="chart-range-btn marker-toggle buy ${chartShowBuys ? "active" : ""}" type="button" data-marker-toggle="buy" aria-pressed="${chartShowBuys}" ${chartInterval === "day" ? "" : `disabled title="일 단위에서만 표시"`}><i></i>매수</button>
-          <button class="chart-range-btn marker-toggle sell ${chartShowSells ? "active" : ""}" type="button" data-marker-toggle="sell" aria-pressed="${chartShowSells}" ${chartInterval === "day" ? "" : `disabled title="일 단위에서만 표시"`}><i></i>매도</button>
+          <button class="chart-range-btn marker-toggle buy ${chartShowBuys ? "active" : ""}" type="button" data-marker-toggle="buy" aria-label="매수 마커" title="매수 마커" aria-pressed="${chartShowBuys}" ${chartInterval === "day" ? "" : `disabled title="일 단위에서만 표시"`}><i></i>B</button>
+          <button class="chart-range-btn marker-toggle sell ${chartShowSells ? "active" : ""}" type="button" data-marker-toggle="sell" aria-label="매도 마커" title="매도 마커" aria-pressed="${chartShowSells}" ${chartInterval === "day" ? "" : `disabled title="일 단위에서만 표시"`}><i></i>S</button>
         </span>
       ` : ""}
     </div>
@@ -120,15 +120,25 @@ function syncChartDisplayControls(visible = Boolean(chartTicker) && !performance
   control.classList.toggle("hidden", !visible);
   const smoothToggle = document.getElementById("chartSmoothToggle");
   const logToggle = document.getElementById("chartLogToggle");
+  const bollingerToggle = document.getElementById("chartBollingerToggle");
+  const ichimokuToggle = document.getElementById("chartIchimokuToggle");
   smoothToggle?.classList.toggle("active", chartSmoothLines);
   smoothToggle?.setAttribute("aria-pressed", String(chartSmoothLines));
   logToggle?.classList.toggle("active", chartLogScale);
   logToggle?.setAttribute("aria-pressed", String(chartLogScale));
+  bollingerToggle?.classList.toggle("active", chartShowBollinger);
+  bollingerToggle?.setAttribute("aria-pressed", String(chartShowBollinger));
+  ichimokuToggle?.classList.toggle("active", chartShowIchimoku);
+  ichimokuToggle?.setAttribute("aria-pressed", String(chartShowIchimoku));
+  bollingerToggle?.classList.toggle("hidden", chartComparePayloads.length > 0);
+  ichimokuToggle?.classList.toggle("hidden", chartComparePayloads.length > 0);
 }
 
 function initChartDisplayControls() {
   const smoothToggle = document.getElementById("chartSmoothToggle");
   const logToggle = document.getElementById("chartLogToggle");
+  const bollingerToggle = document.getElementById("chartBollingerToggle");
+  const ichimokuToggle = document.getElementById("chartIchimokuToggle");
   smoothToggle?.addEventListener("click", () => {
     chartSmoothLines = !chartSmoothLines;
     storageSet(detailStorage.chartSmoothLines, String(chartSmoothLines));
@@ -138,6 +148,18 @@ function initChartDisplayControls() {
   logToggle?.addEventListener("click", () => {
     chartLogScale = !chartLogScale;
     storageSet(detailStorage.chartLogScale, String(chartLogScale));
+    syncChartDisplayControls();
+    if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
+  });
+  bollingerToggle?.addEventListener("click", () => {
+    chartShowBollinger = !chartShowBollinger;
+    storageSet(detailStorage.chartShowBollinger, String(chartShowBollinger));
+    syncChartDisplayControls();
+    if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
+  });
+  ichimokuToggle?.addEventListener("click", () => {
+    chartShowIchimoku = !chartShowIchimoku;
+    storageSet(detailStorage.chartShowIchimoku, String(chartShowIchimoku));
     syncChartDisplayControls();
     if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
   });
@@ -941,17 +963,6 @@ function ichimokuCloudPaths(points, xFor, yFor) {
   return paths;
 }
 
-function renderChartOverlayControls(x, y) {
-  return `
-    <foreignObject x="${x}" y="${y}" width="190" height="34" class="chart-overlay-controls-fo">
-      <div xmlns="http://www.w3.org/1999/xhtml" class="chart-overlay-controls">
-        <button class="chart-range-btn overlay-toggle ${chartShowBollinger ? "active" : ""}" type="button" data-chart-overlay-toggle="bollinger" aria-pressed="${chartShowBollinger}">BB</button>
-        <button class="chart-range-btn overlay-toggle ${chartShowIchimoku ? "active" : ""}" type="button" data-chart-overlay-toggle="ichimoku" aria-pressed="${chartShowIchimoku}">일목</button>
-      </div>
-    </foreignObject>
-  `;
-}
-
 function rsiThresholdAreaPaths(points, threshold, direction, xFor, yFor) {
   const samples = points
     .map((point, index) => ({ x: xFor(index), value: Number(point.rsi) }))
@@ -1259,7 +1270,7 @@ function renderLineChart(payload) {
   const tradeMarkerRadius = compactChart ? 10 : 5;
   document.getElementById("chartMeta").textContent = "";
 
-  const pad = { top: 28, right: 58, bottom: 32, left: 14 };
+  const pad = { top: 42, right: 58, bottom: 22, left: 14 };
   const plotW = width - pad.left - pad.right;
   const rsiGap = compactChart ? 24 : 18;
   const rsiH = compactChart ? 180 : 96;
@@ -1377,7 +1388,7 @@ function renderLineChart(payload) {
       ${vGrid.ticks.map((tick, index) => {
         if (index % labelEvery !== 0) return "";
         const anchor = tick.x < pad.left + 18 ? "start" : tick.x > pad.left + plotW - 18 ? "end" : "middle";
-        return `<text class="chart-x-label" x="${tick.x.toFixed(2)}" y="${height - 12}" text-anchor="${anchor}">${esc(perfGridLabel(tick.time, vGrid.unit))}</text>`;
+        return `<text class="chart-x-label" x="${tick.x.toFixed(2)}" y="${height - 6}" text-anchor="${anchor}">${esc(perfGridLabel(tick.time, vGrid.unit))}</text>`;
       }).join("")}
       <path class="chart-area" d="${area}"></path>
       <g class="chart-price-overlays" clip-path="url(#chartPlotClip)">
@@ -1435,7 +1446,6 @@ function renderLineChart(payload) {
         <rect id="chartTooltipBox" class="chart-tooltip-box" x="0" y="0" width="0" height="0" rx="6"></rect>
         <text id="chartTooltip" class="chart-tooltip" x="0" y="0">-</text>
       </g>
-      ${renderChartOverlayControls(width - 244, pad.top + 8)}
     </svg>
     ${renderChartCompareControls()}
   `;

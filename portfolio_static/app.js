@@ -46,13 +46,13 @@ let editingTxId = null;
 const transactionPageSize = 10;
 
 const chartRanges = [
-  { key: "1m", label: "1개월", months: 1 },
-  { key: "3m", label: "3개월", months: 3 },
-  { key: "6m", label: "6개월", months: 6 },
-  { key: "1y", label: "1년", months: 12 },
+  { key: "1m", label: "1M", months: 1 },
+  { key: "3m", label: "3M", months: 3 },
+  { key: "6m", label: "6M", months: 6 },
+  { key: "1y", label: "1Y", months: 12 },
   { key: "ytd", label: "YTD", ytd: true },
-  { key: "3y", label: "3년", months: 36 },
-  { key: "5y", label: "5년", months: 60 },
+  { key: "3y", label: "3Y", months: 36 },
+  { key: "5y", label: "5Y", months: 60 },
   { key: "all", label: "전체", all: true },
 ];
 const chartCompareLimit = 10;
