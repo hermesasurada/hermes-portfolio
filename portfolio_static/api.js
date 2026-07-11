@@ -34,9 +34,14 @@ function apiFetchChart(ticker) {
   return fetchJson(`/api/chart?ticker=${encodeURIComponent(ticker || "")}`);
 }
 
-function apiFetchAccountPerformance(accountIds, allAccounts) {
-  const query = allAccounts ? "" : `?account_ids=${encodeURIComponent((accountIds || []).join(","))}`;
-  return fetchJson(`/api/account-performance${query}`);
+function apiFetchAccountPerformance(accountIds, allAccounts, options = {}) {
+  const query = new URLSearchParams();
+  if (!allAccounts) query.set("account_ids", (accountIds || []).join(","));
+  if (options.detail) query.set("detail", "1");
+  if (options.range) query.set("range", options.range);
+  if (options.start) query.set("start", options.start);
+  if (options.end) query.set("end", options.end);
+  return fetchJson(`/api/account-performance?${query.toString()}`);
 }
 
 function apiFetchTransactions(accountIds, allAccounts) {

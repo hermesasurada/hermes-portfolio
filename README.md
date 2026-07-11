@@ -5,12 +5,16 @@
 `stock_history.db` 기반으로 보유 종목·거래내역·시세를 관리하고, 로컬 웹 대시보드와
 시세 수집기를 제공합니다.
 
+웹 요청은 DB 캐시를 읽고, 가격·기술지표·펀더멘털·배당 갱신은 수집기에서 수행합니다.
+시장 가격 해석은 `portfolio_core.prices`의 공용 스냅샷을 사용하며 신규 종목 조회와
+데이터 채우기는 각각 `ticker_lookup.py`, `hydration.py`가 담당합니다.
+
 ## 구성
 
 | 영역 | 파일 |
 |------|------|
 | 웹 서버 | `portfolio_web_server.py` (HTTP, `ThreadingHTTPServer`) |
-| 프런트엔드 | `portfolio_static/` (index.html, app.js, app-charts.js, styles.css …) |
+| 프런트엔드 | `portfolio_static/` (상태·API·차트 렌더·차트 지표·거래·관심목록을 순수 JS로 분리) |
 | 코어 패키지 | `portfolio_core/` (portfolio, transactions, prices, charts, stats, watchlist, logos, db, tickers, constants …) |
 | 분 단위 시세 | `collect_quotes.py` (Yahoo/Naver 배치 스냅샷) |
 | 일봉·통계 보정 | `collect_prices.py` |

@@ -13,6 +13,7 @@ from typing import Any
 
 from .constants import KOREAN_SUFFIXES
 from .dates import now_kst_text, parse_iso_date, positive_float, to_iso_text, today_kst
+from .dividend_pipeline import normalize_dividend_events
 from .opendart_dividends import fetch_opendart_dividends, is_opendart_candidate
 from .paths import KST
 from .tickers import normalize_yfinance_symbol, ticker_currency
@@ -538,6 +539,23 @@ def _source_error(source: str, ticker: str, exc: Exception) -> str:
     return f"{source}_error({type(exc).__name__})"
 
 
+def _collect_source(
+    ticker: str,
+    label: str,
+    fetcher,
+    events: dict[str, dict],
+    sources: list[str],
+) -> None:
+    try:
+        fetched = fetcher(ticker)
+        sources.append(label if fetched else f"{label}0")
+        for event in fetched:
+            if event.get("ex_date"):
+                events[event["ex_date"]] = event
+    except Exception as exc:
+        sources.append(_source_error(label, ticker, exc))
+
+
 def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], str]:
     events: dict[str, dict] = {}
     sources = []
@@ -612,46 +630,17 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
         except Exception as exc:
             sources.append(_source_error("kr_history", ticker, exc))
     else:
-        try:
-            yahoo_events = _fetch_yahoo_dividends(ticker)
-            if yahoo_events:
-                sources.append("yahoo")
-            for event in yahoo_events:
-                if event.get("ex_date"):
-                    events[event["ex_date"]] = event
-        except Exception as exc:
-            sources.append(_source_error("yahoo", ticker, exc))
+        _collect_source(ticker, "yahoo", _fetch_yahoo_dividends, events, sources)
 
     if _stockanalysis_candidate(ticker):
-        try:
-            stockanalysis_events = _fetch_stockanalysis_dividends(ticker)
-            sources.append("stockanalysis" if stockanalysis_events else "stockanalysis0")
-            for event in stockanalysis_events:
-                if event.get("ex_date"):
-                    events[event["ex_date"]] = event
-        except Exception as exc:
-            sources.append(_source_error("stockanalysis", ticker, exc))
+        _collect_source(ticker, "stockanalysis", _fetch_stockanalysis_dividends, events, sources)
 
     if _nasdaq_candidate(ticker):
-        try:
-            nasdaq_events = _fetch_nasdaq_dividends(ticker)
-            sources.append("nasdaq" if nasdaq_events else "nasdaq0")
-            for event in nasdaq_events:
-                if event.get("ex_date"):
-                    events[event["ex_date"]] = event
-        except Exception as exc:
-            sources.append(_source_error("nasdaq", ticker, exc))
+        _collect_source(ticker, "nasdaq", _fetch_nasdaq_dividends, events, sources)
 
     # Polygon: 권위 소스이므로 마지막에 같은 ex_date를 덮어써 선언일/기준일/미래
     # 확정분까지 채운다. (분당 5콜 스로틀은 _fetch_polygon_dividends 내부 처리)
     if _polygon_candidate(ticker) and _polygon_api_key():
-        try:
-            polygon_events = _fetch_polygon_dividends(ticker)
-            sources.append("polygon" if polygon_events else "polygon0")
-            for event in polygon_events:
-                if event.get("ex_date"):
-                    events[event["ex_date"]] = event
-        except Exception as exc:
-            sources.append(_source_error("polygon", ticker, exc))
+        _collect_source(ticker, "polygon", _fetch_polygon_dividends, events, sources)
 
-    return list(events.values()), "+".join(sources) or "none"
+    return normalize_dividend_events(ticker, list(events.values())), "+".join(sources) or "none"

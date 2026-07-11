@@ -2212,23 +2212,6 @@ th.pc-frozen-edge {
 .consensus-range { font-size: 13px; color: var(--ink); }
 /* 컨센서스 값칸 안의 투자의견 칩은 값 폰트에 맞춰 키움(관심목록 표 칩은 유지) */
 .consensus-v .rating-chip { font-size: 12.5px; }
-@media (max-width: 980px) {
-  /* 차트 컨트롤: 오버레이 대신 차트영역 바로 위 정적 배치 */
-  .chart-stage { display: flex; flex-direction: column; }
-  .chart-stage .chart-bottom-controls {
-    position: static;
-    order: -1;
-    width: 100%;
-    max-width: 100%;
-    margin: 0 0 6px;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-  .chart-stage .chart-canvas { order: 0; }
-  .consensus-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .consensus-cell:nth-child(2n) { border-right: 0; }
-  .consensus-cell:nth-child(-n + 4) { border-bottom: 1px solid var(--line); }
-}
 /* 리포트 상세 모달: 8767 대시보드 모달을 iframe으로 임베드. 딤은 여기서 제공하고
    iframe(투명)은 그 위에서 모달만 렌더 → 딤 클릭도 iframe 내부 .ov가 받아 닫는다. */
 .report-modal-host {
@@ -4464,6 +4447,22 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 
 /* ── 반응형 ② 태블릿·모바일(≤980px) — 전반 레이아웃 ───────────────────────── */
 @media (max-width: 980px) {
+  /* 차트 컨트롤: 오버레이 대신 차트영역 바로 위 정적 배치 */
+  .chart-stage { display: flex; flex-direction: column; }
+  .chart-stage .chart-bottom-controls {
+    position: static;
+    order: -1;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 0 6px;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .chart-stage .chart-canvas { order: 0; }
+  .consensus-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .consensus-cell:nth-child(2n) { border-right: 0; }
+  .consensus-cell:nth-child(-n + 4) { border-bottom: 1px solid var(--line); }
+
   /* 모바일 정보 밀도 ↑ : 전반적으로 글자를 한 단계(~1px) 줄여
      한 화면에 더 많은 항목/글자가 보이도록 한다. */
   :root {
@@ -4943,9 +4942,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   :root[data-theme="dark"] .cstat-column {
     border-bottom-color: #39414f;
   }
-}
-
-@media (max-width: 560px) {
   .watch-modal.trade-modal {
     width: min(520px, calc(100vw - 10px));
   }

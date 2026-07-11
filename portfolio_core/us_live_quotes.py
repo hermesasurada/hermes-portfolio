@@ -10,7 +10,7 @@ import urllib.request
 from datetime import datetime
 from urllib.parse import quote
 
-from .db import connect, ensure_live_quote_cache_table
+from .db import connect
 from .market_calendar import us_equity_market_status
 from .paths import US_EASTERN
 from .tickers import is_us_stock_ticker, ticker_currency
@@ -189,7 +189,6 @@ def load_shared_quote_rows(symbols: list[str], max_age_seconds: int = SHARED_LIV
     placeholders = ",".join("?" for _ in clean)
     cutoff = datetime.now().timestamp() - max_age_seconds
     with connect() as conn:
-        ensure_live_quote_cache_table(conn)
         rows = conn.execute(
             f"""
             SELECT ticker, fetched_ts, payload_json

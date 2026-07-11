@@ -36,6 +36,7 @@ let chartComparePayloads = [];
 let performanceChartOpen = false;
 let performancePayload = null;
 let performanceLoadInFlight = null;
+let performanceLoadToken = 0;
 let performanceIndexes = { SP500: true, NASDAQ: true, KOSPI: true };
 let mobileAccountsCollapsed = true;
 let watchLookupResult = null;
@@ -254,7 +255,7 @@ document.getElementById("performanceOpen").addEventListener("click", () => {
 });
 document.getElementById("performanceDetailToggle").addEventListener("change", () => {
   syncFilterToggleControls();
-  if (performanceChartOpen) renderPerformanceChart(performancePayload);
+  if (performanceChartOpen) reloadPerformanceChart();
 });
 document.getElementById("accountCollapseToggle").addEventListener("click", () => {
   mobileAccountsCollapsed = !mobileAccountsCollapsed;

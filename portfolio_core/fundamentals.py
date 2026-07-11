@@ -57,6 +57,43 @@ def load_stats_cache_item(conn: sqlite3.Connection, ticker: str, now_ts: float, 
     }
 
 
+def load_stats_cache_items(
+    conn: sqlite3.Connection,
+    tickers: list[str],
+    now_ts: float,
+    fresh_only: bool = True,
+) -> dict[str, dict]:
+    clean = sorted({ticker for ticker in tickers if ticker})
+    if not clean:
+        return {}
+    marks = ",".join("?" for _ in clean)
+    rows = conn.execute(
+        f"""
+        SELECT ticker, version, fetched_ts, source, market_cap, aum, dividend_yield,
+               trailing_pe, forward_pe, price_to_book, next_earnings_date
+        FROM ticker_stats_cache
+        WHERE ticker IN ({marks})
+        """,
+        clean,
+    ).fetchall()
+    result: dict[str, dict] = {}
+    for row in rows:
+        if int(row["version"] or 0) != STATS_CACHE_VERSION or row["source"] == "unknown":
+            continue
+        if fresh_only and stats_cache_expires_today() and now_ts - float(row["fetched_ts"] or 0) >= STATS_CACHE_SECONDS:
+            continue
+        result[row["ticker"]] = {
+            "market_cap": finite_number(row["market_cap"]),
+            "aum": finite_number(row["aum"]),
+            "dividend_yield": finite_number(row["dividend_yield"]),
+            "trailing_pe": normalize_pe(row["trailing_pe"]),
+            "forward_pe": normalize_pe(row["forward_pe"]),
+            "price_to_book": normalize_pe(row["price_to_book"]),
+            "next_earnings_date": row["next_earnings_date"],
+        }
+    return result
+
+
 def save_stats_cache_item(conn: sqlite3.Connection, ticker: str, source: str, data: dict, raw: dict | None = None) -> None:
     conn.execute(
         """
@@ -169,14 +206,16 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
         ).fetchall()
     }
     now_ts = datetime.now().timestamp()
+    cached_items = load_stats_cache_items(conn, tickers, now_ts)
+    stale_items = load_stats_cache_items(conn, tickers, now_ts, fresh_only=False) if refresh_stale else cached_items
     result: dict[str, dict] = {}
     for ticker in tickers:
-        cached = load_stats_cache_item(conn, ticker, now_ts)
+        cached = cached_items.get(ticker)
         if cached:
             cached["next_earnings_date"] = earnings_by_ticker.get(ticker)
             result[ticker] = cached
             continue
-        stale = load_stats_cache_item(conn, ticker, now_ts, fresh_only=False)
+        stale = stale_items.get(ticker)
         if stale:
             stale["next_earnings_date"] = earnings_by_ticker.get(ticker)
             if not refresh_stale:

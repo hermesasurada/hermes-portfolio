@@ -68,6 +68,16 @@ function placeChartHoverTooltip(tooltip, canvas, svgRect, geometry, x) {
   tooltip.style.top = `${Math.max(4, topPx).toFixed(0)}px`;
 }
 
+function declutterChartLabels(labels, minGap) {
+  const sorted = [...labels].sort((left, right) => left.y - right.y);
+  for (let index = 1; index < sorted.length; index += 1) {
+    if (sorted[index].y - sorted[index - 1].y < minGap) {
+      sorted[index].y = sorted[index - 1].y + minGap;
+    }
+  }
+  return sorted;
+}
+
 // 호버 레이어 포인터 와이어링: 이동/진입 시 표시, 터치는 핀 고정, 이탈 시 숨김
 function bindHoverPointerEvents(hoverLayer, showPoint, hide) {
   let touchPinned = false;

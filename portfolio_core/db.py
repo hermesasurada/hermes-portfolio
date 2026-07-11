@@ -7,6 +7,8 @@ from contextlib import contextmanager
 from .constants import FX_NAMES, MARKET_INDEXES
 from .paths import DB_PATH
 
+SCHEMA_VERSION = 1
+
 
 @contextmanager
 def connect() -> Iterator[sqlite3.Connection]:
@@ -331,4 +333,5 @@ def initialize_schema() -> None:
         ensure_market_index_tickers(conn)
         ensure_fx_tickers(conn)
         backfill_ticker_display_names(conn)
+        conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         conn.commit()

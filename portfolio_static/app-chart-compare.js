@@ -326,27 +326,18 @@ function renderCompareLineChart(payload) {
   });
   const vGrid = perfVerticalGrid(minTime, maxTime, chartRange);
   const labelEvery = Math.max(1, Math.ceil(vGrid.lines.length / 8));
-  const endLabels = series
+  const endLabels = declutterChartLabels(series
     .map(item => {
       const lastPoint = item.points[item.points.length - 1];
       return { color: item.color, close: lastPoint.close, y: yFor(lastPoint.close) };
     })
-    .sort((a, b) => a.y - b.y);
-  const minGap = 13;
-  for (let i = 1; i < endLabels.length; i++) {
-    if (endLabels[i].y - endLabels[i - 1].y < minGap) endLabels[i].y = endLabels[i - 1].y + minGap;
-  }
-  const rsiEndLabels = series
+    , 13);
+  const rsiEndLabels = declutterChartLabels(series
     .map(item => {
       const lastPoint = [...item.points].reverse().find(point => Number.isFinite(point.rsi));
       return lastPoint ? { color: item.color, value: lastPoint.rsi, y: rsiYFor(lastPoint.rsi) } : null;
     })
-    .filter(Boolean)
-    .sort((a, b) => a.y - b.y);
-  const rsiMinGap = compactChart ? 12 : 9;
-  for (let i = 1; i < rsiEndLabels.length; i++) {
-    if (rsiEndLabels[i].y - rsiEndLabels[i - 1].y < rsiMinGap) rsiEndLabels[i].y = rsiEndLabels[i - 1].y + rsiMinGap;
-  }
+    .filter(Boolean), compactChart ? 12 : 9);
   const clampRsiY = value => Math.max(rsiTop + 7, Math.min(rsiBottom - 4, value));
   const rsiGuides = [30, 50, 70].map(value => ({ value, y: rsiYFor(value) }));
   const legend = series.map(item => `<span class="perf-legend-item ${item.primary ? "" : "removable"}" style="color:${item.color}"><i style="background:${item.color}"></i><span class="pl-name">${esc(item.ticker || item.name)}</span>${item.primary ? "" : `<button class="legend-remove" type="button" data-compare-remove="${esc(item.ticker)}" aria-label="${esc(item.ticker)} 비교 삭제" title="비교 삭제">&times;</button>`}</span>`).join("");

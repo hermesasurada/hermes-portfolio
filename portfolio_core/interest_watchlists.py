@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from .db import connect, ensure_interest_watchlist_tables
+from .db import connect
 from .paths import KST
 from .tickers import asset_class, ticker_currency
 
@@ -117,7 +117,6 @@ def sync_special_interest_items(items: list[dict]) -> int:
         return 0
     added = 0
     with connect() as conn:
-        ensure_interest_watchlist_tables(conn)
         for ticker, group_name in targets:
             group_id = ensure_group_by_name(conn, group_name)
             if insert_interest_item_if_missing(conn, group_id, ticker):
@@ -134,7 +133,6 @@ def protected_group_required_category(group_name: str | None) -> str | None:
 
 
 def seed_initial_interest_watchlists(conn) -> None:
-    ensure_interest_watchlist_tables(conn)
     seeded = conn.execute(
         "SELECT value FROM interest_watchlist_settings WHERE key = 'initial_seeded'"
     ).fetchone()
@@ -274,7 +272,6 @@ def create_interest_group(payload: dict) -> dict:
     if len(name) > 40:
         raise ValueError("그룹명은 40자 이내로 입력해야 합니다.")
     with connect() as conn:
-        ensure_interest_watchlist_tables(conn)
         duplicate = conn.execute(
             "SELECT 1 FROM interest_watchlist_groups WHERE name = ? COLLATE NOCASE",
             (name,),
@@ -305,7 +302,6 @@ def rename_interest_group(payload: dict) -> dict:
     if len(name) > 40:
         raise ValueError("그룹명은 40자 이내로 입력해야 합니다.")
     with connect() as conn:
-        ensure_interest_watchlist_tables(conn)
         if not conn.execute(
             "SELECT 1 FROM interest_watchlist_groups WHERE id = ?",
             (group_id,),
@@ -340,7 +336,6 @@ def reorder_interest_groups(payload: dict) -> dict:
     if not group_ids or len(group_ids) != len(set(group_ids)):
         raise ValueError("그룹 순서가 올바르지 않습니다.")
     with connect() as conn:
-        ensure_interest_watchlist_tables(conn)
         existing_ids = {
             int(row["id"])
             for row in conn.execute("SELECT id FROM interest_watchlist_groups").fetchall()
@@ -361,7 +356,6 @@ def delete_interest_group(payload: dict) -> dict:
     if group_id <= 0:
         raise ValueError("삭제할 그룹이 올바르지 않습니다.")
     with connect() as conn:
-        ensure_interest_watchlist_tables(conn)
         group = conn.execute(
             "SELECT name FROM interest_watchlist_groups WHERE id = ?",
             (group_id,),
@@ -382,7 +376,6 @@ def add_interest_item(payload: dict) -> dict:
     if group_id <= 0 or not ticker:
         raise ValueError("그룹과 종목을 선택해야 합니다.")
     with connect() as conn:
-        ensure_interest_watchlist_tables(conn)
         group = conn.execute(
             "SELECT name FROM interest_watchlist_groups WHERE id = ?",
             (group_id,),
@@ -430,7 +423,6 @@ def delete_interest_item(payload: dict) -> dict:
     if group_id <= 0 or not ticker:
         raise ValueError("삭제할 종목이 올바르지 않습니다.")
     with connect() as conn:
-        ensure_interest_watchlist_tables(conn)
         row = conn.execute(
             """
             SELECT

@@ -7,7 +7,7 @@ from typing import Any
 
 from .constants import DIVIDEND_LOOKAHEAD_DAYS, KOREAN_SUFFIXES
 from .dates import parse_iso_date, positive_float, today_kst
-from .db import connect, ensure_dividend_tables, ensure_stock_split_tables
+from .db import connect
 from .dividend_refresh import dividend_history_start, refresh_dividend_events
 from .dividend_schedule import consolidated_dividend_events, event_schedule_date
 from .prices import fx_rates, latest_prices
@@ -518,8 +518,6 @@ def load_dividend_history(ticker: str) -> dict:
     today = _today()
     history_start = dividend_history_start()
     with connect() as conn:
-        ensure_dividend_tables(conn)
-        ensure_stock_split_tables(conn)
         ticker_row = conn.execute(
             "SELECT ticker, name, currency FROM tickers WHERE UPPER(ticker) = ?",
             (clean_ticker,),
@@ -614,7 +612,6 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
     raw_start = start - timedelta(days=140)  # 지급일 없는 일본 배당락 이벤트 후보 포함
 
     with connect() as conn:
-        ensure_dividend_tables(conn)
         holding_rows = load_holding_rows(conn, cleaned_account_ids, positive_only=True)
 
     holdings = [
@@ -634,7 +631,6 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
     tickers = sorted({row["ticker"] for row in holdings})
 
     with connect() as conn:
-        ensure_dividend_tables(conn)
         prices = latest_prices(conn)
         placeholders = ",".join("?" for _ in tickers) if tickers else "''"
         event_rows = conn.execute(

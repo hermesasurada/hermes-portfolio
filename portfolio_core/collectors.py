@@ -83,7 +83,9 @@ def fetch_history_rows(category: str, ticker: str, period: str = "10y") -> list[
         from FinanceDataReader import DataReader as fdr
 
         code = kr_ticker_code(ticker)
-        df = fdr(code, "20150101")
+        years = int(period[:-1]) if period.endswith("y") and period[:-1].isdigit() else 10
+        start = f"{datetime.now(KST).year - years:04d}0101"
+        df = fdr(code, start)
         if df is None or df.empty or "Close" not in df:
             return []
         df = df.dropna(subset=["Close"])

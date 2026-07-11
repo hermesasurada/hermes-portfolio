@@ -8,6 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from collect_prices import collector_lock, parse_categories
+from portfolio_core.db import initialize_schema
 from portfolio_core.price_store import (
     collector_run_due,
     load_watch,
@@ -38,6 +39,7 @@ def main() -> int:
     with collector_lock(lock_scope) as acquired:
         if not acquired:
             return 0
+        initialize_schema()
         fetched, errors = collect_snapshots(categories, args.ticker)
         cache_entries = []
         row_count = 0

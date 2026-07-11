@@ -15,6 +15,7 @@ from .dividend_sources import (
     _kr_dividend_candidate,
     _stockanalysis_attempt_due,
 )
+from .dividend_pipeline import normalize_dividend_events
 from .dates import today_kst
 from .tickers import ticker_currency
 
@@ -82,7 +83,8 @@ def refresh_dividend_events(tickers: list[str]) -> None:
     with connect() as conn:
         ensure_dividend_tables(conn)
         for ticker in due:
-            events, status = _fetch_dividends(ticker, names.get(ticker))
+            raw_events, status = _fetch_dividends(ticker, names.get(ticker))
+            events = normalize_dividend_events(ticker, raw_events)
             # KR은 소스별 ex_date 관례가 달라(opendart=기준일-1영업일,
             # yf=ex) 근접 중복이 누적된다. _fetch_dividends가 이미 중복 억제한 완전한
             # 병합본을 주므로, 정상 수집된 경우 기존 이벤트를 통째로 교체한다.

@@ -6,11 +6,18 @@ from datetime import datetime
 from .constants import FX_DEFAULT_RATES, FX_TICKERS
 from .db import connect
 from .paths import KST
+from .us_live_quotes import apply_us_live_prices, us_market_status
 
 
-def latest_prices(conn: sqlite3.Connection) -> dict[str, dict]:
+def latest_prices(conn: sqlite3.Connection, tickers: list[str] | None = None) -> dict[str, dict]:
+    clean_tickers = sorted({ticker.strip().upper() for ticker in tickers or [] if ticker and ticker.strip()})
+    ticker_filter = ""
+    params: list[object] = []
+    if clean_tickers:
+        ticker_filter = f"AND ticker IN ({','.join('?' for _ in clean_tickers)})"
+        params.extend(clean_tickers)
     rows = conn.execute(
-        """
+        f"""
         WITH latest AS (
             SELECT dp.ticker, dp.date, dp.close, dp.source
             FROM daily_prices dp
@@ -18,6 +25,7 @@ def latest_prices(conn: sqlite3.Connection) -> dict[str, dict]:
                 SELECT ticker, MAX(date) AS date
                 FROM daily_prices INDEXED BY idx_daily_prices_ticker_date_desc
                 WHERE close IS NOT NULL
+                  {ticker_filter}
                 GROUP BY ticker
             ) latest_date
               ON latest_date.ticker = dp.ticker
@@ -44,7 +52,8 @@ def latest_prices(conn: sqlite3.Connection) -> dict[str, dict]:
             LIMIT 1
           )
         ORDER BY l.ticker
-        """
+        """,
+        params,
     ).fetchall()
     prices: dict[str, dict] = {}
     for row in rows:
@@ -56,6 +65,66 @@ def latest_prices(conn: sqlite3.Connection) -> dict[str, dict]:
             "previous_date": row["previous_date"],
         }
     return prices
+
+
+def build_market_snapshot(
+    prices: dict[str, dict],
+    ticker_rows: list,
+    include_extended: bool = False,
+    market_status: dict | None = None,
+) -> dict:
+    status = market_status or us_market_status()
+    live_meta = apply_us_live_prices(prices, ticker_rows, include_extended, status)
+    return {
+        "prices": prices,
+        "rates": fx_rates(prices),
+        "previous_rates": fx_previous_rates(prices),
+        "market_status": {**status, **live_meta},
+    }
+
+
+def price_view(
+    ticker: str,
+    currency: str,
+    snapshot: dict,
+) -> dict:
+    prices = snapshot["prices"]
+    rates = snapshot["rates"]
+    previous_rates = snapshot["previous_rates"]
+    current = prices.get(ticker, {})
+    current_price = current.get("price")
+    previous_price = current.get("previous_price")
+    regular_price = current.get("regular_price")
+    regular_previous_price = current.get("regular_previous_price")
+    change = None
+    change_pct = None
+    change_krw_pct = None
+    if current_price is not None and previous_price not in (None, 0):
+        change = float(current_price) - float(previous_price)
+        change_pct = change / float(previous_price) * 100
+    if regular_price is not None and regular_previous_price not in (None, 0):
+        change_pct = (float(regular_price) - float(regular_previous_price)) / float(regular_previous_price) * 100
+
+    rate = rates.get(currency, 1.0)
+    previous_rate = previous_rates.get(currency, rate)
+    change_price = regular_price if regular_price is not None else current_price
+    change_previous = regular_previous_price if regular_previous_price is not None else previous_price
+    if change_price is not None and change_previous not in (None, 0) and previous_rate not in (None, 0):
+        previous_krw_price = float(change_previous) * float(previous_rate)
+        current_krw_price = float(change_price) * float(rate)
+        if currency != "KRW" and previous_krw_price:
+            change_krw_pct = (current_krw_price - previous_krw_price) / previous_krw_price * 100
+
+    return {
+        "price_record": current,
+        "current_price": current_price,
+        "previous_price": previous_price,
+        "change": change,
+        "change_pct": change_pct,
+        "change_krw_pct": change_krw_pct,
+        "fx_rate": rate,
+        "previous_fx_rate": previous_rate,
+    }
 
 
 def _fx_pairs() -> tuple[tuple[str, str], ...]:
@@ -125,33 +194,3 @@ def price_cache_updated_at() -> str | None:
         return dt.astimezone(KST).strftime("%Y-%m-%d %H:%M KST")
     except ValueError:
         return raw
-
-
-def load_ticker_changes(tickers: list[str] | None = None) -> dict:
-    """종목별 등락폭만 내부 DB(daily_prices)에서 계산해 반환. 외부 호출 없음.
-
-    change_pct = (현재가 − 직전 종가) / 직전 종가 × 100. (직전가는 latest_prices가
-    동일가 연속일을 건너뛰고 잡아줌.) tickers 미지정 시 daily_prices 전체.
-    """
-    wanted = {str(t).strip().upper() for t in tickers if str(t).strip()} if tickers else None
-    with connect() as conn:
-        prices = latest_prices(conn)
-    changes: dict[str, dict] = {}
-    for ticker, info in prices.items():
-        if wanted is not None and ticker.upper() not in wanted:
-            continue
-        price = info.get("price")
-        previous = info.get("previous_price")
-        change = None
-        change_pct = None
-        if price is not None and previous not in (None, 0):
-            change = float(price) - float(previous)
-            change_pct = change / float(previous) * 100
-        changes[ticker] = {
-            "price": price,
-            "previous_price": previous,
-            "change": round(change, 6) if change is not None else None,
-            "change_pct": round(change_pct, 4) if change_pct is not None else None,
-            "date": info.get("date"),
-        }
-    return {"updated": price_updated_at(prices), "changes": changes}

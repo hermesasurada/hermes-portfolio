@@ -32,11 +32,11 @@ from portfolio_core.interest_watchlists import (
 )
 from portfolio_core.paths import DB_PATH, LOGO_DIR
 from portfolio_core.portfolio import load_portfolio as load_portfolio_data
-from portfolio_core.prices import load_ticker_changes
 from portfolio_core.stats import load_stats
 from portfolio_core.tickers import asset_class
 from portfolio_core.transactions import add_transaction, delete_transaction, load_transactions, update_transaction
-from portfolio_core.watchlist import add_watchlist_async, is_registered_ticker, lookup_ticker
+from portfolio_core.ticker_lookup import is_registered_ticker, lookup_ticker
+from portfolio_core.watchlist import add_watchlist_async
 
 
 # 애널리스트 컨센서스는 별도 서비스(analyst-reports, 8767)가 담당한다. 같은
@@ -221,15 +221,25 @@ class Handler(BaseHTTPRequestHandler):
             status,
         )
 
-    def send_file(self, file_path: Path, content_type: str | None = None, cache_control: str = "no-store") -> bool:
+    def send_file(self, file_path: Path, content_type: str | None = None, cache_control: str = "no-cache") -> bool:
         if not file_path.exists() or not file_path.is_file():
             self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
+            return True
+        stat = file_path.stat()
+        etag = f'"{stat.st_mtime_ns:x}-{stat.st_size:x}"'
+        if self.headers.get("If-None-Match") == etag:
+            self.send_response(304)
+            self.send_header("ETag", etag)
+            self.send_header("Cache-Control", cache_control)
+            self.end_headers()
+            self.log_access(304)
             return True
         body = file_path.read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", content_type or mimetypes.guess_type(str(file_path))[0] or "application/octet-stream")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", cache_control)
+        self.send_header("ETag", etag)
         self.end_headers()
         try:
             self.wfile.write(body)
@@ -301,10 +311,6 @@ class Handler(BaseHTTPRequestHandler):
         tickers = self.query_values(query, "ticker") or self.query_values(query, "tickers")
         return fetch_analyst_quotes(tickers)
 
-    def api_changes(self, query: dict[str, list[str]]) -> dict:
-        # 종목별 등락폭만 내부 DB에서 계산 (외부 호출 없음). ?tickers=A,B 로 선택 조회.
-        return load_ticker_changes(self.query_values(query, "tickers") or None)
-
     def api_tickers(self, query: dict[str, list[str]]) -> dict:
         # DB 등록 종목 목록 (비교 검색 자동완성용). DB 전용.
         with connect() as conn:
@@ -320,7 +326,13 @@ class Handler(BaseHTTPRequestHandler):
         return load_price_chart(ticker)
 
     def api_account_performance(self, query: dict[str, list[str]]) -> dict:
-        return load_account_performance(self.query_values(query, "account_ids"))
+        return load_account_performance(
+            self.query_values(query, "account_ids"),
+            detail=(query.get("detail") or ["0"])[0] in {"1", "true", "yes", "on"},
+            range_key=(query.get("range") or [None])[0],
+            start=(query.get("start") or [None])[0],
+            end=(query.get("end") or [None])[0],
+        )
 
     def api_dividends(self, query: dict[str, list[str]]) -> dict:
         return load_dividends(self.query_values(query, "account_ids"))
@@ -406,7 +418,6 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/portfolio": self.api_portfolio,
                 "/api/stats": self.api_stats,
                 "/api/quote": self.api_quote,
-                "/api/changes": self.api_changes,
                 "/api/tickers": self.api_tickers,
                 "/api/diagnostics": self.api_diagnostics,
                 "/api/chart": self.api_chart,

@@ -5,9 +5,8 @@ from datetime import datetime
 
 from .db import connect
 from .paths import DB_PATH, KST
-from .prices import fx_previous_rates, fx_rates, fx_updated_at, latest_prices, price_cache_updated_at, price_updated_at
+from .prices import build_market_snapshot, fx_updated_at, latest_prices, price_cache_updated_at, price_updated_at, price_view
 from .tickers import account_kind, account_label, account_scope, asset_class, ticker_currency, ticker_scope
-from .us_live_quotes import apply_us_live_prices, us_market_status
 
 
 def default_logo_hint(ticker: str, name: str) -> dict[str, str | None]:
@@ -37,55 +36,10 @@ def ensure_account(members: dict[str, dict], row) -> dict:
     )
 
 
-def price_view(
-    ticker: str,
-    currency: str,
-    prices: dict[str, dict],
-    rates: dict[str, float],
-    previous_rates: dict[str, float],
-) -> dict:
-    current = prices.get(ticker, {})
-    current_price = current.get("price")
-    previous_price = current.get("previous_price")
-    regular_price = current.get("regular_price")
-    regular_previous_price = current.get("regular_previous_price")
-    change = None
-    change_pct = None
-    change_krw_pct = None
-    if current_price is not None and previous_price not in (None, 0):
-        change = float(current_price) - float(previous_price)
-        change_pct = change / float(previous_price) * 100
-    if regular_price is not None and regular_previous_price not in (None, 0):
-        change_pct = (float(regular_price) - float(regular_previous_price)) / float(regular_previous_price) * 100
-
-    rate = rates.get(currency, 1.0)
-    previous_rate = previous_rates.get(currency, rate)
-    change_pct_price = regular_price if regular_price is not None else current_price
-    change_pct_previous = regular_previous_price if regular_previous_price is not None else previous_price
-    if change_pct_price is not None and change_pct_previous not in (None, 0) and previous_rate not in (None, 0):
-        previous_krw_price = float(change_pct_previous) * float(previous_rate)
-        current_krw_price = float(change_pct_price) * float(rate)
-        if currency != "KRW" and previous_krw_price:
-            change_krw_pct = (current_krw_price - previous_krw_price) / previous_krw_price * 100
-
-    return {
-        "price_record": current,
-        "current_price": current_price,
-        "previous_price": previous_price,
-        "change": change,
-        "change_pct": change_pct,
-        "change_krw_pct": change_krw_pct,
-        "fx_rate": rate,
-        "previous_fx_rate": previous_rate,
-    }
-
-
 def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str], dict[str, str | None]] | None = None) -> dict:
     logo_hint = logo_hint_fn or default_logo_hint
     with connect() as conn:
         prices = latest_prices(conn)
-        rates = fx_rates(prices)
-        previous_rates = fx_previous_rates(prices)
         account_rows = conn.execute(
             """
             SELECT
@@ -130,8 +84,9 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
             """
         ).fetchall()
 
-    market_status = us_market_status()
-    us_market_meta = apply_us_live_prices(prices, ticker_rows, us_extended, market_status)
+    snapshot = build_market_snapshot(prices, ticker_rows, us_extended)
+    prices = snapshot["prices"]
+    rates = snapshot["rates"]
 
     members: dict[str, dict] = {}
     totals = {"value_krw": 0.0}
@@ -141,7 +96,7 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
 
     for row in rows:
         currency = row["currency"] or ticker_currency(row["ticker"])
-        view = price_view(row["ticker"], currency, prices, rates, previous_rates)
+        view = price_view(row["ticker"], currency, snapshot)
         current = view["price_record"]
         current_price = view["current_price"]
         qty = float(row["qty"] or 0)
@@ -197,7 +152,7 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
     for row in ticker_rows:
         ticker_currency_value = row["currency"] or ticker_currency(row["ticker"])
         ticker_name = row["name"] or row["ticker"]
-        view = price_view(row["ticker"], ticker_currency_value, prices, rates, previous_rates)
+        view = price_view(row["ticker"], ticker_currency_value, snapshot)
         ticker_price = view["price_record"]
         ticker_payload.append(
             {
@@ -241,7 +196,7 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
         "fx_updated": fx_updated_at(prices),
         "price_updated": price_updated_at(prices),
         "price_updated_at": price_cache_updated_at(),
-        "us_market": {**market_status, **us_market_meta},
+        "us_market": snapshot["market_status"],
         "totals": totals,
         "members": list(members.values()),
         "tickers": ticker_payload,

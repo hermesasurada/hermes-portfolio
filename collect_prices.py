@@ -19,7 +19,7 @@ from portfolio_core.collectors import (
     fetch_yahoo_earnings_date,
 )
 from portfolio_core.corporate_actions import refresh_stock_splits
-from portfolio_core.db import connect, ensure_dividend_tables
+from portfolio_core.db import connect, ensure_dividend_tables, initialize_schema
 from portfolio_core.dividends import refresh_dividend_events
 from portfolio_core.fundamentals import fetch_fundamentals
 from portfolio_core.price_store import (
@@ -262,6 +262,7 @@ def main() -> int:
     with collector_lock("prices") as acquired:
         if not acquired:
             return 0
+        initialize_schema()
         return _run(args)
 
 

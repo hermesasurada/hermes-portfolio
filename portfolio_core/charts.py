@@ -4,12 +4,14 @@ from datetime import datetime
 from itertools import groupby
 
 from .constants import MARKET_INDEXES
-from .db import connect, ensure_daily_technical_indicators_table
+from .dates import parse_iso_date, today_kst
+from .db import connect
+from .indicators import shift_months
 from .paths import US_EASTERN
-from .prices import fx_rates, latest_prices
+from .prices import build_market_snapshot, fx_rates, latest_prices, price_view
 from .queries import account_filter_clause, clean_account_ids, load_holding_rows
-from .tickers import account_label, is_us_stock_ticker, ticker_currency
-from .us_live_quotes import fetch_us_live_quotes, us_market_status
+from .tickers import account_label, ticker_currency
+from .us_live_quotes import us_market_status
 
 
 def _mean(values: list[float]) -> float:
@@ -78,7 +80,6 @@ def load_price_chart(ticker: str) -> dict:
         raise ValueError("ticker is required")
 
     with connect() as conn:
-        ensure_daily_technical_indicators_table(conn)
         meta = conn.execute(
             """
             SELECT ticker, COALESCE(NULLIF(display_name, ''), name) AS name, currency, category
@@ -117,8 +118,18 @@ def load_price_chart(ticker: str) -> dict:
             """,
             (clean_ticker,),
         ).fetchall()
+        base_prices = latest_prices(conn, [clean_ticker])
 
     currency = meta["currency"] if meta and meta["currency"] else ticker_currency(clean_ticker)
+    market_status = us_market_status()
+    snapshot = build_market_snapshot(
+        base_prices,
+        [meta] if meta else [],
+        include_extended=not bool(market_status.get("is_regular")),
+        market_status=market_status,
+    )
+    market_view = price_view(clean_ticker, currency, snapshot)
+    price_record = market_view["price_record"]
     overlays = _chart_overlay_series(rows)
     points = []
     for row in rows:
@@ -131,13 +142,28 @@ def load_price_chart(ticker: str) -> dict:
         if any(value is not None for value in overlay.values()):
             point.update({key: value for key, value in overlay.items() if value is not None})
         points.append(point)
-    _append_live_chart_point(clean_ticker, currency, points)
+    _append_market_chart_point(price_record, snapshot["market_status"], points)
 
     return {
         "ticker": clean_ticker,
         "name": (meta["name"] if meta and meta["name"] else clean_ticker),
         "currency": currency,
         "category": (meta["category"] if meta else None),
+        "current_price": market_view["current_price"],
+        "previous_price": market_view["previous_price"],
+        "change": market_view["change"],
+        "change_pct": market_view["change_pct"],
+        "regular_price": price_record.get("regular_price"),
+        "regular_previous_price": price_record.get("regular_previous_price"),
+        "regular_change": price_record.get("regular_change"),
+        "regular_change_pct": price_record.get("regular_change_pct"),
+        "extended_price": price_record.get("extended_price"),
+        "extended_base_price": price_record.get("extended_base_price"),
+        "extended_change": price_record.get("extended_change"),
+        "extended_change_pct": price_record.get("extended_change_pct"),
+        "extended_source": price_record.get("extended_source"),
+        "extended_market_state": price_record.get("extended_market_state") or price_record.get("market_state"),
+        "market": snapshot["market_status"],
         "points": points,
         "transactions": [
             {
@@ -155,36 +181,65 @@ def load_price_chart(ticker: str) -> dict:
     }
 
 
-def _append_live_chart_point(ticker: str, currency: str, points: list[dict]) -> None:
-    """US 종목이면 야후 라이브쿼트(정규장=실시간, 장외=연장가)를 차트 마지막 점으로 추가.
-    포트폴리오 로드가 채워둔 600s 캐시를 재사용하므로 추가 네트워크는 대부분 없음."""
-    if not is_us_stock_ticker(ticker, currency):
+def _append_market_chart_point(price_record: dict, market_status: dict, points: list[dict]) -> None:
+    """공용 시장 스냅샷이 선택한 라이브 가격을 차트 마지막 점으로 추가한다."""
+    if not market_status.get("use_live"):
         return
-    try:
-        regular = bool(us_market_status().get("is_regular"))
-        quotes = fetch_us_live_quotes([ticker], include_extended=not regular, regular_hours=regular)
-        quote = quotes.get(ticker) or quotes.get(ticker.upper())
-        if not quote:
-            return
-        extended_price = quote.get("extended_price")
-        live_price = quote.get("price")
-        today = datetime.now(US_EASTERN).strftime("%Y-%m-%d")
-        last_close = points[-1]["close"] if points else None
-        if not regular and extended_price is not None:
-            value, extended = float(extended_price), True       # 장외(프리/애프터) 가격
-        elif regular and live_price is not None:
-            value, extended = float(live_price), False           # 정규장 실시간
-        else:
-            return
-        if last_close is None or abs(value - last_close) > 1e-9:
-            points.append({"date": today, "close": value, "live": True, "extended": extended})
-    except Exception as exc:  # noqa: BLE001 — best-effort live overlay
-        print(f"[chart] live point failed for {ticker}: {exc}")
+    value = price_record.get("price")
+    if value is None:
+        return
+    today = datetime.now(US_EASTERN).strftime("%Y-%m-%d")
+    last_close = points[-1]["close"] if points else None
+    if last_close is None or abs(float(value) - last_close) > 1e-9:
+        points.append(
+            {
+                "date": today,
+                "close": float(value),
+                "live": True,
+                "extended": bool(market_status.get("include_extended")),
+            }
+        )
 
 
-def load_account_performance(account_ids: list[str] | None = None) -> dict:
+PERFORMANCE_INDEXES = ("SP500", "NASDAQ", "KOSPI")
+PERFORMANCE_RANGE_MONTHS = {
+    "1m": 1,
+    "6m": 6,
+    "1y": 12,
+    "3y": 36,
+    "5y": 60,
+}
+
+
+def performance_date_bounds(
+    range_key: str | None,
+    start: str | None = None,
+    end: str | None = None,
+) -> tuple[str | None, str | None]:
+    if range_key == "custom":
+        start_date = parse_iso_date(start)
+        end_date = parse_iso_date(end)
+        if not start_date or not end_date or start_date > end_date:
+            raise ValueError("invalid performance date range")
+        return start_date.isoformat(), end_date.isoformat()
+    today = today_kst()
+    if range_key == "ytd":
+        return f"{today.year:04d}-01-01", None
+    months = PERFORMANCE_RANGE_MONTHS.get(str(range_key or "").lower())
+    return (shift_months(today, -months).isoformat(), None) if months else (None, None)
+
+
+def load_account_performance(
+    account_ids: list[str] | None = None,
+    *,
+    detail: bool = False,
+    range_key: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+) -> dict:
     cleaned_account_ids = clean_account_ids(account_ids)
     account_filter, params = account_filter_clause(cleaned_account_ids)
+    start_date, end_date = performance_date_bounds(range_key, start, end)
 
     with connect() as conn:
         prices = latest_prices(conn)
@@ -212,44 +267,75 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
         ]
         tickers = sorted({row["ticker"] for row in holdings})
         price_rows = []
+        seed_rows = []
         if tickers:
             placeholders = ",".join("?" for _ in tickers)
+            date_conditions = []
+            date_params: list[object] = []
+            if start_date:
+                date_conditions.append("date >= ?")
+                date_params.append(start_date)
+                seed_rows = conn.execute(
+                    f"""
+                    SELECT p.ticker, p.close
+                    FROM daily_prices p
+                    JOIN (
+                        SELECT ticker, MAX(date) AS date
+                        FROM daily_prices
+                        WHERE ticker IN ({placeholders}) AND close IS NOT NULL AND date < ?
+                        GROUP BY ticker
+                    ) seed ON seed.ticker = p.ticker AND seed.date = p.date
+                    """,
+                    [*tickers, start_date],
+                ).fetchall()
+            if end_date:
+                date_conditions.append("date <= ?")
+                date_params.append(end_date)
+            date_sql = f"AND {' AND '.join(date_conditions)}" if date_conditions else ""
             price_rows = conn.execute(
                 f"""
                 SELECT date, ticker, close
                 FROM daily_prices
                 WHERE ticker IN ({placeholders})
                   AND close IS NOT NULL
+                  {date_sql}
                 ORDER BY date, ticker
                 """,
-                tickers,
+                [*tickers, *date_params],
             ).fetchall()
 
-        index_tickers = list(MARKET_INDEXES.keys())
+        index_tickers = list(PERFORMANCE_INDEXES)
         placeholders = ",".join("?" for _ in index_tickers)
+        index_conditions = []
+        index_params: list[object] = []
+        if start_date:
+            index_conditions.append("date >= ?")
+            index_params.append(start_date)
+        if end_date:
+            index_conditions.append("date <= ?")
+            index_params.append(end_date)
+        index_date_sql = f"AND {' AND '.join(index_conditions)}" if index_conditions else ""
         index_rows = conn.execute(
             f"""
             SELECT date, ticker, close
             FROM daily_prices
             WHERE ticker IN ({placeholders})
               AND close IS NOT NULL
+              {index_date_sql}
             ORDER BY ticker, date
             """,
-            index_tickers,
+            [*index_tickers, *index_params],
         ).fetchall()
 
     rates = fx_rates(prices)   # FX_TICKERS 기반 전 통화 — 수동 dict는 CNY/TWD 누락 버그가 있었다
-    first_prices: dict[str, float] = {}
-    for row in price_rows:
-        first_prices.setdefault(row["ticker"], float(row["close"]))
-    priced_tickers = set(first_prices)
+    available_tickers = {row["ticker"] for row in price_rows} | {row["ticker"] for row in seed_rows}
     holding_specs = [
         {
             **holding,
             "rate": rates.get(holding["currency"], 1.0),
         }
         for holding in holdings
-        if holding["ticker"] in priced_tickers
+        if holding["ticker"] in available_tickers
     ]
     tickers = sorted({holding["ticker"] for holding in holding_specs})
     account_names = {
@@ -260,35 +346,17 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
     for holding in holding_specs:
         account_specs.setdefault(holding["account_id"], []).append(holding)
 
-    contributor_specs: dict[str, dict] = {}
-    for holding in holding_specs:
-        spec = contributor_specs.setdefault(
-            holding["ticker"],
-            {
-                "ticker": holding["ticker"],
-                "name": holding.get("name") or holding["ticker"],
-                "currency": holding["currency"],
-                "qty": 0.0,
-                "rate": holding["rate"],
-                "points": [],
-            },
-        )
-        spec["qty"] += holding["qty"]
-
-    latest_by_ticker: dict[str, float] = dict(first_prices)
+    latest_by_ticker: dict[str, float] = {
+        row["ticker"]: float(row["close"])
+        for row in seed_rows
+    }
     points = []
-    account_points: dict[str, list[dict]] = {account_id: [] for account_id in account_specs}
+    account_points: dict[str, list[dict]] = (
+        {account_id: [] for account_id in account_specs} if detail else {}
+    )
     for date, rows_iter in groupby(price_rows, key=lambda row: row["date"]):
         for row in rows_iter:
             latest_by_ticker[row["ticker"]] = float(row["close"])
-            spec = contributor_specs.get(row["ticker"])
-            if spec:
-                spec["points"].append(
-                    {
-                        "date": row["date"],
-                        "value": float(row["close"]) * spec["qty"] * spec["rate"],
-                    }
-                )
         if tickers and all(ticker in latest_by_ticker for ticker in tickers):
             value = sum(
                 holding["qty"] * latest_by_ticker[holding["ticker"]] * holding["rate"]
@@ -296,15 +364,16 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
             )
             if value > 0:
                 points.append({"date": date, "value": value})
-        for account_id, specs in account_specs.items():
-            account_tickers = {spec["ticker"] for spec in specs}
-            if account_tickers and all(ticker in latest_by_ticker for ticker in account_tickers):
-                value = sum(
-                    spec["qty"] * latest_by_ticker[spec["ticker"]] * spec["rate"]
-                    for spec in specs
-                )
-                if value > 0:
-                    account_points[account_id].append({"date": date, "value": value})
+        if detail:
+            for account_id, specs in account_specs.items():
+                account_tickers = {spec["ticker"] for spec in specs}
+                if account_tickers and all(ticker in latest_by_ticker for ticker in account_tickers):
+                    value = sum(
+                        spec["qty"] * latest_by_ticker[spec["ticker"]] * spec["rate"]
+                        for spec in specs
+                    )
+                    if value > 0:
+                        account_points[account_id].append({"date": date, "value": value})
 
     indexes: dict[str, dict] = {}
     for ticker, rows_iter in groupby(index_rows, key=lambda row: row["ticker"]):
@@ -336,17 +405,6 @@ def load_account_performance(account_ids: list[str] | None = None) -> dict:
             }
             for account_id in account_names
             if len(account_points.get(account_id, [])) >= 2
-        ],
-        "contributors": [
-            {
-                "ticker": spec["ticker"],
-                "name": spec["name"],
-                "currency": spec["currency"],
-                "qty": spec["qty"],
-                "points": spec["points"],
-            }
-            for spec in contributor_specs.values()
-            if len(spec["points"]) >= 2
-        ],
+        ] if detail else [],
         "indexes": indexes,
     }

@@ -202,7 +202,7 @@ function renderPerformanceChart(payload) {
   const vGrid = perfVerticalGrid(minTime, maxTime, chartRange);
   const labelEvery = Math.max(1, Math.ceil(vGrid.lines.length / 8));
   // (#3) per-line total performance shown at each line's right end, de-collided vertically
-  const endLabels = series
+  const endLabels = declutterChartLabels(series
     .map(item => {
       const lastPoint = item.points[item.points.length - 1];
       const last = lastPoint.close;
@@ -213,11 +213,7 @@ function renderPerformanceChart(payload) {
         y: yFor(last),
       };
     })
-    .sort((a, b) => a.y - b.y);
-  const minGap = 13;
-  for (let i = 1; i < endLabels.length; i++) {
-    if (endLabels[i].y - endLabels[i - 1].y < minGap) endLabels[i].y = endLabels[i - 1].y + minGap;
-  }
+    , 13);
   // (#3) top legend keeps only colour + name; the % moved to the line ends
   const legend = series
     .map(item => `<span class="perf-legend-item"><i style="background:${item.color}"></i>${esc(item.name)}</span>`)
@@ -279,9 +275,46 @@ function bindPerformanceChartControls() {
         return;
       }
       chartRange = btn.dataset.chartRange || "1y";
-      renderPerformanceChart(performancePayload);
+      reloadPerformanceChart();
     });
   });
+}
+
+function performanceRequestOptions() {
+  return {
+    detail: performanceDetailEnabled(),
+    range: chartRange,
+    start: chartRange === "custom" ? chartCustomRange.start : "",
+    end: chartRange === "custom" ? chartCustomRange.end : "",
+  };
+}
+
+async function reloadPerformanceChart({ skeleton = false } = {}) {
+  if (!performanceChartOpen) return;
+  const accounts = visibleAccounts();
+  const allAccounts = selectionMode === "all";
+  const token = ++performanceLoadToken;
+  if (skeleton) {
+    document.getElementById("chartMeta").textContent = "loading...";
+    document.getElementById("chartCanvas").innerHTML = `<div class="chart-skeleton"></div>`;
+  }
+  const request = apiFetchAccountPerformance(
+    accounts.map(account => account.id),
+    allAccounts,
+    performanceRequestOptions(),
+  );
+  performanceLoadInFlight = request;
+  try {
+    const payload = await request;
+    if (!performanceChartOpen || token !== performanceLoadToken) return;
+    renderPerformanceChart(payload);
+  } catch (err) {
+    if (!performanceChartOpen || token !== performanceLoadToken) return;
+    document.getElementById("chartMeta").textContent = "";
+    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">${esc(err.message || String(err))}</div>`;
+  } finally {
+    if (token === performanceLoadToken) performanceLoadInFlight = null;
+  }
 }
 
 async function openPerformanceChart() {
@@ -300,20 +333,7 @@ async function openPerformanceChart() {
   if (perfRangeHost) perfRangeHost.innerHTML = "";
   document.getElementById("chartMeta").textContent = "loading...";
   document.getElementById("chartCanvas").innerHTML = `<div class="chart-skeleton"></div>`;
-  const accounts = visibleAccounts();
-  const allAccounts = selectionMode === "all";
-  performanceLoadInFlight = apiFetchAccountPerformance(accounts.map(account => account.id), allAccounts);
-  try {
-    const payload = await performanceLoadInFlight;
-    if (!performanceChartOpen) return;
-    renderPerformanceChart(payload);
-  } catch (err) {
-    if (!performanceChartOpen) return;
-    document.getElementById("chartMeta").textContent = "";
-    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">${esc(err.message || String(err))}</div>`;
-  } finally {
-    if (performanceLoadInFlight) performanceLoadInFlight = null;
-  }
+  await reloadPerformanceChart();
 }
 
 async function openChart(ticker) {
@@ -322,6 +342,7 @@ async function openChart(ticker) {
   // 같은 티커를 이미 로딩 중이면 재진입 무시 (연타·중복 클릭 시 fetch 중복 방지)
   if (chartTicker === cleanTicker && chartLoadInFlight) return;
   performanceChartOpen = false;
+  performanceLoadToken += 1;
   if (chartTicker !== cleanTicker) chartComparePayloads = [];
   chartTicker = cleanTicker;
   syncTransactionPanel();
