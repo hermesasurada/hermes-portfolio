@@ -87,17 +87,17 @@ function syncChartOverlayPosition() {
   const control = document.getElementById("chartBottomControls");
   const plot = document.querySelector("#chartCanvas .chart-plot-border");
   if (!stage || !control) return;
-  // ⚠ 컨트롤 top을 '플롯 상단' 기준으로 놓으면 안 된다 — pad.top으로 플롯을
-  // 내릴수록 컨트롤도 따라 내려와 영원히 차트를 덮는 순환이 된다(실사고).
-  // 컨트롤은 스테이지 상단 8px에 고정하고, 차트선과의 겹침은 renderLineChart의
-  // pad.top이 '컨트롤 실제 높이 + 여백'만큼 데이터 영역을 내려서 방지한다.
+  // 컨트롤은 '플롯 박스 안쪽' 상단·우측 8px에 오버레이한다. 차트선과의
+  // 겹침은 renderLineChart가 데이터 y매핑에 컨트롤 높이만큼 헤드룸을 줘서
+  // 방지 — 플롯 위치(pad.top)는 고정이라 따라 내려가는 순환이 없다.
   const INSET = 8;
-  control.style.top = `${INSET}px`;
   if (plot) {
     const stageRect = stage.getBoundingClientRect();
     const plotRect = plot.getBoundingClientRect();
+    control.style.top = `${Math.max(INSET, plotRect.top - stageRect.top + INSET)}px`;
     control.style.right = `${Math.max(INSET, stageRect.right - plotRect.right + INSET)}px`;
   } else {
+    control.style.top = `${INSET}px`;
     control.style.right = `${INSET}px`;
   }
 }
@@ -1292,16 +1292,17 @@ function renderLineChart(payload) {
   const tradeMarkerRadius = compactChart ? 10 : 5;
   document.getElementById("chartMeta").textContent = "";
 
-  // 컨트롤 오버레이(스테이지 상단 8px 고정)의 '실제 높이'만큼만 플롯을
-  // 내린다 — 줄바꿈으로 컨트롤이 높아져도 자동 대응, 불필요한 상단 여백 없음.
-  // ⚠ pad는 viewBox(980) 단위, 컨트롤 높이는 화면 픽셀 — SVG가 화면폭에
-  // 맞춰 스케일되므로 픽셀→viewBox 환산 없이는 좁은 화면에서 다시 겹친다.
+  // 컨트롤바는 플롯 '안쪽' 상단에 오버레이되므로 플롯 자체(pad.top)는 작게
+  // 유지하고, 대신 데이터 y매핑에 '컨트롤 실제 높이 + 여백' 헤드룸을 줘서
+  // 차트선 최고점이 컨트롤 아래에서 시작하게 한다.
+  // ⚠ 헤드룸은 화면 픽셀, y좌표는 viewBox(980) 단위 — 픽셀→viewBox 환산 필수.
   const controlEl = document.getElementById("chartBottomControls");
-  // +34 = 컨트롤 top 인셋(8) + 아래 여백(12) + 고점 마커 라벨 높이(14)
-  const controlPx = (controlEl && !controlEl.classList.contains("hidden") ? controlEl.offsetHeight : 40) + 34;
+  // 8(인셋) + 컨트롤 높이 + 12(여백) + 14(고점 마커 라벨)
+  const headroomPx = 8 + (controlEl && !controlEl.classList.contains("hidden") ? controlEl.offsetHeight : 40) + 26;
   const canvasEl = document.getElementById("chartCanvas");
   const pxToView = width / Math.max(1, canvasEl?.clientWidth || width);
-  const pad = { top: Math.max(40, Math.ceil(controlPx * pxToView)), right: 58, bottom: 22, left: 14 };
+  const dataHeadroom = Math.ceil(headroomPx * pxToView);
+  const pad = { top: 12, right: 58, bottom: 22, left: 14 };
   const plotW = width - pad.left - pad.right;
   const rsiGap = compactChart ? 24 : 18;
   const rsiH = compactChart ? 180 : 96;
@@ -1312,9 +1313,12 @@ function renderLineChart(payload) {
   const logMax = useLog ? Math.log10(max) : 0;
   const logSpan = useLog ? ((Math.log10(max) - Math.log10(min)) || 1) : 1;
   const xFor = index => pad.left + (points.length === 1 ? 0 : index / (points.length - 1) * plotW);
+  // 데이터는 플롯 상단 헤드룸(컨트롤 오버레이 영역) 아래에서 시작
+  const dataTop = pad.top + dataHeadroom;
+  const dataH = Math.max(40, plotH - dataHeadroom);
   const yFor = useLog
-    ? (value => pad.top + (logMax - Math.log10(value)) / logSpan * plotH)
-    : (value => pad.top + (max - value) / range * plotH);
+    ? (value => dataTop + (logMax - Math.log10(value)) / logSpan * dataH)
+    : (value => dataTop + (max - value) / range * dataH);
   const rsiYFor = value => rsiTop + (100 - Math.max(0, Math.min(100, value))) / 100 * rsiH;
   const line = chartLinePath(points.map((point, index) => ({ x: xFor(index), y: yFor(Number(point.close)) })));
   const area = `${line} L${pad.left + plotW},${pad.top + plotH} L${pad.left},${pad.top + plotH} Z`;
@@ -1487,6 +1491,9 @@ function renderLineChart(payload) {
   renderChartStats(payload);
   ensureChartStats(payload.ticker);
   ensureChartQuote(payload.ticker);
+  // rAF 타이밍에 기대지 않고 렌더 직후 즉시 위치 계산(+rAF는 보험)
+  syncChartOverlayPosition();
+  requestAnimationFrame(syncChartOverlayPosition);
 }
 
 // 파일 끝 로드 마커 — 파스 에러·태그 미닫힘 시 이 줄이 실행되지 않아 부트 검사에 걸린다
