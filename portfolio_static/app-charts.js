@@ -278,7 +278,7 @@ function bindPerformanceChartControls() {
         openChartRangeModal();
         return;
       }
-      chartRange = btn.dataset.chartRange || "6m";
+      chartRange = btn.dataset.chartRange || "1y";
       renderPerformanceChart(performancePayload);
     });
   });

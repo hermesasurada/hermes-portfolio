@@ -866,7 +866,7 @@ function bindLineChartControls(payload) {
         openChartRangeModal();
         return;
       }
-      chartRange = btn.dataset.chartRange || "6m";
+      chartRange = btn.dataset.chartRange || "1y";
       renderLineChart(payload);
     });
   });
