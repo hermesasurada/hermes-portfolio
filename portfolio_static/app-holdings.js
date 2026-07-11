@@ -363,14 +363,6 @@ function scheduleUsPriceRefresh() {
   }, 60 * 1000);   // 서버 라이브 캐시 60s와 맞춤 (외부는 배치 1회/분)
 }
 
-function renderPriceUpdated() {
-  const priceUpdated = data.price_updated_at || data.price_updated || "-";
-  const priceDate = String(data.price_updated_at || data.price_updated || "").slice(0, 10);
-  const fxUpdated = data.fx_updated && data.fx_updated !== priceDate ? ` · 환율 ${data.fx_updated}` : "";
-  const usClosed = data?.us_market?.is_closed ? ` · 미국 휴장(${data.us_market.reason || "전 거래일 종가"})` : "";
-  document.getElementById("priceUpdated").textContent = `가격 갱신: ${priceUpdated}${fxUpdated}${usClosed}`;
-}
-
 function syncMobileCollapsePanels() {
   const accountPanel = document.getElementById("accountPanel");
   const accountToggle = document.getElementById("accountCollapseToggle");
@@ -497,7 +489,6 @@ function renderAccounts() {
   }).join("");
   document.getElementById("accounts").innerHTML = totalButton + groupHtml;
   updateHeroSummary(byAccount, totalStats, accounts);
-  renderPriceUpdated();
   document.querySelectorAll(".account").forEach(btn => {
     btn.addEventListener("click", () => {
       const id = btn.dataset.account;

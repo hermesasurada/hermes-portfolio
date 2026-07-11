@@ -79,6 +79,21 @@ function renderChartRangeControls() {
   const host = document.getElementById("chartRangeHost");
   if (!host) return;
   host.innerHTML = renderChartRangeButtons();
+  requestAnimationFrame(syncChartOverlayPosition);
+}
+
+function syncChartOverlayPosition() {
+  const stage = document.querySelector(".chart-stage");
+  const control = document.getElementById("chartBottomControls");
+  const plot = document.querySelector("#chartCanvas .chart-plot-border");
+  if (!stage || !control) return;
+  if (!plot) {
+    control.style.top = "8px";
+    return;
+  }
+  const stageRect = stage.getBoundingClientRect();
+  const plotRect = plot.getBoundingClientRect();
+  control.style.top = `${Math.max(8, plotRect.top - stageRect.top - 2)}px`;
 }
 
 function syncChartBottomControls(visible = Boolean(chartTicker || performanceChartOpen)) {
@@ -163,6 +178,7 @@ function initChartDisplayControls() {
     syncChartDisplayControls();
     if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
   });
+  window.addEventListener("resize", () => requestAnimationFrame(syncChartOverlayPosition));
   syncChartDisplayControls();
 }
 
@@ -1270,7 +1286,7 @@ function renderLineChart(payload) {
   const tradeMarkerRadius = compactChart ? 10 : 5;
   document.getElementById("chartMeta").textContent = "";
 
-  const pad = { top: compactChart ? 128 : 60, right: 58, bottom: 22, left: 14 };
+  const pad = { top: 28, right: 58, bottom: 22, left: 14 };
   const plotW = width - pad.left - pad.right;
   const rsiGap = compactChart ? 24 : 18;
   const rsiH = compactChart ? 180 : 96;
@@ -1423,7 +1439,7 @@ function renderLineChart(payload) {
           <text x="${item.labelX.toFixed(2)}" y="${item.labelY.toFixed(2)}" text-anchor="${item.anchor}">${esc(item.text)}</text>
         </g>
       `).join("")}
-      ${renderChartMetricsOverlay(overlayMetrics, pad.left + 10, pad.top + 10, compactChart)}
+      ${renderChartMetricsOverlay(overlayMetrics, pad.left + 10, pad.top + (compactChart ? 110 : 10), compactChart)}
       <g id="chartSelectionGroup" class="chart-selection hidden">
         <rect id="chartSelectionRect" class="chart-selection-range" x="0" y="${pad.top}" width="0" height="${plotH}"></rect>
         <line id="chartSelectionStartLine" class="chart-selection-line" x1="0" x2="0" y1="${pad.top}" y2="${rsiBottom}"></line>

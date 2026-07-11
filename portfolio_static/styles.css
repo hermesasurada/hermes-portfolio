@@ -70,7 +70,11 @@
   --radius: 2px;
   --radius-sm: 2px;
   --button-radius: 10px;
+  --button-height: 26px;
   --button-surface: #e7e9ef;
+  --button-active: #2f56e0;
+  --button-active-soft: #e0e6fa;
+  --button-active-ink: #1f3fb0;
   --button-shadow-raised:
     3px 3px 7px #c4c8d4,
     -3px -3px 7px #ffffff;
@@ -125,6 +129,9 @@
     --chart-selection-fill: rgba(110, 168, 230, .14);
     --chart-shadow: drop-shadow(0 8px 18px rgba(0, 0, 0, .35));
     --button-surface: #263241;
+    --button-active: #5f7ff0;
+    --button-active-soft: #2c3c67;
+    --button-active-ink: #a9baff;
     --button-shadow-raised:
       3px 3px 7px #111820,
       -3px -3px 7px #354355;
@@ -311,7 +318,9 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
 .auto-refresh-control {
   gap: 0;
   padding: 0;
-  overflow: hidden;
+  border: 0;
+  background: transparent;
+  overflow: visible;
 }
 .auto-refresh-control label,
 .us-price-control label,
@@ -376,7 +385,7 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
   min-width: auto;
 }
 .cycle-toggle-btn {
-  height: 100%;
+  height: 30px;
   min-width: 66px;
   display: inline-flex;
   align-items: center;
@@ -410,6 +419,10 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
 .filter-toggle-control.enabled {
   border-color: var(--brand);
   background: var(--brand-soft);
+}
+.auto-refresh-control.enabled {
+  border: 0;
+  background: transparent;
 }
 .us-market-status {
   color: var(--muted);
@@ -642,14 +655,6 @@ main {
   font-size: 15px;
 }
 .account-list { display: grid; gap: 7px; padding: 8px; }
-.account-footer {
-  border-top: 1px solid var(--line);
-  padding: 9px 12px 11px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1.35;
-}
 
 /* ── 관심목록 사이드바 ─────────────────────────────────────────────── */
 #interestSidebarPane {
@@ -1935,11 +1940,11 @@ th.pc-frozen-edge {
   font-size: 12px;
 }
 .chart-interval-control {
-  height: 26px;
+  height: 32px;
   padding: 2px;
 }
 .chart-interval-control .seg-btn {
-  height: 20px;
+  height: var(--button-height);
   min-width: 25px;
   padding: 0 5px;
   font-size: 10.5px;
@@ -1950,7 +1955,7 @@ th.pc-frozen-edge {
   gap: 5px;
 }
 .chart-head-toggle {
-  height: 24px;
+  height: var(--button-height);
   min-width: 27px;
   padding: 0 6px;
   border: 1px solid var(--line);
@@ -2600,8 +2605,8 @@ th.pc-frozen-edge {
   padding: 3px 4px;
   border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--chart-bg) 90%, transparent);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, .06);
+  background: color-mix(in srgb, var(--chart-tooltip-bg) 88%, transparent);
+  box-shadow: var(--chart-shadow);
   backdrop-filter: blur(5px);
   overflow-x: auto;
   overflow-y: hidden;
@@ -2869,7 +2874,7 @@ th.pc-frozen-edge {
   flex-wrap: nowrap;
 }
 .chart-range-btn {
-  height: 24px;
+  height: var(--button-height);
   min-width: 31px;
   padding: 0 7px;
   border: 1px solid var(--line);
@@ -3014,7 +3019,7 @@ th.pc-frozen-edge {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 46px 6px 0;
+  padding: 4px 6px 0;
 }
 .perf-legend,
 .perf-controls {
@@ -4540,6 +4545,10 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     padding: 0 5px;
     font-size: 10px;
   }
+  .auto-refresh-control {
+    gap: 0;
+    padding: 0;
+  }
   .auto-refresh-control label,
   .us-price-control label,
   .toggle-switch {
@@ -4708,15 +4717,15 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     gap: 4px;
   }
   .chart-head-toggle {
-    height: 24px;
+    height: var(--button-height);
     padding: 0 6px;
     font-size: 10.5px;
   }
   .chart-interval-control {
-    height: 26px;
+    height: 32px;
   }
   .chart-interval-control .seg-btn {
-    height: 20px;
+    height: var(--button-height);
     min-width: 25px;
     padding: 0 5px;
     font-size: 10.5px;
@@ -5054,12 +5063,45 @@ button {
 :where(
   .sidebar-tab.active,
   .tab-btn.active,
-  .seg-btn.active,
-  .chart-range-btn.active,
+  .segmented:not(.trade-side-toggle) .seg-btn.active,
+  .chart-range-btn.active:not(.marker-toggle),
   .chart-head-toggle[aria-pressed="true"],
+  .perf-index-toggle.active,
+  .auto-refresh-control.enabled .cycle-toggle-btn,
   .apply-toggle:has(input:checked)
 ) {
+  border-color: var(--button-active) !important;
+  background: var(--button-active) !important;
+  color: #fff !important;
   box-shadow: var(--button-shadow-pressed) !important;
+}
+:where(
+  .primary-btn,
+  #watchAdd.watch-add-ready,
+  .interest-main-form button[type="submit"],
+  .tx-action-btn.tx-save
+) {
+  border-color: var(--button-active) !important;
+  background: var(--button-active) !important;
+  color: #fff !important;
+}
+.account.active {
+  border-color: var(--button-active) !important;
+  border-left-color: var(--button-active) !important;
+  background: var(--button-active-soft) !important;
+}
+.interest-group.active {
+  border-color: color-mix(in srgb, var(--button-active) 48%, transparent) !important;
+  border-left-color: var(--button-active) !important;
+  background: var(--button-active-soft) !important;
+}
+:where(.us-price-control.enabled, .filter-toggle-control.enabled) {
+  border-color: var(--button-active) !important;
+  background: var(--button-active-soft) !important;
+}
+:where(.toggle-switch, .apply-toggle) input:checked + .toggle-ui {
+  border-color: var(--button-active) !important;
+  background: var(--button-active) !important;
 }
 :where(button, .chart-link-btn, .apply-toggle):disabled {
   box-shadow: var(--button-shadow-pressed) !important;
