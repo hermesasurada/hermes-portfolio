@@ -90,6 +90,12 @@ function syncChartOverlayPosition() {
   // 컨트롤은 '플롯 박스 안쪽' 상단·우측 8px에 오버레이한다. 차트선과의
   // 겹침은 renderLineChart가 데이터 y매핑에 컨트롤 높이만큼 헤드룸을 줘서
   // 방지 — 플롯 위치(pad.top)는 고정이라 따라 내려가는 순환이 없다.
+  // 모바일(≤980px)은 컨트롤을 차트영역 '위' 정적 배치(CSS) — 인라인 위치 제거
+  if (window.matchMedia?.("(max-width: 980px)")?.matches) {
+    control.style.top = "";
+    control.style.right = "";
+    return;
+  }
   const INSET = 8;
   if (plot) {
     const stageRect = stage.getBoundingClientRect();
@@ -274,37 +280,6 @@ function chartLogoRow(payload) {
   };
 }
 
-const KR_ETF_ISSUERS = [
-  {
-    brand: "KODEX",
-    label: "KODEX ETF",
-    icon: "K",
-    logoUrl: "/logos/KODEX.png",
-    url: code => `https://www.samsungfund.com/etf/product/view.do?id=${encodeURIComponent(code)}`,
-  },
-  {
-    brand: "TIGER",
-    label: "TIGER ETF",
-    icon: "T",
-    logoUrl: "/logos/TIGER.png",
-    url: code => `https://www.tigeretf.com/ko/product/search/detail/index.do?ksdFund=${encodeURIComponent(code)}`,
-  },
-  {
-    brand: "ACE",
-    label: "ACE ETF",
-    icon: "A",
-    logoUrl: "/logos/ACE.png",
-    url: code => `https://www.aceetf.co.kr/fund/${encodeURIComponent(code)}`,
-  },
-  {
-    brand: "SOL",
-    label: "SOL ETF",
-    icon: "S",
-    logoUrl: "/logos/SOL.svg",
-    url: code => `https://www.soletf.co.kr/ko/fund?keyword=${encodeURIComponent(code)}`,
-  },
-];
-
 function isKoreanTicker(ticker) {
   return /\.(KS|KQ)$/i.test(String(ticker || ""));
 }
@@ -315,48 +290,25 @@ function koreanTickerCode(ticker) {
 }
 
 function renderChartExternalLinks(payload) {
-  const el = document.getElementById("chartLinks");
+  // 한국 종목이면 상단 툴바(목록·관심목록 옆)의 네이버 증권 링크를 노출.
+  const el = document.getElementById("chartNaverLink");
   if (!el) return;
-  el.innerHTML = "";
-  const ticker = String(payload?.ticker || "").toUpperCase();
-  const code = koreanTickerCode(ticker);
-  if (!code) return;
-  const name = String(payload?.name || "");
-  const links = [];
-  links.push({
-    label: "네이버 증권",
-    icon: "N",
-    logoText: "N",
-    kind: "naver",
-    url: `https://finance.naver.com/item/main.naver?code=${code}`,
-  });
-  const issuer = KR_ETF_ISSUERS.find(it =>
-    name.toUpperCase().includes(it.brand)
-  );
-  if (issuer) {
-    links.push({
-      label: issuer.label,
-      icon: issuer.icon,
-      logoUrl: issuer.logoUrl,
-      kind: "etf",
-      url: typeof issuer.url === "function" ? issuer.url(code) : issuer.url,
-    });
+  const code = koreanTickerCode(String(payload?.ticker || "").toUpperCase());
+  if (!code) {
+    el.classList.add("hidden");
+    el.removeAttribute("href");
+    return;
   }
-  el.innerHTML = links
-    .map(
-      link => {
-        const icon = link.logoUrl
-          ? `<img src="${esc(link.logoUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentElement.classList.add('logo-fallback');this.remove()"><span class="chart-link-fallback" aria-hidden="true">${esc(link.icon || "↗")}</span>`
-          : `<span class="chart-link-symbol" aria-hidden="true">${esc(link.logoText || link.icon || "↗")}</span>`;
-        return `<a class="chart-link-btn chart-link-icon-btn ${esc(link.kind || "")}" href="${esc(link.url)}" target="_blank" rel="noopener noreferrer" title="${esc(link.label)}" aria-label="${esc(link.label)}">${icon}</a>`;
-      }
-    )
-    .join("");
+  el.href = `https://finance.naver.com/item/main.naver?code=${code}`;
+  el.classList.remove("hidden");
 }
 
 function clearChartExternalLinks() {
-  const el = document.getElementById("chartLinks");
-  if (el) el.innerHTML = "";
+  const el = document.getElementById("chartNaverLink");
+  if (el) {
+    el.classList.add("hidden");
+    el.removeAttribute("href");
+  }
 }
 
 function renderChartIdentity(payload) {
@@ -1297,8 +1249,11 @@ function renderLineChart(payload) {
   // 차트선 최고점이 컨트롤 아래에서 시작하게 한다.
   // ⚠ 헤드룸은 화면 픽셀, y좌표는 viewBox(980) 단위 — 픽셀→viewBox 환산 필수.
   const controlEl = document.getElementById("chartBottomControls");
-  // 8(인셋) + 컨트롤 높이 + 12(여백) + 14(고점 마커 라벨)
-  const headroomPx = 8 + (controlEl && !controlEl.classList.contains("hidden") ? controlEl.offsetHeight : 40) + 26;
+  // 8(인셋) + 컨트롤 높이 + 12(여백) + 14(고점 마커 라벨).
+  // 모바일은 컨트롤이 차트 위 정적 배치라 고점 라벨 여유만 두면 된다.
+  const headroomPx = compactChart
+    ? 16
+    : 8 + (controlEl && !controlEl.classList.contains("hidden") ? controlEl.offsetHeight : 40) + 26;
   const canvasEl = document.getElementById("chartCanvas");
   const pxToView = width / Math.max(1, canvasEl?.clientWidth || width);
   const dataHeadroom = Math.ceil(headroomPx * pxToView);

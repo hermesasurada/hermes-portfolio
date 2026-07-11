@@ -69,7 +69,7 @@
   --sp-4: 16px;
   --radius: 2px;
   --radius-sm: 2px;
-  --button-radius: 10px;
+  --button-radius: 6px;
   --button-height: 26px;
   --button-surface: #e7e9ef;
   --button-active: #2f56e0;
@@ -1947,8 +1947,9 @@ th.pc-frozen-edge {
   font-size: 12px;
 }
 .chart-interval-control {
-  height: 32px;
-  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 .chart-interval-control .seg-btn {
   height: var(--button-height);
@@ -2006,12 +2007,6 @@ th.pc-frozen-edge {
   gap: 1px;
   min-width: 0;
 }
-.chart-links {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-}
 .chart-links:empty {
   display: none;
 }
@@ -2034,52 +2029,6 @@ th.pc-frozen-edge {
   background: var(--brand-soft);
   border-color: var(--brand);
   color: var(--brand);
-}
-.chart-link-icon-btn {
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-  justify-content: center;
-  padding: 0;
-  border-radius: 2px;
-  font-size: 12px;
-  line-height: 1;
-  overflow: hidden;
-}
-.chart-link-icon-btn.naver {
-  background: #03c75a;
-  color: #03c75a;
-  border-color: #03c75a;
-}
-.chart-link-icon-btn.etf {
-  color: var(--accent-2);
-}
-.chart-link-icon-btn img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 3px;
-  background: #fff;
-}
-.chart-link-icon-btn .chart-link-symbol,
-.chart-link-icon-btn .chart-link-fallback {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  font-weight: 900;
-}
-.chart-link-icon-btn .chart-link-fallback {
-  display: none;
-}
-.chart-link-icon-btn.logo-fallback .chart-link-fallback {
-  display: inline-flex;
-}
-.chart-link-icon-btn.naver .chart-link-symbol {
-  color: #fff;
-  font-size: 17px;
-  font-weight: 950;
-  letter-spacing: -0.02em;
 }
 .chart-interest-open {
   color: var(--accent-2);
@@ -2264,6 +2213,18 @@ th.pc-frozen-edge {
 /* 컨센서스 값칸 안의 투자의견 칩은 값 폰트에 맞춰 키움(관심목록 표 칩은 유지) */
 .consensus-v .rating-chip { font-size: 12.5px; }
 @media (max-width: 980px) {
+  /* 차트 컨트롤: 오버레이 대신 차트영역 바로 위 정적 배치 */
+  .chart-stage { display: flex; flex-direction: column; }
+  .chart-stage .chart-bottom-controls {
+    position: static;
+    order: -1;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 0 6px;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .chart-stage .chart-canvas { order: 0; }
   .consensus-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .consensus-cell:nth-child(2n) { border-right: 0; }
   .consensus-cell:nth-child(-n + 4) { border-bottom: 1px solid var(--line); }
@@ -2621,6 +2582,17 @@ th.pc-frozen-edge {
   white-space: nowrap;
 }
 .chart-bottom-controls::-webkit-scrollbar { display: none; }
+/* 기능그룹(표시 토글 | 일·주·월 | 기간 | 매수·매도) 사이 세로 구분선 */
+.chart-bottom-controls > * + * {
+  border-left: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+  padding-left: 8px;
+  margin-left: 4px;
+}
+.chart-marker-toggles {
+  border-left: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+  padding-left: 8px;
+  margin-left: 4px;
+}
 .chart-bottom-controls.hidden {
   display: none;
 }
@@ -4681,19 +4653,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     flex-wrap: wrap;
     gap: 6px;
   }
-  .chart-links {
-    width: auto;
-    justify-content: flex-end;
-    gap: 5px;
-    order: 0;
-    margin-left: auto;
-  }
-  .chart-link-icon-btn {
-    width: 30px;
-    min-width: 30px;
-    height: 30px;
-  }
-  .chart-display-controls,
+      .chart-display-controls,
   .chart-interval-control {
     max-width: 100%;
   }

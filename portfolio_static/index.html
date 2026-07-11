@@ -132,6 +132,7 @@
             <strong id="tableTitle">전체</strong>
             <button class="ghost-btn hidden" id="chartBack" type="button">목록</button>
             <button class="ghost-btn chart-interest-open hidden" id="chartInterestOpen" type="button">관심목록</button>
+            <a class="ghost-btn chart-link-btn chart-naver-link hidden" id="chartNaverLink" target="_blank" rel="noopener noreferrer" title="네이버 증권에서 보기">네이버 증권</a>
             <span class="filter-toggle-control hidden" id="performanceDetailControl">
               <label class="toggle-switch" for="performanceDetailToggle">
                 <input id="performanceDetailToggle" type="checkbox">
@@ -311,7 +312,6 @@
               <div class="chart-price-summary" id="chartPriceSummary"></div>
             </div>
             <div class="chart-head-right">
-              <span id="chartLinks" class="chart-links"></span>
               <div class="chart-meta" id="chartMeta">-</div>
             </div>
           </div>
@@ -323,7 +323,7 @@
                 <button class="chart-head-toggle" id="chartBollingerToggle" type="button" aria-pressed="false" aria-label="볼린저 밴드" title="볼린저 밴드">BB</button>
                 <button class="chart-head-toggle" id="chartIchimokuToggle" type="button" aria-pressed="false" aria-label="일목균형표" title="일목균형표">일목</button>
               </div>
-              <div class="segmented chart-interval-control hidden" id="chartIntervalControl" role="group" aria-label="차트 단위">
+              <div class="chart-interval-control hidden" id="chartIntervalControl" role="group" aria-label="차트 단위">
                 <button class="seg-btn" type="button" data-chart-interval="day" aria-pressed="true">일</button>
                 <button class="seg-btn" type="button" data-chart-interval="week" aria-pressed="false">주</button>
                 <button class="seg-btn" type="button" data-chart-interval="month" aria-pressed="false">월</button>
