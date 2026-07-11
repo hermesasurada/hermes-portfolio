@@ -69,6 +69,18 @@
   --sp-4: 16px;
   --radius: 2px;
   --radius-sm: 2px;
+  --button-radius: 10px;
+  --button-shadow-raised:
+    3px 3px 7px rgba(31, 45, 61, .16),
+    -3px -3px 7px rgba(255, 255, 255, .88),
+    inset 0 1px 0 rgba(255, 255, 255, .62);
+  --button-shadow-hover:
+    4px 4px 9px rgba(31, 45, 61, .19),
+    -3px -3px 8px rgba(255, 255, 255, .94),
+    inset 0 1px 0 rgba(255, 255, 255, .72);
+  --button-shadow-pressed:
+    inset 2px 2px 5px rgba(31, 45, 61, .20),
+    inset -2px -2px 5px rgba(255, 255, 255, .68);
   --shadow: 0 1px 0 rgba(15, 23, 42, .04);
   --t-fast: .15s ease;
   --header-bg: rgba(246, 247, 249, 0.94);
@@ -113,6 +125,17 @@
     --chart-hover-line: #7a8797;
     --chart-selection-fill: rgba(110, 168, 230, .14);
     --chart-shadow: drop-shadow(0 8px 18px rgba(0, 0, 0, .35));
+    --button-shadow-raised:
+      3px 3px 8px rgba(0, 0, 0, .42),
+      -2px -2px 6px rgba(255, 255, 255, .05),
+      inset 0 1px 0 rgba(255, 255, 255, .07);
+    --button-shadow-hover:
+      4px 4px 10px rgba(0, 0, 0, .48),
+      -3px -3px 7px rgba(255, 255, 255, .07),
+      inset 0 1px 0 rgba(255, 255, 255, .09);
+    --button-shadow-pressed:
+      inset 2px 2px 6px rgba(0, 0, 0, .48),
+      inset -2px -2px 5px rgba(255, 255, 255, .06);
 }
 /* 자체 호스팅 가변 폰트 — 한글 자간·숫자 형태가 시스템 폰트보다 일관적.
    서버가 .woff2만 max-age=86400으로 캐시(그 외 정적은 no-store 유지). */
@@ -3896,6 +3919,47 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .dividend-history-stats .cstat-board {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── 공통 버튼 표면 ────────────────────────────────────────────────────
+   기존 컴포넌트의 색·크기는 유지하고 곡률과 양각/눌림 깊이만 통일한다. */
+:where(button, .chart-link-btn, .apply-toggle) {
+  border-radius: var(--button-radius) !important;
+  box-shadow: var(--button-shadow-raised) !important;
+  transition:
+    background var(--t-fast),
+    color var(--t-fast),
+    border-color var(--t-fast),
+    box-shadow var(--t-fast),
+    transform var(--t-fast);
+}
+:where(button, .chart-link-btn, .apply-toggle):hover:not(:disabled) {
+  box-shadow: var(--button-shadow-hover) !important;
+  transform: translateY(-1px);
+}
+:where(button, .chart-link-btn, .apply-toggle):active:not(:disabled) {
+  box-shadow: var(--button-shadow-pressed) !important;
+  transform: translateY(1px);
+}
+:where(button.active, button[aria-pressed="true"], .apply-toggle:has(input:checked)) {
+  box-shadow: var(--button-shadow-pressed) !important;
+}
+:where(button, .chart-link-btn, .apply-toggle):disabled {
+  box-shadow: none !important;
+  transform: none;
+}
+/* 링크·표 값·사이드바 행처럼 button 태그만 빌린 요소는 평면을 유지한다. */
+:where(
+  button.ticker-link,
+  button.interest-group-select,
+  button.stat-yield-link,
+  button.dividend-detail-btn,
+  button.dividend-month-toggle,
+  button.history-year-toggle,
+  .interest-order-controls button
+) {
+  box-shadow: none !important;
+  transform: none !important;
 }
 .dividend-history-stats .cstat-v small {
   margin-left: 2px;
