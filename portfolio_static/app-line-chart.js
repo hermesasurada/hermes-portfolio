@@ -89,11 +89,17 @@ function syncChartOverlayPosition() {
   if (!stage || !control) return;
   if (!plot) {
     control.style.top = "8px";
+    control.style.right = "8px";
     return;
   }
+  // 플롯 박스 '안쪽' 좌표에 상단·우측 8px 여백을 두고 얹는다.
+  // (차트선과의 세로 겹침은 renderLineChart의 pad.top이 컨트롤 높이만큼
+  //  데이터 영역을 아래로 내려서 방지)
+  const INSET = 8;
   const stageRect = stage.getBoundingClientRect();
   const plotRect = plot.getBoundingClientRect();
-  control.style.top = `${Math.max(8, plotRect.top - stageRect.top - 2)}px`;
+  control.style.top = `${Math.max(INSET, plotRect.top - stageRect.top + INSET)}px`;
+  control.style.right = `${Math.max(INSET, stageRect.right - plotRect.right + INSET)}px`;
 }
 
 function syncChartBottomControls(visible = Boolean(chartTicker || performanceChartOpen)) {
@@ -1286,7 +1292,10 @@ function renderLineChart(payload) {
   const tradeMarkerRadius = compactChart ? 10 : 5;
   document.getElementById("chartMeta").textContent = "";
 
-  const pad = { top: 28, right: 58, bottom: 22, left: 14 };
+  // top은 플롯 안 상단에 얹히는 컨트롤 오버레이(약 44px) + 여백 확보 —
+  // 차트선(데이터 최고점)이 컨트롤 밑에서 시작해 겹치지 않는다.
+  // compact(모바일)는 컨트롤이 여러 줄로 쌓여 더 큰 여백이 필요.
+  const pad = { top: compactChart ? 128 : 64, right: 58, bottom: 22, left: 14 };
   const plotW = width - pad.left - pad.right;
   const rsiGap = compactChart ? 24 : 18;
   const rsiH = compactChart ? 180 : 96;
@@ -1439,7 +1448,7 @@ function renderLineChart(payload) {
           <text x="${item.labelX.toFixed(2)}" y="${item.labelY.toFixed(2)}" text-anchor="${item.anchor}">${esc(item.text)}</text>
         </g>
       `).join("")}
-      ${renderChartMetricsOverlay(overlayMetrics, pad.left + 10, pad.top + (compactChart ? 110 : 10), compactChart)}
+      ${renderChartMetricsOverlay(overlayMetrics, pad.left + 10, pad.top + 10, compactChart)}
       <g id="chartSelectionGroup" class="chart-selection hidden">
         <rect id="chartSelectionRect" class="chart-selection-range" x="0" y="${pad.top}" width="0" height="${plotH}"></rect>
         <line id="chartSelectionStartLine" class="chart-selection-line" x1="0" x2="0" y1="${pad.top}" y2="${rsiBottom}"></line>

@@ -5035,11 +5035,17 @@ button {
   border-color: transparent;
   background: var(--button-surface);
 }
+/* 개별 버튼 규칙(클래스 specificity)이 :where(0)를 이겨 배경이 제각각이던
+   문제 — 표면색을 !important로 강제해 전 버튼을 단일 soft 표면으로 통일.
+   active 파랑 규칙이 이 아래에 있으므로(같은 !important, 소스 순서) 눌린
+   상태는 정상적으로 파랑이 이긴다. */
 :where(
   .ghost-btn,
   .header-icon-btn,
   .theme-btn,
   .help-icon-btn,
+  .cycle-toggle-btn,
+  .tab-btn:not(.active),
   .chart-head-toggle,
   .chart-range-btn:not(.active),
   .sidebar-tab:not(.active),
@@ -5048,11 +5054,17 @@ button {
   .perf-index-toggle:not(.active),
   .tx-action-btn:not(.tx-save),
   .mobile-collapse-toggle,
+  .interest-bulk-open,
+  .consensus-report-link,
   .chart-link-btn,
   .apply-toggle
 ) {
-  border-color: transparent;
-  background: var(--button-surface);
+  border-color: transparent !important;
+  background: var(--button-surface) !important;
+}
+/* 매수·매도 마커 토글: 표면은 통일하되 의미색 보더(빨강/파랑)는 유지 */
+.chart-range-btn.marker-toggle {
+  background: var(--button-surface) !important;
 }
 :where(button, .chart-link-btn, .apply-toggle):hover:not(:disabled) {
   box-shadow: var(--button-shadow-hover) !important;
