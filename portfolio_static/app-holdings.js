@@ -50,8 +50,36 @@ function defaultAccountTypesForHour(hour) {
   }
   return types;
 }
+// 실제 현재 KST 요일·시각 (갱신·계좌 기본값의 주말 구간 판정 공용).
+function kstWeekdayHour() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    weekday: "short",
+    hour: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  return {
+    weekday: parts.find(part => part.type === "weekday")?.value || "",
+    hour: Number(parts.find(part => part.type === "hour")?.value || 0),
+  };
+}
+// 시장이 닫혀 있는 주말 정적 구간: 토 06:00 ~ 월 08:00 (KST).
+function isWeekendQuietWindow() {
+  const { weekday, hour } = kstWeekdayHour();
+  if (weekday === "Sat") return hour >= 6;
+  if (weekday === "Sun") return true;
+  if (weekday === "Mon") return hour < 8;
+  return false;
+}
 function applyTimeBasedDefaultAccountSelection() {
   if (defaultAccountSelectionApplied || !data) return;
+  // 주말 정적 구간엔 시간대별 필터 없이 전체 계좌 선택.
+  if (isWeekendQuietWindow()) {
+    selectionMode = "all";
+    selectedAccounts = new Set();
+    defaultAccountSelectionApplied = true;
+    return;
+  }
   const accountTypes = defaultAccountTypesForHour(portfolioKstHour());
   selectedAccounts = new Set(
     flattenAccounts()

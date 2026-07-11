@@ -217,7 +217,12 @@ function initAutoRefreshControls() {
   const btn = document.getElementById("autoRefreshCycle");
   const storedEnabled = storageGet(autoRefreshStorage.enabled) === "true";
   const storedInterval = Number(storageGet(autoRefreshStorage.interval));
-  setAutoRefreshMode(storedEnabled ? (storedInterval <= 1 ? "1" : "5") : "off");
+  // 주말 정적 구간(토 06시~월 08시 KST)엔 시장이 닫혀 자동갱신을 기본 OFF로.
+  // 저장된 선호는 그대로 두므로 평일 복귀 시 원래 설정이 되살아난다.
+  const initialMode = isWeekendQuietWindow()
+    ? "off"
+    : (storedEnabled ? (storedInterval <= 1 ? "1" : "5") : "off");
+  setAutoRefreshMode(initialMode);
   const apply = () => {
     saveAutoRefreshSettings();
     renderAutoRefreshControl();
