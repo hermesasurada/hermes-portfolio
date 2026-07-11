@@ -456,10 +456,20 @@ textarea {
   resize: vertical;
 }
 .filter-toggle-control {
-  height: 26px;
-  padding: 0 6px;
-  font-size: 10.5px;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 11px;
+  border: 0 !important;
+  border-radius: var(--button-radius);
+  background: var(--button-surface) !important;
+  box-shadow: var(--button-shadow-raised);
+  cursor: pointer;
 }
+.filter-toggle-control:hover { box-shadow: var(--button-shadow-hover); }
+/* 스위치 노브는 숨기고 라벨만 — 버튼처럼 보이되 체크박스 토글 동작은 유지 */
+.filter-toggle-control .toggle-ui { display: none; }
+.filter-toggle-control .toggle-switch { gap: 0; }
+.filter-toggle-control .toggle-label { font-weight: 800; }
 .currency-filter-control {
   height: 26px;
   padding: 0 6px;
@@ -1675,16 +1685,12 @@ th.pc-frozen-edge {
   flex-wrap: wrap;
 }
 .detail-tabs {
-  height: 30px;
   display: inline-flex;
   align-items: center;
-  padding: 2px;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  background: var(--surface-2);
+  gap: 5px;   /* 감싸는 박스 없이 뉴모픽 버튼 두 개만 나란히 */
 }
 .tab-btn {
-  height: 24px;
+  height: 30px;
   min-width: 72px;
   border: 0;
   border-radius: 2px;
@@ -4060,21 +4066,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   font-weight: 650;
   line-height: 1.45;
 }
-/* 지표 해석 방향 칩 (낮을수록/높을수록/게이지/맥락) + 계산식 강조 */
-.help-judge {
-  display: inline-block;
-  margin: 0 5px 2px 0;
-  padding: 1px 7px;
-  border-radius: 2px;
-  background: var(--surface-2);
-  color: var(--ink);
-  font-size: 10.5px;
-  font-weight: 800;
-  white-space: nowrap;
-  vertical-align: 1px;
-}
-.help-judge.good-low { background: var(--accent-soft); color: var(--accent); }
-.help-judge.good-high { background: var(--brand-soft); color: var(--brand); }
 .help-block dd code {
   padding: 0 3px;
   border-radius: 3px;
@@ -4089,13 +4080,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   margin-right: 2px;
 }
 .help-block dd b:not(:first-child) { margin-left: 4px; }
-.help-judge-legend {
-  margin: 0 0 2px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 650;
-  line-height: 1.8;
-}
 .help-note {
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -5109,10 +5093,15 @@ button {
   border-left-color: var(--button-active) !important;
   background: var(--button-active-soft) !important;
 }
-:where(.us-price-control.enabled, .filter-toggle-control.enabled) {
+:where(.us-price-control.enabled) {
   border-color: var(--button-active) !important;
   background: var(--button-active-soft) !important;
 }
+.filter-toggle-control.enabled {
+  background: var(--button-active) !important;
+  box-shadow: none !important;
+}
+.filter-toggle-control.enabled .toggle-label { color: #fff; }
 :where(.toggle-switch, .apply-toggle) input:checked + .toggle-ui {
   border-color: var(--button-active) !important;
   background: var(--button-active) !important;

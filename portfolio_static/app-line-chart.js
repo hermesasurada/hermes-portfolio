@@ -87,19 +87,19 @@ function syncChartOverlayPosition() {
   const control = document.getElementById("chartBottomControls");
   const plot = document.querySelector("#chartCanvas .chart-plot-border");
   if (!stage || !control) return;
-  if (!plot) {
-    control.style.top = "8px";
-    control.style.right = "8px";
-    return;
-  }
-  // 플롯 박스 '안쪽' 좌표에 상단·우측 8px 여백을 두고 얹는다.
-  // (차트선과의 세로 겹침은 renderLineChart의 pad.top이 컨트롤 높이만큼
-  //  데이터 영역을 아래로 내려서 방지)
+  // ⚠ 컨트롤 top을 '플롯 상단' 기준으로 놓으면 안 된다 — pad.top으로 플롯을
+  // 내릴수록 컨트롤도 따라 내려와 영원히 차트를 덮는 순환이 된다(실사고).
+  // 컨트롤은 스테이지 상단 8px에 고정하고, 차트선과의 겹침은 renderLineChart의
+  // pad.top이 '컨트롤 실제 높이 + 여백'만큼 데이터 영역을 내려서 방지한다.
   const INSET = 8;
-  const stageRect = stage.getBoundingClientRect();
-  const plotRect = plot.getBoundingClientRect();
-  control.style.top = `${Math.max(INSET, plotRect.top - stageRect.top + INSET)}px`;
-  control.style.right = `${Math.max(INSET, stageRect.right - plotRect.right + INSET)}px`;
+  control.style.top = `${INSET}px`;
+  if (plot) {
+    const stageRect = stage.getBoundingClientRect();
+    const plotRect = plot.getBoundingClientRect();
+    control.style.right = `${Math.max(INSET, stageRect.right - plotRect.right + INSET)}px`;
+  } else {
+    control.style.right = `${INSET}px`;
+  }
 }
 
 function syncChartBottomControls(visible = Boolean(chartTicker || performanceChartOpen)) {
@@ -1292,10 +1292,16 @@ function renderLineChart(payload) {
   const tradeMarkerRadius = compactChart ? 10 : 5;
   document.getElementById("chartMeta").textContent = "";
 
-  // top은 플롯 안 상단에 얹히는 컨트롤 오버레이(약 44px) + 여백 확보 —
-  // 차트선(데이터 최고점)이 컨트롤 밑에서 시작해 겹치지 않는다.
-  // compact(모바일)는 컨트롤이 여러 줄로 쌓여 더 큰 여백이 필요.
-  const pad = { top: compactChart ? 148 : 88, right: 58, bottom: 22, left: 14 };
+  // 컨트롤 오버레이(스테이지 상단 8px 고정)의 '실제 높이'만큼만 플롯을
+  // 내린다 — 줄바꿈으로 컨트롤이 높아져도 자동 대응, 불필요한 상단 여백 없음.
+  // ⚠ pad는 viewBox(980) 단위, 컨트롤 높이는 화면 픽셀 — SVG가 화면폭에
+  // 맞춰 스케일되므로 픽셀→viewBox 환산 없이는 좁은 화면에서 다시 겹친다.
+  const controlEl = document.getElementById("chartBottomControls");
+  // +34 = 컨트롤 top 인셋(8) + 아래 여백(12) + 고점 마커 라벨 높이(14)
+  const controlPx = (controlEl && !controlEl.classList.contains("hidden") ? controlEl.offsetHeight : 40) + 34;
+  const canvasEl = document.getElementById("chartCanvas");
+  const pxToView = width / Math.max(1, canvasEl?.clientWidth || width);
+  const pad = { top: Math.max(40, Math.ceil(controlPx * pxToView)), right: 58, bottom: 22, left: 14 };
   const plotW = width - pad.left - pad.right;
   const rsiGap = compactChart ? 24 : 18;
   const rsiH = compactChart ? 180 : 96;

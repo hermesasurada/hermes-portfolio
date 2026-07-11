@@ -146,15 +146,6 @@ function initDataHelpModal() {
   close.addEventListener("click", () => modal.close());
 }
 
-function initStatsHelpModal() {
-  const modal = document.getElementById("statsHelpModal");
-  const open = document.getElementById("statsHelpOpen");
-  const close = document.getElementById("statsHelpClose");
-  if (!modal || !open || !close) return;
-  open.addEventListener("click", () => modal.showModal());
-  close.addEventListener("click", () => modal.close());
-}
-
 function render() {
   renderAccounts();
   renderInterestWatchlists();
@@ -414,7 +405,6 @@ initAutoRefreshControls();
 initUsPriceControls();
 initThemeControl();
 initDataHelpModal();
-initStatsHelpModal();
 initDividendHistoryModal();
 initWatchlistControls();
 initTickerSearch();
