@@ -47,7 +47,6 @@ const transactionPageSize = 10;
 
 const chartRanges = [
   { key: "1m", label: "1M", months: 1 },
-  { key: "3m", label: "3M", months: 3 },
   { key: "6m", label: "6M", months: 6 },
   { key: "1y", label: "1Y", months: 12 },
   { key: "ytd", label: "YTD", ytd: true },
