@@ -703,12 +703,12 @@ main {
 }
 .interest-group {
   min-width: 0;
-  min-height: 48px;
+  min-height: 40px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 24px 26px 26px;
   align-items: center;
   gap: 4px;
-  padding: 7px 7px 7px 9px;
+  padding: 3px 7px 3px 8px;
   border: 1px solid var(--line);
   border-left-width: 3px;
   border-radius: 2px;
@@ -724,9 +724,10 @@ main {
 }
 .interest-group-select {
   min-width: 0;
-  min-height: 32px;
+  height: auto;        /* 전역 button height:36px 무력화 — 행 밀도 확보 */
+  min-height: 30px;
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
   align-items: center;
   gap: 6px;
   padding: 0 4px 0 0;
@@ -736,14 +737,14 @@ main {
   text-align: left;
 }
 .interest-group-icon {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   display: inline-grid;
   place-items: center;
   border-radius: 2px;
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 850;
   line-height: 1;
 }
@@ -757,7 +758,7 @@ main {
 .interest-group-name {
   min-width: 0;
   overflow: hidden;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -768,7 +769,7 @@ main {
   border-radius: 2px;
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   text-align: center;
 }
@@ -5085,7 +5086,8 @@ button {
   border-color: var(--button-active) !important;
   background: var(--button-active) !important;
   color: #fff !important;
-  box-shadow: var(--button-shadow-pressed) !important;
+  /* inset 눌림 그림자가 파랑 위에서 명암 그라데이션처럼 번짐 → 평평한 단색 */
+  box-shadow: none !important;
 }
 :where(
   .primary-btn,

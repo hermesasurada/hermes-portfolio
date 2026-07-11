@@ -1295,7 +1295,7 @@ function renderLineChart(payload) {
   // top은 플롯 안 상단에 얹히는 컨트롤 오버레이(약 44px) + 여백 확보 —
   // 차트선(데이터 최고점)이 컨트롤 밑에서 시작해 겹치지 않는다.
   // compact(모바일)는 컨트롤이 여러 줄로 쌓여 더 큰 여백이 필요.
-  const pad = { top: compactChart ? 128 : 64, right: 58, bottom: 22, left: 14 };
+  const pad = { top: compactChart ? 148 : 88, right: 58, bottom: 22, left: 14 };
   const plotW = width - pad.left - pad.right;
   const rsiGap = compactChart ? 24 : 18;
   const rsiH = compactChart ? 180 : 96;
