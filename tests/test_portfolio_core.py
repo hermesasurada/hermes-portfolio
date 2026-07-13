@@ -22,6 +22,9 @@ from portfolio_core.dividends import (
     _active_dividend_year,
     _aggregate_annual_dividends,
     _attributed_history_events,
+    _estimated_annual_cagr,
+    _history_summary,
+    _history_year_rows,
     _mark_fiscal_finals,
     _split_adjusted_amount,
     _tax_rate,
@@ -77,6 +80,39 @@ def test_normalize_pe():
     assert normalize_pe(float("inf")) is None
     assert normalize_pe(None) is None
     assert normalize_pe("n/a") is None
+
+
+def test_dividend_growth_uses_current_annual_estimate():
+    totals = {2021: 1.0, 2022: 1.1, 2023: 1.2, 2024: 1.3, 2025: 1.4, 2026: 0.5}
+    complete_years = {2021, 2022, 2023, 2024, 2025}
+    estimate = 2.0
+    expected_cagr = ((estimate / totals[2021]) ** (1 / 5) - 1) * 100
+    assert abs(_estimated_annual_cagr(totals, complete_years, 2026, estimate, 5) - expected_cagr) < 1e-9
+
+    annual = {
+        year: {
+            "amount": amount,
+            "payments": 4 if year < 2026 else 1,
+            "last_date": date(year, 12 if year < 2026 else 3, 1),
+            "sources": {"test"},
+            "final": False,
+            "events": [],
+        }
+        for year, amount in totals.items()
+    }
+    current_row = next(
+        row for row in _history_year_rows(
+            annual, totals, complete_years, 4, estimate, 2026, False
+        )
+        if row["year"] == 2026
+    )
+    assert current_row["growth_basis"] == "estimate"
+    assert abs(current_row["growth_pct"] - (estimate / totals[2025] - 1) * 100) < 1e-9
+
+    summary = _history_summary([], totals, complete_years, 4, estimate, 2026, 0)
+    assert summary["latest_growth_estimated"] is True
+    assert summary["cagr_5y_estimated"] is True
+    assert abs(summary["cagr_5y"] - expected_cagr) < 1e-9
 
 
 def test_read_only_fundamentals_serve_stale_cache():

@@ -73,6 +73,27 @@ def _annual_cagr(
     return ((end_value / start_value) ** (1 / years) - 1) * 100
 
 
+def _estimated_annual_cagr(
+    totals: dict[int, float],
+    complete_years: set[int],
+    current_year: int,
+    current_estimate: float | None,
+    years: int,
+) -> float | None:
+    """현재 귀속연도 예상 연간배당을 종점으로 한 CAGR."""
+    start_year = current_year - years
+    start_value = totals.get(start_year)
+    if (
+        current_estimate is None
+        or current_estimate <= 0
+        or start_value is None
+        or start_value <= 0
+        or any(year not in complete_years for year in range(start_year, current_year))
+    ):
+        return None
+    return ((current_estimate / start_value) ** (1 / years) - 1) * 100
+
+
 # 공용 헬퍼 위임 (동일 기능 로컬 복제 제거)
 _history_date = parse_iso_date
 
@@ -427,7 +448,11 @@ def _history_year_rows(
     for year in sorted(annual, reverse=True):
         row = annual[year]
         current_ytd = year == current_year
-        growth_pct, growth_basis = _year_growth(year, annual, totals, complete_years, is_korean)
+        if current_ytd and current_estimate is not None and year - 1 in complete_years:
+            growth_pct = _annual_growth(current_estimate, totals.get(year - 1))
+            growth_basis = "estimate" if growth_pct is not None else None
+        else:
+            growth_pct, growth_basis = _year_growth(year, annual, totals, complete_years, is_korean)
         rows.append(
             {
                 "year": year,
@@ -482,24 +507,43 @@ def _last_raise(events: list[dict]) -> tuple[float | None, str | None]:
 
 def _history_summary(
     events: list[dict], totals: dict[int, float], complete_years: set[int],
-    frequency: int, current_estimate: float | None, final_dividend_count: int,
+    frequency: int, current_estimate: float | None, current_year: int,
+    final_dividend_count: int,
 ) -> dict:
     completed_years = sorted(complete_years)
     latest_completed = completed_years[-1] if completed_years else None
+    latest_growth_estimated = (
+        current_estimate is not None and current_year - 1 in complete_years
+    )
     latest_growth = (
-        _annual_growth(totals[latest_completed], totals.get(latest_completed - 1))
+        _annual_growth(current_estimate, totals.get(current_year - 1))
+        if latest_growth_estimated
+        else _annual_growth(totals[latest_completed], totals.get(latest_completed - 1))
         if latest_completed is not None and latest_completed - 1 in complete_years
         else None
     )
-    cagr_3y = _annual_cagr(totals, complete_years, latest_completed, 3) if latest_completed is not None else None
-    cagr_5y = _annual_cagr(totals, complete_years, latest_completed, 5) if latest_completed is not None else None
+    estimated_cagr_3y = _estimated_annual_cagr(
+        totals, complete_years, current_year, current_estimate, 3
+    )
+    estimated_cagr_5y = _estimated_annual_cagr(
+        totals, complete_years, current_year, current_estimate, 5
+    )
+    cagr_3y = estimated_cagr_3y if estimated_cagr_3y is not None else (
+        _annual_cagr(totals, complete_years, latest_completed, 3) if latest_completed is not None else None
+    )
+    cagr_5y = estimated_cagr_5y if estimated_cagr_5y is not None else (
+        _annual_cagr(totals, complete_years, latest_completed, 5) if latest_completed is not None else None
+    )
     last_raise_pct, last_raise_date = _last_raise(events)
     latest_completed_total = totals.get(latest_completed) if latest_completed is not None else None
     return {
         "latest_completed_year": latest_completed,
         "latest_growth_pct": latest_growth,
+        "latest_growth_estimated": latest_growth_estimated and latest_growth is not None,
         "cagr_3y": cagr_3y,
+        "cagr_3y_estimated": estimated_cagr_3y is not None,
         "cagr_5y": cagr_5y,
+        "cagr_5y_estimated": estimated_cagr_5y is not None,
         "frequency": frequency,
         "frequency_label": _frequency_label(frequency),
         "annualized_run_rate": current_estimate if current_estimate is not None else latest_completed_total,
@@ -599,7 +643,8 @@ def load_dividend_history(ticker: str) -> dict:
             annual, totals, complete_years, frequency, current_estimate, active_year, is_korean
         ),
         "summary": _history_summary(
-            events, totals, complete_years, frequency, current_estimate, final_dividend_count
+            events, totals, complete_years, frequency, current_estimate, active_year,
+            final_dividend_count
         ),
     }
 

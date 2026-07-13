@@ -3697,7 +3697,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 .dividend-history-table th,
 .dividend-history-table td {
-  height: 22px;
+  height: 26px;
   padding: 0 4px;
   border-bottom: 1px solid var(--line);
   box-sizing: border-box;
@@ -3811,7 +3811,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 .history-year-anchor,
 .history-annual-anchor {
-  height: 22px;
+  height: 26px;
   display: flex;
   align-items: center;
   line-height: 1.05;

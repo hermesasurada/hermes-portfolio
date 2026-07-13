@@ -239,13 +239,14 @@ function renderDividendHistory(payload) {
     return;
   }
   initDividendHistoryCollapsedYears(payload, rows);
+  const estimatedGrowthMark = `<small class="history-growth-basis" title="현재 귀속연도 예상 연간배당 기준">*</small>`;
   const summaryColumns = [
     [
       ["지급주기", esc(summary.frequency_label || "-")],
       ["최근 배당 연환산", dividendMoneyText(summary.annualized_run_rate, payload.currency)],
     ],
     [
-      ["최근 성장률", dividendHistoryPercent(summary.latest_growth_pct)],
+      [summary.latest_growth_estimated ? "예상 성장률" : "최근 성장률", `${dividendHistoryPercent(summary.latest_growth_pct)}${summary.latest_growth_estimated ? estimatedGrowthMark : ""}`],
       [
         "최근 인상",
         summary.last_raise_pct == null
@@ -254,8 +255,8 @@ function renderDividendHistory(payload) {
       ],
     ],
     [
-      ["3년 CAGR", dividendHistoryPercent(summary.cagr_3y)],
-      ["5년 CAGR", dividendHistoryPercent(summary.cagr_5y)],
+      ["3년 CAGR", `${dividendHistoryPercent(summary.cagr_3y)}${summary.cagr_3y_estimated ? estimatedGrowthMark : ""}`],
+      ["5년 CAGR", `${dividendHistoryPercent(summary.cagr_5y)}${summary.cagr_5y_estimated ? estimatedGrowthMark : ""}`],
     ],
   ];
   body.innerHTML = `
@@ -304,9 +305,11 @@ function renderDividendHistory(payload) {
               row.growth_pct == null
                 ? "-"
                 : `${dividendHistoryPercent(row.growth_pct)}${
-                    row.growth_basis === "first_payment"
-                      ? `<span class="history-growth-basis" title="연간 미완결 — 해당 연도 최초 배당금 기준">*</span>`
-                      : ""
+                    row.growth_basis === "estimate"
+                      ? `<span class="history-growth-basis" title="현재 귀속연도 예상 연간배당 기준">*</span>`
+                      : row.growth_basis === "first_payment"
+                        ? `<span class="history-growth-basis" title="연간 미완결 — 해당 연도 최초 배당금 기준">*</span>`
+                        : ""
                   }`
             }</span></td>`;
             const countCell = `<td class="history-annual-cell"><span class="history-annual-anchor">${fmt.format(Number(row.payments) || 0)}${row.expected_payments ? `/${fmt.format(row.expected_payments)}` : ""}</span></td>`;
