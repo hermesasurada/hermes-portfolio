@@ -96,6 +96,7 @@ def test_read_only_fundamentals_serve_stale_cache():
                 "market_cap": 123.0,
                 "aum": None,
                 "dividend_yield": 0.5,
+                "dividend_growth_5y": 7.5,
                 "trailing_pe": 20.0,
                 "forward_pe": 18.0,
                 "price_to_book": 4.0,
@@ -108,6 +109,7 @@ def test_read_only_fundamentals_serve_stale_cache():
         result = fetch_fundamentals(conn, ["AAPL"], refresh_stale=False)
         assert result["AAPL"]["market_cap"] == 123.0
         assert result["AAPL"]["dividend_yield"] == 0.5
+        assert result["AAPL"]["dividend_growth_5y"] == 7.5
     finally:
         fundamentals_module.load_stats_cache_items = original_loader
         conn.close()

@@ -393,6 +393,7 @@ const interestColumnWidths = {
   next_earnings_date: 82,
   market_cap_usd: 112,
   dividend_yield: 70,
+  dividend_growth_5y: 78,
   drawdown_52w: 72,
   beta: 52,
   beta_adj: 52,
@@ -420,7 +421,7 @@ const interestColumnWidths = {
 };
 
 const interestAlwaysVisibleFields = new Set(["display_change_pct", "current_price"]);
-const INTEREST_TABLE_COLUMN_COUNT = 33;
+const INTEREST_TABLE_COLUMN_COUNT = 34;
 
 function interestEmptyRow(message) {
   return `<tr class="interest-empty-row">${Array.from({ length: INTEREST_TABLE_COLUMN_COUNT }, (_, index) => {
@@ -509,6 +510,7 @@ function renderInterestMainTable() {
       <td>${Number(r.dividend_yield) > 0
         ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(r.ticker)}">${dividendYieldText(r.dividend_yield)}</button>`
         : dividendYieldText(r.dividend_yield)}</td>
+      <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
       <td>${signedPercentText(r.drawdown_52w, 1)}</td>
       <td>${betaText(r.beta)}</td>
       <td>${betaText(r.beta_adj)}</td>

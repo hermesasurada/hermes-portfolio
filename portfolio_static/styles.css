@@ -980,14 +980,14 @@ main {
 #interestTableWrap .interest-detail-list td:nth-child(5),
 #interestTableWrap .interest-detail-list th[data-interest-col="5"],
 #interestTableWrap .interest-detail-list td:nth-child(6),
-#interestTableWrap .interest-detail-list th[data-interest-col="10"],
-#interestTableWrap .interest-detail-list td:nth-child(11),
-#interestTableWrap .interest-detail-list th[data-interest-col="16"],
-#interestTableWrap .interest-detail-list td:nth-child(17),
-#interestTableWrap .interest-detail-list th[data-interest-col="19"],
-#interestTableWrap .interest-detail-list td:nth-child(20),
-#interestTableWrap .interest-detail-list th[data-interest-col="26"],
-#interestTableWrap .interest-detail-list td:nth-child(27) {
+#interestTableWrap .interest-detail-list th[data-interest-col="11"],
+#interestTableWrap .interest-detail-list td:nth-child(12),
+#interestTableWrap .interest-detail-list th[data-interest-col="17"],
+#interestTableWrap .interest-detail-list td:nth-child(18),
+#interestTableWrap .interest-detail-list th[data-interest-col="20"],
+#interestTableWrap .interest-detail-list td:nth-child(21),
+#interestTableWrap .interest-detail-list th[data-interest-col="27"],
+#interestTableWrap .interest-detail-list td:nth-child(28) {
   padding-right: 9px;
 }
 .interest-detail-list th.logo-col {
@@ -1065,13 +1065,13 @@ main {
 .interest-detail-list td:nth-child(7) {
   width: 112px;
 }
-.interest-detail-list th[data-interest-col="11"],
 .interest-detail-list th[data-interest-col="12"],
 .interest-detail-list th[data-interest-col="13"],
 .interest-detail-list th[data-interest-col="14"],
 .interest-detail-list th[data-interest-col="15"],
 .interest-detail-list th[data-interest-col="16"],
-.interest-detail-list td:nth-child(n+12):nth-child(-n+17) {
+.interest-detail-list th[data-interest-col="17"],
+.interest-detail-list td:nth-child(n+13):nth-child(-n+18) {
   width: 48px;
   padding-left: 2px;
   padding-right: 2px;
@@ -1207,8 +1207,7 @@ table { width: 100%; border-collapse: collapse; min-width: 660px; }
 /* 2행 sticky 헤더: 그룹행(위, 22px) + 컬럼행(아래). 23컬럼을 4묶음으로 라벨링 */
 /* 그룹헤더 행에서 로고+종목명 위 칸도 좌측 틀고정 — 양축 스크롤 시 이 띠로
    body 내용이 새어 보이지 않게(z 6: 옆으로 스크롤되는 그룹 라벨보다 위) */
-/* 25컬럼: 로고·종목·등락·현재가·시총·배당율·52주高대비·β·β″·RSI×3·BB×3·P/E(t,f)·P/B·기간수익률×7 */
-/* P/E(t), P/E(f) (16,17) / P/B (18) */
+/* 로고·종목·보유내역 뒤에 펀더멘털·모멘텀·밸류·기간수익률을 밀도 높게 배치 */
 /* 로고 셀: 가운데, 종목명 셀: 좌측 정렬 */
 .logo-cell { text-align: center; padding-left: 4px; padding-right: 4px; }
 #detailTableWrap td.logo-cell { padding-left: 9px; }
@@ -1589,28 +1588,29 @@ tr.dividend-month-row:hover td {
 #detailTableWrap th:nth-child(9), #detailTableWrap td:nth-child(9) { min-width: 54px; }   /* 비중 */
 #detailTableWrap th:nth-child(10), #detailTableWrap td:nth-child(10) { min-width: 96px; } /* 시총/AUM */
 #detailTableWrap th:nth-child(11), #detailTableWrap td:nth-child(11) { min-width: 58px; } /* 배당율 */
-#detailTableWrap th:nth-child(12), #detailTableWrap td:nth-child(12) { min-width: 68px; } /* 실적 */
-#detailTableWrap th:nth-child(13), #detailTableWrap td:nth-child(13) { min-width: 62px; } /* 52주高 */
-#detailTableWrap th:nth-child(14), #detailTableWrap td:nth-child(14),
-#detailTableWrap th:nth-child(15), #detailTableWrap td:nth-child(15) { min-width: 46px; } /* β */
-#detailTableWrap th:nth-child(n+16):nth-child(-n+21),
-#detailTableWrap td:nth-child(n+16):nth-child(-n+21) {
+#detailTableWrap th:nth-child(12), #detailTableWrap td:nth-child(12) { min-width: 72px; } /* 5년 배당성장 */
+#detailTableWrap th:nth-child(13), #detailTableWrap td:nth-child(13) { min-width: 68px; } /* 실적 */
+#detailTableWrap th:nth-child(14), #detailTableWrap td:nth-child(14) { min-width: 62px; } /* 52주高 */
+#detailTableWrap th:nth-child(15), #detailTableWrap td:nth-child(15),
+#detailTableWrap th:nth-child(16), #detailTableWrap td:nth-child(16) { min-width: 46px; } /* β */
+#detailTableWrap th:nth-child(n+17):nth-child(-n+22),
+#detailTableWrap td:nth-child(n+17):nth-child(-n+22) {
   min-width: 43px;
   padding-left: 1px;
   padding-right: 1px;
 } /* RSI/BB */
-#detailTableWrap th:nth-child(22), #detailTableWrap td:nth-child(22),
-#detailTableWrap th:nth-child(23), #detailTableWrap td:nth-child(23) { min-width: 56px; } /* P/E */
-#detailTableWrap th:nth-child(24), #detailTableWrap td:nth-child(24) { min-width: 48px; } /* P/B */
-#detailTableWrap th:nth-child(n+25):nth-child(-n+31),
-#detailTableWrap td:nth-child(n+25):nth-child(-n+31) { min-width: 58px; } /* 기간 수익률 */
-#detailTableWrap th:nth-child(32), #detailTableWrap td:nth-child(32) { min-width: 54px; } /* 거래 */
-#detailTableWrap th:nth-child(15),
-#detailTableWrap td:nth-child(15),
-#detailTableWrap th:nth-child(21),
-#detailTableWrap td:nth-child(21),
-#detailTableWrap th:nth-child(24),
-#detailTableWrap td:nth-child(24) { padding-right: 8px; }
+#detailTableWrap th:nth-child(23), #detailTableWrap td:nth-child(23),
+#detailTableWrap th:nth-child(24), #detailTableWrap td:nth-child(24) { min-width: 56px; } /* P/E */
+#detailTableWrap th:nth-child(25), #detailTableWrap td:nth-child(25) { min-width: 48px; } /* P/B */
+#detailTableWrap th:nth-child(n+26):nth-child(-n+32),
+#detailTableWrap td:nth-child(n+26):nth-child(-n+32) { min-width: 58px; } /* 기간 수익률 */
+#detailTableWrap th:nth-child(33), #detailTableWrap td:nth-child(33) { min-width: 54px; } /* 거래 */
+#detailTableWrap th:nth-child(16),
+#detailTableWrap td:nth-child(16),
+#detailTableWrap th:nth-child(22),
+#detailTableWrap td:nth-child(22),
+#detailTableWrap th:nth-child(25),
+#detailTableWrap td:nth-child(25) { padding-right: 8px; }
 /* 행 처리 단일화: 지브라+보더+호버 3중첩에서 보더+호버만 남김 */
 tr:hover td { background: var(--surface-hover); }
 tbody tr.index-row td {

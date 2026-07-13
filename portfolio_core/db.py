@@ -89,6 +89,8 @@ def ensure_stats_cache_table(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN price_to_book REAL")
     if "aum" not in columns:
         conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN aum REAL")
+    if "dividend_growth_5y" not in columns:
+        conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN dividend_growth_5y REAL")
 
 
 def ensure_technical_stats_cache_table(conn: sqlite3.Connection) -> None:

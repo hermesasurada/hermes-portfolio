@@ -32,7 +32,8 @@ def stats_cache_expires_today() -> bool:
 def load_stats_cache_item(conn: sqlite3.Connection, ticker: str, now_ts: float, fresh_only: bool = True) -> dict | None:
     row = conn.execute(
         """
-        SELECT version, fetched_ts, source, market_cap, aum, dividend_yield, trailing_pe, forward_pe, price_to_book, next_earnings_date
+        SELECT version, fetched_ts, source, market_cap, aum, dividend_yield, dividend_growth_5y,
+               trailing_pe, forward_pe, price_to_book, next_earnings_date
         FROM ticker_stats_cache
         WHERE ticker = ?
         """,
@@ -50,6 +51,7 @@ def load_stats_cache_item(conn: sqlite3.Connection, ticker: str, now_ts: float, 
         "market_cap": finite_number(row["market_cap"]),
         "aum": finite_number(row["aum"]),
         "dividend_yield": finite_number(row["dividend_yield"]),
+        "dividend_growth_5y": finite_number(row["dividend_growth_5y"]),
         "trailing_pe": normalize_pe(row["trailing_pe"]),
         "forward_pe": normalize_pe(row["forward_pe"]),
         "price_to_book": normalize_pe(row["price_to_book"]),
@@ -69,7 +71,7 @@ def load_stats_cache_items(
     marks = ",".join("?" for _ in clean)
     rows = conn.execute(
         f"""
-        SELECT ticker, version, fetched_ts, source, market_cap, aum, dividend_yield,
+        SELECT ticker, version, fetched_ts, source, market_cap, aum, dividend_yield, dividend_growth_5y,
                trailing_pe, forward_pe, price_to_book, next_earnings_date
         FROM ticker_stats_cache
         WHERE ticker IN ({marks})
@@ -86,6 +88,7 @@ def load_stats_cache_items(
             "market_cap": finite_number(row["market_cap"]),
             "aum": finite_number(row["aum"]),
             "dividend_yield": finite_number(row["dividend_yield"]),
+            "dividend_growth_5y": finite_number(row["dividend_growth_5y"]),
             "trailing_pe": normalize_pe(row["trailing_pe"]),
             "forward_pe": normalize_pe(row["forward_pe"]),
             "price_to_book": normalize_pe(row["price_to_book"]),

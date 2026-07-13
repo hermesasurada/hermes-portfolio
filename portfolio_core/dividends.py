@@ -7,7 +7,7 @@ from typing import Any
 
 from .constants import DIVIDEND_LOOKAHEAD_DAYS, KOREAN_SUFFIXES
 from .dates import parse_iso_date, positive_float, today_kst
-from .db import connect
+from .db import connect, ensure_stats_cache_table
 from .dividend_refresh import dividend_history_start, refresh_dividend_events
 from .dividend_schedule import consolidated_dividend_events, event_schedule_date
 from .prices import fx_rates, latest_prices
@@ -602,6 +602,28 @@ def load_dividend_history(ticker: str) -> dict:
             events, totals, complete_years, frequency, current_estimate, final_dividend_count
         ),
     }
+
+
+def refresh_dividend_growth_cache(tickers: list[str]) -> int:
+    """배당 귀속연도 기준 5년 CAGR을 펀더멘털 캐시에 저장한다."""
+    clean_tickers = sorted({str(ticker or "").strip().upper() for ticker in tickers if ticker})
+    values: list[tuple[float | None, str]] = []
+    for ticker in clean_tickers:
+        try:
+            summary = load_dividend_history(ticker).get("summary") or {}
+            values.append((summary.get("cagr_5y"), ticker))
+        except (TypeError, ValueError):
+            values.append((None, ticker))
+    if not values:
+        return 0
+    with connect() as conn:
+        ensure_stats_cache_table(conn)
+        conn.executemany(
+            "UPDATE ticker_stats_cache SET dividend_growth_5y = ? WHERE ticker = ?",
+            values,
+        )
+        conn.commit()
+    return sum(value is not None for value, _ticker in values)
 
 
 def load_dividends(account_ids: list[str] | None = None) -> dict:

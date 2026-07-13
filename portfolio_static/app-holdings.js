@@ -796,6 +796,7 @@ function renderTable() {
       <td>${Number(r.dividend_yield) > 0
         ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(r.ticker)}" title="배당 이력 보기">${dividendYieldText(r.dividend_yield)}</button>`
         : dividendYieldText(r.dividend_yield)}</td>
+      <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
       <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
       <td class="group-start">${signedPercentText(r.drawdown_52w, 1)}</td>
       <td>${betaText(r.beta)}</td>

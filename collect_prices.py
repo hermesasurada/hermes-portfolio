@@ -20,7 +20,7 @@ from portfolio_core.collectors import (
 )
 from portfolio_core.corporate_actions import refresh_stock_splits
 from portfolio_core.db import connect, ensure_dividend_tables, initialize_schema
-from portfolio_core.dividends import refresh_dividend_events
+from portfolio_core.dividends import refresh_dividend_events, refresh_dividend_growth_cache
 from portfolio_core.fundamentals import fetch_fundamentals
 from portfolio_core.price_store import (
     CATEGORIES,
@@ -210,6 +210,8 @@ def collect_dividend_events(tickers: list[str] | None = None) -> int:
     if not dividend_tickers:
         return 0
     refresh_dividend_events(dividend_tickers)
+    growth_count = refresh_dividend_growth_cache(dividend_tickers)
+    print(f"Updated {growth_count} five-year dividend growth rates")
     return len(dividend_tickers)
 
 
@@ -269,8 +271,8 @@ def main() -> int:
 def _run(args: argparse.Namespace) -> int:
     # 배당/분할 전용 모드: 가격·실적 수집을 건너뛰고 전 추적종목 배당만 갱신.
     if args.dividends_only:
-        dividend_count = collect_dividend_events(args.ticker)
         split_count = collect_stock_splits(args.ticker)
+        dividend_count = collect_dividend_events(args.ticker)
         print(f"Dividends-only: checked {dividend_count} tickers, updated splits for {split_count}")
         return 0
 

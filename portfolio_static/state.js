@@ -47,6 +47,7 @@ const defaultSortDir = {
   net_krw: -1,
   market_cap_usd: -1,
   dividend_yield: -1,
+  dividend_growth_5y: -1,
   rsi_day: -1,
   rsi_week: -1,
   rsi_month: -1,
