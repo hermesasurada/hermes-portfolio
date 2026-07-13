@@ -207,7 +207,9 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
     }
     now_ts = datetime.now().timestamp()
     cached_items = load_stats_cache_items(conn, tickers, now_ts)
-    stale_items = load_stats_cache_items(conn, tickers, now_ts, fresh_only=False) if refresh_stale else cached_items
+    # Read-only API requests must keep serving the last collected fundamentals
+    # after the refresh TTL expires. The collector owns refreshing stale rows.
+    stale_items = load_stats_cache_items(conn, tickers, now_ts, fresh_only=False)
     result: dict[str, dict] = {}
     for ticker in tickers:
         cached = cached_items.get(ticker)

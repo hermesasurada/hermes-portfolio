@@ -9,12 +9,14 @@ layer where the original parse_number regression slipped through unnoticed.
 from __future__ import annotations
 
 import sys
+import sqlite3
 from datetime import date, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from portfolio_core.fundamentals import normalize_pe, parse_number
+import portfolio_core.fundamentals as fundamentals_module
+from portfolio_core.fundamentals import fetch_fundamentals, normalize_pe, parse_number
 from portfolio_core.dates import parse_iso_date, to_iso_text
 from portfolio_core.dividends import (
     _active_dividend_year,
@@ -75,6 +77,40 @@ def test_normalize_pe():
     assert normalize_pe(float("inf")) is None
     assert normalize_pe(None) is None
     assert normalize_pe("n/a") is None
+
+
+def test_read_only_fundamentals_serve_stale_cache():
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute(
+        "CREATE TABLE tickers (ticker TEXT, name TEXT, display_name TEXT, category TEXT, currency TEXT, next_earnings_date TEXT)"
+    )
+    conn.execute("INSERT INTO tickers VALUES ('AAPL', 'Apple', NULL, 'overseas', 'USD', NULL)")
+    original_loader = fundamentals_module.load_stats_cache_items
+
+    def fake_loader(_conn, _tickers, _now_ts, fresh_only=True):
+        if fresh_only:
+            return {}
+        return {
+            "AAPL": {
+                "market_cap": 123.0,
+                "aum": None,
+                "dividend_yield": 0.5,
+                "trailing_pe": 20.0,
+                "forward_pe": 18.0,
+                "price_to_book": 4.0,
+                "next_earnings_date": None,
+            }
+        }
+
+    try:
+        fundamentals_module.load_stats_cache_items = fake_loader
+        result = fetch_fundamentals(conn, ["AAPL"], refresh_stale=False)
+        assert result["AAPL"]["market_cap"] == 123.0
+        assert result["AAPL"]["dividend_yield"] == 0.5
+    finally:
+        fundamentals_module.load_stats_cache_items = original_loader
+        conn.close()
 
 
 # --- tickers ----------------------------------------------------------------
