@@ -80,11 +80,13 @@ def refresh_dividend_events(tickers: list[str]) -> None:
     if not due:
         return
 
-    with connect() as conn:
-        ensure_dividend_tables(conn)
-        for ticker in due:
-            raw_events, status = _fetch_dividends(ticker, names.get(ticker))
-            events = normalize_dividend_events(ticker, raw_events)
+    # 네트워크 조회는 DB 트랜잭션 밖에서 수행한다. 소스별 응답이 느릴 때
+    # 수백 종목 전체가 끝날 때까지 SQLite 쓰기 잠금을 잡지 않도록, 조회가
+    # 끝난 종목만 짧은 트랜잭션으로 즉시 저장한다.
+    for ticker in due:
+        raw_events, status = _fetch_dividends(ticker, names.get(ticker))
+        events = normalize_dividend_events(ticker, raw_events)
+        with connect() as conn:
             # KR은 소스별 ex_date 관례가 달라(opendart=기준일-1영업일,
             # yf=ex) 근접 중복이 누적된다. _fetch_dividends가 이미 중복 억제한 완전한
             # 병합본을 주므로, 정상 수집된 경우 기존 이벤트를 통째로 교체한다.
@@ -130,4 +132,4 @@ def refresh_dividend_events(tickers: list[str]) -> None:
                 """,
                 (ticker, now, status),
             )
-        conn.commit()
+            conn.commit()

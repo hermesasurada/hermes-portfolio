@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import sys
 import sqlite3
+from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import portfolio_core.fundamentals as fundamentals_module
+import portfolio_core.dividend_refresh as dividend_refresh_module
 from portfolio_core.fundamentals import fetch_fundamentals, normalize_pe, parse_number
 from portfolio_core.dates import parse_iso_date, to_iso_text
 from portfolio_core.dividends import (
@@ -113,6 +115,63 @@ def test_dividend_growth_uses_current_annual_estimate():
     assert summary["latest_growth_estimated"] is True
     assert summary["cagr_5y_estimated"] is True
     assert abs(summary["cagr_5y"] - expected_cagr) < 1e-9
+
+
+def test_dividend_network_fetch_runs_outside_db_transaction():
+    active_connections = 0
+    stored_tickers = []
+
+    class Result:
+        def __init__(self, rows=None):
+            self.rows = rows or []
+
+        def fetchall(self):
+            return self.rows
+
+    class FakeConnection:
+        def execute(self, sql, params=()):
+            if "SELECT c.ticker" in sql:
+                return Result([])
+            if "SELECT ticker, name" in sql:
+                return Result([{"ticker": "AAPL", "name": "Apple"}])
+            if "INSERT INTO ticker_dividend_cache" in sql:
+                assert active_connections == 1
+                stored_tickers.append(params[0])
+            return Result()
+
+        def commit(self):
+            return None
+
+    @contextmanager
+    def fake_connect():
+        nonlocal active_connections
+        active_connections += 1
+        try:
+            yield FakeConnection()
+        finally:
+            active_connections -= 1
+
+    originals = {
+        "connect": dividend_refresh_module.connect,
+        "ensure_dividend_tables": dividend_refresh_module.ensure_dividend_tables,
+        "_fetch_dividends": dividend_refresh_module._fetch_dividends,
+        "normalize_dividend_events": dividend_refresh_module.normalize_dividend_events,
+    }
+    try:
+        dividend_refresh_module.connect = fake_connect
+        dividend_refresh_module.ensure_dividend_tables = lambda _conn: None
+
+        def fake_fetch(_ticker, _name):
+            assert active_connections == 0
+            return [], "test"
+
+        dividend_refresh_module._fetch_dividends = fake_fetch
+        dividend_refresh_module.normalize_dividend_events = lambda _ticker, _events: []
+        dividend_refresh_module.refresh_dividend_events(["AAPL"])
+        assert stored_tickers == ["AAPL"]
+    finally:
+        for name, value in originals.items():
+            setattr(dividend_refresh_module, name, value)
 
 
 def test_read_only_fundamentals_serve_stale_cache():
