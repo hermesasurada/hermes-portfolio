@@ -97,13 +97,13 @@ async function loadDividendsForSelection() {
   dividendLoadKey = key;
   const accounts = visibleAccounts();
   const allAccounts = selectionMode === "all";
-  document.getElementById("dividendRows").innerHTML = skeletonRows(13);
+  document.getElementById("dividendRows").innerHTML = skeletonRows(12);
   dividendInFlight = apiFetchDividends(accounts.map(account => account.id), allAccounts);
   try {
     dividendData = await dividendInFlight;
     renderDividendTable();
   } catch (err) {
-    document.getElementById("dividendRows").innerHTML = `<tr><td colspan="13">${esc(err.message || String(err))}</td></tr>`;
+    document.getElementById("dividendRows").innerHTML = `<tr><td colspan="12">${esc(err.message || String(err))}</td></tr>`;
   } finally {
     dividendInFlight = null;
   }
@@ -116,9 +116,12 @@ function renderDividendTable() {
   }
   const rows = [...(dividendData.rows || [])];
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
-  const empty = `<tr><td colspan="13" class="flat">예정 배당 없음</td></tr>`;
+  const empty = `<tr><td colspan="12" class="flat">예정 배당 없음</td></tr>`;
   const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : "confirmed-date"}">${dividendDateText(value)}</span>`;
-  const displayTicker = ticker => String(ticker || "-").replace(/\.(KS|KQ)$/i, "");
+  const targetInitial = value => {
+    const match = String(value || "").match(/[A-Za-z]/);
+    return match ? match[0].toUpperCase() : "?";
+  };
   const taxRateText = value => {
     const rate = Number(value);
     return Number.isFinite(rate) && rate !== 0 ? numberText(rate, 2) : "-";
@@ -141,7 +144,7 @@ function renderDividendTable() {
     const collapsed = item.kind === "month" && collapsedDividendMonths.has(item.key);
     if (item.kind === "month") return `
     <tr class="dividend-month-row ${collapsed ? "collapsed" : ""}" data-month="${esc(item.key)}">
-      <td colspan="13">
+      <td colspan="12">
         <div class="dividend-month-summary">
           <button class="dividend-month-toggle" type="button" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${collapsed ? "월별 배당 펼치기" : "월별 배당 접기"}"></button>
           <span>${esc(item.label)}</span>
@@ -160,7 +163,7 @@ function renderDividendTable() {
     if (showTodayBoundary) todayBoundaryInserted = true;
     const todayBoundary = showTodayBoundary ? `
       <tr class="dividend-today-row">
-        <td colspan="13">
+        <td colspan="12">
           <span class="dividend-today-marker">오늘 ${dividendDateText(today)}</span>
         </td>
       </tr>
@@ -169,8 +172,7 @@ function renderDividendTable() {
     ${todayBoundary}
     <tr class="${paid ? "dividend-paid-row" : "dividend-upcoming-row"}">
       <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
-      <td class="dividend-target" title="${esc(item.row.target || item.row.member || "-")}">${esc(item.row.target || item.row.member || "-")}</td>
-      <td class="dividend-ticker"><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(displayTicker(item.row.ticker))}</a></td>
+      <td class="dividend-target" title="${esc(item.row.target || item.row.member || "-")}"><span class="dividend-target-icon" aria-label="${esc(item.row.target || item.row.member || "-")}">${esc(targetInitial(item.row.target || item.row.member))}</span></td>
       <td class="dividend-name" title="${esc(item.row.name || item.row.ticker || "-")}"><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(item.row.name || item.row.ticker || "-")}</a></td>
       <td>${dividendAmountText(item.row.amount, item.row.currency)}</td>
       <td>${fmt2.format(Number(item.row.qty) || 0)}</td>

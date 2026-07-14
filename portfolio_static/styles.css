@@ -1326,84 +1326,93 @@ th:first-child, td:first-child { text-align: left; }
 .dividend-list th:nth-child(1),
 .dividend-list td:nth-child(1) {
   text-align: center;
-  width: 5.5%;
+  width: 6%;
 }
 .dividend-list th:nth-child(2),
 .dividend-list td:nth-child(2) {
-  width: 13%;
-  text-align: left;
+  width: 4%;
+  text-align: center;
 }
 .dividend-list th:nth-child(3),
 .dividend-list td:nth-child(3) {
-  width: 5%;
+  width: 22%;
+  text-align: left;
 }
 .dividend-list th:nth-child(4),
 .dividend-list td:nth-child(4) {
-  width: 16%;
+  width: 8%;
 }
 .dividend-list th:nth-child(5),
 .dividend-list td:nth-child(5) {
-  width: 7.5%;
+  width: 6%;
 }
 .dividend-list th:nth-child(6),
 .dividend-list td:nth-child(6) {
-  width: 6%;
+  width: 8.5%;
 }
 .dividend-list th:nth-child(7),
-.dividend-list td:nth-child(7),
+.dividend-list td:nth-child(7) {
+  width: 8.5%;
+}
 .dividend-list th:nth-child(8),
 .dividend-list td:nth-child(8) {
-  width: 8%;
+  width: 5%;
 }
 .dividend-list th:nth-child(9),
 .dividend-list td:nth-child(9) {
-  width: 5%;
+  width: 8.5%;
 }
 .dividend-list th:nth-child(10),
 .dividend-list td:nth-child(10) {
-  width: 8%;
+  width: 6%;
 }
 .dividend-list th:nth-child(11),
 .dividend-list td:nth-child(11) {
-  width: 6%;
+  width: 12%;
 }
 .dividend-list th:nth-child(12),
 .dividend-list td:nth-child(12) {
-  width: 8%;
+  width: 5.5%;
 }
-.dividend-list th:nth-child(13),
-.dividend-list td:nth-child(13) {
-  width: 4%;
-}
-/* 대상→티커, 종목→주당배당금 경계는 촘촘하게 유지 */
+/* 대상→종목, 종목→주당배당금 경계는 촘촘하게 유지 */
 .dividend-list th:nth-child(2),
 .dividend-list td:nth-child(2),
-.dividend-list th:nth-child(4),
-.dividend-list td:nth-child(4) {
+.dividend-list th:nth-child(3),
+.dividend-list td:nth-child(3) {
   padding-right: 5px;
 }
 .dividend-list th:nth-child(3),
 .dividend-list td:nth-child(3),
-.dividend-list th:nth-child(5),
-.dividend-list td:nth-child(5) {
+.dividend-list th:nth-child(4),
+.dividend-list td:nth-child(4) {
   padding-left: 5px;
 }
 /* 수량·세전·세금 숫자군은 서로 구분되도록 여백 확대 */
+.dividend-list th:nth-child(5),
+.dividend-list td:nth-child(5),
 .dividend-list th:nth-child(6),
 .dividend-list td:nth-child(6),
 .dividend-list th:nth-child(7),
-.dividend-list td:nth-child(7),
-.dividend-list th:nth-child(8),
-.dividend-list td:nth-child(8) {
+.dividend-list td:nth-child(7) {
   padding-left: 16px;
   padding-right: 16px;
 }
 .dividend-target {
-  max-width: 0;
-  color: var(--ink);
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: center;
+}
+.dividend-target-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid color-mix(in srgb, var(--brand) 24%, var(--line));
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
 }
 .dividend-name {
   max-width: 0;
@@ -1415,21 +1424,13 @@ th:first-child, td:first-child { text-align: left; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.dividend-ticker {
-  color: var(--accent-2);
-  font-weight: 800;
-}
 .dividend-list .ticker-link {
   color: var(--ink);
   font-weight: 800;
 }
-.dividend-list .dividend-ticker .ticker-link {
-  color: var(--brand);
-}
 .dividend-list .dividend-name .ticker-link {
   color: color-mix(in srgb, var(--accent) 72%, var(--ink));
 }
-.dividend-list .dividend-ticker .ticker-link:hover,
 .dividend-list .dividend-name .ticker-link:hover {
   color: var(--ink);
   text-decoration: underline;
@@ -1563,12 +1564,12 @@ tr.dividend-month-row:hover td {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
-.dividend-list th:nth-child(8),
-.dividend-list th:nth-child(10),
-.dividend-list th:nth-child(12),
-.dividend-list td:nth-child(8),
-.dividend-list td:nth-child(10),
-.dividend-list td:nth-child(12) {
+.dividend-list th:nth-child(7),
+.dividend-list th:nth-child(9),
+.dividend-list th:nth-child(11),
+.dividend-list td:nth-child(7),
+.dividend-list td:nth-child(9),
+.dividend-list td:nth-child(11) {
   text-align: right;
 }
 #detailTableWrap th:first-child,
@@ -4556,14 +4557,13 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   /* 모바일 Safari는 table-layout:fixed + width:100%에서 min-width를 무시해 테이블이
      뷰포트로 압축됨 → 가로 스크롤이 안 생김. 명시적 px 폭으로 강제(통계탭과 동일). */
   #dividendTableWrap .dividend-list {
-    width: 1120px;
-    min-width: 1120px;
+    width: 1060px;
+    min-width: 1060px;
   }
-  /* 대상(사람 이름)은 짧으므로 폭을 텍스트에 맞게 더 축소 — 틀고정 블록(지급일자·
-     대상·티커)을 슬림하게 해 모바일에서 본문 컬럼이 더 많이 보이도록. */
+  /* 대상은 한 글자 아이콘이므로 틀고정 블록을 슬림하게 유지한다. */
   #dividendTableWrap .dividend-list th:nth-child(2),
   #dividendTableWrap .dividend-list td:nth-child(2) {
-    width: 6%;
+    width: 4%;
   }
   .dividend-history-table th,
   .dividend-history-table td {
