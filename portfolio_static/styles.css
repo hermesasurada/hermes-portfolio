@@ -4565,6 +4565,26 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   #dividendTableWrap .dividend-list td:nth-child(2) {
     width: 4%;
   }
+  #dividendTableWrap .dividend-list th:nth-child(3),
+  #dividendTableWrap .dividend-list td:nth-child(3) {
+    width: 14%;
+  }
+  #dividendTableWrap .dividend-list th:nth-child(4),
+  #dividendTableWrap .dividend-list td:nth-child(4) { width: 8.5%; }
+  #dividendTableWrap .dividend-list th:nth-child(5),
+  #dividendTableWrap .dividend-list td:nth-child(5) { width: 6.5%; }
+  #dividendTableWrap .dividend-list th:nth-child(6),
+  #dividendTableWrap .dividend-list td:nth-child(6) { width: 10%; }
+  #dividendTableWrap .dividend-list th:nth-child(7),
+  #dividendTableWrap .dividend-list td:nth-child(7) { width: 9.5%; }
+  #dividendTableWrap .dividend-list th:nth-child(9),
+  #dividendTableWrap .dividend-list td:nth-child(9) { width: 10%; }
+  #dividendTableWrap .dividend-list th:nth-child(10),
+  #dividendTableWrap .dividend-list td:nth-child(10) { width: 6.5%; }
+  #dividendTableWrap .dividend-list th:nth-child(11),
+  #dividendTableWrap .dividend-list td:nth-child(11) { width: 14%; }
+  #dividendTableWrap .dividend-list th:nth-child(12),
+  #dividendTableWrap .dividend-list td:nth-child(12) { width: 6%; }
   .dividend-history-table th,
   .dividend-history-table td {
     padding-left: 7px;
