@@ -8,7 +8,7 @@
 - 펀더멘털·기술지표·배당·분할 캐시 최신성
 - 실적일 수집 최신성 및 7일 이상 지난 원천 날짜
 - 가격 정체: 전체 최신일 대비 4일 초과 뒤처진 종목
-- 가격 수집 자체 중단: collector_runs 'price'가 오래됨
+- 실시간·일배치 가격 수집 중단/0건: collector_runs 'price', 'price-daily'
 """
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ from portfolio_core.technical_stats import TECHNICAL_CACHE_VERSION
 from portfolio_core.tickers import asset_class
 
 PRICE_RUN_MAX_AGE_HOURS = 36  # 주말 고려 — 평일 10분 주기 수집이 이보다 오래 멈추면 이상
+DAILY_PRICE_RUN_MAX_AGE_HOURS = 48
 DAILY_CACHE_MAX_AGE_HOURS = 36
 MARKET_CACHE_MAX_AGE_HOURS = 120  # 주말·휴장 뒤 첫 일배치 전까지 허용
 
@@ -177,6 +178,19 @@ def check() -> list[str]:
         problems.append("가격 수집 기록 없음 (collector_runs)")
     elif age > PRICE_RUN_MAX_AGE_HOURS:
         problems.append(f"가격 수집 중단 의심 — 마지막 실행 {age:.0f}시간 전 ({run['updated_at']})")
+    elif int(run["item_count"] or 0) == 0:
+        problems.append(f"가격 수집 결과 0건 ({run['updated_at']})")
+
+    daily_run = diag["daily_price_run"]
+    daily_age = _run_age_hours(daily_run["updated_at"]) if daily_run else None
+    if daily_age is None:
+        problems.append("가격 일배치 기록 없음 (collector_runs: price-daily)")
+    elif daily_age > DAILY_PRICE_RUN_MAX_AGE_HOURS:
+        problems.append(
+            f"가격 일배치 중단 의심 — 마지막 실행 {daily_age:.0f}시간 전 ({daily_run['updated_at']})"
+        )
+    elif int(daily_run["item_count"] or 0) == 0:
+        problems.append(f"가격 일배치 결과 0건 ({daily_run['updated_at']})")
 
     return problems
 

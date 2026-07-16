@@ -417,13 +417,6 @@ def collector_run_due(name: str, max_age_seconds: float) -> bool:
     return (datetime.now(timezone.utc) - updated_at).total_seconds() >= max_age_seconds
 
 
-def update_price_cache(entries: Iterable[tuple[str, float, str, str]]) -> None:
-    """이름과 달리 가격 캐시 저장은 없다 — 수집 run(개수·시각) 기록만 남긴다.
-    (과거 캐시 테이블 시절의 레거시 API. 호출부 호환을 위해 시그니처 유지.)"""
-    clean_entries = list(entries)
-    update_collector_run("price", len(clean_entries))
-
-
 def update_earnings_dates(entries: Iterable[tuple[str, str | None]]) -> int:
     clean_entries = [(ticker, date_text) for ticker, date_text in entries if ticker]
     if not clean_entries:

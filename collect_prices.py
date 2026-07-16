@@ -2,11 +2,9 @@
 from __future__ import annotations
 
 import argparse
-import fcntl
 import sys
 import time
 import urllib.error
-from contextlib import contextmanager
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -18,12 +16,12 @@ from portfolio_core.collectors import (
     fetch_price,
     fetch_yahoo_earnings_date,
 )
+from portfolio_core.collect_common import collector_lock, parse_categories
 from portfolio_core.corporate_actions import refresh_stock_splits
 from portfolio_core.db import connect, ensure_dividend_tables, initialize_schema
 from portfolio_core.dividends import refresh_dividend_events, refresh_dividend_growth_cache
 from portfolio_core.fundamentals import fetch_fundamentals
 from portfolio_core.price_store import (
-    CATEGORIES,
     earnings_update_due_tickers,
     history_backfill_status,
     load_watch,
@@ -31,7 +29,7 @@ from portfolio_core.price_store import (
     repair_split_adjusted_daily_prices,
     save_daily_prices,
     update_earnings_dates,
-    update_price_cache,
+    update_collector_run,
 )
 from portfolio_core.technical_stats import refresh_technical_stats_cache
 from portfolio_core.tickers import asset_class
@@ -75,38 +73,6 @@ def backfill_new_tickers(categories: list[str], tickers: list[str] | None) -> tu
             backfilled.append(ticker)
             print(f"  ↺ backfilled {ticker}: {saved} history rows")
     return rows_saved, backfilled
-
-
-@contextmanager
-def collector_lock(name: str):
-    """cron 겹침 방지용 flock. 이미 실행 중이면 False를 yield하고 즉시 반환.
-    collect_quotes(quotes-{scope})·collect_prices(prices)가 공유한다."""
-    lock_path = Path(f"/tmp/hermes-portfolio-{name}.lock")
-    with lock_path.open("w") as lock_file:
-        try:
-            fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            print(f"Skipped: another {name} collector is still running")
-            yield False
-            return
-        try:
-            yield True
-        finally:
-            fcntl.flock(lock_file, fcntl.LOCK_UN)
-
-
-def parse_categories(values: list[str] | None) -> list[str]:
-    if not values:
-        return list(CATEGORIES)
-    categories: list[str] = []
-    for value in values:
-        categories.extend(item.strip() for item in value.split(",") if item.strip())
-    if "all" in categories:
-        return list(CATEGORIES)
-    unknown = sorted(set(categories) - set(CATEGORIES))
-    if unknown:
-        raise SystemExit(f"Unknown category: {', '.join(unknown)}")
-    return sorted(set(categories), key=list(CATEGORIES).index)
 
 
 def collect_prices(categories: list[str], tickers: list[str] | None, history_start: str) -> tuple[list[CollectedPrice], list[str]]:
@@ -261,7 +227,8 @@ def main() -> int:
 
     # Polygon 스로틀 등으로 수십 분까지 늘어질 수 있어 cron 주기와 겹치면
     # 같은 작업 2벌 + SQLite 쓰기 경합이 난다. flock으로 단일 실행 보장.
-    with collector_lock("prices") as acquired:
+    lock_name = "dividends" if args.dividends_only else "prices"
+    with collector_lock(lock_name) as acquired:
         if not acquired:
             return 0
         initialize_schema()
@@ -271,60 +238,111 @@ def main() -> int:
 def _run(args: argparse.Namespace) -> int:
     # 배당/분할 전용 모드: 가격·실적 수집을 건너뛰고 전 추적종목 배당만 갱신.
     if args.dividends_only:
-        split_count = collect_stock_splits(args.ticker)
-        dividend_count = collect_dividend_events(args.ticker)
+        stage_errors: list[str] = []
+        split_count = 0
+        dividend_count = 0
+        try:
+            split_count = collect_stock_splits(args.ticker)
+        except Exception as exc:
+            stage_errors.append("splits")
+            print(f"Stage failed: splits: {type(exc).__name__}: {exc}")
+        try:
+            dividend_count = collect_dividend_events(args.ticker)
+        except Exception as exc:
+            stage_errors.append("dividends")
+            print(f"Stage failed: dividends: {type(exc).__name__}: {exc}")
         print(f"Dividends-only: checked {dividend_count} tickers, updated splits for {split_count}")
-        return 0
+        return 1 if stage_errors else 0
 
     categories = parse_categories(args.category)
     fetched, errors = collect_prices(categories, args.ticker, args.history_start)
 
-    cache_entries = []
+    stage_errors: list[str] = []
+    saved_tickers = 0
     row_count = 0
     for item in fetched:
-        row_count += save_daily_prices(item.ticker, item.recent, item.source)
-        cache_entries.append((item.ticker, item.price, item.currency, item.source))
-    if cache_entries:
-        update_price_cache(cache_entries)
+        try:
+            row_count += save_daily_prices(item.ticker, item.recent, item.source)
+            saved_tickers += 1
+        except Exception as exc:
+            stage_errors.append(f"save:{item.ticker}")
+            print(f"Stage failed: save {item.ticker}: {type(exc).__name__}: {exc}")
 
-    backfill_count, backfilled = backfill_new_tickers(categories, args.ticker)
+    backfill_count = 0
+    backfilled: list[str] = []
+    try:
+        backfill_count, backfilled = backfill_new_tickers(categories, args.ticker)
+    except Exception as exc:
+        stage_errors.append("backfill")
+        print(f"Stage failed: backfill: {type(exc).__name__}: {exc}")
     if backfill_count:
         row_count += backfill_count
         print(f"Backfilled {len(backfilled)} new tickers / {backfill_count} history rows")
 
     technical_tickers = {item.ticker for item in fetched} | set(backfilled)
     if not args.skip_splits:
-        split_count = collect_stock_splits(args.ticker)
-        if split_count:
-            print(f"Updated stock splits for {split_count} tracked tickers")
+        try:
+            split_count = collect_stock_splits(args.ticker)
+            if split_count:
+                print(f"Updated stock splits for {split_count} tracked tickers")
+        except Exception as exc:
+            stage_errors.append("splits")
+            print(f"Stage failed: splits: {type(exc).__name__}: {exc}")
     if technical_tickers:
-        technical_updated = refresh_technical_stats_cache(technical_tickers)
-        if technical_updated:
-            print(f"Updated {technical_updated} technical stats")
+        try:
+            technical_updated = refresh_technical_stats_cache(technical_tickers)
+            if technical_updated:
+                print(f"Updated {technical_updated} technical stats")
+        except Exception as exc:
+            stage_errors.append("technicals")
+            print(f"Stage failed: technicals: {type(exc).__name__}: {exc}")
     if not args.skip_fundamentals:
-        fundamentals_updated = collect_fundamentals(categories, args.ticker)
-        if fundamentals_updated:
-            print(f"Updated {fundamentals_updated} fundamentals")
+        try:
+            fundamentals_updated = collect_fundamentals(categories, args.ticker)
+            if fundamentals_updated:
+                print(f"Updated {fundamentals_updated} fundamentals")
+        except Exception as exc:
+            stage_errors.append("fundamentals")
+            print(f"Stage failed: fundamentals: {type(exc).__name__}: {exc}")
     earnings_errors: list[str] = []
     if not args.skip_earnings:
-        earnings_entries, earnings_errors = collect_earnings_dates(
-            categories,
-            args.ticker,
-            args.earnings_max_age_hours,
-            args.force_earnings,
-        )
-        updated_earnings = update_earnings_dates(earnings_entries)
-        if updated_earnings:
-            print(f"Updated {updated_earnings} earnings dates")
+        try:
+            earnings_entries, earnings_errors = collect_earnings_dates(
+                categories,
+                args.ticker,
+                args.earnings_max_age_hours,
+                args.force_earnings,
+            )
+            updated_earnings = update_earnings_dates(earnings_entries)
+            if updated_earnings:
+                print(f"Updated {updated_earnings} earnings dates")
+        except Exception as exc:
+            stage_errors.append("earnings")
+            print(f"Stage failed: earnings: {type(exc).__name__}: {exc}")
     if not args.skip_dividends:
-        dividend_count = collect_dividend_events(args.ticker)
-        if dividend_count:
-            print(f"Checked dividend events for {dividend_count} tracked tickers")
+        try:
+            dividend_count = collect_dividend_events(args.ticker)
+            if dividend_count:
+                print(f"Checked dividend events for {dividend_count} tracked tickers")
+        except Exception as exc:
+            stage_errors.append("dividends")
+            print(f"Stage failed: dividends: {type(exc).__name__}: {exc}")
+    update_collector_run(
+        "price-daily",
+        saved_tickers,
+        {
+            "categories": categories,
+            "fetch_errors": len(errors),
+            "stage_errors": stage_errors,
+        },
+    )
     print(f"Updated {len(fetched)} tickers / {row_count} daily rows")
     all_errors = errors + [f"{ticker}:earnings" for ticker in earnings_errors]
     if all_errors:
         print(f"Failed {len(all_errors)} tickers: {', '.join(all_errors)}")
-    return 0 if fetched or not errors else 1
+    if stage_errors:
+        print(f"Failed stages: {', '.join(stage_errors)}")
+    return 1 if stage_errors or (errors and not fetched) else 0
 
 
 if __name__ == "__main__":

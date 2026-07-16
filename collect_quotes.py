@@ -7,14 +7,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from collect_prices import collector_lock, parse_categories
+from portfolio_core.collect_common import collector_lock, parse_categories
 from portfolio_core.db import initialize_schema
 from portfolio_core.price_store import (
     collector_run_due,
     load_watch,
     save_daily_prices,
     update_collector_run,
-    update_price_cache,
 )
 from portfolio_core.snapshot_collector import collect_snapshots
 from portfolio_core.technical_stats import refresh_technical_stats_cache
@@ -46,8 +45,11 @@ def main() -> int:
         for item in fetched:
             row_count += save_daily_prices(item.ticker, item.recent, item.source)
             cache_entries.append((item.ticker, item.price, item.currency, item.source))
-        if cache_entries:
-            update_price_cache(cache_entries)
+        update_collector_run(
+            "price",
+            len(cache_entries),
+            {"categories": categories, "errors": len(errors)},
+        )
 
         if not args.skip_technicals and collector_run_due(technical_run_name, TECHNICAL_REFRESH_SECONDS):
             watch = load_watch(categories=categories, tickers=args.ticker)

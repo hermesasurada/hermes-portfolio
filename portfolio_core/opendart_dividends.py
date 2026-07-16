@@ -98,15 +98,17 @@ def _corp_map() -> dict[str, str]:
             if age_days < CORP_CODE_TTL_DAYS:
                 _corp_map_cache = json.loads(CORP_CODE_CACHE.read_text())
                 return _corp_map_cache
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"[dividends] OpenDART corp-code cache read failed: {type(exc).__name__}: {exc}")
     try:
         _corp_map_cache = _refresh_corp_codes(key)
-    except Exception:
+    except Exception as exc:
+        print(f"[dividends] OpenDART corp-code refresh failed: {type(exc).__name__}: {exc}")
         # 갱신 실패 시 기존 캐시라도 사용
         try:
             _corp_map_cache = json.loads(CORP_CODE_CACHE.read_text()) if CORP_CODE_CACHE.exists() else {}
-        except Exception:
+        except Exception as cache_exc:
+            print(f"[dividends] OpenDART corp-code fallback failed: {type(cache_exc).__name__}: {cache_exc}")
             _corp_map_cache = {}
     return _corp_map_cache
 
@@ -184,10 +186,7 @@ def fetch_opendart_dividends(ticker: str) -> list[dict]:
     by_record: dict[str, dict] = {}
     for filing in sorted(filings, key=lambda x: x.get("rcept_dt") or "", reverse=True):
         time.sleep(_DOC_PACING_SECONDS)
-        try:
-            info = _parse_decision(filing["rcept_no"])
-        except Exception:
-            continue
+        info = _parse_decision(filing["rcept_no"])
         if not info:
             continue
         record = info["record"]

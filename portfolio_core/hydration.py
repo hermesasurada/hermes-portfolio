@@ -9,10 +9,10 @@ from .corporate_actions import refresh_stock_splits
 from .db import connect, ensure_ticker_metadata_columns
 from .fundamentals import fetch_fundamentals
 from .logos import cache_logo
-from .price_store import infer_category, save_daily_prices, update_earnings_dates, update_price_cache
+from .price_store import infer_category, save_daily_prices, update_earnings_dates
 from .technical_stats import refresh_technical_stats_cache
 from .ticker_lookup import resolve_kr_suffix
-from .tickers import asset_class, ticker_currency
+from .tickers import asset_class
 
 
 def normalize_hydration_ticker(value: str) -> str:
@@ -27,8 +27,7 @@ def hydrate_ticker(ticker: str, years: int = 10) -> dict:
     result = {"ticker": ticker, "history_rows": 0, "stats": False, "earnings": None, "logo": None, "error": None}
     with connect() as conn:
         ensure_ticker_metadata_columns(conn)
-        meta = conn.execute("SELECT name, currency FROM tickers WHERE ticker = ?", (ticker,)).fetchone()
-    currency = (meta["currency"] if meta and meta["currency"] else ticker_currency(ticker))
+        meta = conn.execute("SELECT name FROM tickers WHERE ticker = ?", (ticker,)).fetchone()
     name = (meta["name"] if meta and meta["name"] else "")
     try:
         category = infer_category(ticker)
@@ -36,8 +35,7 @@ def hydrate_ticker(ticker: str, years: int = 10) -> dict:
         source = "fdr-history" if category == "kr" else "upbit-history" if category == "crypto" else "yf-history"
         if rows:
             result["history_rows"] = save_daily_prices(ticker, rows, source)
-            last_date, last_price = rows[-1]
-            update_price_cache([(ticker, last_price, currency, source)])
+            last_date, _ = rows[-1]
             result["last_date"] = last_date
             result["technical_stats"] = refresh_technical_stats_cache([ticker])
     except Exception as exc:

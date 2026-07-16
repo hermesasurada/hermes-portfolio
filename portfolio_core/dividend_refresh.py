@@ -90,7 +90,7 @@ def refresh_dividend_events(tickers: list[str]) -> None:
             # KR은 소스별 ex_date 관례가 달라(opendart=기준일-1영업일,
             # yf=ex) 근접 중복이 누적된다. _fetch_dividends가 이미 중복 억제한 완전한
             # 병합본을 주므로, 정상 수집된 경우 기존 이벤트를 통째로 교체한다.
-            if _kr_dividend_candidate(ticker) and events:
+            if _kr_dividend_candidate(ticker) and events and "_error" not in str(status or ""):
                 conn.execute("DELETE FROM dividend_events WHERE ticker = ?", (ticker,))
             for event in events:
                 if not event.get("ex_date") or not _in_retention_window(event):

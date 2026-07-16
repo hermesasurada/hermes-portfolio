@@ -448,14 +448,18 @@ def _js_string_field(text: str, key: str) -> str | None:
 def _fetch_stockanalysis_dividends(ticker: str) -> list[dict]:
     fallback_currency = ticker_currency(ticker)
     html = ""
+    last_error: Exception | None = None
     for url in _stockanalysis_urls(ticker):
         try:
             html = _fetch_text(url, STOCKANALYSIS_HEADERS)
             if "history:[" in html:
                 break
-        except Exception:
+        except Exception as exc:
+            last_error = exc
             continue
     if "history:[" not in html:
+        if last_error is not None:
+            raise last_error
         return []
 
     block_match = re.search(r"history:\[(.*?)\],chartData:", html, re.DOTALL)

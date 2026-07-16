@@ -124,10 +124,17 @@ def load_collection_diagnostics(conn: sqlite3.Connection) -> dict:
     run = conn.execute(
         "SELECT updated_at, item_count FROM collector_runs WHERE name = 'price'"
     ).fetchone()
+    daily_run = conn.execute(
+        "SELECT updated_at, item_count FROM collector_runs WHERE name = 'price-daily'"
+    ).fetchone()
     return {
         "dividend_errors": [{"ticker": row["ticker"], "status": row["status"]} for row in dividend_errors],
         "stale_prices": [{"ticker": row["ticker"], "last_date": row["last_date"]} for row in stale],
         "price_run": ({"updated_at": run["updated_at"], "item_count": run["item_count"]} if run else None),
+        "daily_price_run": (
+            {"updated_at": daily_run["updated_at"], "item_count": daily_run["item_count"]}
+            if daily_run else None
+        ),
     }
 
 

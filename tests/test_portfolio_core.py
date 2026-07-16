@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import portfolio_core.fundamentals as fundamentals_module
 import portfolio_core.dividend_refresh as dividend_refresh_module
+from portfolio_core.collect_common import parse_categories
 from portfolio_core.fundamentals import fetch_fundamentals, normalize_pe, parse_number
 from portfolio_core.dates import parse_iso_date, to_iso_text
 from portfolio_core.dividends import (
@@ -187,6 +188,72 @@ def test_dividend_network_fetch_runs_outside_db_transaction():
     finally:
         for name, value in originals.items():
             setattr(dividend_refresh_module, name, value)
+
+
+def test_kr_dividend_partial_failure_preserves_existing_history():
+    class Result:
+        def __init__(self, rows=None):
+            self.rows = rows or []
+
+        def fetchall(self):
+            return self.rows
+
+    statements: list[str] = []
+
+    class FakeConnection:
+        def execute(self, sql, params=()):
+            statements.append(" ".join(sql.split()))
+            if "SELECT c.ticker" in sql:
+                return Result([])
+            if "SELECT ticker, name" in sql:
+                return Result([{"ticker": "005930.KS", "name": "Samsung Electronics"}])
+            return Result()
+
+        def commit(self):
+            return None
+
+    @contextmanager
+    def fake_connect():
+        yield FakeConnection()
+
+    originals = {
+        "connect": dividend_refresh_module.connect,
+        "ensure_dividend_tables": dividend_refresh_module.ensure_dividend_tables,
+        "_fetch_dividends": dividend_refresh_module._fetch_dividends,
+        "normalize_dividend_events": dividend_refresh_module.normalize_dividend_events,
+        "_kr_dividend_candidate": dividend_refresh_module._kr_dividend_candidate,
+    }
+    event = {
+        "ticker": "005930.KS",
+        "ex_date": f"{date.today().year}-06-01",
+        "pay_date": f"{date.today().year}-06-20",
+        "amount": 100.0,
+        "currency": "KRW",
+        "source": "opendart",
+    }
+    try:
+        dividend_refresh_module.connect = fake_connect
+        dividend_refresh_module.ensure_dividend_tables = lambda _conn: None
+        dividend_refresh_module.normalize_dividend_events = lambda _ticker, events: events
+        dividend_refresh_module._kr_dividend_candidate = lambda _ticker: True
+
+        dividend_refresh_module._fetch_dividends = lambda _ticker, _name: ([event], "opendart_error(TimeoutError)+kr_history")
+        dividend_refresh_module.refresh_dividend_events(["005930.KS"])
+        assert not any(sql.startswith("DELETE FROM dividend_events") for sql in statements)
+        assert any(sql.startswith("INSERT INTO dividend_events") for sql in statements)
+
+        statements.clear()
+        dividend_refresh_module._fetch_dividends = lambda _ticker, _name: ([event], "opendart+kr_history")
+        dividend_refresh_module.refresh_dividend_events(["005930.KS"])
+        assert any(sql.startswith("DELETE FROM dividend_events") for sql in statements)
+    finally:
+        for name, value in originals.items():
+            setattr(dividend_refresh_module, name, value)
+
+
+def test_parse_collector_categories():
+    assert parse_categories(["overseas,fx", "overseas"]) == ["fx", "overseas"]
+    assert parse_categories(["all"]) == ["fx", "crypto", "overseas", "kr", "index"]
 
 
 def test_read_only_fundamentals_serve_stale_cache():
