@@ -22,6 +22,13 @@
   --brand: #1f4e79;         /* unified interactive accent (charts, toggles, ranges) */
   --brand-soft: #eaf1f9;
   --on-accent: #ffffff;
+  --schedule-earnings: #6d28d9;
+  --schedule-earnings-soft: #f1ebff;
+  --schedule-earnings-border: #c4b5fd;
+  --schedule-dividend: #047857;
+  --schedule-dividend-soft: #e7f8ef;
+  --schedule-dividend-border: #86d1ad;
+  --schedule-tag-ink: #ffffff;
   --up: #c1121f;            /* KR convention: 상승=빨강 */
   --down: #1d4ed8;          /* 하락=파랑 */
   --buy: #15803d;
@@ -105,6 +112,13 @@
     --accent-2: #6ea8e6;
     --brand: #6ea8e6;
     --brand-soft: #24364b;
+    --schedule-earnings: #a78bfa;
+    --schedule-earnings-soft: #33284d;
+    --schedule-earnings-border: #6f5b91;
+    --schedule-dividend: #6ee7b7;
+    --schedule-dividend-soft: #173f33;
+    --schedule-dividend-border: #36745f;
+    --schedule-tag-ink: #11161d;
     --up: #f87171;          /* dark-bg-safe 상승=빨강 (살짝 탈채도로 눈부심 완화) */
     --down: #7aa2ff;        /* 하락=파랑 */
     --buy: #4ade80;
@@ -3615,14 +3629,36 @@ th.pc-frozen-edge {
   align-items: center;
   gap: 5px;
 }
-.schedule-legend i {
-  width: 7px;
-  height: 7px;
-  display: inline-block;
-  border-radius: 50%;
+.schedule-legend-item {
+  min-height: 22px;
+  padding: 2px 8px 2px 3px;
+  border: 1px solid;
+  border-radius: 999px;
 }
-.schedule-legend i.earnings { background: var(--brand); }
-.schedule-legend i.dividend { background: var(--accent); }
+.schedule-legend-item.earnings {
+  border-color: var(--schedule-earnings-border);
+  background: var(--schedule-earnings-soft);
+  color: var(--schedule-earnings);
+}
+.schedule-legend-item.dividend {
+  border-color: var(--schedule-dividend-border);
+  background: var(--schedule-dividend-soft);
+  color: var(--schedule-dividend);
+}
+.schedule-legend-item i {
+  height: 16px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 3px;
+  color: var(--schedule-tag-ink);
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1;
+}
+.schedule-legend-item.earnings i { background: var(--schedule-earnings); }
+.schedule-legend-item.dividend i { background: var(--schedule-dividend); }
 .schedule-estimate-note { margin-left: auto; font-style: italic; }
 .schedule-body {
   min-height: 470px;
@@ -3705,21 +3741,28 @@ th.pc-frozen-edge {
   height: 19px !important;
   min-width: 0;
   display: grid;
-  grid-template-columns: 6px minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr);
   align-items: center;
-  gap: 4px;
-  padding: 0 5px;
+  gap: 3px;
+  padding: 0 4px 0 2px;
   border: 1px solid transparent !important;
+  border-left-width: 3px !important;
   border-radius: 3px !important;
   box-shadow: none !important;
   text-align: left;
 }
-.schedule-event i {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+.schedule-event-type {
+  height: 14px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 2px;
+  color: var(--schedule-tag-ink);
+  font-size: 7.5px;
+  font-weight: 900;
+  letter-spacing: -.02em;
+  line-height: 1;
 }
-.schedule-event span {
+.schedule-event-label {
   min-width: 0;
   overflow: hidden;
   font-size: 9.5px;
@@ -3729,19 +3772,21 @@ th.pc-frozen-edge {
   white-space: nowrap;
 }
 .schedule-event.earnings {
-  border-color: color-mix(in srgb, var(--brand) 22%, transparent) !important;
-  background: var(--brand-soft) !important;
-  color: var(--brand);
+  border-color: var(--schedule-earnings-border) !important;
+  border-left-color: var(--schedule-earnings) !important;
+  background: var(--schedule-earnings-soft) !important;
+  color: var(--schedule-earnings);
 }
-.schedule-event.earnings i { background: var(--brand); }
+.schedule-event.earnings .schedule-event-type { background: var(--schedule-earnings); }
 .schedule-event.dividend {
-  border-color: color-mix(in srgb, var(--accent) 24%, transparent) !important;
-  background: var(--accent-soft) !important;
-  color: var(--accent);
+  border-color: var(--schedule-dividend-border) !important;
+  border-left-color: var(--schedule-dividend) !important;
+  background: var(--schedule-dividend-soft) !important;
+  color: var(--schedule-dividend);
 }
-.schedule-event.dividend i { background: var(--accent); }
-.schedule-event.estimated span { font-style: italic; opacity: .72; }
-.schedule-event.owned { border-left-width: 3px !important; }
+.schedule-event.dividend .schedule-event-type { background: var(--schedule-dividend); }
+.schedule-event.estimated .schedule-event-label { font-style: italic; opacity: .72; }
+.schedule-event.owned .schedule-event-label { font-weight: 900; }
 .schedule-event:hover { filter: brightness(.97); }
 .schedule-more {
   width: 100%;
@@ -3782,7 +3827,7 @@ th.pc-frozen-edge {
   min-height: 46px;
   height: auto !important;
   display: grid;
-  grid-template-columns: 30px 38px minmax(150px, 1fr) minmax(160px, auto) 34px;
+  grid-template-columns: 30px 58px minmax(150px, 1fr) minmax(160px, auto) 34px;
   align-items: center;
   gap: 9px;
   padding: 6px 10px;
@@ -3795,6 +3840,8 @@ th.pc-frozen-edge {
   text-align: left;
 }
 .schedule-list-row:last-child { border-bottom: 0 !important; }
+.schedule-list-row.earnings { border-left: 3px solid var(--schedule-earnings) !important; }
+.schedule-list-row.dividend { border-left: 3px solid var(--schedule-dividend) !important; }
 .schedule-list-row:hover { background: var(--surface-hover) !important; }
 .schedule-list-logo .asset-icon {
   width: 26px;
@@ -3810,9 +3857,21 @@ th.pc-frozen-edge {
   font-weight: 800;
   white-space: nowrap;
 }
-.schedule-type-badge { height: 20px; }
-.schedule-type-badge.earnings { color: var(--brand); background: var(--brand-soft); }
-.schedule-type-badge.dividend { color: var(--accent); background: var(--accent-soft); }
+.schedule-type-badge {
+  height: 22px;
+  padding: 0 5px;
+  border: 1px solid;
+}
+.schedule-type-badge.earnings {
+  border-color: var(--schedule-earnings-border);
+  color: var(--schedule-earnings);
+  background: var(--schedule-earnings-soft);
+}
+.schedule-type-badge.dividend {
+  border-color: var(--schedule-dividend-border);
+  color: var(--schedule-dividend);
+  background: var(--schedule-dividend-soft);
+}
 .schedule-list-identity {
   min-width: 0;
   display: flex;
@@ -3915,19 +3974,19 @@ th.pc-frozen-edge {
   .schedule-day-events { gap: 2px; }
   .schedule-event {
     height: 17px !important;
-    grid-template-columns: 4px minmax(0, 1fr);
-    gap: 3px;
-    padding: 0 3px;
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 2px;
+    padding: 0 2px 0 1px;
   }
-  .schedule-event i { width: 4px; height: 4px; }
-  .schedule-event span { font-size: 8.5px; }
+  .schedule-event-type { height: 13px; font-size: 7px; }
+  .schedule-event-label { font-size: 8.5px; }
   .schedule-more { height: 16px !important; padding: 0 3px; font-size: 8.5px; }
   .schedule-list-group { grid-template-columns: 42px minmax(0, 1fr); }
   .schedule-list-date { padding: 10px 4px; }
   .schedule-list-date strong { font-size: 14px; }
   .schedule-list-row {
     min-height: 52px;
-    grid-template-columns: 26px 32px minmax(0, 1fr) auto;
+    grid-template-columns: 26px 52px minmax(0, 1fr) auto;
     grid-template-rows: auto auto;
     gap: 3px 7px;
     padding: 6px 8px;

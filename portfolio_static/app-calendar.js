@@ -70,11 +70,13 @@ function visibleScheduleEvents() {
 function scheduleEventButton(event) {
   const label = scheduleTickerLabel(event);
   const typeLabel = event.type === "earnings" ? "실적발표" : "배당지급";
+  const shortTypeLabel = event.type === "earnings" ? "실적" : "배당";
   const title = `${typeLabel} · ${event.name} (${event.ticker})${event.estimated ? " · 예상일" : ""}`;
   return `
     <button class="schedule-event ${event.type}${event.estimated ? " estimated" : ""}${event.owned ? " owned" : ""}"
-      type="button" data-chart-ticker="${esc(event.ticker)}" title="${esc(title)}">
-      <i aria-hidden="true"></i><span>${esc(label)}</span>
+      type="button" data-chart-ticker="${esc(event.ticker)}" title="${esc(title)}" aria-label="${esc(title)}">
+      <span class="schedule-event-type" aria-hidden="true">${shortTypeLabel}</span>
+      <span class="schedule-event-label">${esc(label)}</span>
     </button>`;
 }
 
@@ -145,7 +147,7 @@ function renderScheduleList(events) {
       <button class="schedule-list-row ${event.type}${event.estimated ? " estimated" : ""}"
         type="button" data-chart-ticker="${esc(event.ticker)}">
         <span class="schedule-list-logo">${logoMarkup(event)}</span>
-        <span class="schedule-type-badge ${event.type}">${event.type === "earnings" ? "실적" : "배당"}</span>
+        <span class="schedule-type-badge ${event.type}">${event.type === "earnings" ? "실적발표" : "배당지급"}</span>
         <span class="schedule-list-identity">
           <strong>${esc(event.name)}</strong><small>${esc(event.ticker)}</small>
         </span>
