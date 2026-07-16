@@ -117,6 +117,21 @@ def test_dividend_growth_uses_current_annual_estimate():
     assert abs(summary["cagr_5y"] - expected_cagr) < 1e-9
 
 
+def test_dividend_growth_ignores_historical_payment_count_changes():
+    totals = {2021: 3.954, 2022: 6.634, 2023: 6.452, 2024: 6.713, 2025: 7.372}
+    estimate = 10.699
+    expected_cagr = ((estimate / totals[2021]) ** (1 / 5) - 1) * 100
+
+    # ASML처럼 반기배당에서 분기배당으로 바뀐 종목은 과거 연도가 현재 주기
+    # 기준으로 완결되지 않아도 귀속연도 합계로 CAGR을 계산한다.
+    result = _estimated_annual_cagr(totals, {2023, 2024, 2025}, 2026, estimate, 5)
+    assert abs(result - expected_cagr) < 1e-9
+
+    missing_year = dict(totals)
+    missing_year.pop(2023)
+    assert _estimated_annual_cagr(missing_year, set(), 2026, estimate, 5) is None
+
+
 def test_dividend_network_fetch_runs_outside_db_transaction():
     active_connections = 0
     stored_tickers = []

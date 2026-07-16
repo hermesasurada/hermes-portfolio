@@ -56,7 +56,7 @@ def _same_dividend_cycle_amount(current: float, previous: float | None) -> bool:
 
 def _annual_cagr(
     totals: dict[int, float],
-    complete_years: set[int],
+    _complete_years: set[int],
     end_year: int,
     years: int,
 ) -> float | None:
@@ -67,7 +67,7 @@ def _annual_cagr(
         or end_value is None
         or start_value <= 0
         or end_value <= 0
-        or any(year not in complete_years for year in range(end_year - years, end_year + 1))
+        or any(totals.get(year, 0) <= 0 for year in range(end_year - years, end_year + 1))
     ):
         return None
     return ((end_value / start_value) ** (1 / years) - 1) * 100
@@ -75,7 +75,7 @@ def _annual_cagr(
 
 def _estimated_annual_cagr(
     totals: dict[int, float],
-    complete_years: set[int],
+    _complete_years: set[int],
     current_year: int,
     current_estimate: float | None,
     years: int,
@@ -88,7 +88,7 @@ def _estimated_annual_cagr(
         or current_estimate <= 0
         or start_value is None
         or start_value <= 0
-        or any(year not in complete_years for year in range(start_year, current_year))
+        or any(totals.get(year, 0) <= 0 for year in range(start_year, current_year))
     ):
         return None
     return ((current_estimate / start_value) ** (1 / years) - 1) * 100
