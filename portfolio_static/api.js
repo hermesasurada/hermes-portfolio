@@ -30,6 +30,10 @@ function apiFetchDividendHistory(ticker) {
   return fetchJson(`/api/dividend-history?ticker=${encodeURIComponent(ticker || "")}`);
 }
 
+function apiFetchSchedule() {
+  return fetchJson("/api/schedule");
+}
+
 function apiFetchChart(ticker) {
   return fetchJson(`/api/chart?ticker=${encodeURIComponent(ticker || "")}`);
 }

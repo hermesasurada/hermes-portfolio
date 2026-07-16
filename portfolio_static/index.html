@@ -81,6 +81,7 @@
             <span class="search-icon" aria-hidden="true"></span>
           </button>
           <button id="watchlistOpen" class="ghost-btn" type="button"><span class="label-full">관리종목</span><span class="label-short">종목</span></button>
+          <button id="scheduleOpen" class="ghost-btn" type="button">일정</button>
           <button id="performanceOpen" class="ghost-btn" type="button"><span class="label-full">성과차트</span><span class="label-short">성과</span></button>
         </div>
         <div class="ctrl-group" aria-label="환경">
@@ -552,6 +553,45 @@
       <div id="dividendHistoryBody"></div>
     </form>
   </dialog>
+  <dialog class="watch-modal schedule-modal" id="scheduleModal">
+    <form method="dialog" class="modal-card schedule-card">
+      <div class="modal-head schedule-head">
+        <div class="schedule-title">
+          <strong>일정</strong>
+          <span id="scheduleCount">-</span>
+        </div>
+        <button class="ghost-btn" id="scheduleClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <div class="schedule-toolbar">
+        <div class="schedule-nav" aria-label="월 이동">
+          <button class="schedule-nav-btn" id="schedulePrev" type="button" aria-label="이전 달" title="이전 달">‹</button>
+          <strong id="scheduleMonthLabel">-</strong>
+          <button class="schedule-nav-btn" id="scheduleNext" type="button" aria-label="다음 달" title="다음 달">›</button>
+          <button class="ghost-btn schedule-today-btn" id="scheduleToday" type="button">오늘</button>
+        </div>
+        <div class="schedule-options">
+          <div class="segmented schedule-view-toggle" role="group" aria-label="일정 보기 방식">
+            <button class="seg-btn active" type="button" data-schedule-view="grid" title="격자 보기">
+              <span class="schedule-grid-icon" aria-hidden="true"></span><span>격자</span>
+            </button>
+            <button class="seg-btn" type="button" data-schedule-view="list" title="목록 보기">
+              <span class="schedule-list-icon" aria-hidden="true"></span><span>목록</span>
+            </button>
+          </div>
+          <div class="segmented schedule-held-toggle" role="group" aria-label="보유종목 필터">
+            <button class="seg-btn active" type="button" data-schedule-held="0">전체</button>
+            <button class="seg-btn" type="button" data-schedule-held="1">보유</button>
+          </div>
+        </div>
+      </div>
+      <div class="schedule-legend" aria-label="일정 범례">
+        <span><i class="earnings"></i>실적발표</span>
+        <span><i class="dividend"></i>배당지급</span>
+        <span class="schedule-estimate-note">기울임은 예상일</span>
+      </div>
+      <div class="schedule-body" id="scheduleBody" aria-live="polite"></div>
+    </form>
+  </dialog>
   <dialog class="watch-modal help-modal" id="dataHelpModal">
     <form method="dialog" class="modal-card help-card">
       <div class="modal-head">
@@ -659,6 +699,7 @@
   <script src="/static/app-watchlist.js"></script>
   <script src="/static/app-interest-watchlists.js"></script>
   <script src="/static/app-ticker-search.js"></script>
+  <script src="/static/app-calendar.js"></script>
   <script src="/static/app.js"></script>
   <script>
     // 부트 검사: 각 JS 파일 마지막 줄의 로드 마커와 대조. 파일이 파스
@@ -668,7 +709,7 @@
       var expected = ["state", "format", "api", "chart-utils", "app-consensus",
         "app-tabs", "app-charts", "app-holdings", "app-chart-scale", "app-chart-metrics", "app-line-chart",
         "app-chart-compare", "app-transactions", "app-trade-controls",
-        "app-watchlist", "app-interest-watchlists", "app-ticker-search", "app"];
+        "app-watchlist", "app-interest-watchlists", "app-ticker-search", "app-calendar", "app"];
       var loaded = window.__loaded || new Set();
       var missing = expected.filter(function (name) { return !loaded.has(name); });
       if (missing.length && window.__bootBanner) {

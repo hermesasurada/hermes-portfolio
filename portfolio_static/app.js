@@ -410,6 +410,7 @@ initAutoRefreshControls();
 initUsPriceControls();
 initThemeControl();
 initDataHelpModal();
+initScheduleModal();
 initDividendHistoryModal();
 initWatchlistControls();
 initTickerSearch();

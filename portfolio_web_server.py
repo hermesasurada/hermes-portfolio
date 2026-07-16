@@ -19,6 +19,7 @@ from portfolio_core.charts import load_account_performance, load_price_chart
 from portfolio_core.constants import KOREAN_ETF_BRANDS, KOREAN_SUFFIXES, LOCAL_MARKET_SUFFIXES
 from portfolio_core.db import connect, initialize_schema
 from portfolio_core.queries import load_collection_diagnostics, load_ticker_directory
+from portfolio_core.schedule import load_schedule
 from portfolio_core.logos import is_dark_logo
 from portfolio_core.dividends import load_dividend_history, load_dividends
 from portfolio_core.interest_watchlists import (
@@ -341,6 +342,9 @@ class Handler(BaseHTTPRequestHandler):
         ticker = (query.get("ticker") or [""])[0]
         return load_dividend_history(ticker)
 
+    def api_schedule(self, query: dict[str, list[str]]) -> dict:
+        return load_schedule(logo_hint_fn=logo_hint)
+
     def api_transactions(self, query: dict[str, list[str]]) -> dict:
         account_id = (query.get("account_id") or [None])[0]
         ticker = (query.get("ticker") or [None])[0]
@@ -424,6 +428,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/account-performance": self.api_account_performance,
                 "/api/dividends": self.api_dividends,
                 "/api/dividend-history": self.api_dividend_history,
+                "/api/schedule": self.api_schedule,
                 "/api/transactions": self.api_transactions,
                 "/api/watchlist/lookup": self.api_watchlist_lookup,
                 "/api/interest-watchlists": self.api_interest_watchlists,
