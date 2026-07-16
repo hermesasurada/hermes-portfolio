@@ -45,8 +45,13 @@ DIVIDEND_LOOKAHEAD_DAYS = 365
 
 KOREAN_SUFFIXES = (".KS", ".KQ")
 LOCAL_MARKET_SUFFIXES = (".KS", ".KQ", ".T", ".TO", ".PA", ".DE", ".L", ".SW", ".AX", ".SI", ".HK")
-ETF_BRANDS = ("KODEX", "TIGER", "ACE", "SOL", "ETF", "ETN", "QQQ")
-KOREAN_ETF_BRANDS = ("KODEX", "TIGER", "ACE", "SOL")
+KOREAN_ETF_BRANDS = (
+    "KODEX", "TIGER", "RISE", "ACE", "SOL", "PLUS", "HANARO", "KIWOOM",
+    "TIMEFOLIO", "KOACT", "WON", "1Q", "FOCUS", "BNK", "TRUSTON",
+    # Rebranded products can remain registered under their legacy names.
+    "KBSTAR", "KINDEX", "ARIRANG", "KOSEF",
+)
+ETF_BRANDS = (*KOREAN_ETF_BRANDS, "ETF", "ETN", "QQQ")
 # US ETF tickers that carry no obvious name token (used by asset_class).
 US_ETF_TICKERS = frozenset(
     {

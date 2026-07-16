@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import portfolio_core.fundamentals as fundamentals_module
 import portfolio_core.dividend_refresh as dividend_refresh_module
+import portfolio_core.schedule as schedule_module
 from portfolio_core.collect_common import parse_categories
 from portfolio_core.fundamentals import fetch_fundamentals, normalize_pe, parse_number
 from portfolio_core.dates import parse_iso_date, to_iso_text
@@ -776,9 +777,18 @@ def test_ticker_scope():
     assert ticker_scope("SP500", "S&P 500", "index", "USD") is None
     assert ticker_scope("005930.KS", "삼성전자", "kr", "KRW") == "kr_stock"
     assert ticker_scope("069500.KS", "KODEX 200", "kr", "KRW") == "kr_etf"
+    assert ticker_scope("0101N0.KS", "RISE AI전력인프라", "kr", "KRW") == "kr_etf"
+    assert ticker_scope("411860.KS", "KIWOOM 독일DAX", "kr", "KRW") == "kr_etf"
     assert ticker_scope("AAPL", "Apple", "overseas", "USD") == "overseas"
     # KRW currency without an explicit category still resolves to a KR scope
     assert ticker_scope("042660.KS", "한화오션", None, "KRW") == "kr_stock"
+
+
+def test_schedule_excludes_only_korean_etfs():
+    assert not schedule_module._include_schedule_ticker("069500.KS", "KODEX 200", "kr", "KRW")
+    assert not schedule_module._include_schedule_ticker("0101N0.KS", "RISE AI전력인프라", "kr", "KRW")
+    assert schedule_module._include_schedule_ticker("005930.KS", "삼성전자", "kr", "KRW")
+    assert schedule_module._include_schedule_ticker("SCHD", "Schwab US Dividend Equity ETF", "overseas", "USD")
 
 
 # --- watchlist helpers ------------------------------------------------------

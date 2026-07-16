@@ -6,10 +6,15 @@ from datetime import timedelta
 from .dates import today_kst
 from .db import connect, ensure_dividend_tables, ensure_ticker_metadata_columns
 from .dividend_schedule import add_months, consolidated_dividend_events, event_schedule_date
+from .tickers import ticker_scope
 
 
 def _default_logo(ticker: str, _name: str) -> dict[str, str | None]:
     return {"text": ticker[:2].upper(), "url": None}
+
+
+def _include_schedule_ticker(ticker: str, name: str, category: str | None, currency: str | None) -> bool:
+    return ticker_scope(ticker, name, category, currency) != "kr_etf"
 
 
 def load_schedule(
@@ -29,6 +34,8 @@ def load_schedule(
             """
             SELECT ticker,
                    COALESCE(NULLIF(display_name, ''), name, ticker) AS name,
+                   category,
+                   currency,
                    next_earnings_date
             FROM tickers
             WHERE category IN ('kr', 'overseas')
@@ -37,6 +44,11 @@ def load_schedule(
             ORDER BY ticker
             """
         ).fetchall()
+        ticker_rows = [
+            row
+            for row in ticker_rows
+            if _include_schedule_ticker(row["ticker"], row["name"], row["category"], row["currency"])
+        ]
         owned = {
             str(row["ticker"]).upper()
             for row in conn.execute(
