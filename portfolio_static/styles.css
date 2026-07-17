@@ -74,8 +74,8 @@
   --sp-2: 8px;
   --sp-3: 12px;
   --sp-4: 16px;
-  --radius: 2px;
-  --radius-sm: 2px;
+  --radius: 8px;
+  --radius-sm: 6px;
   --button-radius: 6px;
   --button-height: 26px;
   --button-surface: #ede6d6;
@@ -83,15 +83,14 @@
   --button-active-soft: #dde6da;
   --button-active-ink: #2c4433;
   --button-shadow-raised:
-    3px 3px 7px #d4c9b3,
-    -3px -3px 7px #fffcf4;
+    0 1px 2px rgba(74, 60, 40, .10),
+    0 2px 6px rgba(74, 60, 40, .07);
   --button-shadow-hover:
-    3px 3px 8px #ccc0a8,
-    -3px -3px 8px #fffcf4;
+    0 2px 4px rgba(74, 60, 40, .13),
+    0 4px 10px rgba(74, 60, 40, .09);
   --button-shadow-pressed:
-    inset 2px 2px 5px #d4c9b3,
-    inset -2px -2px 5px #fffcf4;
-  --shadow: 0 1px 0 rgba(60, 55, 40, .05);
+    inset 0 1px 3px rgba(74, 60, 40, .18);
+  --shadow: 0 1px 3px rgba(74, 60, 40, .07), 0 4px 14px rgba(74, 60, 40, .05);
   --t-fast: .15s ease;
   --header-bg: rgba(240, 235, 225, 0.94);
 }
@@ -147,14 +146,13 @@
     --button-active-soft: #34443a;
     --button-active-ink: #b9d4c1;
     --button-shadow-raised:
-      3px 3px 7px #120e0a,
-      -3px -3px 7px #3a3124;
+      0 1px 2px rgba(0, 0, 0, .35),
+      0 2px 6px rgba(0, 0, 0, .25);
     --button-shadow-hover:
-      3px 3px 8px #0d0a07,
-      -3px -3px 8px #423728;
+      0 2px 5px rgba(0, 0, 0, .45),
+      0 4px 10px rgba(0, 0, 0, .3);
     --button-shadow-pressed:
-      inset 2px 2px 5px #120e0a,
-      inset -2px -2px 5px #3a3124;
+      inset 0 1px 3px rgba(0, 0, 0, .5);
 }
 /* 밤의 서재: 큰 카드에는 뉴모픽 하이라이트가 halo처럼 번져 평면+보더로 */
 :root[data-theme="dark"] .account,
@@ -188,6 +186,11 @@ h1,
 #tableTitle,
 #chartName,
 .hero-label,
+#heroValue,
+.group-head .group-label,
+.group-head strong,
+.toolbar > .title-tools > strong,
+.dividend-month-summary span,
 .consensus-title,
 .modal-head strong,
 #scheduleMonthLabel {
@@ -196,6 +199,19 @@ h1,
   letter-spacing: 0;
 }
 * { box-sizing: border-box; }
+/* 종이 결 — 서재 테마의 미세 그레인. fixed 오버레이라 스크롤 성능 무해,
+   pointer-events 차단 없음. 다크는 더 약하게. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.05'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+:root[data-theme="dark"] body::before { opacity: .3; }
+body > * { position: relative; z-index: 1; }
 body {
   margin: 0;
   font-family: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -354,7 +370,7 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
   gap: 6px;
   padding: 0 7px;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
   font-size: 11px;
   font-weight: 700;
@@ -437,7 +453,7 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
   justify-content: center;
   padding: 0;
   border: 0;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--ink);
   font-size: 11px;
@@ -486,7 +502,7 @@ button, input, select, textarea {
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--ink);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 0 10px;
   font: inherit;
 }
@@ -599,7 +615,7 @@ main {
   font-size: 20px;
   font-weight: var(--fw-strong);
   padding: 3px 11px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   white-space: nowrap;
 }
 .hero-change.up { color: var(--up); background: color-mix(in srgb, var(--up) 11%, transparent); }
@@ -656,7 +672,7 @@ main {
   height: 24px;
   padding: 0 10px;
   border: 0;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
   font-size: 12px;
@@ -766,7 +782,7 @@ main {
   padding: 3px 7px 3px 8px;
   border: 1px solid var(--line);
   border-left-width: 3px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
 }
 .interest-group.active {
@@ -796,7 +812,7 @@ main {
   height: 26px;
   display: inline-grid;
   place-items: center;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
   color: var(--muted);
   font-size: 14px;
@@ -821,7 +837,7 @@ main {
 .interest-count {
   min-width: 24px;
   padding: 2px 6px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
   color: var(--muted);
   font-size: 11px;
@@ -906,7 +922,7 @@ main {
   padding: 8px;
   border: 1px solid var(--line);
   border-left: 3px solid var(--brand);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--brand-soft);
 }
 .interest-group-rename input {
@@ -1154,7 +1170,7 @@ main {
   min-height: 48px;
   text-align: left;
   padding: 7px 10px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   border-left-width: 3px;
   display: grid;
   grid-template-rows: minmax(15px, auto) minmax(14px, auto);
@@ -1240,13 +1256,22 @@ main {
   background: var(--line);
   background-clip: content-box;
   border: 2px solid transparent;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
 }
 .table-wrap::-webkit-scrollbar-thumb:hover,
 .dividend-history-table-wrap::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 .table-wrap::-webkit-scrollbar-corner,
 .dividend-history-table-wrap::-webkit-scrollbar-corner { background: transparent; }
 
+
+/* 책 표제선 — 표 헤더 아래만 살짝 진한 룰로 본문과 위계 구분 */
+#detailTableWrap thead tr:last-child th,
+#dividendTableWrap thead tr:last-child th,
+#interestTableWrap thead tr:last-child th,
+.tx-list thead th,
+.dividend-history-table-wrap thead th {
+  border-bottom: 2px solid color-mix(in srgb, var(--ink) 24%, var(--line));
+}
 /* ── 테이블 공통 · 통계/배당 테이블 ────────────────────────────────────── */
 table { width: 100%; border-collapse: collapse; min-width: 660px; }
 /* 2행 sticky 헤더: 그룹행(위, 22px) + 컬럼행(아래). 23컬럼을 4묶음으로 라벨링 */
@@ -1583,7 +1608,7 @@ tr.dividend-month-row:hover td {
   align-items: center;
   min-height: 22px;
   padding: 0 8px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--brand-soft);
   color: var(--brand);
   font-size: 12.5px;
@@ -1676,7 +1701,7 @@ tbody tr.index-row td:first-child::before {
   top: 7px;
   bottom: 7px;
   width: 3px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--index-row-line);
 }
 
@@ -1739,7 +1764,7 @@ th.pc-frozen-edge {
   height: 30px;
   min-width: 72px;
   border: 0;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
   padding: 0 9px;
@@ -1755,7 +1780,7 @@ th.pc-frozen-edge {
   align-items: center;
   height: 24px;
   padding: 0 8px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
   color: var(--muted);
   font-size: 11.5px;
@@ -1767,7 +1792,8 @@ th.pc-frozen-edge {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #eef4f3;
+  background: color-mix(in srgb, var(--surface-2) 60%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
   color: var(--accent);
   flex: 0 0 auto;
   overflow: hidden;
@@ -1777,9 +1803,9 @@ th.pc-frozen-edge {
   position: relative;
 }
 .asset-icon.has-image {
-  background: white;
+  background: #fdfcf9;   /* 로고 가독용 밝은 종이 — 순백보다 웜 */
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
 }
 .asset-icon img {
   width: 100%;
@@ -1830,7 +1856,7 @@ th.pc-frozen-edge {
 .ticker-link:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 3px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
 }
 .asset-name {
   color: var(--ink);
@@ -1864,7 +1890,7 @@ th.pc-frozen-edge {
 /* 등락% 칩 — 색칠은 이 칩 하나로 제한해 '온통 빨강' 화면을 진정시킨다 */
 .pct-chip {
   padding: 2px 9px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   font-size: 11px;
 }
 .pct-chip.up { background: color-mix(in srgb, var(--up) 10%, transparent); }
@@ -1953,7 +1979,7 @@ th.pc-frozen-edge {
   justify-content: center;
   min-height: 21px;
   padding: 0 7px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 750;
   line-height: 1;
@@ -1986,7 +2012,7 @@ th.pc-frozen-edge {
 .chart-price-row.extended .chart-price-pill {
   min-height: 19px;
   padding: 0 6px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   font-size: 11px;
 }
 .chart-price-row.extended .chart-price-today {
@@ -2013,7 +2039,7 @@ th.pc-frozen-edge {
   min-width: 27px;
   padding: 0 6px;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
   color: var(--muted);
   font-size: 10.5px;
@@ -2045,7 +2071,7 @@ th.pc-frozen-edge {
 .chart-icon-slot .asset-icon {
   width: 46px;
   height: 46px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
 }
 .chart-id-text {
@@ -2062,7 +2088,7 @@ th.pc-frozen-edge {
   height: 26px;
   padding: 0 11px;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
   color: var(--muted);
   font-size: 11.5px;
@@ -2120,7 +2146,7 @@ th.pc-frozen-edge {
 .buy-meter-track {
   width: 40px;
   height: 5px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--muted) 18%, transparent);
   overflow: hidden;
   flex: 0 0 auto;
@@ -2128,7 +2154,7 @@ th.pc-frozen-edge {
 .buy-meter-fill {
   display: block;
   height: 100%;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--muted);
 }
 .buy-meter.up .buy-meter-fill { background: var(--up); }
@@ -2142,7 +2168,7 @@ th.pc-frozen-edge {
   min-height: 20px;
   padding: 0 8px;
   border: 1px solid color-mix(in srgb, var(--muted) 18%, transparent);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   font-size: 11.5px;
   font-weight: 700;
   line-height: 1;
@@ -2165,7 +2191,7 @@ th.pc-frozen-edge {
   margin-top: 8px;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
 }
 .consensus-head {
@@ -2193,7 +2219,7 @@ th.pc-frozen-edge {
   height: 22px;
   padding: 0 8px;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
   color: var(--muted);
   font-size: 11px;
@@ -2281,7 +2307,7 @@ th.pc-frozen-edge {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
 }
 .cstat-column {
@@ -2323,7 +2349,7 @@ th.pc-frozen-edge {
   max-width: 100%;
   overflow-x: auto;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
   vertical-align: top;
 }
@@ -2393,7 +2419,7 @@ th.pc-frozen-edge {
   justify-content: center;
   padding: 0;
   border: 0;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
   font-size: 15px;
@@ -2641,6 +2667,12 @@ th.pc-frozen-edge {
 .chart-grid {
   stroke: var(--chart-grid);
   stroke-width: 1;
+  stroke-dasharray: 1 5;   /* 노트 괘선 느낌의 점선 */
+  stroke-linecap: round;
+}
+.chart-grid.perf-vgrid {
+  stroke-dasharray: none;  /* 세로 기준선은 실선으로 희미하게 */
+  opacity: .45;
 }
 .chart-area {
   fill: url(#chartFill);
@@ -2886,7 +2918,7 @@ th.pc-frozen-edge {
   min-width: 31px;
   padding: 0 7px;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
   color: var(--muted);
   font-size: 10.5px;
@@ -3045,14 +3077,14 @@ th.pc-frozen-edge {
   font-size: 12px;
   font-weight: 800;
   padding: 3px 10px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);   /* 칩 배경으로 컬러 텍스트 대비 확보 */
   border: 1px solid var(--line);
 }
 .perf-legend-item i {
   width: 16px;
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   display: inline-block;
   flex: 0 0 auto;
 }
@@ -3084,7 +3116,7 @@ th.pc-frozen-edge {
   height: 26px;
   padding: 0 9px;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
   color: var(--muted);
   font-size: 11px;
@@ -3165,7 +3197,7 @@ th.pc-frozen-edge {
   pointer-events: none;
   background: var(--chart-tooltip-bg);
   border: 1px solid var(--chart-tooltip-border);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 8px 10px;
   box-shadow: 0 6px 18px rgba(60, 48, 32, .22);
   font-size: 11.5px;
@@ -3204,7 +3236,7 @@ th.pc-frozen-edge {
 .compare-tooltip .ct-logo {
   width: 18px;
   height: 18px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   object-fit: contain;
   background: #fff;
   border: 1px solid var(--line);
@@ -3439,7 +3471,7 @@ th.pc-frozen-edge {
   display: inline-grid;
   place-items: center;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
 }
 .chart-interest-check::after {
@@ -3786,7 +3818,7 @@ th.pc-frozen-edge {
   height: 14px;
   display: inline-grid;
   place-items: center;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   color: var(--schedule-tag-ink);
   font-size: 7.5px;
   font-weight: 900;
@@ -4066,7 +4098,7 @@ th.pc-frozen-edge {
   display: inline-block;
   height: 11px;
   width: 70%;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(90deg,
     var(--surface-2) 25%, var(--surface-hover) 37%, var(--surface-2) 63%);
   background-size: 400% 100%;
@@ -4474,7 +4506,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .diag-ok { color: var(--buy); font-weight: 800; }
 .diag-chip {
   padding: 2px 8px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   font-size: 11px;
   font-weight: 800;
 }
@@ -4514,7 +4546,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   place-items: center;
   flex: 0 0 auto;
   border: 1px solid color-mix(in srgb, var(--brand) 36%, var(--line));
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--brand) 10%, var(--panel));
   color: var(--brand);
   font-size: 11px;
@@ -4769,7 +4801,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--muted);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   height: 24px;
   min-width: 24px;
   padding: 0 6px;
@@ -4791,7 +4823,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   height: 26px;
   padding: 0 6px;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--panel);
   color: var(--ink);
   font-size: 12px;
@@ -4803,14 +4835,14 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   align-items: center;
   padding: 2px;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--surface-2);
 }
 .seg-btn {
   height: 26px;
   min-width: 42px;
   border: 0;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
   padding: 0 8px;
@@ -4850,7 +4882,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   margin: 0;
   padding: 0 6px;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: #fff;
   color: var(--muted);
   font-size: 11px;
@@ -5134,7 +5166,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .chart-icon-slot .asset-icon {
     width: 34px;
     height: 34px;
-    border-radius: 2px;
+    border-radius: var(--radius-sm);
     font-size: 11px;
   }
   #chartName,
@@ -5161,7 +5193,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .chart-price-pill {
     min-height: 18px;
     padding: 0 5px;
-    border-radius: 2px;
+    border-radius: var(--radius-sm);
     font-size: 10.5px;
   }
   .chart-price-today {
@@ -5483,7 +5515,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     width: min(520px, calc(100vw - 10px));
   }
   .trade-dialog-card {
-    border-radius: 2px;
+    border-radius: var(--radius-sm);
   }
   .trade-dialog-head,
   .trade-dialog-body,
@@ -5578,7 +5610,7 @@ button {
   .chart-link-btn,
   .apply-toggle
 ) {
-  border-color: transparent !important;
+  border-color: color-mix(in srgb, var(--line) 80%, transparent) !important;
   background: var(--button-surface) !important;
 }
 /* 매수·매도 마커 토글: 표면은 통일하되 의미색 보더(빨강/파랑)는 유지 */
