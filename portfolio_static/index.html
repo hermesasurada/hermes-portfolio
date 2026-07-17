@@ -166,9 +166,11 @@
                 <span class="toggle-label">보유종목만</span>
               </label>
             </span>
-            <span class="currency-filter-control hidden" id="interestSectorControl">
-              <label for="interestSectorFilter">섹터</label>
-              <select id="interestSectorFilter"><option value="all">전체</option></select>
+            <span class="currency-filter-control sector-filter-control hidden" id="interestSectorControl">
+              <label id="interestSectorLabel">섹터</label>
+              <button class="sector-filter-btn" id="interestSectorButton" type="button"
+                aria-haspopup="true" aria-expanded="false" aria-labelledby="interestSectorLabel interestSectorButton">전체</button>
+              <div class="sector-filter-panel hidden" id="interestSectorPanel" role="group" aria-label="섹터 다중 선택"></div>
             </span>
             <span class="currency-filter-control" id="currencyFilterControl">
               <label for="currencyFilter">통화</label>

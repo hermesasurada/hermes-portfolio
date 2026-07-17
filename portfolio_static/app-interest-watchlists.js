@@ -475,29 +475,59 @@ function syncInterestVisibleColumns(rows) {
   table.style.minWidth = "100%";
 }
 
-function interestSectorFilterValue() {
-  return document.getElementById("interestSectorFilter")?.value || "all";
+// 섹터 다중 선택 상태 — 빈 Set = 전체 표시
+const interestSectorSelection = new Set();
+let interestSectorOptions = [];
+
+function interestSectorButtonLabel() {
+  if (!interestSectorSelection.size) return "전체";
+  const picked = interestSectorOptions.filter(s => interestSectorSelection.has(s)).map(sectorLabel);
+  if (!picked.length) return "전체";
+  return picked.length === 1 ? picked[0] : `${picked[0]} 외 ${picked.length - 1}`;
 }
 
-// 섹터 필터 UI: 현재 그룹 행에 섹터가 있으면 노출하고 옵션을 유니크 섹터로 구성.
-// 옵션 재구성 시 기존 선택은 가능하면 유지한다.
+function renderInterestSectorPanel() {
+  const panel = document.getElementById("interestSectorPanel");
+  if (!panel) return;
+  const allActive = interestSectorSelection.size === 0;
+  panel.innerHTML = `
+    <button class="sector-filter-item${allActive ? " checked" : ""}" type="button" data-sector-all>
+      <span class="sector-filter-check" aria-hidden="true">${allActive ? "✓" : ""}</span>전체
+    </button>
+    ${interestSectorOptions.map(s => {
+      const checked = interestSectorSelection.has(s);
+      return `<button class="sector-filter-item${checked ? " checked" : ""}" type="button" data-sector-value="${esc(s)}">
+        <span class="sector-filter-check" aria-hidden="true">${checked ? "✓" : ""}</span>${esc(sectorLabel(s))}
+      </button>`;
+    }).join("")}`;
+}
+
+// 섹터 필터 UI: 현재 그룹 행에 섹터가 있으면 노출. 옵션 재구성 시 존재하지
+// 않게 된 섹터는 선택에서 제거하고, 버튼 라벨·패널 체크를 동기화한다.
 function syncInterestSectorFilter(rows) {
   const control = document.getElementById("interestSectorControl");
-  const select = document.getElementById("interestSectorFilter");
-  if (!control || !select) return;
+  const button = document.getElementById("interestSectorButton");
+  if (!control || !button) return;
   const showing = interestModeActive();
-  const sectors = [...new Set(rows.map(row => String(row.sector || "").trim()).filter(Boolean))]
+  interestSectorOptions = [...new Set(rows.map(row => String(row.sector || "").trim()).filter(Boolean))]
     .sort((a, b) => sectorLabel(a).localeCompare(sectorLabel(b), "ko-KR"));
-  if (!showing || !sectors.length) {
+  [...interestSectorSelection].forEach(s => {
+    if (!interestSectorOptions.includes(s)) interestSectorSelection.delete(s);
+  });
+  if (!showing || !interestSectorOptions.length) {
     control.classList.add("hidden");
-    if (select.value !== "all") select.value = "all";
+    closeInterestSectorPanel();
     return;
   }
-  const previous = select.value;
-  select.innerHTML = `<option value="all">전체</option>`
-    + sectors.map(s => `<option value="${esc(s)}">${esc(sectorLabel(s))}</option>`).join("");
-  select.value = sectors.includes(previous) ? previous : "all";
+  button.textContent = interestSectorButtonLabel();
+  button.classList.toggle("filtering", interestSectorSelection.size > 0);
+  if (!document.getElementById("interestSectorPanel")?.classList.contains("hidden")) renderInterestSectorPanel();
   control.classList.remove("hidden");
+}
+
+function closeInterestSectorPanel() {
+  document.getElementById("interestSectorPanel")?.classList.add("hidden");
+  document.getElementById("interestSectorButton")?.setAttribute("aria-expanded", "false");
 }
 
 function renderInterestMainTable() {
@@ -510,10 +540,9 @@ function renderInterestMainTable() {
   }
   const baseRows = statsRows(interestBaseRows()).map(attachConsensus);
   syncInterestSectorFilter(baseRows);
-  const sectorFilter = interestSectorFilterValue();
-  const rows = sectorFilter === "all"
+  const rows = interestSectorSelection.size === 0
     ? baseRows
-    : baseRows.filter(row => String(row.sector || "").trim() === sectorFilter);
+    : baseRows.filter(row => interestSectorSelection.has(String(row.sector || "").trim()));
   sortInterestRows(rows, group);
   // lazy-load는 섹터 필터와 무관하게 그룹 전체(baseRows) 기준 — 필터 전환 시 재요청 방지
   const missingStats = baseRows.some(row => !statsData[row.ticker]
@@ -581,8 +610,37 @@ function renderInterestMainTable() {
 }
 
 function initInterestSectorFilter() {
-  document.getElementById("interestSectorFilter")?.addEventListener("change", () => {
+  const button = document.getElementById("interestSectorButton");
+  const panel = document.getElementById("interestSectorPanel");
+  if (!button || !panel) return;
+  button.addEventListener("click", () => {
+    const opening = panel.classList.contains("hidden");
+    if (opening) {
+      renderInterestSectorPanel();
+      panel.classList.remove("hidden");
+      button.setAttribute("aria-expanded", "true");
+    } else {
+      closeInterestSectorPanel();
+    }
+  });
+  panel.addEventListener("click", event => {
+    const item = event.target.closest("button");
+    if (!item) return;
+    if (item.hasAttribute("data-sector-all")) {
+      interestSectorSelection.clear();
+    } else {
+      const value = item.dataset.sectorValue || "";
+      if (interestSectorSelection.has(value)) interestSectorSelection.delete(value);
+      else interestSectorSelection.add(value);
+    }
+    renderInterestSectorPanel();   // 패널 유지한 채 체크만 갱신
     renderInterestMainTable();
+  });
+  document.addEventListener("click", event => {
+    // 패널 항목 클릭 → 재렌더로 노드가 DOM에서 분리되면 closest가 실패해
+    // 외부 클릭으로 오인·패널이 닫혀버린다 — 분리된 노드는 내부 클릭으로 간주.
+    if (!event.target.isConnected) return;
+    if (!event.target.closest?.("#interestSectorControl")) closeInterestSectorPanel();
   });
 }
 
