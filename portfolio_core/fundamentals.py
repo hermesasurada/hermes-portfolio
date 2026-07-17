@@ -278,6 +278,13 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
                     source = "yfinance"
                     raw = {"info": info}
                     fetched = True
+                    # GICS 섹터는 정적 속성이라 tickers에 저장 (관심목록 섹터 컬럼·필터용)
+                    sector = str(info.get("sector") or "").strip()
+                    if sector:
+                        conn.execute(
+                            "UPDATE tickers SET sector = ? WHERE ticker = ? AND COALESCE(sector, '') <> ?",
+                            (sector, ticker, sector),
+                        )
         except Exception as exc:
             print(f"[stats] fundamentals failed for {ticker}: {exc}")
             if stale:

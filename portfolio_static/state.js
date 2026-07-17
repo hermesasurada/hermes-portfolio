@@ -24,6 +24,7 @@ const sidebarStorage = {
 };
 const defaultSortDir = {
   name: 1,
+  sector: 1,
   display_change_pct: -1,
   extended_change_pct: -1,
   change_krw: -1,

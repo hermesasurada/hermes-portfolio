@@ -2160,6 +2160,21 @@ th.pc-frozen-edge {
 .buy-meter.up .buy-meter-fill { background: var(--up); }
 .buy-meter.down .buy-meter-fill { background: var(--down); }
 .buy-meter-num { font-variant-numeric: tabular-nums; min-width: 22px; text-align: right; }
+/* 섹터 칩: 중립 종이 톤 — 정보 라벨(등락색과 무관) */
+.sector-chip {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 1px 7px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface-2) 80%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 /* 투자의견 칩: 매수=빨강 틴트, 매도=파랑 틴트, 중립=무채색 */
 .rating-chip {
   display: inline-flex;

@@ -34,6 +34,8 @@ def ensure_ticker_metadata_columns(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE tickers ADD COLUMN earnings_updated_at TEXT")
     if "display_name" not in columns:   # 노출명칭(법인격 수식어 제거). 비면 name 폴백.
         conn.execute("ALTER TABLE tickers ADD COLUMN display_name TEXT")
+    if "sector" not in columns:   # GICS 섹터(yfinance info.sector — 미국 개별주 위주)
+        conn.execute("ALTER TABLE tickers ADD COLUMN sector TEXT")
 
 
 def backfill_ticker_display_names(conn: sqlite3.Connection) -> None:

@@ -229,6 +229,26 @@ function toUsd(v, currency) {
   if (currency === "KRW") return n / usdKrw;
   return n * fxRateForCurrency(currency) / usdKrw;
 }
+// GICS 섹터 한글 라벨 (yfinance info.sector 명칭 기준)
+const SECTOR_LABELS = {
+  "Technology": "기술",
+  "Financial Services": "금융",
+  "Healthcare": "헬스케어",
+  "Consumer Cyclical": "경기소비재",
+  "Consumer Defensive": "필수소비재",
+  "Industrials": "산업재",
+  "Energy": "에너지",
+  "Utilities": "유틸리티",
+  "Real Estate": "부동산",
+  "Basic Materials": "소재",
+  "Communication Services": "통신",
+};
+function sectorLabel(sector) {
+  const key = String(sector || "").trim();
+  if (!key) return "";
+  return SECTOR_LABELS[key] || key;
+}
+
 function marketCapText(v, currency) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "-";

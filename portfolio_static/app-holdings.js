@@ -212,6 +212,7 @@ function watchlistRowForAccount(tickerMeta, account) {
     ticker: tickerMeta.ticker,
     name: tickerMeta.name || tickerMeta.ticker,
     category: tickerMeta.category || null,
+    sector: tickerMeta.sector || null,
     qty: null,
     avg_price: null,
     invested: null,

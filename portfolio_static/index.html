@@ -166,6 +166,10 @@
                 <span class="toggle-label">보유종목만</span>
               </label>
             </span>
+            <span class="currency-filter-control hidden" id="interestSectorControl">
+              <label for="interestSectorFilter">섹터</label>
+              <select id="interestSectorFilter"><option value="all">전체</option></select>
+            </span>
             <span class="currency-filter-control" id="currencyFilterControl">
               <label for="currencyFilter">통화</label>
               <select id="currencyFilter" aria-label="통화 필터">
@@ -233,6 +237,7 @@
               <col style="width:48px"><col style="width:48px"><col style="width:48px"><col style="width:48px"><col style="width:48px"><col style="width:48px">
               <col style="width:62px"><col style="width:62px"><col style="width:44px">
               <col style="width:64px"><col style="width:64px"><col style="width:64px"><col style="width:64px"><col style="width:64px"><col style="width:64px"><col style="width:64px">
+              <col style="width:72px">
               <col style="width:67px"><col style="width:61px"><col style="width:54px"><col style="width:76px"><col style="width:66px">
               <col style="width:40px">
             </colgroup>
@@ -259,8 +264,9 @@
                 <th rowspan="2" class="interest-leaf-head" data-interest-col="25" data-interest-sort-key="perf_1y">1년</th>
                 <th rowspan="2" class="interest-leaf-head" data-interest-col="26" data-interest-sort-key="perf_3y">3년</th>
                 <th rowspan="2" class="interest-leaf-head" data-interest-col="27" data-interest-sort-key="perf_5y">5년</th>
+                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="28" data-interest-sort-key="sector">섹터</th>
                 <th colspan="5" class="group-start" data-interest-group-head="consensus">컨센서스</th>
-                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="33" aria-label="관심목록에서 삭제"></th>
+                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="34" aria-label="관심목록에서 삭제"></th>
               </tr>
               <tr class="interest-col-head">
                 <th class="indicator-head group-start interest-leaf-head" data-interest-col="12" data-interest-group="momentum" data-interest-sort-key="rsi_day"><span>RSI</span><span>(일)</span></th>
@@ -272,11 +278,11 @@
                 <th class="indicator-head group-start interest-leaf-head" data-interest-col="18" data-interest-group="value" data-interest-sort-key="trailing_pe"><span>P/E</span><span>(t)</span></th>
                 <th class="indicator-head interest-leaf-head" data-interest-col="19" data-interest-group="value" data-interest-sort-key="forward_pe"><span>P/E</span><span>(f)</span></th>
                 <th class="interest-leaf-head" data-interest-col="20" data-interest-group="value" data-interest-sort-key="price_to_book">P/B</th>
-                <th class="group-start interest-leaf-head" data-interest-col="28" data-interest-group="consensus" data-interest-sort-key="target_price">목표가</th>
-                <th class="interest-leaf-head" data-interest-col="29" data-interest-group="consensus" data-interest-sort-key="upside_pct">업사이드</th>
-                <th class="interest-leaf-head" data-interest-col="30" data-interest-group="consensus" data-interest-sort-key="dispersion_pct">편차</th>
-                <th class="interest-leaf-head" data-interest-col="31" data-interest-group="consensus" data-interest-sort-key="buy_strength">매수강도</th>
-                <th class="interest-leaf-head" data-interest-col="32" data-interest-group="consensus" data-interest-sort-key="rating_rank">투자의견</th>
+                <th class="group-start interest-leaf-head" data-interest-col="29" data-interest-group="consensus" data-interest-sort-key="target_price">목표가</th>
+                <th class="interest-leaf-head" data-interest-col="30" data-interest-group="consensus" data-interest-sort-key="upside_pct">업사이드</th>
+                <th class="interest-leaf-head" data-interest-col="31" data-interest-group="consensus" data-interest-sort-key="dispersion_pct">편차</th>
+                <th class="interest-leaf-head" data-interest-col="32" data-interest-group="consensus" data-interest-sort-key="buy_strength">매수강도</th>
+                <th class="interest-leaf-head" data-interest-col="33" data-interest-group="consensus" data-interest-sort-key="rating_rank">투자의견</th>
               </tr>
             </thead>
             <tbody id="interestRows"></tbody>

@@ -413,6 +413,7 @@ const interestColumnWidths = {
   perf_1y: 64,
   perf_3y: 64,
   perf_5y: 64,
+  sector: 72,
   target_price: 67,
   upside_pct: 61,
   dispersion_pct: 54,
@@ -421,7 +422,7 @@ const interestColumnWidths = {
 };
 
 const interestAlwaysVisibleFields = new Set(["display_change_pct", "current_price"]);
-const INTEREST_TABLE_COLUMN_COUNT = 34;
+const INTEREST_TABLE_COLUMN_COUNT = 35;
 
 function interestEmptyRow(message) {
   return `<tr class="interest-empty-row">${Array.from({ length: INTEREST_TABLE_COLUMN_COUNT }, (_, index) => {
@@ -432,6 +433,8 @@ function interestEmptyRow(message) {
 
 function hasInterestColumnValue(row, field) {
   if (field === "next_earnings_date") return Boolean(row[field]);
+  if (field === "sector") return Boolean(String(row[field] || "").trim());
+  if (field === "rating_rank") return row[field] != null;
   if (field === "dividend_yield") return Number(row[field]) > 0;
   return row[field] != null && Number.isFinite(Number(row[field]));
 }
@@ -472,6 +475,31 @@ function syncInterestVisibleColumns(rows) {
   table.style.minWidth = "100%";
 }
 
+function interestSectorFilterValue() {
+  return document.getElementById("interestSectorFilter")?.value || "all";
+}
+
+// 섹터 필터 UI: 현재 그룹 행에 섹터가 있으면 노출하고 옵션을 유니크 섹터로 구성.
+// 옵션 재구성 시 기존 선택은 가능하면 유지한다.
+function syncInterestSectorFilter(rows) {
+  const control = document.getElementById("interestSectorControl");
+  const select = document.getElementById("interestSectorFilter");
+  if (!control || !select) return;
+  const showing = interestModeActive();
+  const sectors = [...new Set(rows.map(row => String(row.sector || "").trim()).filter(Boolean))]
+    .sort((a, b) => sectorLabel(a).localeCompare(sectorLabel(b), "ko-KR"));
+  if (!showing || !sectors.length) {
+    control.classList.add("hidden");
+    if (select.value !== "all") select.value = "all";
+    return;
+  }
+  const previous = select.value;
+  select.innerHTML = `<option value="all">전체</option>`
+    + sectors.map(s => `<option value="${esc(s)}">${esc(sectorLabel(s))}</option>`).join("");
+  select.value = sectors.includes(previous) ? previous : "all";
+  control.classList.remove("hidden");
+}
+
 function renderInterestMainTable() {
   const group = activeInterestGroup();
   const body = document.getElementById("interestRows");
@@ -480,14 +508,20 @@ function renderInterestMainTable() {
     body.innerHTML = interestEmptyRow("선택할 관심그룹이 없습니다.");
     return;
   }
-  const rows = statsRows(interestBaseRows()).map(attachConsensus);
+  const baseRows = statsRows(interestBaseRows()).map(attachConsensus);
+  syncInterestSectorFilter(baseRows);
+  const sectorFilter = interestSectorFilterValue();
+  const rows = sectorFilter === "all"
+    ? baseRows
+    : baseRows.filter(row => String(row.sector || "").trim() === sectorFilter);
   sortInterestRows(rows, group);
-  const missingStats = rows.some(row => !statsData[row.ticker]
+  // lazy-load는 섹터 필터와 무관하게 그룹 전체(baseRows) 기준 — 필터 전환 시 재요청 방지
+  const missingStats = baseRows.some(row => !statsData[row.ticker]
     || (!statsFetchedTickers.has(row.ticker) && hasMissingTechnicalStats(statsData[row.ticker])));
-  if (missingStats) loadStatsForRows(rows);
+  if (missingStats) loadStatsForRows(baseRows);
   // 애널리스트 컨센서스는 개별주·ETF만 대상(환율·지수·가상자산 제외). 도착하면
   // 관심목록을 다시 그려 컨센서스 5컬럼을 채운다.
-  loadQuotesForRows(rows.filter(consensusCandidate).map(row => row.ticker), renderInterestMainTable);
+  loadQuotesForRows(baseRows.filter(consensusCandidate).map(row => row.ticker), renderInterestMainTable);
   document.getElementById("tableTitle").textContent = group.name;
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
   const suppressIndexHighlight = interestGroupIsIndex(group);
@@ -530,6 +564,7 @@ function renderInterestMainTable() {
       <td>${signedPercentText(r.perf_1y, 0)}</td>
       <td>${signedPercentText(r.perf_3y, 0)}</td>
       <td>${signedPercentText(r.perf_5y, 0)}</td>
+      <td class="group-start interest-sector-cell">${r.sector ? `<span class="sector-chip">${esc(sectorLabel(r.sector))}</span>` : "-"}</td>
       <td class="group-start">${consensusPriceText(r.target_price, r.consensus_currency || r.currency)}</td>
       <td>${upsideText(r.upside_pct)}</td>
       <td>${dispersionText(r.dispersion_pct, quoteFor(r.ticker)?.dispersion_basis)}</td>
@@ -545,7 +580,14 @@ function renderInterestMainTable() {
   // 로고·종목명 틀고정은 CSS sticky가 담당 — pc-frozen(JS) 대상 아님.
 }
 
+function initInterestSectorFilter() {
+  document.getElementById("interestSectorFilter")?.addEventListener("change", () => {
+    renderInterestMainTable();
+  });
+}
+
 function initInterestWatchlists() {
+  initInterestSectorFilter();
   const savedTab = storageGet(sidebarStorage.activeTab);
   activeSidebarTab = savedTab === "interest" ? "interest" : "accounts";
   syncSidebarTabs();
