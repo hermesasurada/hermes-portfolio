@@ -230,17 +230,16 @@ function renderDividendHistory(payload) {
   const body = document.getElementById("dividendHistoryBody");
   document.getElementById("dividendHistoryName").textContent = payload.name || payload.ticker || "-";
   document.getElementById("dividendHistoryTicker").textContent = payload.ticker || "-";
+  const freqLabel = payload.summary?.frequency_label;
+  document.getElementById("dividendHistoryFreq").textContent = freqLabel ? `(${freqLabel})` : "";
   if (!rows.length) {
     body.innerHTML = `<div class="dividend-history-empty">${payload.start_year || 2010}년 이후 배당이력 없음</div>`;
     return;
   }
   initDividendHistoryCollapsedYears(payload, rows);
   const estimatedGrowthMark = `<small class="history-growth-basis" title="현재 귀속연도 예상 연간배당 기준">*</small>`;
+  // 지급주기는 타이틀 옆 괄호로, 연환산은 표의 예상 연간배당과 중복이라 보드에서 제외
   const summaryColumns = [
-    [
-      ["지급주기", esc(summary.frequency_label || "-")],
-      ["최근 배당 연환산", dividendMoneyText(summary.annualized_run_rate, payload.currency)],
-    ],
     [
       [summary.latest_growth_estimated ? "예상 성장률" : "최근 성장률", `${dividendHistoryPercent(summary.latest_growth_pct)}${summary.latest_growth_estimated ? estimatedGrowthMark : ""}`],
       [
@@ -361,6 +360,7 @@ async function openDividendHistory(ticker) {
   const body = document.getElementById("dividendHistoryBody");
   document.getElementById("dividendHistoryName").textContent = "배당이력";
   document.getElementById("dividendHistoryTicker").textContent = ticker || "-";
+  document.getElementById("dividendHistoryFreq").textContent = "";
   body.innerHTML = `<div class="dividend-history-empty">불러오는 중...</div>`;
   if (!modal.open) modal.showModal();   // 이미 열려 있으면 내용만 교체(showModal 재호출 시 throw 방지)
   // 모바일 뒤로가기로 닫을 수 있도록 history 항목 추가 (URL은 유지)

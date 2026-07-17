@@ -4126,6 +4126,28 @@ th.pc-frozen-edge {
   width: min(540px, calc(100vw - 28px));
   max-height: min(760px, calc(100vh - 28px));
 }
+/* 세로 스크롤은 표(wrap) 안에서만 — 헤더·통계 보드는 항상 고정.
+   [open] 한정 필수: dialog에 무조건 display를 주면 닫힘 상태(UA display:none)를 덮는다. */
+.dividend-history-modal[open] {
+  display: flex;
+  flex-direction: column;
+}
+.dividend-history-card {
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+#dividendHistoryBody {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 0;
+}
+.dividend-history-freq {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
 .watch-modal::backdrop {
   background: rgba(40, 32, 22, .45);
   backdrop-filter: blur(3px);
@@ -4285,7 +4307,8 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   font-weight: 800;
 }
 .dividend-history-table-wrap {
-  max-height: min(570px, calc(100vh - 205px));
+  /* 높이 상한은 모달 max-height가 담당 — grid 1fr 안에서 자체 스크롤 */
+  min-height: 0;
   overflow-x: auto;     /* 모달이 뷰포트에 눌려 좁아져도 잘림 대신 스크롤 */
   overflow-y: auto;
   border: 1px solid var(--line);
