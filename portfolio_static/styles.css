@@ -4121,8 +4121,9 @@ th.pc-frozen-edge {
 
 /* ── 배당이력 모달 (연도 rowspan 표 + 요약 보드) ────────────────────────── */
 .dividend-history-modal {
-  /* 표 px 고정폭 552 + 카드 패딩 28 + wrap 보더 2 — 콘텐츠에 꼭 맞게 */
-  width: min(584px, calc(100vw - 28px));
+  /* 표 px 고정폭 508 + 모달 내부 오버헤드 실측 32(카드 패딩 28 + 보더 등).
+     좁은 화면(100vw-28)에서도 뷰포트 568px까지 잘림 없이 들어간다. */
+  width: min(540px, calc(100vw - 28px));
   max-height: min(760px, calc(100vh - 28px));
 }
 .watch-modal::backdrop {
@@ -4285,7 +4286,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 .dividend-history-table-wrap {
   max-height: min(570px, calc(100vh - 205px));
-  overflow-x: hidden;   /* 데스크톱: 팝업 폭이 충분해 가로 스크롤 불필요 */
+  overflow-x: auto;     /* 모달이 뷰포트에 눌려 좁아져도 잘림 대신 스크롤 */
   overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -4293,7 +4294,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .dividend-history-table {
   /* 콘텐츠 실측 기반 px 고정폭 — 컬럼 px 합과 일치해야 fixed가 그대로 쓴다
      (max-content는 auto-layout 폭을 비례 배분해 컬럼 지정이 무시됨) */
-  width: 552px;
+  width: 508px;
   min-width: 0; /* 전역 table { min-width: 660px } 오버라이드 */
   border-collapse: collapse;
   table-layout: fixed;
@@ -4323,31 +4324,31 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 .dividend-history-table th:first-child,
 .dividend-history-table td:first-child {
-  width: 94px; /* 귀속연도 + YTD 칩 실측 82 */
+  width: 90px; /* 귀속연도 + YTD 칩 실측 82 */
   text-align: left;
 }
 .dividend-history-table th:nth-child(2),
 .dividend-history-table td:nth-child(2) {
-  width: 100px; /* 연간배당 실측 87 */
+  width: 100px; /* 연간배당 실측 92 (DPZ '예상 $7.96') */
 }
 .dividend-history-table th:nth-child(3),
 .dividend-history-table td:nth-child(3) {
-  width: 88px; /* 성장률 실측 75 */
+  width: 88px; /* 성장률 실측 80 ('▲24.8%*') */
 }
 .dividend-history-table th:nth-child(4),
 .dividend-history-table td:nth-child(4) {
-  width: 50px; /* 횟수 실측 37 */
+  width: 50px; /* 횟수 실측 42 */
   text-align: center;
 }
 .dividend-history-table th:nth-child(5),
 .dividend-history-table td:nth-child(5),
 .dividend-history-table th:nth-child(6),
 .dividend-history-table td:nth-child(6) {
-  width: 78px; /* 기준일·지급일 풀 날짜 실측 66 */
+  width: 60px; /* 기준일·지급일 YY.MM.DD 축약(shortDateText) */
 }
 .dividend-history-table th:last-child,
 .dividend-history-table td:last-child {
-  width: 64px; /* 주당배당금 실측 52 */
+  width: 60px; /* 주당배당금 실측 52 */
   text-align: center;
 }
 .dividend-history-table tbody tr:last-child td {

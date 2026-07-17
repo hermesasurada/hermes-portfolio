@@ -208,12 +208,6 @@ function dividendHistoryPercent(value) {
   return `<span class="${cls}"><span aria-hidden="true">${arrow}</span>${fmt1.format(Math.abs(number))}%</span>`;
 }
 
-function dividendHistoryFullDate(dateText) {
-  const text = String(dateText || "");
-  if (!/^\d{4}-\d{2}-\d{2}/.test(text)) return "-";
-  return text.slice(0, 10).replace(/-/g, ".");
-}
-
 let dividendHistoryCollapseKey = "";
 let collapsedDividendHistoryYears = new Set();
 
@@ -331,8 +325,8 @@ function renderDividendHistory(payload) {
             return details.map((detail, index) => `
               <tr class="${index === 0 && rowIndex > 0 ? "history-year-start" : ""}">
                 ${index === 0 ? `${yearCell}${amountCell}${growthCell}${countCell}` : emptyGroupCells}
-                <td class="history-detail-date">${detail ? dividendHistoryFullDate(detail.entitlement_date) : "-"}</td>
-                <td class="history-detail-date">${detail ? dividendHistoryFullDate(detail.pay_date) : "-"}</td>
+                <td class="history-detail-date">${detail ? shortDateText(detail.entitlement_date) : "-"}</td>
+                <td class="history-detail-date">${detail ? shortDateText(detail.pay_date) : "-"}</td>
                 <td class="history-detail-amount">${detail ? dividendAmountText(detail.amount, payload.currency) : "-"}</td>
               </tr>
             `).join("");
