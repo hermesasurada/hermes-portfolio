@@ -5429,6 +5429,21 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
 }
 
+/* ── 반응형 ②′ 좁은 화면(≤568px) — 배당이력 모달 크롬 다이어트 ─────────────
+   표(508px)는 콘텐츠 한계라 더 못 줄인다(예상 배당·YTD 칩 등 고정폰트 하위
+   요소 때문에 폰트 축소도 무효). 대신 바깥 여백 28→8·카드 패딩 14→6으로
+   32px을 벌어 뷰포트 532px까지 잘림 없이 수용. 그 밑은 wrap 가로 스크롤. */
+@media (max-width: 568px) {
+  .watch-modal.dividend-history-modal {
+    width: calc(100vw - 8px);
+    /* dialog UA 기본 max-width: calc(100% - 6px - 2em)가 폭을 되물리므로 해제 */
+    max-width: calc(100vw - 8px);
+  }
+  .dividend-history-card {
+    padding: 10px 6px;
+  }
+}
+
 /* ── 반응형 ③ 모바일(≤560px) — 통계 보드·차트 ──────────────────────────── */
 @media (max-width: 560px) {
   .watch-modal {
