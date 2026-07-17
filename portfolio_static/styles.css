@@ -4121,7 +4121,8 @@ th.pc-frozen-edge {
 
 /* ── 배당이력 모달 (연도 rowspan 표 + 요약 보드) ────────────────────────── */
 .dividend-history-modal {
-  width: min(780px, calc(100vw - 28px));
+  /* 표 px 고정폭 552 + 카드 패딩 28 + wrap 보더 2 — 콘텐츠에 꼭 맞게 */
+  width: min(584px, calc(100vw - 28px));
   max-height: min(760px, calc(100vh - 28px));
 }
 .watch-modal::backdrop {
@@ -4290,8 +4291,10 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   border-radius: var(--radius-sm);
 }
 .dividend-history-table {
-  width: 100%;
-  min-width: 0;
+  /* 콘텐츠 실측 기반 px 고정폭 — 컬럼 px 합과 일치해야 fixed가 그대로 쓴다
+     (max-content는 auto-layout 폭을 비례 배분해 컬럼 지정이 무시됨) */
+  width: 552px;
+  min-width: 0; /* 전역 table { min-width: 660px } 오버라이드 */
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 13.5px;
@@ -4320,31 +4323,31 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 .dividend-history-table th:first-child,
 .dividend-history-table td:first-child {
-  width: 12%;
+  width: 94px; /* 귀속연도 + YTD 칩 실측 82 */
   text-align: left;
 }
 .dividend-history-table th:nth-child(2),
 .dividend-history-table td:nth-child(2) {
-  width: 16%;
+  width: 100px; /* 연간배당 실측 87 */
 }
 .dividend-history-table th:nth-child(3),
 .dividend-history-table td:nth-child(3) {
-  width: 14%;
+  width: 88px; /* 성장률 실측 75 */
 }
 .dividend-history-table th:nth-child(4),
 .dividend-history-table td:nth-child(4) {
-  width: 8%;
+  width: 50px; /* 횟수 실측 37 */
   text-align: center;
 }
 .dividend-history-table th:nth-child(5),
 .dividend-history-table td:nth-child(5),
 .dividend-history-table th:nth-child(6),
 .dividend-history-table td:nth-child(6) {
-  width: 16%;
+  width: 78px; /* 기준일·지급일 풀 날짜 실측 66 */
 }
 .dividend-history-table th:last-child,
 .dividend-history-table td:last-child {
-  width: 18%;
+  width: 64px; /* 주당배당금 실측 52 */
   text-align: center;
 }
 .dividend-history-table tbody tr:last-child td {
@@ -4470,9 +4473,10 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .dividend-history-stats {
   margin-top: 8px;
 }
-/* 모달 폭(780px)에 맞춰 3열 — 통계지표와 동일한 보드 스타일, 열만 넓게 */
+/* 모달 폭(584px)에 맞춰 2열 — 통계지표와 동일한 보드 스타일. 3열은 값
+   '▲50.0% 25.11.13'류(≈103px)가 잘려 2열로 폭 확보 */
 .dividend-history-stats .cstat-board {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .dividend-history-stats .cstat-row {
   grid-template-columns: 96px minmax(0, 1fr);
@@ -5157,17 +5161,9 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   /* 배당표는 데스크톱 규칙이 이미 px 고정폭(width:max-content + 컬럼 px)이라
      모바일 오버라이드 불필요 — 과거 width:100% 시절의 Safari 압축 대응 잔재 제거. */
-  .dividend-history-table th,
-  .dividend-history-table td {
-    padding-left: 7px;
-    padding-right: 7px;
-  }
-  /* 모바일: 좁은 화면에선 가로 스크롤 허용 (열이 많아 압축 대신 스크롤) */
+  /* 배당이력 팝업도 px 고정폭 — 모바일은 가로 스크롤만 허용(압축 금지) */
   .dividend-history-table-wrap {
     overflow-x: auto;
-  }
-  .dividend-history-table.detailed {
-    min-width: 620px;
   }
   .chart-head {
     align-items: flex-start;
