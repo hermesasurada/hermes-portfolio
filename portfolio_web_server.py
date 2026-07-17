@@ -222,7 +222,7 @@ class Handler(BaseHTTPRequestHandler):
             status,
         )
 
-    def send_file(self, file_path: Path, content_type: str | None = None, cache_control: str = "no-cache") -> bool:
+    def send_file(self, file_path: Path, content_type: str | None = None, cache_control: str = "no-store") -> bool:
         if not file_path.exists() or not file_path.is_file():
             self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
             return True
