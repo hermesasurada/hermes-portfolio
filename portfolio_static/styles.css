@@ -1302,7 +1302,7 @@ table { width: 100%; border-collapse: collapse; min-width: 660px; }
 #detailTableWrap td.group-start { border-left: 1px solid var(--line); }
 .hidden { display: none !important; }
 th, td {
-  padding: 10px 8px;
+  padding: 10px 6px;
   border-bottom: 1px solid var(--line);
   text-align: right;
   white-space: nowrap;
@@ -1652,18 +1652,18 @@ tr.dividend-month-row:hover td {
 }                                                                  /* 종목명 */
 #detailTableWrap th:nth-child(3), #detailTableWrap td:nth-child(3) { min-width: 76px; }   /* 등락 */
 #detailTableWrap th:nth-child(4), #detailTableWrap td:nth-child(4) { min-width: 56px; }   /* 연장 */
-#detailTableWrap th:nth-child(5), #detailTableWrap td:nth-child(5) { min-width: 100px; }  /* 현재단가 */
-#detailTableWrap th:nth-child(6), #detailTableWrap td:nth-child(6) { min-width: 98px; }   /* 등락금액 */
-#detailTableWrap th:nth-child(7), #detailTableWrap td:nth-child(7) { min-width: 56px; }   /* 수량 */
-#detailTableWrap th:nth-child(8), #detailTableWrap td:nth-child(8) { min-width: 108px; }  /* 평가액 */
+#detailTableWrap th:nth-child(5), #detailTableWrap td:nth-child(5) { min-width: 86px; }   /* 현재단가 */
+#detailTableWrap th:nth-child(6), #detailTableWrap td:nth-child(6) { min-width: 80px; }   /* 등락금액 */
+#detailTableWrap th:nth-child(7), #detailTableWrap td:nth-child(7) { min-width: 44px; }   /* 수량 */
+#detailTableWrap th:nth-child(8), #detailTableWrap td:nth-child(8) { min-width: 74px; }   /* 평가액 */
 #detailTableWrap th:nth-child(9), #detailTableWrap td:nth-child(9) { min-width: 54px; }   /* 비중 */
-#detailTableWrap th:nth-child(10), #detailTableWrap td:nth-child(10) { min-width: 96px; } /* 시총/AUM */
-#detailTableWrap th:nth-child(11), #detailTableWrap td:nth-child(11) { min-width: 58px; } /* 배당율 */
+#detailTableWrap th:nth-child(10), #detailTableWrap td:nth-child(10) { min-width: 76px; } /* 시총/AUM */
+#detailTableWrap th:nth-child(11), #detailTableWrap td:nth-child(11) { min-width: 48px; } /* 배당율 */
 #detailTableWrap th:nth-child(12), #detailTableWrap td:nth-child(12) { min-width: 72px; } /* 5년 배당성장 */
-#detailTableWrap th:nth-child(13), #detailTableWrap td:nth-child(13) { min-width: 68px; } /* 실적 */
+#detailTableWrap th:nth-child(13), #detailTableWrap td:nth-child(13) { min-width: 46px; } /* 실적 */
 #detailTableWrap th:nth-child(14), #detailTableWrap td:nth-child(14) { min-width: 62px; } /* 52주高 */
 #detailTableWrap th:nth-child(15), #detailTableWrap td:nth-child(15),
-#detailTableWrap th:nth-child(16), #detailTableWrap td:nth-child(16) { min-width: 46px; } /* β */
+#detailTableWrap th:nth-child(16), #detailTableWrap td:nth-child(16) { min-width: 42px; } /* β */
 #detailTableWrap th:nth-child(n+17):nth-child(-n+22),
 #detailTableWrap td:nth-child(n+17):nth-child(-n+22) {
   min-width: 43px;
@@ -1672,7 +1672,7 @@ tr.dividend-month-row:hover td {
 } /* RSI/BB */
 #detailTableWrap th:nth-child(23), #detailTableWrap td:nth-child(23),
 #detailTableWrap th:nth-child(24), #detailTableWrap td:nth-child(24) { min-width: 56px; } /* P/E */
-#detailTableWrap th:nth-child(25), #detailTableWrap td:nth-child(25) { min-width: 48px; } /* P/B */
+#detailTableWrap th:nth-child(25), #detailTableWrap td:nth-child(25) { min-width: 40px; } /* P/B */
 #detailTableWrap th:nth-child(n+26):nth-child(-n+32),
 #detailTableWrap td:nth-child(n+26):nth-child(-n+32) { min-width: 58px; } /* 기간 수익률 */
 #detailTableWrap th:nth-child(33), #detailTableWrap td:nth-child(33) { min-width: 54px; } /* 거래 */
