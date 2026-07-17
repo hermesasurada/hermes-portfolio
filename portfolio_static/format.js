@@ -233,10 +233,15 @@ function marketCapText(v, currency) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "-";
   if (currency === "KRW") {
-    const jo = Math.floor(n / 1_0000_0000_0000);
-    const eok = Math.round((n - jo * 1_0000_0000_0000) / 1_0000_0000);
-    if (jo > 0 && eok > 0) return `${fmt.format(jo)}조 ${fmt.format(eok)}억`;
-    if (jo > 0) return `${fmt.format(jo)}조`;
+    const jo = n / 1_0000_0000_0000;
+    // 조 단위는 소수 1자리 반올림·콤마 없이 짧게 — "1,312조 7,978억" → "1312.8조"
+    if (jo >= 1) {
+      // toFixed는 FP 오차로 1.95→"1.9"가 되므로 Math.round 기반 반올림
+      const rounded = Math.round(jo * 10) / 10;
+      const text = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+      return `${text}조`;
+    }
+    const eok = Math.round(n / 1_0000_0000);
     if (eok > 0) return `${fmt.format(eok)}억`;
     return krwShort(n);
   }
