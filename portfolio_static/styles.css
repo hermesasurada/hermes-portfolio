@@ -1380,69 +1380,69 @@ th:first-child, td:first-child { text-align: left; }
   padding: 0;
 }
 .dividend-list {
-  min-width: 1120px;
-  width: 100%;
+  /* 콘텐츠 실측 기반 px 고정폭 — 넓은 화면에서 비례 확장으로 성겨지던 것 방지 */
+  width: max-content;
   table-layout: fixed;
   margin: 0;
   background: var(--panel);
 }
 .dividend-list th,
 .dividend-list td {
-  padding-left: 10px;
-  padding-right: 10px;
+  padding-left: 6px;
+  padding-right: 6px;
   font-size: 12.5px;
   white-space: nowrap;
 }
 .dividend-list th:nth-child(1),
 .dividend-list td:nth-child(1) {
   text-align: center;
-  width: 6%;
+  width: 56px;
 }
 .dividend-list th:nth-child(2),
 .dividend-list td:nth-child(2) {
-  width: 4%;
+  width: 40px;
   text-align: center;
 }
 .dividend-list th:nth-child(3),
 .dividend-list td:nth-child(3) {
-  width: 22%;
+  width: 238px; /* 최장 종목명 실측 225px + 패딩 — 말줄임 없이 전량 표시 */
   text-align: left;
 }
 .dividend-list th:nth-child(4),
 .dividend-list td:nth-child(4) {
-  width: 8%;
+  width: 70px;
 }
 .dividend-list th:nth-child(5),
 .dividend-list td:nth-child(5) {
-  width: 6%;
+  width: 46px;
 }
 .dividend-list th:nth-child(6),
 .dividend-list td:nth-child(6) {
-  width: 8.5%;
+  width: 70px;
 }
 .dividend-list th:nth-child(7),
 .dividend-list td:nth-child(7) {
-  width: 8.5%;
+  width: 60px;
 }
 .dividend-list th:nth-child(8),
 .dividend-list td:nth-child(8) {
-  width: 5%;
+  width: 46px;
 }
 .dividend-list th:nth-child(9),
 .dividend-list td:nth-child(9) {
-  width: 8.5%;
+  width: 74px;
 }
 .dividend-list th:nth-child(10),
 .dividend-list td:nth-child(10) {
-  width: 6%;
+  width: 56px;
 }
 .dividend-list th:nth-child(11),
 .dividend-list td:nth-child(11) {
-  width: 12%;
+  width: 74px;
 }
 .dividend-list th:nth-child(12),
 .dividend-list td:nth-child(12) {
-  width: 5.5%;
+  width: 58px;
 }
 /* 대상→종목, 종목→주당배당금 경계는 촘촘하게 유지 */
 .dividend-list th:nth-child(2),
@@ -1457,16 +1457,7 @@ th:first-child, td:first-child { text-align: left; }
 .dividend-list td:nth-child(4) {
   padding-left: 5px;
 }
-/* 수량·세전·세금 숫자군은 서로 구분되도록 여백 확대 */
-.dividend-list th:nth-child(5),
-.dividend-list td:nth-child(5),
-.dividend-list th:nth-child(6),
-.dividend-list td:nth-child(6),
-.dividend-list th:nth-child(7),
-.dividend-list td:nth-child(7) {
-  padding-left: 16px;
-  padding-right: 16px;
-}
+
 .dividend-target {
   text-align: center;
 }
@@ -5164,37 +5155,8 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     overflow-x: auto;
     overflow-y: auto;
   }
-  /* 모바일 Safari는 table-layout:fixed + width:100%에서 min-width를 무시해 테이블이
-     뷰포트로 압축됨 → 가로 스크롤이 안 생김. 명시적 px 폭으로 강제(통계탭과 동일). */
-  #dividendTableWrap .dividend-list {
-    width: 1060px;
-    min-width: 1060px;
-  }
-  /* 대상은 한 글자 아이콘이므로 틀고정 블록을 슬림하게 유지한다. */
-  #dividendTableWrap .dividend-list th:nth-child(2),
-  #dividendTableWrap .dividend-list td:nth-child(2) {
-    width: 4%;
-  }
-  #dividendTableWrap .dividend-list th:nth-child(3),
-  #dividendTableWrap .dividend-list td:nth-child(3) {
-    width: 14%;
-  }
-  #dividendTableWrap .dividend-list th:nth-child(4),
-  #dividendTableWrap .dividend-list td:nth-child(4) { width: 8.5%; }
-  #dividendTableWrap .dividend-list th:nth-child(5),
-  #dividendTableWrap .dividend-list td:nth-child(5) { width: 6.5%; }
-  #dividendTableWrap .dividend-list th:nth-child(6),
-  #dividendTableWrap .dividend-list td:nth-child(6) { width: 10%; }
-  #dividendTableWrap .dividend-list th:nth-child(7),
-  #dividendTableWrap .dividend-list td:nth-child(7) { width: 9.5%; }
-  #dividendTableWrap .dividend-list th:nth-child(9),
-  #dividendTableWrap .dividend-list td:nth-child(9) { width: 10%; }
-  #dividendTableWrap .dividend-list th:nth-child(10),
-  #dividendTableWrap .dividend-list td:nth-child(10) { width: 6.5%; }
-  #dividendTableWrap .dividend-list th:nth-child(11),
-  #dividendTableWrap .dividend-list td:nth-child(11) { width: 14%; }
-  #dividendTableWrap .dividend-list th:nth-child(12),
-  #dividendTableWrap .dividend-list td:nth-child(12) { width: 6%; }
+  /* 배당표는 데스크톱 규칙이 이미 px 고정폭(width:max-content + 컬럼 px)이라
+     모바일 오버라이드 불필요 — 과거 width:100% 시절의 Safari 압축 대응 잔재 제거. */
   .dividend-history-table th,
   .dividend-history-table td {
     padding-left: 7px;
