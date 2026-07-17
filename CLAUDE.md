@@ -14,6 +14,7 @@
   - webkit 함정 ①: 축 pseudo(`:vertical`)에 width를 주면 무시됨 — 반드시 `::-webkit-scrollbar`에 width/height.
   - webkit 함정 ②: 표준 `scrollbar-width`/`scrollbar-color`를 선언하면 Chrome이 `::-webkit-scrollbar*` 전체를 무시 → 선언 금지.
 - 색상은 CSS 변수 토큰만 사용(하드코딩 hex 지양). 네이버 그린(#03c75a) 등 브랜드색은 예외.
+- **테마 = '따뜻한 서재'(496e0d8)**: 라이트=크림 종이+세피아 잉크+램프 그린 액센트, 다크='밤의 서재'(웜 다크 브라운). 쿨 블루그레이 복귀 금지. 헤딩 세리프는 Noto Serif KR 600 자체 호스팅(타이틀류만 — 본문·숫자는 Pretendard+tabular 유지). 다크의 큰 카드(계좌·관심그룹)는 뉴모픽 하이라이트 halo 때문에 평면 예외.
 
 ## 프런트 구조 규칙 (classic script, 빌드 없음)
 - 티커 링크·배당이력 버튼 클릭은 **app.js의 문서 위임 한 곳**에서만 처리. 렌더 후 개별 addEventListener 재바인딩 금지(리스너 누적 사고 이력).
