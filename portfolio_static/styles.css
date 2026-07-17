@@ -4482,6 +4482,13 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .dividend-history-table.detailed .history-detail-amount {
   text-align: right;
 }
+.history-special-note {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: right;
+  /* 연간 합계·성장률 계산에서 제외된 회차임을 라벨로만 알린다 */
+}
 .history-growth-basis {
   margin-left: 1px;
   color: var(--muted);

@@ -266,6 +266,48 @@ def _current_year_estimate(events: list[dict], frequency: int, current_year: int
     return actual + missing * latest["amount"]
 
 
+def _mark_special_dividends(events: list[dict]) -> None:
+    """정기 흐름 사이에 금액이 크게 튀는 단발 회차를 특별배당으로 표시.
+    조건: 직전 정기 회차의 2.5배 이상 + 다음 회차가 다시 그 수준으로 복귀 +
+    작년 동기에 반복되지 않은 것(일본·한국식 '소액 중간 + 대액 기말'은 정기).
+    반복 참조는 특별배당 표시 여부와 무관하게 전체 이력에서 찾는다 — 첫 해가
+    특별로 빠지면 이듬해부터 참조가 사라져 연쇄 오검출되는 것 방지(반다이남코).
+    한국 결산배당(is_final)은 중간배당의 몇 배라도 정기로 본다."""
+    regular: list[dict] = []
+    for index, event in enumerate(events):
+        event["is_special"] = False
+        prev_amount = regular[-1]["amount"] if regular else None
+        if (
+            not event["is_final"]
+            and prev_amount
+            and event["amount"] >= prev_amount * 2.5
+        ):
+            reference = _same_period_reference(events[:index], event)
+            recurring = reference is not None and reference["amount"] * 2 > event["amount"]
+            next_event = events[index + 1] if index + 1 < len(events) else None
+            if next_event is not None:
+                event["is_special"] = (
+                    not recurring and next_event["amount"] <= event["amount"] / 2.5
+                )
+            else:
+                # 최신 회차는 '다음 회차 복귀'를 확인할 수 없다 — 정기 주기 밖
+                # 추가 지급(직전 간격 < 정기 간격의 65%)일 때만 특별로 본다.
+                # 정상 주기 자리의 대폭 인상(NVDA $0.01→$0.25)은 정기 취급.
+                recent = regular[-6:]
+                intervals = [
+                    (right["date"] - left["date"]).days
+                    for left, right in zip(recent, recent[1:])
+                ]
+                gap = (event["date"] - regular[-1]["date"]).days
+                event["is_special"] = (
+                    not recurring
+                    and bool(intervals)
+                    and gap < median(intervals) * 0.65
+                )
+        if not event["is_special"]:
+            regular.append(event)
+
+
 def _attributed_history_events(
     event_rows: list,
     ticker: str,
@@ -322,11 +364,22 @@ def _attributed_history_events(
         and str(ticker or "").upper() not in FISCAL_END_MONTH_OVERRIDES
         and str(ticker or "").upper() not in PAY_DATE_YEAR_TICKERS
     )
-    if relabel and events:
+    # 특별배당은 사이클·연간 계산을 흔들지 않도록 먼저 표시하고 정기 회차만
+    # 재라벨한다(COST 2023-12 $15가 $1.02 사이클을 끊던 회귀).
+    # 한국은 '소액 분기 + 대액 기말' 관례라 기말 확대가 오인되기 쉬워 제외
+    # (하나금융 2024-02 첫 1,600원 기말이 특별로 빠지던 실측).
+    if is_korean:
+        for event in events:
+            event["is_special"] = False
+    else:
+        _mark_special_dividends(events)
+    regular_events = [event for event in events if not event["is_special"]]
+
+    if relabel and regular_events:
         if fiscal_end_month:
             cycle: list[dict] = []
             previous_amount: float | None = None
-            for event in events:
+            for event in regular_events:
                 amount = float(event["amount"])
                 same_cycle = _same_dividend_cycle_amount(amount, previous_amount)
                 if cycle and (len(cycle) >= 4 or not same_cycle):
@@ -341,44 +394,58 @@ def _attributed_history_events(
                 for item in cycle:
                     item["year"] = label_year
             overfull_years = {
-                year for year, count in Counter(event["year"] for event in events).items()
+                year for year, count in Counter(event["year"] for event in regular_events).items()
                 if count > 4
             }
-            latest_event_year = max(event["date"].year for event in events)
+            latest_event_year = max(event["date"].year for event in regular_events)
             if any(year >= latest_event_year - 2 for year in overfull_years):
-                for event in events:
+                for event in regular_events:
                     event["year"] = event["date"].year
             elif overfull_years:
-                for event in events:
+                for event in regular_events:
                     if event["year"] in overfull_years:
                         event["year"] = event["date"].year
                 if any(
                     year >= latest_event_year - 2 and count > 4
-                    for year, count in Counter(event["year"] for event in events).items()
+                    for year, count in Counter(event["year"] for event in regular_events).items()
                 ):
-                    for event in events:
+                    for event in regular_events:
                         event["year"] = event["date"].year
             for _ in range(20):
-                counts = Counter(event["year"] for event in events)
+                counts = Counter(event["year"] for event in regular_events)
                 overfull = [year for year, count in counts.items() if count > 4]
                 if not overfull:
                     break
                 for year in overfull:
                     year_events = sorted(
-                        (event for event in events if event["year"] == year),
+                        (event for event in regular_events if event["year"] == year),
                         key=lambda item: item["date"],
                     )
                     for event in year_events[:max(0, len(year_events) - 4)]:
                         event["year"] = year - 1
         else:
             cycles: dict[int, list[dict]] = {}
-            for event in events:
+            for event in regular_events:
                 cycles.setdefault(event["year"], []).append(event)
             for cycle_events in cycles.values():
                 year_counts = Counter(event["date"].year for event in cycle_events)
                 majority_year = max(year_counts, key=lambda year: (year_counts[year], year))
                 for event in cycle_events:
                     event["year"] = majority_year
+
+    # 특별배당의 귀속연도는 직전 정기 회차(없으면 직후)를 따라 같은 그룹에 표시
+    for index, event in enumerate(events):
+        if not event["is_special"]:
+            continue
+        anchor = next(
+            (events[j] for j in range(index - 1, -1, -1) if not events[j]["is_special"]),
+            None,
+        ) or next(
+            (events[j] for j in range(index + 1, len(events)) if not events[j]["is_special"]),
+            None,
+        )
+        if anchor:
+            event["year"] = anchor["year"]
 
     return events, final_dividend_count
 
@@ -391,13 +458,15 @@ def _aggregate_annual_dividends(events: list[dict]) -> dict[int, dict]:
             event["year"],
             {"amount": 0.0, "payments": 0, "last_date": event["date"], "sources": set(), "final": False, "events": []},
         )
+        year_row["events"].append(event)
+        if event["source"]:
+            year_row["sources"].add(event["source"])
+        if event.get("is_special"):
+            continue  # 특별배당은 상세에만 표시 — 연간 합계·회차·성장률에서 제외
         year_row["amount"] += event["amount"]
         year_row["payments"] += 1
         year_row["last_date"] = max(year_row["last_date"], event["date"])
         year_row["final"] = year_row["final"] or event["is_final"]
-        year_row["events"].append(event)
-        if event["source"]:
-            year_row["sources"].add(event["source"])
     return annual
 
 
@@ -407,9 +476,10 @@ def _mark_fiscal_finals(annual: dict[int, dict], complete_years: set[int]) -> in
     marked = 0
     for year in complete_years:
         group = annual.get(year)
-        if not group or not group["events"]:
+        regular = [event for event in (group["events"] if group else []) if not event.get("is_special")]
+        if not regular:
             continue
-        final_event = max(group["events"], key=lambda item: item["date"])
+        final_event = max(regular, key=lambda item: item["date"])
         if not final_event["is_final"]:
             final_event["is_final"] = True
             group["final"] = True
@@ -430,10 +500,13 @@ def _year_growth(
     if not is_korean:
         previous = annual.get(year - 1)
         current = annual.get(year)
-        if previous and previous["events"] and current and current["events"]:
-            growth = _annual_growth(
-                current["events"][0]["amount"], previous["events"][0]["amount"]
-            )
+        first_regular = lambda group: next(
+            (event for event in group["events"] if not event.get("is_special")), None
+        )
+        previous_first = first_regular(previous) if previous else None
+        current_first = first_regular(current) if current else None
+        if previous_first and current_first:
+            growth = _annual_growth(current_first["amount"], previous_first["amount"])
             if growth is not None:
                 return growth, "first_payment"
     return None, None
@@ -478,6 +551,7 @@ def _history_year_rows(
                         "split_adjusted": event["split_factor"] != 1.0,
                         "source": event["source"],
                         "is_final": event["is_final"],
+                        "is_special": bool(event.get("is_special")),
                     }
                     for event in sorted(row["events"], key=lambda item: item["date"], reverse=True)
                 ],
@@ -625,14 +699,15 @@ def load_dividend_history(ticker: str) -> dict:
     )
     totals = {year: row["amount"] for year, row in annual.items()}
     payment_counts = {year: row["payments"] for year, row in annual.items()}
-    frequency = _dividend_frequency(events, payment_counts, active_year)
+    regular_events = [event for event in events if not event.get("is_special")]
+    frequency = _dividend_frequency(regular_events, payment_counts, active_year)
     complete_years = {
         year for year, count in payment_counts.items()
         if year < active_year and count >= frequency
     }
     if fiscal_end_month:
         final_dividend_count += _mark_fiscal_finals(annual, complete_years)
-    current_estimate = _current_year_estimate(events, frequency, active_year)
+    current_estimate = _current_year_estimate(regular_events, frequency, active_year)
 
     return {
         "ticker": ticker_row["ticker"],
@@ -643,7 +718,7 @@ def load_dividend_history(ticker: str) -> dict:
             annual, totals, complete_years, frequency, current_estimate, active_year, is_korean
         ),
         "summary": _history_summary(
-            events, totals, complete_years, frequency, current_estimate, active_year,
+            regular_events, totals, complete_years, frequency, current_estimate, active_year,
             final_dividend_count
         ),
     }

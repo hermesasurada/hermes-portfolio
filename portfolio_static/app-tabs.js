@@ -321,12 +321,19 @@ function renderDividendHistory(payload) {
                 </tr>
               `;
             }
+            const specialGroupCells = `
+              <td class="history-group-empty"></td>
+              <td class="history-special-note" colspan="3">특별배당</td>`;
             return details.map((detail, index) => `
               <tr class="${index === 0 && rowIndex > 0 ? "history-year-start" : ""}">
-                ${index === 0 ? `${yearCell}${amountCell}${growthCell}${countCell}` : emptyGroupCells}
+                ${index === 0
+                  ? `${yearCell}${amountCell}${growthCell}${countCell}`
+                  : detail?.is_special ? specialGroupCells : emptyGroupCells}
                 <td class="history-detail-date">${detail ? shortDateText(detail.entitlement_date) : "-"}</td>
                 <td class="history-detail-date">${detail ? shortDateText(detail.pay_date) : "-"}</td>
-                <td class="history-detail-amount">${detail ? dividendAmountText(detail.amount, payload.currency) : "-"}</td>
+                <td class="history-detail-amount">${
+                  index === 0 && detail?.is_special ? `<span class="history-special-note">특별</span> ` : ""
+                }${detail ? dividendAmountText(detail.amount, payload.currency) : "-"}</td>
               </tr>
             `).join("");
           }).join("")}

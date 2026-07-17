@@ -550,6 +550,69 @@ def test_quarterly_dividend_cycle_never_groups_more_than_four_payments():
     assert all(row["payments"] <= 4 for row in annual.values())
 
 
+def test_special_dividend_excluded_from_annual_totals_and_cycles():
+    # COST 패턴: $1.02 분기 사이클 중간의 12월 $15 특별배당.
+    rows = []
+    for record_date, amount in [
+        ("2022-05-12", 0.9),
+        ("2022-08-11", 0.9),
+        ("2022-11-10", 0.9),
+        ("2023-02-09", 0.9),
+        ("2023-05-11", 1.02),
+        ("2023-08-24", 1.02),
+        ("2023-11-02", 1.02),
+        ("2023-12-27", 15.0),
+        ("2024-02-01", 1.02),
+        ("2024-04-25", 1.16),
+        ("2024-07-26", 1.16),
+        ("2024-11-01", 1.16),
+        ("2025-02-07", 1.16),
+        ("2025-05-02", 1.3),
+    ]:
+        rows.append({
+            "record_date": record_date,
+            "ex_date": None,
+            "pay_date": None,
+            "declaration_date": None,
+            "amount": amount,
+            "source": "test",
+        })
+
+    events, _ = _attributed_history_events(rows, "COST", False, 4)
+    specials = [event for event in events if event["is_special"]]
+    assert len(specials) == 1 and specials[0]["amount"] == 15.0
+    # 특별배당은 직전 정기 회차의 그룹(2023 사이클)에 표시된다.
+    assert specials[0]["year"] == 2023
+
+    annual = _aggregate_annual_dividends(events)
+    # 연간 합계·회차에서 제외 — $15가 끊던 사이클도 복원(2024-02가 2023 그룹).
+    assert annual[2023]["payments"] == 4
+    assert round(annual[2023]["amount"], 6) == 4.08
+    assert annual[2024]["payments"] == 4
+    assert round(annual[2024]["amount"], 6) == 4.64
+    # 상세에는 특별배당 포함(2023 그룹 5건).
+    assert len(annual[2023]["events"]) == 5
+
+    # 한국 기말배당(중간의 3배 이상, 매년 반복)은 특별배당이 아니다.
+    kr_rows = []
+    for record_date, declaration_date, amount in [
+        ("2022-06-30", None, 1500.0),
+        ("2022-12-31", None, 6000.0),
+        ("2023-06-30", None, 1500.0),
+        ("2023-12-31", None, 6000.0),
+    ]:
+        kr_rows.append({
+            "record_date": record_date,
+            "ex_date": None,
+            "pay_date": None,
+            "declaration_date": declaration_date,
+            "amount": amount,
+            "source": "test",
+        })
+    kr_events, _ = _attributed_history_events(kr_rows, "005380.KS", True, None)
+    assert not any(event["is_special"] for event in kr_events)
+
+
 def test_split_adjusted_half_cent_stays_in_same_dividend_cycle():
     rows = [
         {"record_date": "2023-12-20", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 5.25, "source": "polygon"},
