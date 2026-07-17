@@ -6,53 +6,53 @@
 :root {
   color-scheme: light dark;
   /* surfaces & text */
-  --bg: #f6f7f9;
-  --panel: #ffffff;
-  --surface-2: #eef1f5;     /* pills, table head, tab track */
-  --surface-hover: #f7f9fb; /* row hover */
-  --index-row-bg: #eaf3ff;
-  --index-row-hover: #ddeeff;
-  --index-row-line: #1f4e79;
-  --ink: #1d2530;
-  --muted: #5b6675;         /* darkened for AA contrast */
-  --line: #dde3ea;
+  --bg: #f0ebe1;
+  --panel: #f9f5eb;
+  --surface-2: #e8e1d2;     /* pills, table head, tab track */
+  --surface-hover: #f0eadb; /* row hover */
+  --index-row-bg: #e7e6d3;
+  --index-row-hover: #dfdec6;
+  --index-row-line: #6b6f45;
+  --ink: #2e2a22;
+  --muted: #68614f;         /* darkened for AA contrast */
+  --line: #d8cfbc;
   /* brand / semantic */
-  --accent: #0f766e;
-  --accent-2: #1f4e79;
-  --brand: #1f4e79;         /* unified interactive accent (charts, toggles, ranges) */
-  --brand-soft: #eaf1f9;
+  --accent: #3f5c48;
+  --accent-2: #8a5a2b;
+  --brand: #3f5c48;         /* unified interactive accent (charts, toggles, ranges) */
+  --brand-soft: #e2e8dd;
   --on-accent: #ffffff;
-  --schedule-earnings: #6d28d9;
-  --schedule-earnings-soft: #f1ebff;
-  --schedule-earnings-border: #c4b5fd;
-  --schedule-dividend: #047857;
-  --schedule-dividend-soft: #e7f8ef;
-  --schedule-dividend-border: #86d1ad;
+  --schedule-earnings: #7a5686;
+  --schedule-earnings-soft: #efe7f2;
+  --schedule-earnings-border: #c5aecd;
+  --schedule-dividend: #2a7a5c;
+  --schedule-dividend-soft: #e2efe6;
+  --schedule-dividend-border: #93c3ab;
   --schedule-tag-ink: #ffffff;
-  --up: #c1121f;            /* KR convention: 상승=빨강 */
-  --down: #1d4ed8;          /* 하락=파랑 */
+  --up: #b0392e;            /* KR convention: 상승=빨강 */
+  --down: #31608f;          /* 하락=파랑 */
   --buy: #15803d;
   --sell: #b91c1c;
-  --warn: #995c00;
-  --focus: #5b8fd6;
-  --focus-soft: rgba(91, 143, 214, .18);
+  --warn: #8c5a13;
+  --focus: #5c7a63;
+  --focus-soft: rgba(92, 122, 99, .22);
   /* interactive surfaces */
-  --accent-soft: #e8f3f1;
-  --accent-soft-border: #9ccbc5;
-  --track-off: #cbd5df;
-  --track-off-border: #b8c3cf;
+  --accent-soft: #e2e8dd;
+  --accent-soft-border: #9db08f;
+  --track-off: #ccc1a9;
+  --track-off-border: #bcae91;
   /* chart surfaces */
-  --chart-bg: #ffffff;
-  --chart-grid: #e8eaed;
-  --chart-axis: #5f6368;
-  --chart-ink: #202124;
-  --chart-tooltip-bg: rgba(255, 255, 255, .97);
-  --chart-tooltip-border: #d5dbe3;
-  --chart-dot-fill: #ffffff;
-  --chart-label-halo: #ffffff;
-  --chart-hover-line: #9aa0a6;
-  --chart-selection-fill: rgba(31, 78, 121, .08);
-  --chart-shadow: drop-shadow(0 2px 6px rgba(60, 64, 67, .20));
+  --chart-bg: #f9f5eb;
+  --chart-grid: #e3dac6;
+  --chart-axis: #77705c;
+  --chart-ink: #2e2a22;
+  --chart-tooltip-bg: rgba(249, 245, 235, .97);
+  --chart-tooltip-border: #d0c5ab;
+  --chart-dot-fill: #f9f5eb;
+  --chart-label-halo: #f9f5eb;
+  --chart-hover-line: #9c9179;
+  --chart-selection-fill: rgba(63, 92, 72, .10);
+  --chart-shadow: drop-shadow(0 2px 6px rgba(70, 58, 40, .18));
   /* type scale */
   --fs-xs: 10.5px;
   --fs-sm: 11.5px;
@@ -78,83 +78,88 @@
   --radius-sm: 2px;
   --button-radius: 6px;
   --button-height: 26px;
-  --button-surface: #e7e9ef;
-  --button-active: #2f56e0;
-  --button-active-soft: #e0e6fa;
-  --button-active-ink: #1f3fb0;
+  --button-surface: #ede6d6;
+  --button-active: #3f5c48;
+  --button-active-soft: #dde6da;
+  --button-active-ink: #2c4433;
   --button-shadow-raised:
-    3px 3px 7px #c4c8d4,
-    -3px -3px 7px #ffffff;
+    3px 3px 7px #d4c9b3,
+    -3px -3px 7px #fffcf4;
   --button-shadow-hover:
-    3px 3px 8px #bcc1ce,
-    -3px -3px 8px #ffffff;
+    3px 3px 8px #ccc0a8,
+    -3px -3px 8px #fffcf4;
   --button-shadow-pressed:
-    inset 2px 2px 5px #c4c8d4,
-    inset -2px -2px 5px #ffffff;
-  --shadow: 0 1px 0 rgba(15, 23, 42, .04);
+    inset 2px 2px 5px #d4c9b3,
+    inset -2px -2px 5px #fffcf4;
+  --shadow: 0 1px 0 rgba(60, 55, 40, .05);
   --t-fast: .15s ease;
-  --header-bg: rgba(246, 247, 249, 0.94);
+  --header-bg: rgba(240, 235, 225, 0.94);
 }
 /* dark palette — JS sets data-theme to the resolved value (auto follows OS) */
 :root[data-theme="dark"] {
     /* 3단 표면(배경<패널<요소)의 명도차를 키워 보더 의존도를 낮춘다 */
-    --bg: #11161d;
-    --panel: #1d2530;
-    --surface-2: #263241;
-    --surface-hover: #232d3a;
-    --index-row-bg: #23364d;
-    --index-row-hover: #29405d;
-    --index-row-line: #6ea8e6;
-    --ink: #e6ebf2;
-    --muted: #9aa6b5;
-    --line: #344153;
-    --accent: #2dd4bf;
-    --accent-2: #6ea8e6;
-    --brand: #6ea8e6;
-    --brand-soft: #24364b;
-    --schedule-earnings: #a78bfa;
-    --schedule-earnings-soft: #33284d;
-    --schedule-earnings-border: #6f5b91;
-    --schedule-dividend: #6ee7b7;
-    --schedule-dividend-soft: #173f33;
-    --schedule-dividend-border: #36745f;
+    --bg: #1b1612;
+    --panel: #262019;
+    --surface-2: #332b20;
+    --surface-hover: #2e261c;
+    --index-row-bg: #33301f;
+    --index-row-hover: #3c3826;
+    --index-row-line: #b3ab6d;
+    --ink: #ece4d4;
+    --muted: #a89c86;
+    --line: #453b2c;
+    --accent: #8fb598;
+    --accent-2: #c99b62;
+    --brand: #8fb598;
+    --brand-soft: #2c352b;
+    --schedule-earnings: #bf9cc9;
+    --schedule-earnings-soft: #3a2e3e;
+    --schedule-earnings-border: #77607e;
+    --schedule-dividend: #8fd0ac;
+    --schedule-dividend-soft: #24382c;
+    --schedule-dividend-border: #4c6f57;
     --schedule-tag-ink: #11161d;
-    --up: #f87171;          /* dark-bg-safe 상승=빨강 (살짝 탈채도로 눈부심 완화) */
-    --down: #7aa2ff;        /* 하락=파랑 */
+    --up: #ef8b7a;          /* dark-bg-safe 상승=빨강 (웜 톤) */
+    --down: #8bacd8;        /* 하락=파랑 */
     --buy: #4ade80;
     --sell: #f87171;
-    --warn: #e0a854;
-    --focus: #6ea8e6;
-    --focus-soft: rgba(110, 168, 230, .22);
-    --accent-soft: #1e4743;
-    --accent-soft-border: #3d7d75;
-    --track-off: #465466;
-    --track-off-border: #526174;
-    --header-bg: rgba(17, 22, 29, 0.94);
-    --chart-bg: #1b2430;
-    --chart-grid: #354253;
-    --chart-axis: #9aa6b5;
-    --chart-ink: #e6ebf2;
-    --chart-tooltip-bg: rgba(29, 37, 48, .97);
-    --chart-tooltip-border: #4a586b;
-    --chart-dot-fill: #1b2430;
-    --chart-label-halo: #1b2430;
-    --chart-hover-line: #7a8797;
-    --chart-selection-fill: rgba(110, 168, 230, .14);
+    --warn: #dcaa5e;
+    --focus: #8fb598;
+    --focus-soft: rgba(143, 181, 152, .24);
+    --accent-soft: #2c352b;
+    --accent-soft-border: #55684f;
+    --track-off: #524736;
+    --track-off-border: #5f5340;
+    --header-bg: rgba(27, 22, 18, 0.94);
+    --chart-bg: #241e17;
+    --chart-grid: #423828;
+    --chart-axis: #a89c86;
+    --chart-ink: #ece4d4;
+    --chart-tooltip-bg: rgba(38, 32, 25, .97);
+    --chart-tooltip-border: #594c37;
+    --chart-dot-fill: #241e17;
+    --chart-label-halo: #241e17;
+    --chart-hover-line: #8d8069;
+    --chart-selection-fill: rgba(143, 181, 152, .16);
     --chart-shadow: drop-shadow(0 8px 18px rgba(0, 0, 0, .35));
-    --button-surface: #263241;
-    --button-active: #5f7ff0;
-    --button-active-soft: #2c3c67;
-    --button-active-ink: #a9baff;
+    --button-surface: #332b20;
+    --button-active: #5f8a6b;
+    --button-active-soft: #34443a;
+    --button-active-ink: #b9d4c1;
     --button-shadow-raised:
-      3px 3px 7px #111820,
-      -3px -3px 7px #354355;
+      3px 3px 7px #120e0a,
+      -3px -3px 7px #3a3124;
     --button-shadow-hover:
-      3px 3px 8px #0c1117,
-      -3px -3px 8px #3a495d;
+      3px 3px 8px #0d0a07,
+      -3px -3px 8px #423728;
     --button-shadow-pressed:
-      inset 2px 2px 5px #111820,
-      inset -2px -2px 5px #354355;
+      inset 2px 2px 5px #120e0a,
+      inset -2px -2px 5px #3a3124;
+}
+/* 밤의 서재: 큰 카드에는 뉴모픽 하이라이트가 halo처럼 번져 평면+보더로 */
+:root[data-theme="dark"] .account,
+:root[data-theme="dark"] .interest-group {
+  box-shadow: none !important;
 }
 /* 자체 호스팅 가변 폰트 — 한글 자간·숫자 형태가 시스템 폰트보다 일관적.
    서버가 .woff2만 max-age=86400으로 캐시(그 외 정적은 no-store 유지). */
@@ -163,6 +168,32 @@
   src: url("/static/PretendardVariable.woff2") format("woff2-variations");
   font-weight: 45 920;
   font-display: swap;
+}
+/* 서재 테마 헤딩 세리프 — 타이틀·종목명 헤더 전용(본문·숫자는 Pretendard 유지).
+   latin을 먼저 선언해 숫자·영문은 라틴 파일에서, 한글은 korean 파일에서 로드. */
+@font-face {
+  font-family: "Noto Serif KR";
+  src: url("/static/NotoSerifKR-600-latin.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+2000-206F;
+}
+@font-face {
+  font-family: "Noto Serif KR";
+  src: url("/static/NotoSerifKR-600-korean.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+h1,
+#tableTitle,
+#chartName,
+.hero-label,
+.consensus-title,
+.modal-head strong,
+#scheduleMonthLabel {
+  font-family: "Noto Serif KR", "Iowan Old Style", Georgia, "Pretendard Variable", serif;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 * { box-sizing: border-box; }
 body {
@@ -377,7 +408,7 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
   top: 1px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, .22);
+  box-shadow: 0 1px 2px rgba(60, 48, 32, .22);
   transition: transform .18s ease;
 }
 .toggle-switch input:checked + .toggle-ui {
@@ -2005,7 +2036,7 @@ th.pc-frozen-edge {
   background: var(--brand);
   border-color: var(--brand);
   color: var(--on-accent);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, .18);
+  box-shadow: 0 1px 3px rgba(60, 48, 32, .18);
 }
 .chart-icon-slot {
   display: inline-flex;
@@ -2233,7 +2264,7 @@ th.pc-frozen-edge {
   position: fixed;
   inset: 0;
   z-index: 120;
-  background: rgba(16, 20, 28, 0.42);
+  background: rgba(40, 32, 22, 0.45);
   display: none;
 }
 .report-modal-host.on { display: block; }
@@ -2474,21 +2505,21 @@ th.pc-frozen-edge {
 }
 :root[data-theme="dark"] .consensus-head,
 :root[data-theme="dark"] .consensus-k {
-  border-color: #39414f;
+  border-color: #4a4032;
   background: #29313d;
-  color: #aab3c3;
+  color: #b3a892;
 }
 :root[data-theme="dark"] .consensus-cell {
-  border-color: #39414f;
+  border-color: #4a4032;
 }
 :root[data-theme="dark"] .consensus-v,
 :root[data-theme="dark"] .consensus-range {
-  color: #e7e9ee;
+  color: #ece4d4;
 }
 :root[data-theme="dark"] .consensus-report-link {
-  border-color: #39414f;
+  border-color: #4a4032;
   background: #20252e;
-  color: #aab3c3;
+  color: #b3a892;
 }
 :root[data-theme="dark"] .consensus-report-link:hover {
   border-color: #5f83c7;
@@ -2496,22 +2527,22 @@ th.pc-frozen-edge {
   color: #c7d7ff;
 }
 :root[data-theme="dark"] .buy-meter-track {
-  background: #39414f;
+  background: #4a4032;
 }
 :root[data-theme="dark"] .rating-chip {
-  border-color: #39414f;
+  border-color: #4a4032;
   background: rgba(170, 179, 195, .08);
 }
 :root[data-theme="dark"] .cstat-column,
 :root[data-theme="dark"] .cstat-row {
-  border-color: #39414f;
+  border-color: #4a4032;
 }
 :root[data-theme="dark"] .cstat-k {
-  border-right-color: #39414f;
+  border-right-color: #4a4032;
   background: #29313d;
-  color: #aab3c3;
+  color: #b3a892;
 }
-:root[data-theme="dark"] .cstat-v { color: #e7e9ee; }
+:root[data-theme="dark"] .cstat-v { color: #ece4d4; }
 :root[data-theme="dark"] .cstat-compare-val.best {
   color: color-mix(in srgb, #fbbf24 42%, #eef2f7);
   background:
@@ -2820,7 +2851,7 @@ th.pc-frozen-edge {
   fill: color-mix(in srgb, var(--chart-tooltip-bg) 88%, transparent);
   stroke: color-mix(in srgb, var(--chart-tooltip-border) 82%, transparent);
   stroke-width: 1;
-  filter: drop-shadow(0 4px 10px rgba(15, 23, 42, .07));
+  filter: drop-shadow(0 4px 10px rgba(60, 48, 32, .07));
 }
 .chart-metric-title {
   fill: var(--muted);
@@ -2871,7 +2902,7 @@ th.pc-frozen-edge {
   background: var(--brand);
   border-color: var(--brand);
   color: var(--on-accent);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, .18);
+  box-shadow: 0 1px 3px rgba(60, 48, 32, .18);
 }
 .chart-range-btn.disabled,
 .chart-range-btn:disabled {
@@ -3136,7 +3167,7 @@ th.pc-frozen-edge {
   border: 1px solid var(--chart-tooltip-border);
   border-radius: 2px;
   padding: 8px 10px;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, .22);
+  box-shadow: 0 6px 18px rgba(60, 48, 32, .22);
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -4010,7 +4041,7 @@ th.pc-frozen-edge {
   max-height: min(760px, calc(100vh - 28px));
 }
 .watch-modal::backdrop {
-  background: rgba(15, 23, 42, .42);
+  background: rgba(40, 32, 22, .45);
   backdrop-filter: blur(3px);
 }
 /* 모달 진입: 150ms 페이드+살짝 솟기 (reduced-motion에선 비활성) */
@@ -4079,7 +4110,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   border-radius: var(--radius);
   background: var(--panel);
   color: var(--ink);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, .16);
+  box-shadow: 0 8px 24px rgba(60, 48, 32, .16);
 }
 .modal-head,
 .watch-search,
@@ -4562,7 +4593,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   border-color: var(--brand);
   background: var(--brand);
   color: var(--on-accent);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, .18);
+  box-shadow: 0 1px 3px rgba(60, 48, 32, .18);
 }
 .watch-hint {
   flex: 1 1 180px;
@@ -5257,7 +5288,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   :root[data-theme="dark"] #chartStats .cstat-row:nth-child(4n),
   :root[data-theme="dark"] #chartStats .cstat-row:nth-last-child(-n + 4) {
-    border-color: #39414f;
+    border-color: #4a4032;
   }
   .cstat-column:nth-child(2) {
     border-right: 0;
@@ -5266,7 +5297,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     border-bottom: 1px solid var(--line);
   }
   :root[data-theme="dark"] .cstat-column:nth-child(-n + 2) {
-    border-bottom-color: #39414f;
+    border-bottom-color: #4a4032;
   }
   .chart-canvas {
     min-height: 0;
@@ -5424,7 +5455,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   :root[data-theme="dark"] #chartStats .cstat-row:nth-last-child(-n + 2),
   :root[data-theme="dark"] #chartStats .cstat-row:nth-last-child(-n + 4) {
-    border-bottom-color: #39414f;
+    border-bottom-color: #4a4032;
   }
   .cstat-column,
   .cstat-column:nth-child(2) {
@@ -5446,7 +5477,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     padding-right: 12px;
   }
   :root[data-theme="dark"] .cstat-column {
-    border-bottom-color: #39414f;
+    border-bottom-color: #4a4032;
   }
   .watch-modal.trade-modal {
     width: min(520px, calc(100vw - 10px));
