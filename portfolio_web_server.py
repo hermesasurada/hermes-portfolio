@@ -16,7 +16,13 @@ from urllib.parse import parse_qs, quote, urlparse
 from urllib.request import Request, urlopen
 
 from portfolio_core.charts import load_account_performance, load_price_chart
-from portfolio_core.constants import KOREAN_ETF_BRANDS, KOREAN_SUFFIXES, LOCAL_MARKET_SUFFIXES
+from portfolio_core.constants import (
+    FX_TICKERS,
+    KOREAN_ETF_BRANDS,
+    KOREAN_SUFFIXES,
+    LOCAL_MARKET_SUFFIXES,
+    MARKET_INDEXES,
+)
 from portfolio_core.db import connect, initialize_schema
 from portfolio_core.queries import load_collection_diagnostics, load_ticker_directory
 from portfolio_core.schedule import load_schedule
@@ -98,6 +104,8 @@ SVG_PREFERRED_LOGOS = frozenset(
         "HWM",  # Howmet Aerospace
         "MEDP",  # Medpace Holdings
         "FSLR",  # First Solar
+        *FX_TICKERS,
+        *MARKET_INDEXES,
         *KOREAN_ETF_BRANDS,
     }
 )
