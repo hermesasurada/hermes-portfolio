@@ -6,6 +6,12 @@ from statistics import median
 from typing import Any
 
 from .constants import DIVIDEND_LOOKAHEAD_DAYS, KOREAN_SUFFIXES
+from .corporate_actions import (
+    dedupe_dividend_event_rows,
+    dividend_event_information_score,
+    entitlement_date as _ca_entitlement_date,
+    split_adjusted_amount,
+)
 from .dates import parse_iso_date, positive_float, today_kst
 from .db import connect, ensure_stats_cache_table
 from .dividend_refresh import dividend_history_start, refresh_dividend_events
@@ -24,7 +30,20 @@ FISCAL_END_MONTH_OVERRIDES = {
     "NVDA": 3,
 }
 PAY_DATE_YEAR_TICKERS = {"DIS"}
-UNADJUSTED_DIVIDEND_SOURCES = {"polygon", "nasdaq", "opendart"}
+from .corporate_actions import UNADJUSTED_DIVIDEND_SOURCES  # 공용화(재수출)
+# 원천이 같은 날짜의 정기·특별배당 합계만 제공하는 경우 공식 구성금액으로 분리한다.
+# (raw amount, is_special) — 수집 DB가 갱신되어도 상세·연간 성장률 보정이 유지된다.
+DIVIDEND_COMPONENT_OVERRIDES = {
+    ("RMS.PA", "2024-05-02"): ((11.5, False), (10.0, True)),
+    ("RMS.PA", "2025-05-05"): ((12.5, False), (10.0, True)),
+}
+# 자동 배당 사이클 라벨보다 명시적으로 우선해야 하는 귀속연도.
+DIVIDEND_YEAR_OVERRIDES = {
+    ("RMS.PA", "2025-02-17"): 2025,
+}
+DIVIDEND_FREQUENCY_OVERRIDES = {
+    "RMS.PA": 2,
+}
 
 
 def _tax_rate(currency: str, account_type: str | None = None) -> float:
@@ -106,6 +125,25 @@ def _entitlement_date(event: Any) -> date | None:
     )
 
 
+def _dividend_components(
+    ticker: str,
+    entitlement_date: date,
+    raw_amount: float,
+) -> tuple[tuple[float, bool | None], ...]:
+    """합계형 원천 배당을 정기·특별 구성금액으로 분리한다."""
+    components = DIVIDEND_COMPONENT_OVERRIDES.get(
+        (str(ticker or "").upper(), entitlement_date.isoformat())
+    )
+    if components and abs(sum(amount for amount, _special in components) - raw_amount) <= 0.01:
+        return components
+    return ((raw_amount, None),)
+
+
+# 중복 병합·정보 점수는 corporate_actions로 공용화 — 배당이력·총수익 시계열이 공유
+_history_event_information_score = dividend_event_information_score
+_dedupe_cross_currency_history_rows = dedupe_dividend_event_rows
+
+
 def _most_recent_raise_month(adjusted_events: list[dict]) -> int | None:
     """분할조정 금액 시계열에서 '가장 최근의 지속된 인상' 회차의 월.
     배당년도는 인상 시점에 시작하므로(같은 금액 N분기가 한 묶음) 이 월이 anchor.
@@ -140,21 +178,7 @@ def _active_dividend_year(today: date, fiscal_end_month: int | None) -> int:
     return today.year
 
 
-def _split_adjusted_amount(
-    amount: float,
-    event_date: date,
-    source: str | None,
-    splits: list[dict],
-) -> tuple[float, float]:
-    if str(source or "").lower() not in UNADJUSTED_DIVIDEND_SOURCES:
-        return amount, 1.0
-    factor = 1.0
-    for split in splits:
-        split_date = _history_date(split["split_date"])
-        ratio = _float_value(split["ratio"])
-        if split_date and split_date > event_date and ratio:
-            factor *= ratio
-    return (amount / factor, factor) if abs(factor - 1.0) > 1e-12 else (amount, 1.0)
+_split_adjusted_amount = split_adjusted_amount  # corporate_actions로 공용화
 
 
 def _dividend_attribution(
@@ -208,7 +232,15 @@ def _dividend_attribution(
     return entitlement_date, attributed_year, False
 
 
-def _dividend_frequency(events: list[dict], completed_counts: dict[int, int], current_year: int) -> int:
+def _dividend_frequency(
+    events: list[dict],
+    completed_counts: dict[int, int],
+    current_year: int,
+    ticker: str | None = None,
+) -> int:
+    frequency_override = DIVIDEND_FREQUENCY_OVERRIDES.get(str(ticker or "").upper())
+    if frequency_override:
+        return frequency_override
     recent_dates = sorted(event["date"] for event in events if event["year"] >= current_year - 3)
     intervals = [
         (right - left).days
@@ -228,6 +260,41 @@ def _dividend_frequency(events: list[dict], completed_counts: dict[int, int], cu
     count_hint = max(recent_counts, default=0)
     count_hint = 12 if count_hint >= 8 else 4 if count_hint >= 3 else 2 if count_hint == 2 else 1 if count_hint else None
     return max(interval_hint or 1, count_hint or 1)
+
+
+def _frequency_from_payment_count(count: int) -> int:
+    if count >= 8:
+        return 12
+    if count >= 3:
+        return 4
+    if count == 2:
+        return 2
+    return 1
+
+
+def _yearly_expected_payment_counts(
+    payment_counts: dict[int, int], current_year: int, current_frequency: int,
+) -> dict[int, int]:
+    """지급주기가 바뀐 종목의 연도별 당시 예상 회차를 복원한다.
+
+    현재 귀속연도는 최근 지급주기를 쓰고, 과거는 해당 연도의 실제 회차를
+    월/분기/반기/연 단위로 정규화한다. 양옆 연도가 같은 더 높은 주기인데
+    가운데만 낮으면 누락 이력으로 보고 주변 주기를 따른다.
+    """
+    normalized = {
+        year: _frequency_from_payment_count(int(count or 0))
+        for year, count in payment_counts.items()
+        if int(count or 0) > 0
+    }
+    expected: dict[int, int] = {}
+    for year, frequency in normalized.items():
+        if year == current_year:
+            expected[year] = current_frequency
+            continue
+        previous = normalized.get(year - 1)
+        following = normalized.get(year + 1)
+        expected[year] = previous if previous == following and previous > frequency else frequency
+    return expected
 
 
 def _frequency_label(frequency: int) -> str:
@@ -275,6 +342,12 @@ def _mark_special_dividends(events: list[dict]) -> None:
     한국 결산배당(is_final)은 중간배당의 몇 배라도 정기로 본다."""
     regular: list[dict] = []
     for index, event in enumerate(events):
+        special_override = event.get("special_override")
+        if special_override is not None:
+            event["is_special"] = bool(special_override)
+            if not event["is_special"]:
+                regular.append(event)
+            continue
         event["is_special"] = False
         prev_amount = regular[-1]["amount"] if regular else None
         if (
@@ -335,24 +408,28 @@ def _attributed_history_events(
         if entitlement_date is None or attributed_year is None:
             continue
         raw_amount = float(event["amount"])
-        amount, split_factor = _split_adjusted_amount(
-            raw_amount, entitlement_date, event["source"], splits
-        )
         final_dividend_count += int(is_final)
-        events.append(
-            {
-                "date": entitlement_date,
-                "year": attributed_year,
-                "amount": amount,
-                "raw_amount": raw_amount,
-                "split_factor": split_factor,
-                "source": event["source"],
-                "declaration_date": _history_date(event["declaration_date"]),
-                "ex_date": _history_date(event["ex_date"]),
-                "pay_date": _history_date(event["pay_date"]),
-                "is_final": is_final,
-            }
-        )
+        for component_amount, special_override in _dividend_components(
+            ticker, entitlement_date, raw_amount
+        ):
+            amount, split_factor = _split_adjusted_amount(
+                component_amount, entitlement_date, event["source"], splits
+            )
+            events.append(
+                {
+                    "date": entitlement_date,
+                    "year": attributed_year,
+                    "amount": amount,
+                    "raw_amount": component_amount,
+                    "split_factor": split_factor,
+                    "source": event["source"],
+                    "declaration_date": _history_date(event["declaration_date"]),
+                    "ex_date": _history_date(event["ex_date"]),
+                    "pay_date": _history_date(event["pay_date"]),
+                    "is_final": is_final and special_override is not True,
+                    "special_override": special_override,
+                }
+            )
 
     # 비역년 회계연도 종목은 먼저 같은 주당배당금 사이클(최대 4회)을 한
     # 배당연도로 본다. 예: NOC 2023-05~2024-02의 $1.87 네 회차는 모두
@@ -432,6 +509,13 @@ def _attributed_history_events(
                 majority_year = max(year_counts, key=lambda year: (year_counts[year], year))
                 for event in cycle_events:
                     event["year"] = majority_year
+
+    for event in events:
+        year_override = DIVIDEND_YEAR_OVERRIDES.get(
+            (str(ticker or "").upper(), event["date"].isoformat())
+        )
+        if year_override is not None:
+            event["year"] = year_override
 
     # 특별배당의 귀속연도는 직전 정기 회차(없으면 직후)를 따라 같은 그룹에 표시
     for index, event in enumerate(events):
@@ -515,6 +599,7 @@ def _year_growth(
 def _history_year_rows(
     annual: dict[int, dict], totals: dict[int, float], complete_years: set[int],
     frequency: int, current_estimate: float | None, current_year: int, is_korean: bool,
+    expected_payments_by_year: dict[int, int] | None = None,
 ) -> list[dict]:
     """연도별 응답 행 직렬화 (최신 연도부터)."""
     rows = []
@@ -533,7 +618,7 @@ def _history_year_rows(
                 "growth_pct": growth_pct,
                 "growth_basis": growth_basis,
                 "payments": row["payments"],
-                "expected_payments": frequency,
+                "expected_payments": (expected_payments_by_year or {}).get(year, frequency),
                 "complete": year in complete_years,
                 "estimated_amount": current_estimate if current_ytd else None,
                 "last_date": row["last_date"].isoformat(),
@@ -650,10 +735,9 @@ def load_dividend_history(ticker: str) -> dict:
               AND amount IS NOT NULL
               AND amount > 0
               AND date(COALESCE(record_date, ex_date, pay_date)) >= ?
-              AND date(COALESCE(record_date, ex_date, pay_date)) <= ?
             ORDER BY date(COALESCE(record_date, ex_date, pay_date))
             """,
-            (ticker_row["ticker"], history_start.isoformat(), today.isoformat()),
+            (ticker_row["ticker"], history_start.isoformat()),
         ).fetchall()
         split_rows = [
             dict(row) for row in conn.execute(
@@ -666,6 +750,8 @@ def load_dividend_history(ticker: str) -> dict:
                 (ticker_row["ticker"],),
             ).fetchall()
         ]
+        # 동일통화 중복 병합은 분할보정 후 금액 비교가 필요해 splits를 전달
+        event_rows = _dedupe_cross_currency_history_rows(event_rows, split_rows)
         is_korean = ticker_row["ticker"].upper().endswith(KOREAN_SUFFIXES)
         # 배당년도 종료월을 '최근 인상월 직전'으로 도출 → 같은 금액 N분기가 한 묶음.
         # 인상 감지엔 분할조정 금액이 필요하므로 먼저 (기준일, 조정금액) 시계열을 만든다.
@@ -674,10 +760,15 @@ def load_dividend_history(ticker: str) -> dict:
             event_date = _entitlement_date(event)
             if event_date is None:
                 continue
-            amount, _factor = _split_adjusted_amount(
-                float(event["amount"]), event_date, event["source"], split_rows
-            )
-            adjusted_events.append({"date": event_date, "amount": amount})
+            for component_amount, special_override in _dividend_components(
+                ticker_row["ticker"], event_date, float(event["amount"])
+            ):
+                if special_override is True:
+                    continue
+                amount, _factor = _split_adjusted_amount(
+                    component_amount, event_date, event["source"], split_rows
+                )
+                adjusted_events.append({"date": event_date, "amount": amount})
         adjusted_events.sort(key=lambda item: item["date"])
         pay_date_year_ticker = ticker_row["ticker"].upper() in PAY_DATE_YEAR_TICKERS
         fiscal_end_month = None if is_korean or pay_date_year_ticker else _dividend_fiscal_end_month(
@@ -700,10 +791,15 @@ def load_dividend_history(ticker: str) -> dict:
     totals = {year: row["amount"] for year, row in annual.items()}
     payment_counts = {year: row["payments"] for year, row in annual.items()}
     regular_events = [event for event in events if not event.get("is_special")]
-    frequency = _dividend_frequency(regular_events, payment_counts, active_year)
+    frequency = _dividend_frequency(
+        regular_events, payment_counts, active_year, ticker_row["ticker"]
+    )
+    expected_payments_by_year = _yearly_expected_payment_counts(
+        payment_counts, active_year, frequency
+    )
     complete_years = {
         year for year, count in payment_counts.items()
-        if year < active_year and count >= frequency
+        if year < active_year and count >= expected_payments_by_year.get(year, frequency)
     }
     if fiscal_end_month:
         final_dividend_count += _mark_fiscal_finals(annual, complete_years)
@@ -715,7 +811,8 @@ def load_dividend_history(ticker: str) -> dict:
         "currency": ticker_row["currency"] or ticker_currency(ticker_row["ticker"]),
         "start_year": history_start.year,
         "rows": _history_year_rows(
-            annual, totals, complete_years, frequency, current_estimate, active_year, is_korean
+            annual, totals, complete_years, frequency, current_estimate, active_year, is_korean,
+            expected_payments_by_year
         ),
         "summary": _history_summary(
             regular_events, totals, complete_years, frequency, current_estimate, active_year,
@@ -803,10 +900,19 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
             """,
             tickers if tickers else [],
         ).fetchall()
+        stats_rows = conn.execute(
+            f"""
+            SELECT ticker, dividend_yield, dividend_growth_5y
+            FROM ticker_stats_cache
+            WHERE ticker IN ({placeholders})
+            """,
+            tickers if tickers else [],
+        ).fetchall()
 
     holdings_by_ticker: dict[str, list[dict]] = {}
     for holding in holdings:
         holdings_by_ticker.setdefault(holding["ticker"], []).append(holding)
+    stats_by_ticker = {row["ticker"]: row for row in stats_rows}
 
     rates = fx_rates(prices)   # FX_TICKERS 기반 전 통화 — 수동 dict는 CNY/TWD 누락 버그가 있었다
     rows = []
@@ -815,6 +921,7 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
         if start <= (event_schedule_date(event) or start) <= end
     ]
     for event in dividend_events:
+        stats = stats_by_ticker.get(event["ticker"])
         currency = event["currency"] or ticker_currency(event["ticker"])
         amount = _float_value(event["amount"])
         rate = rates.get(currency, 1.0)
@@ -845,6 +952,8 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
                     "net": net,
                     "fx_rate": rate if currency != "KRW" else None,
                     "net_krw": net_krw,
+                    "dividend_yield": stats["dividend_yield"] if stats else None,
+                    "dividend_growth_5y": stats["dividend_growth_5y"] if stats else None,
                     "source": event["source"],
                 }
             )

@@ -650,7 +650,7 @@ function renderInterestMainTable() {
         : dividendYieldText(r.dividend_yield)}</td>
       <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
       <td>${signedPercentText(r.drawdown_52w, 1)}</td>
-      <td>${riskRewardScoreText(r.risk_reward_score, r.risk_reward_short)}</td>
+      <td>${riskRewardScoreText(r.risk_reward_score, r.risk_reward_basis, r.risk_reward_quality)}</td>
       <td>${betaText(r.beta)}</td>
       <td>${betaText(r.beta_adj)}</td>
       <td class="group-start">${earningsText(r.next_earnings_date)}</td>

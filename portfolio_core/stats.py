@@ -101,17 +101,13 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
             **technical.get(ticker, {}),
             **fundamentals.get(ticker, {}),
         }
-        performance = merged.get("performance") or {}
-        score, short_history = risk_reward_score(
-            performance.get("five_year"),
-            performance.get("three_year"),
-            performance.get("one_year"),
-            merged.get("dividend_yield"),
-            merged.get("vol_annual"),
+        score, basis, quality = risk_reward_score(
+            merged.get("risk_reward"),
             merged.get("drawdown_52w"),
         )
         merged["risk_reward_score"] = score
-        merged["risk_reward_short"] = short_history
+        merged["risk_reward_basis"] = basis
+        merged["risk_reward_quality"] = quality
         stats[ticker] = merged
 
     return {

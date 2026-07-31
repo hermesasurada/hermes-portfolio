@@ -212,13 +212,21 @@ function betaText(v) {
   return v != null && Number.isFinite(Number(v)) ? Number(v).toFixed(2) : "-";
 }
 /* 손익비 산식은 서버(portfolio_core/risk_reward.py)가 단일 진실 —
-   /api/stats 응답의 risk_reward_score·risk_reward_short를 표시만 한다. */
-function riskRewardScoreText(v, shortHistory) {
+   /api/stats 응답의 score·basis(기준 기간)·quality(TR/P)를 표시만 한다.
+   기본 케이스(5Y·총수익)는 라벨 생략, 폴백만 '3Y'·'5Y·P' 형태로 병기. */
+function riskRewardScoreText(v, basis, quality) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "-";
   const cls = n > 0 ? "up" : n < 0 ? "down" : "flat";
   const sign = n > 0 ? "+" : "";
-  const mark = shortHistory ? `<small class="history-growth-basis" title="상장 이력이 짧아 3년 이하 수익률로 산출">*</small>` : "";
+  let mark = "";
+  if (basis && (basis !== "5y" || quality === "P")) {
+    const label = `${basis.toUpperCase()}${quality === "P" ? "·P" : ""}`;
+    const why = basis !== "5y"
+      ? `이력이 짧아 ${basis.toUpperCase()} 기준으로 산출`
+      : "배당 이력 미비로 가격수익률 기준";
+    mark = ` <small class="history-growth-basis" title="${why}${quality === "P" ? " (P=가격 폴백)" : ""}">${label}</small>`;
+  }
   return `<span class="${cls}">${sign}${n.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}${mark}</span>`;
 }
 function indicatorToneAttr(v, kind) {

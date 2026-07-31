@@ -2,17 +2,31 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import datetime, timedelta
-from typing import Iterable
+from bisect import bisect_left
+from datetime import date, datetime, timedelta
+from typing import Callable, Iterable
 
+from .constants import FX_TICKERS
+from .corporate_actions import (
+    dedupe_dividend_event_rows,
+    entitlement_date,
+    split_adjusted_amount,
+)
+from .dates import parse_iso_date, positive_float
 from .db import connect, ensure_technical_stats_cache_table
 from .indicators import bollinger_pband, recent_performance, resample_last, rsi_series, rsi_value
 from .paths import KST
+from .tickers import ticker_currency
 
-TECHNICAL_CACHE_VERSION = 4  # 4: vol_annual(연율화 변동성) 추가
+TECHNICAL_CACHE_VERSION = 5  # 5: 총수익(배당 재투자) 기간별 CAGR·변동성(risk_reward)
 TECHNICAL_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
 BETA_WINDOW = 180
+
+# 손익비 점수용 총수익 기간(거래일). 가용 판정은 95% 이상 데이터.
+TOTAL_RETURN_PERIODS = (("5y", 1260), ("3y", 756), ("1y", 252))
+DIVIDEND_MAP_MAX_DAYS = 5   # 휴장일 이월 한도 — 초과 배당은 반영하지 않고 품질 P
+FX_LOOKUP_MAX_DAYS = 14
 
 
 def placeholders(items: list[str]) -> str:
@@ -37,17 +51,117 @@ def _returns(closes: list[float]) -> list[float]:
     return [closes[index] / closes[index - 1] - 1 for index in range(1, len(closes)) if closes[index - 1]]
 
 
-def annualized_volatility(daily: list[float]) -> float | None:
-    """최근 180거래일 일수익률의 연율화 변동성(%) — 손익비 점수의 위험 축.
-    벤치마크 교집합에 묶이는 beta_stats와 달리 자기 시계열만 쓴다."""
-    closes = [c for c in daily[-(BETA_WINDOW + 1):] if c is not None and c > 0]
-    returns = _returns(closes)
-    count = len(returns)
-    if count < 30:
-        return None
-    mean = sum(returns) / count
-    variance = sum((value - mean) ** 2 for value in returns) / count
-    return round((variance ** 0.5) * (252 ** 0.5) * 100, 2)
+def build_fx_lookup(fx_series: dict[str, list[tuple[str, float]]]) -> Callable:
+    """(from_ccy, to_ccy, date) → 환산 배율. 시계열은 {CCY}KRW(원화 크로스).
+    해당 일자 이전 최근 환율(14일 이내)만 사용, 없으면 None."""
+    def rate_krw(ccy: str, on: date) -> float | None:
+        if ccy == "KRW":
+            return 1.0
+        rows = fx_series.get(f"{ccy}KRW")
+        if not rows:
+            return None
+        target = on.isoformat()
+        index = bisect_left(rows, (target, float("inf")))
+        if index == 0:
+            return None
+        row_date, value = rows[index - 1]
+        parsed = parse_iso_date(row_date)
+        if parsed is None or (on - parsed).days > FX_LOOKUP_MAX_DAYS:
+            return None
+        return value
+
+    def lookup(from_ccy: str, to_ccy: str, on: date) -> float | None:
+        if from_ccy == to_ccy:
+            return 1.0
+        from_rate = rate_krw(from_ccy, on)
+        to_rate = rate_krw(to_ccy, on)
+        if from_rate is None or to_rate is None or to_rate == 0:
+            return None
+        return from_rate / to_rate
+
+    return lookup
+
+
+def total_return_periods(
+    price_rows: list,
+    dividend_rows: list,
+    splits: list[dict],
+    currency: str,
+    fx_lookup: Callable | None = None,
+    dividend_yield: float | None = None,
+) -> dict[str, dict | None]:
+    """기간별(5y/3y/1y) 총수익 CAGR·연율 변동성·품질(TR/P).
+
+    일간 총수익률 r(t) = (P(t) + 분할·통화보정 배당(t)) / P(t-1) - 1.
+    배당은 배당락일(ex_date) 이후 첫 거래일에 가산하되 5일 초과 이월은
+    반영하지 않고 품질을 P로 낮춘다. 통화가 다른 배당은 FX 크로스 환산,
+    불가하면 미반영+P. 배당수익률이 있는데 기간 내 반영된 배당이 없으면
+    가격수익률 폴백으로 보고 P."""
+    dates = [row["date"] for row in price_rows]
+    closes = [float(row["close"]) for row in price_rows]
+    result: dict[str, dict | None] = {key: None for key, _days in TOTAL_RETURN_PERIODS}
+    if len(closes) < 2:
+        return result
+
+    dividend_by_index: dict[int, float] = {}
+    unmapped_dates: list[str] = []
+    for event in dedupe_dividend_event_rows(dividend_rows, splits):
+        event_date = parse_iso_date(event["ex_date"]) or entitlement_date(event)
+        amount = positive_float(event["amount"])
+        if event_date is None or not amount:
+            continue
+        adjusted, _factor = split_adjusted_amount(amount, event_date, event["source"], splits)
+        event_currency = str(event["currency"] or "").upper() or currency
+        if event_currency != currency:
+            ratio = fx_lookup(event_currency, currency, event_date) if fx_lookup else None
+            if ratio is None:
+                unmapped_dates.append(event_date.isoformat())
+                continue
+            adjusted *= ratio
+        index = bisect_left(dates, event_date.isoformat())
+        mapped_date = parse_iso_date(dates[index]) if index < len(dates) else None
+        if (
+            index == 0
+            or mapped_date is None
+            or (mapped_date - event_date).days > DIVIDEND_MAP_MAX_DAYS
+        ):
+            unmapped_dates.append(event_date.isoformat())
+            continue
+        dividend_by_index[index] = dividend_by_index.get(index, 0.0) + adjusted
+
+    returns: list[float] = []
+    for index in range(1, len(closes)):
+        previous = closes[index - 1]
+        if previous <= 0:
+            returns.append(0.0)
+            continue
+        returns.append((closes[index] + dividend_by_index.get(index, 0.0)) / previous - 1)
+
+    for key, period_days in TOTAL_RETURN_PERIODS:
+        if len(returns) < period_days * 0.95:
+            continue
+        window = returns[-period_days:]
+        count = len(window)
+        growth = 1.0
+        for value in window:
+            growth *= 1 + value
+        if growth <= 0:
+            cagr = -100.0
+        else:
+            cagr = (growth ** (252 / count) - 1) * 100
+        mean = sum(window) / count
+        variance = sum((value - mean) ** 2 for value in window) / count
+        vol = (variance ** 0.5) * (252 ** 0.5) * 100
+        window_start = dates[len(dates) - count - 1]
+        has_dividend = any(
+            index >= len(closes) - count for index in dividend_by_index
+        )
+        has_unmapped = any(day >= window_start for day in unmapped_dates)
+        quality = "TR"
+        if has_unmapped or (not has_dividend and (dividend_yield or 0) > 0.5):
+            quality = "P"
+        result[key] = {"cagr": round(cagr, 2), "vol": round(vol, 2), "quality": quality}
+    return result
 
 
 def beta_stats(rows: list[sqlite3.Row], benchmark_rows: list[sqlite3.Row]) -> dict[str, float | None]:
@@ -104,7 +218,6 @@ def calculate_technical_stats(
         },
         "performance": recent_performance(rows),
         "drawdown_52w": high_52w_drawdown(daily),
-        "vol_annual": annualized_volatility(daily),
         **beta_stats(rows, benchmark_rows or []),
     }
 
@@ -209,12 +322,76 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
         ).fetchall()
         for row in rows:
             grouped[row["ticker"]].append(row)
+
+        # 총수익(배당 재투자) 시계열 재료 — 배당·분할·FX·배당수익률 일괄 로딩
+        ticker_placeholders = placeholders(clean_tickers)
+        today_text = datetime.now(KST).date().isoformat()
+        dividend_rows_by_ticker: dict[str, list] = {ticker: [] for ticker in clean_tickers}
+        for row in conn.execute(
+            f"""
+            SELECT ticker, ex_date, record_date, pay_date, declaration_date, amount, currency, source
+            FROM dividend_events
+            WHERE ticker IN ({ticker_placeholders})
+              AND amount IS NOT NULL AND amount > 0
+              AND date(COALESCE(ex_date, record_date, pay_date)) <= ?
+            ORDER BY ticker, date(COALESCE(record_date, ex_date, pay_date))
+            """,
+            [*clean_tickers, today_text],
+        ).fetchall():
+            dividend_rows_by_ticker[row["ticker"]].append(row)
+        splits_by_ticker: dict[str, list[dict]] = {ticker: [] for ticker in clean_tickers}
+        for row in conn.execute(
+            f"""
+            SELECT ticker, split_date, ratio, source
+            FROM stock_splits
+            WHERE ticker IN ({ticker_placeholders})
+            ORDER BY ticker, split_date
+            """,
+            clean_tickers,
+        ).fetchall():
+            splits_by_ticker[row["ticker"]].append(dict(row))
+        fx_series: dict[str, list[tuple[str, float]]] = {}
+        for row in conn.execute(
+            f"""
+            SELECT ticker, date, close
+            FROM daily_prices
+            WHERE ticker IN ({placeholders(list(FX_TICKERS))})
+              AND date >= ? AND close IS NOT NULL
+            ORDER BY ticker, date
+            """,
+            [*FX_TICKERS, cutoff],
+        ).fetchall():
+            fx_series.setdefault(row["ticker"], []).append((row["date"], float(row["close"])))
+        fx_lookup = build_fx_lookup(fx_series)
+        yield_by_ticker = {
+            row["ticker"]: positive_float(row["dividend_yield"])
+            for row in conn.execute(
+                f"SELECT ticker, dividend_yield FROM ticker_stats_cache WHERE ticker IN ({ticker_placeholders})",
+                clean_tickers,
+            ).fetchall()
+        }
+        currency_by_ticker = {
+            row["ticker"]: row["currency"] or ticker_currency(row["ticker"])
+            for row in conn.execute(
+                f"SELECT ticker, currency FROM tickers WHERE ticker IN ({ticker_placeholders})",
+                clean_tickers,
+            ).fetchall()
+        }
+
         now_text = datetime.now(KST).isoformat(timespec="seconds")
         updated = 0
         for ticker in clean_tickers:
             price_rows = grouped.get(ticker, [])
             daily_rsi = rsi_series([float(row["close"]) for row in price_rows])
             payload = calculate_technical_stats(price_rows, daily_rsi, grouped.get(BETA_BENCHMARK, []))
+            payload["risk_reward"] = total_return_periods(
+                price_rows,
+                dividend_rows_by_ticker.get(ticker, []),
+                splits_by_ticker.get(ticker, []),
+                currency_by_ticker.get(ticker) or ticker_currency(ticker),
+                fx_lookup,
+                yield_by_ticker.get(ticker),
+            )
             conn.execute(
                 """
                 INSERT INTO ticker_technical_stats_cache

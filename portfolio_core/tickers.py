@@ -62,6 +62,10 @@ def ticker_currency(ticker: str) -> str:
         return "HKD"
     if ticker.endswith(".T"):
         return "JPY"
+    if ticker.endswith(".TW"):
+        return "TWD"
+    if ticker.endswith((".SZ", ".SS")):
+        return "CNY"
     return "USD"
 
 

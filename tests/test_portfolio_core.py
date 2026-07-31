@@ -12,7 +12,7 @@ import sys
 import sqlite3
 import urllib.error
 from contextlib import contextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -852,49 +852,133 @@ def test_quarterly_dividend_cycle_never_groups_more_than_four_payments():
 
 def test_risk_reward_score_formula():
     from portfolio_core.risk_reward import risk_reward_score
-    from portfolio_core.technical_stats import annualized_volatility
 
-    # 정상: 총수익(가격 CAGR+배당) / 연율 변동성 ×10 × 낙폭 보정(0.75~1)
-    # perf_5y=100% → CAGR 14.87 + 배당 2 = 16.87 / 3y=50%→14.47+2=16.47 / 1y=10+2=12
-    score, short = risk_reward_score(100.0, 50.0, 10.0, 2.0, 20.0, -10.0)
-    expected_return = 0.6 * 16.869 + 0.3 * 16.472 + 0.1 * 12.0
-    expected = expected_return / 20.0 * 10 * (1 - 10 / 200)
-    assert short is False
-    assert abs(score - round(expected, 2)) < 0.02
+    # 정상: 기간별 Sharpe(clamp(cagr)/max(vol,5)) 가중평균 ×10 × 고점괴리 보정
+    periods = {
+        "5y": {"cagr": 16.0, "vol": 20.0, "quality": "TR"},
+        "3y": {"cagr": 12.0, "vol": 25.0, "quality": "TR"},
+        "1y": {"cagr": 30.0, "vol": 40.0, "quality": "TR"},
+    }
+    score, basis, quality = risk_reward_score(periods, -10.0)
+    expected = (0.6 * 16 / 20 + 0.3 * 12 / 25 + 0.1 * 30 / 40) * 10 * (1 - 10 / 200)
+    assert basis == "5y" and quality == "TR"
+    assert abs(score - round(expected, 2)) < 0.01
 
-    # 이력 폴백: 5y 없음 → 3y 90% + 1y 10%, short 마크
-    score3, short3 = risk_reward_score(None, 50.0, 10.0, 0.0, 20.0, 0.0)
-    assert short3 is True
-    assert abs(score3 - round((0.9 * 14.471 + 0.1 * 10.0) / 20.0 * 10, 2)) < 0.02
-    # 1y만: short 마크
-    score1, short1 = risk_reward_score(None, None, 30.0, 0.0, 20.0, 0.0)
-    assert short1 is True and abs(score1 - 15.0) < 0.01
+    # 결측 기간 가중 비례 재분배: 5y 없음 → 3y 0.75 / 1y 0.25
+    score3, basis3, _q = risk_reward_score(
+        {"3y": {"cagr": 12.0, "vol": 25.0, "quality": "TR"},
+         "1y": {"cagr": 30.0, "vol": 40.0, "quality": "TR"}}, 0.0)
+    expected3 = (0.75 * 12 / 25 + 0.25 * 30 / 40) * 10
+    assert basis3 == "3y"
+    assert abs(score3 - round(expected3, 2)) < 0.01
 
-    # 음수 점수엔 낙폭 보정이 나눗셈 — 낙폭 클수록 더 나빠진다
-    down_small, _ = risk_reward_score(None, None, -20.0, 0.0, 20.0, -10.0)
-    down_big, _ = risk_reward_score(None, None, -20.0, 0.0, 20.0, -50.0)
+    # 품질: 한 기간이라도 P면 P
+    _s, _b, quality_p = risk_reward_score(
+        {"5y": {"cagr": 10.0, "vol": 20.0, "quality": "P"},
+         "1y": {"cagr": 10.0, "vol": 20.0, "quality": "TR"}}, 0.0)
+    assert quality_p == "P"
+
+    # 음수 점수엔 고점괴리 보정이 나눗셈 — 괴리 클수록 더 나빠진다
+    down_small, _b1, _q1 = risk_reward_score({"1y": {"cagr": -20.0, "vol": 20.0, "quality": "TR"}}, -10.0)
+    down_big, _b2, _q2 = risk_reward_score({"1y": {"cagr": -20.0, "vol": 20.0, "quality": "TR"}}, -50.0)
     assert down_big < down_small < 0
 
-    # 윈저라이즈: 극단 수익률은 ±50/100 캡 (레버리지 ETF)
-    capped, _ = risk_reward_score(None, None, 500.0, 0.0, 40.0, 0.0)
-    assert abs(capped - (100.0 / 40.0 * 10)) < 0.01
+    # 캡·변동성 바닥
+    capped, _b, _q = risk_reward_score({"1y": {"cagr": 500.0, "vol": 40.0, "quality": "TR"}}, 0.0)
+    assert abs(capped - 100.0 / 40.0 * 10) < 0.01
+    floor, _b, _q = risk_reward_score({"1y": {"cagr": 4.0, "vol": 1.0, "quality": "TR"}}, 0.0)
+    assert abs(floor - 4.0 / 5.0 * 10) < 0.01
 
-    # 변동성 바닥 5%: MMF류 극저변동 폭발 방지
-    floor, _ = risk_reward_score(None, None, 4.0, 0.0, 1.0, 0.0)
-    assert abs(floor - (4.0 / 5.0 * 10)) < 0.01
+    # 결측이면 None
+    assert risk_reward_score(None, -10.0) == (None, None, None)
+    assert risk_reward_score(periods, None) == (None, None, None)
+    assert risk_reward_score({"5y": None, "3y": None, "1y": None}, -10.0) == (None, None, None)
 
-    # 위험 축 결측이면 None
-    assert risk_reward_score(100.0, 50.0, 10.0, 2.0, None, -10.0) == (None, False)
-    assert risk_reward_score(100.0, 50.0, 10.0, 2.0, 20.0, None) == (None, False)
-    assert risk_reward_score(None, None, None, 2.0, 20.0, -10.0) == (None, False)
 
-    # 연율화 변동성: 일정한 ±1% 교차 수익률 → σ=1%/일 → 연율 ≈ 15.87%
-    closes = [100.0]
-    for i in range(200):
-        closes.append(closes[-1] * (1.01 if i % 2 == 0 else 0.99))
-    vol = annualized_volatility(closes)
-    assert vol is not None and abs(vol - 15.87) < 0.1
-    assert annualized_volatility([100.0] * 10) is None  # 표본 부족
+def test_total_return_periods_dividend_mapping():
+    from portfolio_core.technical_stats import total_return_periods
+
+    # 300거래일 평탄한 가격 + 중간 배당 1건 → 1y CAGR에 배당 수익만 반영
+    days = []
+    base = date(2024, 1, 2)
+    current = base
+    while len(days) < 300:
+        if current.weekday() < 5:
+            days.append(current.isoformat())
+        current += timedelta(days=1)
+    price_rows = [{"date": day, "close": 100.0} for day in days]
+
+    dividend_rows = [{
+        "ex_date": days[150], "record_date": None, "pay_date": None,
+        "declaration_date": None, "amount": 5.0, "currency": "USD", "source": "yf-history",
+    }]
+    result = total_return_periods(price_rows, dividend_rows, [], "USD")
+    one_year = result["1y"]
+    assert one_year is not None and one_year["quality"] == "TR"
+    # 총누적 5% → 연율화(252/n) ≈ 5%대
+    assert 4.0 < one_year["cagr"] < 6.0
+    assert result["5y"] is None and result["3y"] is None  # 이력 부족
+
+    # 분할 미조정 소스(polygon): 분할 후 이벤트 금액이 10으로 나뉜다
+    splits = [{"split_date": days[200], "ratio": 10.0, "source": "yfinance"}]
+    div_unadjusted = [{
+        "ex_date": days[150], "record_date": None, "pay_date": None,
+        "declaration_date": None, "amount": 5.0, "currency": "USD", "source": "polygon",
+    }]
+    adj = total_return_periods(price_rows, div_unadjusted, splits, "USD")
+    assert adj["1y"]["cagr"] < 1.0  # 0.5/100 수준으로 축소
+
+    # 휴장 이월 한도: 마지막 가격일보다 6일 뒤 배당은 미반영 + P
+    late_div = [{
+        "ex_date": (date.fromisoformat(days[-1]) + timedelta(days=6)).isoformat(),
+        "record_date": None, "pay_date": None, "declaration_date": None,
+        "amount": 5.0, "currency": "USD", "source": "yf-history",
+    }]
+    late = total_return_periods(price_rows, late_div, [], "USD")
+    assert late["1y"]["quality"] == "P" and abs(late["1y"]["cagr"]) < 0.5
+
+    # 배당수익률이 있는데 이벤트가 없으면 가격 폴백 P
+    no_div = total_return_periods(price_rows, [], [], "USD", None, 3.0)
+    assert no_div["1y"]["quality"] == "P"
+    # 무배당 종목(수익률 정보 없음)은 TR
+    zero_div = total_return_periods(price_rows, [], [], "USD", None, None)
+    assert zero_div["1y"]["quality"] == "TR"
+
+
+def test_dedupe_same_currency_duplicates():
+    from portfolio_core.corporate_actions import dedupe_dividend_event_rows
+
+    def event(ex_date, amount, source, currency="USD"):
+        return {"ex_date": ex_date, "record_date": None, "pay_date": None,
+                "declaration_date": None, "amount": amount, "currency": currency, "source": source}
+
+    # ETN 유형: 이종 출처·동일 금액·1일 차 → 병합(정보 우선 polygon 유지)
+    merged = dedupe_dividend_event_rows([
+        event("2025-11-05", 1.04, "yf-history"),
+        event("2025-11-06", 1.04, "polygon"),
+    ])
+    assert len(merged) == 1 and merged[0]["source"] == "polygon"
+
+    # COST 유형: 같은 출처의 특별+정기(2일 차, 금액 다름) → 보존
+    kept = dedupe_dividend_event_rows([
+        event("2017-05-08", 7.0, "polygon"),
+        event("2017-05-10", 0.5, "polygon"),
+    ])
+    assert len(kept) == 2
+
+    # 이종 출처라도 금액이 다르면 보존 (DGRW 유형)
+    kept2 = dedupe_dividend_event_rows([
+        event("2021-12-22", 0.30, "yf-history"),
+        event("2021-12-27", 0.20349, "polygon"),
+    ])
+    assert len(kept2) == 2
+
+    # 교차통화(RACE 유형): 통화 다름·1일 차 → 병합
+    cross = dedupe_dividend_event_rows([
+        event("2026-04-20", 4.254, "yf-history", "USD"),
+        event("2026-04-21", 3.615, "polygon", "EUR"),
+    ])
+    assert len(cross) == 1
 
 
 def test_special_dividend_excluded_from_annual_totals_and_cycles():
