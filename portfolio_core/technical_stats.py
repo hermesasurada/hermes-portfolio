@@ -103,12 +103,18 @@ def total_return_periods(
     if len(closes) < 2:
         return result
 
+    last_price_date = parse_iso_date(dates[-1])
     dividend_by_index: dict[int, float] = {}
     unmapped_dates: list[str] = []
     for event in dedupe_dividend_event_rows(dividend_rows, splits):
         event_date = parse_iso_date(event["ex_date"]) or entitlement_date(event)
         amount = positive_float(event["amount"])
         if event_date is None or not amount:
+            continue
+        if last_price_date is not None and event_date > last_price_date:
+            # 마지막 가격일 이후 배당락 = 아직 대응 가격이 없는 미래 이벤트
+            # (미국 종목은 KST 기준 하루 늦게 가격이 온다) — 다음 배치에서
+            # 가격과 함께 반영되므로 실패로 세지 않는다.
             continue
         adjusted, _factor = split_adjusted_amount(amount, event_date, event["source"], splits)
         event_currency = str(event["currency"] or "").upper() or currency
@@ -129,19 +135,31 @@ def total_return_periods(
             continue
         dividend_by_index[index] = dividend_by_index.get(index, 0.0) + adjusted
 
-    returns: list[float] = []
+    total_returns: list[float] = []
+    price_returns: list[float] = []
     for index in range(1, len(closes)):
         previous = closes[index - 1]
         if previous <= 0:
-            returns.append(0.0)
+            total_returns.append(0.0)
+            price_returns.append(0.0)
             continue
-        returns.append((closes[index] + dividend_by_index.get(index, 0.0)) / previous - 1)
+        price_return = closes[index] / previous - 1
+        price_returns.append(price_return)
+        total_returns.append(price_return + dividend_by_index.get(index, 0.0) / previous)
 
     for key, period_days in TOTAL_RETURN_PERIODS:
-        if len(returns) < period_days * 0.95:
+        if len(total_returns) < period_days * 0.95:
             continue
-        window = returns[-period_days:]
-        count = len(window)
+        count = min(period_days, len(total_returns))
+        window_start = dates[len(dates) - count - 1]
+        has_dividend = any(
+            index >= len(closes) - count for index in dividend_by_index
+        )
+        has_unmapped = any(day >= window_start for day in unmapped_dates)
+        # 매핑 실패가 하나라도 있으면 '부분 총수익'이 되므로 그 기간은
+        # 순수 가격수익률로 통째 재계산 — P 라벨(가격 폴백)과 실체를 일치.
+        series = price_returns if has_unmapped else total_returns
+        window = series[-count:]
         growth = 1.0
         for value in window:
             growth *= 1 + value
@@ -152,11 +170,6 @@ def total_return_periods(
         mean = sum(window) / count
         variance = sum((value - mean) ** 2 for value in window) / count
         vol = (variance ** 0.5) * (252 ** 0.5) * 100
-        window_start = dates[len(dates) - count - 1]
-        has_dividend = any(
-            index >= len(closes) - count for index in dividend_by_index
-        )
-        has_unmapped = any(day >= window_start for day in unmapped_dates)
         quality = "TR"
         if has_unmapped or (not has_dividend and (dividend_yield or 0) > 0.5):
             quality = "P"

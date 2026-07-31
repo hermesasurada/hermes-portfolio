@@ -928,14 +928,30 @@ def test_total_return_periods_dividend_mapping():
     adj = total_return_periods(price_rows, div_unadjusted, splits, "USD")
     assert adj["1y"]["cagr"] < 1.0  # 0.5/100 수준으로 축소
 
-    # 휴장 이월 한도: 마지막 가격일보다 6일 뒤 배당은 미반영 + P
-    late_div = [{
-        "ex_date": (date.fromisoformat(days[-1]) + timedelta(days=6)).isoformat(),
+    # 마지막 가격일 이후 배당락 = 미래 이벤트 — 실패로 세지 않고 TR 유지
+    # (미국 종목은 KST 기준 가격이 하루 늦어 당일 배당이 이 상태가 된다)
+    future_div = [{
+        "ex_date": (date.fromisoformat(days[-1]) + timedelta(days=1)).isoformat(),
         "record_date": None, "pay_date": None, "declaration_date": None,
         "amount": 5.0, "currency": "USD", "source": "yf-history",
     }]
-    late = total_return_periods(price_rows, late_div, [], "USD")
-    assert late["1y"]["quality"] == "P" and abs(late["1y"]["cagr"]) < 0.5
+    future = total_return_periods(price_rows, future_div, [], "USD")
+    assert future["1y"]["quality"] == "TR" and abs(future["1y"]["cagr"]) < 0.5
+
+    # 기간 내 매핑 실패(가격 공백 6일 초과)가 있으면 부분 총수익이 아니라
+    # 순수 가격수익률로 재계산 + P — 반영됐던 다른 배당도 제외된다
+    gap_days = [d for d in days if not (days[100] <= d <= days[104])]
+    gap_rows = [{"date": day, "close": 100.0} for day in gap_days]
+    mixed_divs = [
+        {"ex_date": days[50], "record_date": None, "pay_date": None,
+         "declaration_date": None, "amount": 5.0, "currency": "USD", "source": "yf-history"},
+        {"ex_date": days[101], "record_date": None, "pay_date": None,
+         "declaration_date": None, "amount": 5.0, "currency": "USD", "source": "polygon"},
+    ]
+    # days[101]~[104] 제거로 두 번째 배당은 다음 가격일까지 6일 초과 → 실패
+    partial = total_return_periods(gap_rows, mixed_divs, [], "USD")
+    assert partial["1y"]["quality"] == "P"
+    assert abs(partial["1y"]["cagr"]) < 0.5  # 첫 배당(반영됐던 것)도 빠진 순수 가격수익
 
     # 배당수익률이 있는데 이벤트가 없으면 가격 폴백 P
     no_div = total_return_periods(price_rows, [], [], "USD", None, 3.0)
