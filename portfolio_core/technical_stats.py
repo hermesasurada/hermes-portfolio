@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Iterable
 
-from .db import connect, ensure_daily_technical_indicators_table, ensure_technical_stats_cache_table
-from .indicators import bollinger_pband, recent_performance, resample_last, rsi_series, rsi_value, technical_indicators_available
+from .db import connect, ensure_technical_stats_cache_table
+from .indicators import bollinger_pband, recent_performance, resample_last, rsi_series, rsi_value
 from .paths import KST
 
-TECHNICAL_CACHE_VERSION = 2
-DAILY_RSI_REFRESH_ROWS = 90
+TECHNICAL_CACHE_VERSION = 4  # 4: vol_annual(연율화 변동성) 추가
+TECHNICAL_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
 BETA_WINDOW = 180
 
@@ -35,6 +35,19 @@ def high_52w_drawdown(daily: list[float]) -> float | None:
 
 def _returns(closes: list[float]) -> list[float]:
     return [closes[index] / closes[index - 1] - 1 for index in range(1, len(closes)) if closes[index - 1]]
+
+
+def annualized_volatility(daily: list[float]) -> float | None:
+    """최근 180거래일 일수익률의 연율화 변동성(%) — 손익비 점수의 위험 축.
+    벤치마크 교집합에 묶이는 beta_stats와 달리 자기 시계열만 쓴다."""
+    closes = [c for c in daily[-(BETA_WINDOW + 1):] if c is not None and c > 0]
+    returns = _returns(closes)
+    count = len(returns)
+    if count < 30:
+        return None
+    mean = sum(returns) / count
+    variance = sum((value - mean) ** 2 for value in returns) / count
+    return round((variance ** 0.5) * (252 ** 0.5) * 100, 2)
 
 
 def beta_stats(rows: list[sqlite3.Row], benchmark_rows: list[sqlite3.Row]) -> dict[str, float | None]:
@@ -91,54 +104,62 @@ def calculate_technical_stats(
         },
         "performance": recent_performance(rows),
         "drawdown_52w": high_52w_drawdown(daily),
+        "vol_annual": annualized_volatility(daily),
         **beta_stats(rows, benchmark_rows or []),
     }
 
 
-def upsert_daily_rsi(
-    conn: sqlite3.Connection,
-    ticker: str,
-    rows: list[sqlite3.Row],
-    values: list[float | None],
-    computed_at: str,
-) -> None:
-    existing_rows = conn.execute(
-        """
-        SELECT date, rsi_14
-        FROM daily_technical_indicators
-        WHERE ticker = ?
-        ORDER BY date DESC
-        LIMIT ?
-        """,
-        (ticker, DAILY_RSI_REFRESH_ROWS),
-    ).fetchall()
-    existing = {
-        row["date"]: float(row["rsi_14"])
-        for row in existing_rows
-        if row["rsi_14"] is not None
-    }
-    start = 0 if not existing_rows else max(0, len(rows) - DAILY_RSI_REFRESH_ROWS)
-    entries = [
-        (ticker, row["date"], value, computed_at)
-        for row, value in zip(rows[start:], values[start:])
-        if value is not None
-        and (
-            row["date"] not in existing
-            or abs(existing[row["date"]] - value) > 0.0000001
+def price_adjusted_rows(
+    rows: list[sqlite3.Row] | list[dict],
+    current_price: float,
+    current_date: str,
+) -> list[dict]:
+    """마지막 시장가격으로 해당 거래일 종가를 임시 대체한 시계열.
+
+    장외 시세는 영구 일봉 데이터에 저장하지 않고, 화면용 기술지표를 계산할
+    때만 당일 종가 자리에 넣는다. 당일 일봉이 아직 없으면 새 행을 추가한다.
+    """
+    adjusted = [dict(row) for row in rows if row["date"] and row["close"] is not None]
+    replaced = False
+    for row in adjusted:
+        if row["date"] == current_date:
+            row["close"] = float(current_price)
+            replaced = True
+            break
+    if not replaced:
+        adjusted.append(
+            {
+                "date": current_date,
+                "close": float(current_price),
+                "high": float(current_price),
+                "low": float(current_price),
+            }
         )
-    ]
-    if not entries:
-        return
-    conn.executemany(
-        """
-        INSERT INTO daily_technical_indicators (ticker, date, rsi_14, computed_at)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(ticker, date) DO UPDATE SET
-          rsi_14 = excluded.rsi_14,
-          computed_at = excluded.computed_at
-        """,
-        entries,
-    )
+        adjusted.sort(key=lambda row: row["date"])
+    return adjusted
+
+
+def calculate_price_adjusted_indicators(
+    rows: list[sqlite3.Row] | list[dict],
+    current_price: float,
+    current_date: str,
+) -> dict:
+    adjusted = price_adjusted_rows(rows, current_price, current_date)
+    daily = [float(row["close"]) for row in adjusted]
+    weekly = resample_last(adjusted, "week")
+    monthly = resample_last(adjusted, "month")
+    return {
+        "rsi": {
+            "day": rsi_value(daily),
+            "week": rsi_value(weekly),
+            "month": rsi_value(monthly),
+        },
+        "bollinger_pband": {
+            "day": bollinger_pband(daily),
+            "week": bollinger_pband(weekly),
+            "month": bollinger_pband(monthly),
+        },
+    }
 
 
 def normalize_tickers(tickers: Iterable[str]) -> list[str]:
@@ -170,22 +191,21 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
     clean_tickers = normalize_tickers(tickers)
     if not clean_tickers:
         return 0
-    if not technical_indicators_available():
-        print("[stats] skipped technical stats refresh; pandas/ta is not available in this Python environment")
-        return 0
     with connect() as conn:
         ensure_technical_stats_cache_table(conn)
-        ensure_daily_technical_indicators_table(conn)
         query_tickers = sorted(set(clean_tickers) | {BETA_BENCHMARK})
         grouped: dict[str, list[sqlite3.Row]] = {ticker: [] for ticker in query_tickers}
+        cutoff = (datetime.now(KST).date() - timedelta(days=TECHNICAL_LOOKBACK_DAYS)).isoformat()
         rows = conn.execute(
             f"""
             SELECT ticker, date, close
             FROM daily_prices
-            WHERE ticker IN ({placeholders(query_tickers)}) AND close IS NOT NULL
+            WHERE ticker IN ({placeholders(query_tickers)})
+              AND date >= ?
+              AND close IS NOT NULL
             ORDER BY ticker, date
             """,
-            query_tickers,
+            [*query_tickers, cutoff],
         ).fetchall()
         for row in rows:
             grouped[row["ticker"]].append(row)
@@ -195,7 +215,6 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
             price_rows = grouped.get(ticker, [])
             daily_rsi = rsi_series([float(row["close"]) for row in price_rows])
             payload = calculate_technical_stats(price_rows, daily_rsi, grouped.get(BETA_BENCHMARK, []))
-            upsert_daily_rsi(conn, ticker, price_rows, daily_rsi, now_text)
             conn.execute(
                 """
                 INSERT INTO ticker_technical_stats_cache

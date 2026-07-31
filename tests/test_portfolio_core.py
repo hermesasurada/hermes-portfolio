@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import sys
 import sqlite3
+import urllib.error
 from contextlib import contextmanager
 from datetime import date, datetime
 from pathlib import Path
@@ -18,9 +19,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import portfolio_core.fundamentals as fundamentals_module
 import portfolio_core.dividend_refresh as dividend_refresh_module
+import portfolio_core.dividend_sources as dividend_sources_module
+import portfolio_core.dividends as dividends_module
 import portfolio_core.schedule as schedule_module
+import portfolio_core.ticker_metadata as ticker_metadata_module
+import collect_prices as collect_prices_module
 from portfolio_core.collect_common import parse_categories
-from portfolio_core.fundamentals import fetch_fundamentals, normalize_pe, parse_number
+from portfolio_core.collectors import CollectedPrice
+from portfolio_core.fundamentals import (
+    dividend_yield_from_run_rate,
+    fetch_fundamentals,
+    normalize_pe,
+    parse_number,
+    yfinance_profile_metrics,
+)
 from portfolio_core.dates import parse_iso_date, to_iso_text
 from portfolio_core.dividends import (
     _active_dividend_year,
@@ -35,15 +47,22 @@ from portfolio_core.dividends import (
 )
 from portfolio_core.dividend_schedule import consolidated_dividend_events
 from portfolio_core.indicators import (
+    bollinger_pband,
     performance_pct,
     price_near_target,
     recent_performance,
     resample_last,
+    rsi_series,
     shift_months,
 )
 from portfolio_core.market_calendar import us_equity_calendar_day
 from portfolio_core.price_store import infer_category
-from portfolio_core.prices import fx_previous_rates, fx_rates
+from portfolio_core.prices import fx_previous_rates, fx_rates, price_view
+from portfolio_core.queries import dividend_status_total_failure
+from portfolio_core.technical_stats import (
+    calculate_price_adjusted_indicators,
+    price_adjusted_rows,
+)
 from portfolio_core.us_live_quotes import (
     apply_us_live_prices,
     extended_change_from_quote,
@@ -75,6 +94,205 @@ def test_parse_number():
     assert parse_number("-") is None
     assert parse_number("") is None
     assert parse_number("abc") is None
+
+
+def test_daily_price_collection_batches_yahoo_targets():
+    originals = {
+        "load_watch": collect_prices_module.load_watch,
+        "fetch_yahoo_prices_batch": collect_prices_module.fetch_yahoo_prices_batch,
+        "fetch_price": collect_prices_module.fetch_price,
+    }
+    individual_calls = []
+    try:
+        collect_prices_module.load_watch = lambda **_kwargs: {
+            "overseas": ["AAPL"],
+            "kr": ["005930.KS"],
+            "index": ["SP500", "KOSPI"],
+        }
+
+        def fake_batch(targets):
+            assert {target[0] for target in targets} == {"AAPL", "SP500"}
+            return [
+                CollectedPrice("AAPL", 200.0, "USD", "yf-batch", "2026-07-28", [("2026-07-28", 200.0)]),
+                CollectedPrice("SP500", 6000.0, "USD", "yf-batch", "2026-07-28", [("2026-07-28", 6000.0)]),
+            ], []
+
+        def fake_individual(category, ticker, history_start=None):
+            individual_calls.append((category, ticker, history_start))
+            return CollectedPrice(ticker, 1.0, "KRW", "fdr", "2026-07-28", [("2026-07-28", 1.0)])
+
+        collect_prices_module.fetch_yahoo_prices_batch = fake_batch
+        collect_prices_module.fetch_price = fake_individual
+        fetched, errors = collect_prices_module.collect_prices(
+            ["overseas", "kr", "index"], None, None
+        )
+        assert errors == []
+        assert {item.ticker for item in fetched} == {"AAPL", "005930.KS", "SP500", "KOSPI"}
+        assert individual_calls == [
+            ("kr", "005930.KS", None),
+            ("index", "KOSPI", None),
+        ]
+    finally:
+        for name, value in originals.items():
+            setattr(collect_prices_module, name, value)
+
+
+def test_dividend_yield_from_run_rate():
+    assert round(dividend_yield_from_run_rate(3320, 82200), 4) == 4.0389
+    assert dividend_yield_from_run_rate(None, 82200) is None
+    assert dividend_yield_from_run_rate(3320, 0) is None
+
+
+def test_dividend_status_alerts_only_when_every_source_failed():
+    assert dividend_status_total_failure(
+        "yahoo_error(TimeoutError)+stockanalysis_error(HTTPError)+nasdaq_error(HTTPError)"
+    )
+    assert not dividend_status_total_failure(
+        "yahoo0+stockanalysis_error(HTTPError)+nasdaq0+polygon0"
+    )
+    assert not dividend_status_total_failure("yahoo+nasdaq_error(HTTPError)")
+    assert not dividend_status_total_failure(None)
+
+
+def test_stockanalysis_404_is_an_empty_dividend_result():
+    original = dividend_sources_module._fetch_text
+
+    def not_found(url, _headers):
+        raise urllib.error.HTTPError(url, 404, "Not Found", None, None)
+
+    dividend_sources_module._fetch_text = not_found
+    try:
+        assert dividend_sources_module._fetch_stockanalysis_dividends("AAOI") == []
+    finally:
+        dividend_sources_module._fetch_text = original
+
+
+def test_dividend_history_includes_source_backed_future_payment():
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE tickers (ticker TEXT PRIMARY KEY, name TEXT, currency TEXT)")
+    conn.execute(
+        """
+        CREATE TABLE dividend_events (
+            ticker TEXT,
+            ex_date TEXT,
+            record_date TEXT,
+            pay_date TEXT,
+            declaration_date TEXT,
+            amount REAL,
+            currency TEXT,
+            source TEXT
+        )
+        """
+    )
+    conn.execute(
+        "CREATE TABLE stock_splits (ticker TEXT, split_date TEXT, ratio REAL, source TEXT)"
+    )
+    conn.execute("INSERT INTO tickers VALUES ('ASML', 'ASML Holding N.V.', 'USD')")
+    conn.executemany(
+        "INSERT INTO dividend_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+            ("ASML", "2026-04-27", "2026-04-27", "2026-05-05", "2026-01-28", 3.16845, "USD", "polygon"),
+            ("ASML", "2026-07-28", "2026-07-28", "2026-08-05", "2026-07-15", 2.15072, "USD", "polygon"),
+        ],
+    )
+
+    @contextmanager
+    def fake_connect():
+        yield conn
+
+    original_connect = dividends_module.connect
+    original_today = dividends_module._today
+    original_history_start = dividends_module.dividend_history_start
+    try:
+        dividends_module.connect = fake_connect
+        dividends_module._today = lambda: date(2026, 7, 22)
+        dividends_module.dividend_history_start = lambda: date(2016, 1, 1)
+        payload = dividends_module.load_dividend_history("ASML")
+        details = [detail for row in payload["rows"] for detail in row["payments_detail"]]
+        future = next(detail for detail in details if detail["pay_date"] == "2026-08-05")
+        assert future["entitlement_date"] == "2026-07-28"
+        assert abs(future["amount"] - 2.15072) < 1e-9
+        assert future["source"] == "polygon"
+    finally:
+        dividends_module.connect = original_connect
+        dividends_module._today = original_today
+        dividends_module.dividend_history_start = original_history_start
+        conn.close()
+
+
+def test_race_cross_currency_duplicate_is_one_annual_dividend():
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE tickers (ticker TEXT PRIMARY KEY, name TEXT, currency TEXT)")
+    conn.execute(
+        """
+        CREATE TABLE dividend_events (
+            ticker TEXT,
+            ex_date TEXT,
+            record_date TEXT,
+            pay_date TEXT,
+            declaration_date TEXT,
+            amount REAL,
+            currency TEXT,
+            source TEXT
+        )
+        """
+    )
+    conn.execute("CREATE TABLE stock_splits (ticker TEXT, split_date TEXT, ratio REAL, source TEXT)")
+    conn.execute("INSERT INTO tickers VALUES ('RACE', 'Ferrari N.V.', 'USD')")
+    conn.executemany(
+        "INSERT INTO dividend_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+            ("RACE", "2024-04-22", "2024-04-23", "2024-05-03", "2024-02-22", 2.443, "EUR", "polygon"),
+            ("RACE", "2025-04-22", None, None, None, 3.438, "USD", "yf-history"),
+            ("RACE", "2025-04-23", "2025-04-23", "2025-05-06", "2025-02-20", 2.986, "EUR", "polygon"),
+            ("RACE", "2026-04-20", None, None, None, 4.254, "USD", "yf-history"),
+            ("RACE", "2026-04-21", "2026-04-21", "2026-05-05", "2026-02-19", 3.615, "EUR", "polygon"),
+        ],
+    )
+
+    @contextmanager
+    def fake_connect():
+        yield conn
+
+    original_connect = dividends_module.connect
+    original_today = dividends_module._today
+    original_history_start = dividends_module.dividend_history_start
+    try:
+        dividends_module.connect = fake_connect
+        dividends_module._today = lambda: date(2026, 7, 24)
+        dividends_module.dividend_history_start = lambda: date(2016, 1, 1)
+        payload = dividends_module.load_dividend_history("RACE")
+        assert payload["summary"]["frequency"] == 1
+        assert payload["summary"]["frequency_label"] == "연배당"
+        rows = {row["year"]: row for row in payload["rows"]}
+        assert rows[2025]["payments"] == 1
+        assert rows[2025]["expected_payments"] == 1
+        assert abs(rows[2025]["amount"] - 2.986) < 1e-9
+        assert len(rows[2025]["payments_detail"]) == 1
+        assert rows[2025]["payments_detail"][0]["source"] == "polygon"
+    finally:
+        dividends_module.connect = original_connect
+        dividends_module._today = original_today
+        dividends_module.dividend_history_start = original_history_start
+        conn.close()
+
+
+def test_yearly_expected_payment_counts_preserves_historical_frequency():
+    expected = dividends_module._yearly_expected_payment_counts(
+        {2021: 1, 2022: 1, 2023: 1, 2024: 1, 2025: 2, 2026: 1},
+        2026,
+        2,
+    )
+    assert expected == {
+        2021: 1,
+        2022: 1,
+        2023: 1,
+        2024: 1,
+        2025: 2,
+        2026: 2,
+    }
 
 
 def test_normalize_pe():
@@ -293,6 +511,35 @@ def test_read_only_fundamentals_serve_stale_cache():
         conn.close()
 
 
+def test_yfinance_profile_metrics_normalizes_interest_fields():
+    metrics = yfinance_profile_metrics({
+        "info": {
+            "grossMargins": 0.46,
+            "revenueGrowth": 0.18,
+            "debtToEquity": 79.5,
+            "freeCashflow": 12_345_678,
+            "payoutRatio": 0.22,
+            "shortPercentOfFloat": 0.014,
+            "sharesPercentSharesOut": 0.011,
+            "shortRatio": 1.7,
+            "heldPercentInsiders": 0.032,
+            "heldPercentInstitutions": 0.71,
+            "financialCurrency": "usd",
+        }
+    })
+    assert metrics["gross_margin"] == 0.46
+    assert metrics["revenue_growth"] == 0.18
+    assert metrics["debt_to_equity"] == 79.5
+    assert metrics["free_cash_flow"] == 12_345_678
+    assert metrics["payout_ratio"] == 0.22
+    assert metrics["short_percent_float"] == 0.014
+    assert metrics["short_percent_shares"] == 0.011
+    assert metrics["short_ratio"] == 1.7
+    assert metrics["insider_ownership"] == 0.032
+    assert metrics["institutional_ownership"] == 0.71
+    assert metrics["financial_currency"] == "USD"
+
+
 # --- tickers ----------------------------------------------------------------
 def test_ticker_currency():
     assert ticker_currency("BTC") == "KRW"
@@ -371,6 +618,29 @@ def test_fx_rates_uses_quotes_then_fallback():
     assert prev["EUR"] == 1700.0
 
 
+def test_price_view_keeps_regular_change_separate_from_extended_price():
+    snapshot = {
+        "prices": {
+            "MSFT": {
+                "price": 425.01,
+                "previous_price": 393.35,
+                "regular_price": 390.54,
+                "regular_previous_price": 393.35,
+                "extended_price": 425.01,
+                "extended_change": 34.47,
+                "extended_change_pct": 8.826,
+            }
+        },
+        "rates": {"USD": 1450.0},
+        "previous_rates": {"USD": 1450.0},
+    }
+    view = price_view("MSFT", "USD", snapshot)
+    assert view["current_price"] == 425.01
+    assert view["price_record"]["regular_previous_price"] == 393.35
+    assert round(view["change"], 2) == -2.81
+    assert round(view["change_pct"], 3) == -0.714
+
+
 # --- indicators -------------------------------------------------------------
 def test_shift_months():
     assert shift_months(date(2026, 3, 31), -1) == date(2026, 2, 28)
@@ -386,6 +656,33 @@ def test_resample_last_monthly():
         {"date": "2026-02-05", "close": 12.0},
     ]
     assert resample_last(rows, "month") == [11.0, 12.0]
+
+
+def test_python_technical_indicators_match_previous_calculation():
+    values = [1, 2, 3, 2, 4, 3, 5, 4, 6, 7, 5, 8, 9, 7, 10, 11, 8, 12, 13, 10, 14]
+    rsi = rsi_series(values)
+    assert rsi[:13] == [None] * 13
+    assert abs(rsi[-1] - 66.0488098264758) < 1e-12
+    pband = bollinger_pband([float(value) for value in range(1, 21)])
+    assert abs(pband - 91.1877235523957) < 1e-12
+
+
+def test_extended_price_replaces_latest_close_for_rsi_and_bollinger():
+    rows = [
+        {
+            "date": f"2026-07-{day:02d}",
+            "close": 100.0 + ((day * 7) % 11) - day * 0.15,
+        }
+        for day in range(1, 31)
+    ]
+    adjusted_rows = price_adjusted_rows(rows, 115.0, "2026-07-30")
+    adjusted = calculate_price_adjusted_indicators(rows, 115.0, "2026-07-30")
+    regular = calculate_price_adjusted_indicators(rows, 105.0, "2026-07-30")
+
+    assert len(adjusted_rows) == len(rows)
+    assert adjusted_rows[-1]["close"] == 115.0
+    assert adjusted["rsi"]["day"] > regular["rsi"]["day"]
+    assert adjusted["bollinger_pband"]["day"] > regular["bollinger_pband"]["day"]
 
 
 def test_performance_pct():
@@ -443,6 +740,9 @@ def test_estimated_dividend_uses_latest_amount_not_same_period_amount():
         events = consolidated_dividend_events([], history_rows)
         estimate = next(event for event in events if event["ticker"] == "NVDA" and event["pay_date"] == "2026-10-02")
         assert estimate["amount"] == 0.25
+        assert estimate["ex_date"] == "2026-09-11"
+        assert estimate["ex_date_estimated"] is True
+        assert estimate["pay_date_estimated"] is True
     finally:
         schedule.today = original_today
 
@@ -550,6 +850,53 @@ def test_quarterly_dividend_cycle_never_groups_more_than_four_payments():
     assert all(row["payments"] <= 4 for row in annual.values())
 
 
+def test_risk_reward_score_formula():
+    from portfolio_core.risk_reward import risk_reward_score
+    from portfolio_core.technical_stats import annualized_volatility
+
+    # 정상: 총수익(가격 CAGR+배당) / 연율 변동성 ×10 × 낙폭 보정(0.75~1)
+    # perf_5y=100% → CAGR 14.87 + 배당 2 = 16.87 / 3y=50%→14.47+2=16.47 / 1y=10+2=12
+    score, short = risk_reward_score(100.0, 50.0, 10.0, 2.0, 20.0, -10.0)
+    expected_return = 0.6 * 16.869 + 0.3 * 16.472 + 0.1 * 12.0
+    expected = expected_return / 20.0 * 10 * (1 - 10 / 200)
+    assert short is False
+    assert abs(score - round(expected, 2)) < 0.02
+
+    # 이력 폴백: 5y 없음 → 3y 90% + 1y 10%, short 마크
+    score3, short3 = risk_reward_score(None, 50.0, 10.0, 0.0, 20.0, 0.0)
+    assert short3 is True
+    assert abs(score3 - round((0.9 * 14.471 + 0.1 * 10.0) / 20.0 * 10, 2)) < 0.02
+    # 1y만: short 마크
+    score1, short1 = risk_reward_score(None, None, 30.0, 0.0, 20.0, 0.0)
+    assert short1 is True and abs(score1 - 15.0) < 0.01
+
+    # 음수 점수엔 낙폭 보정이 나눗셈 — 낙폭 클수록 더 나빠진다
+    down_small, _ = risk_reward_score(None, None, -20.0, 0.0, 20.0, -10.0)
+    down_big, _ = risk_reward_score(None, None, -20.0, 0.0, 20.0, -50.0)
+    assert down_big < down_small < 0
+
+    # 윈저라이즈: 극단 수익률은 ±50/100 캡 (레버리지 ETF)
+    capped, _ = risk_reward_score(None, None, 500.0, 0.0, 40.0, 0.0)
+    assert abs(capped - (100.0 / 40.0 * 10)) < 0.01
+
+    # 변동성 바닥 5%: MMF류 극저변동 폭발 방지
+    floor, _ = risk_reward_score(None, None, 4.0, 0.0, 1.0, 0.0)
+    assert abs(floor - (4.0 / 5.0 * 10)) < 0.01
+
+    # 위험 축 결측이면 None
+    assert risk_reward_score(100.0, 50.0, 10.0, 2.0, None, -10.0) == (None, False)
+    assert risk_reward_score(100.0, 50.0, 10.0, 2.0, 20.0, None) == (None, False)
+    assert risk_reward_score(None, None, None, 2.0, 20.0, -10.0) == (None, False)
+
+    # 연율화 변동성: 일정한 ±1% 교차 수익률 → σ=1%/일 → 연율 ≈ 15.87%
+    closes = [100.0]
+    for i in range(200):
+        closes.append(closes[-1] * (1.01 if i % 2 == 0 else 0.99))
+    vol = annualized_volatility(closes)
+    assert vol is not None and abs(vol - 15.87) < 0.1
+    assert annualized_volatility([100.0] * 10) is None  # 표본 부족
+
+
 def test_special_dividend_excluded_from_annual_totals_and_cycles():
     # COST 패턴: $1.02 분기 사이클 중간의 12월 $15 특별배당.
     rows = []
@@ -611,6 +958,66 @@ def test_special_dividend_excluded_from_annual_totals_and_cycles():
         })
     kr_events, _ = _attributed_history_events(kr_rows, "005380.KS", True, None)
     assert not any(event["is_special"] for event in kr_events)
+
+
+def test_rms_combined_final_and_special_dividends_are_split():
+    rows = []
+    for ex_date, amount in [
+        ("2022-02-21", 2.5),
+        ("2022-04-25", 5.5),
+        ("2023-02-20", 3.5),
+        ("2023-04-25", 9.5),
+        ("2024-02-13", 3.5),
+        ("2024-05-02", 21.5),
+        ("2025-02-17", 3.5),
+        ("2025-05-05", 22.5),
+        ("2026-02-16", 5.0),
+        ("2026-04-21", 13.0),
+    ]:
+        rows.append({
+            "record_date": None,
+            "ex_date": ex_date,
+            "pay_date": None,
+            "declaration_date": None,
+            "amount": amount,
+            "source": "yf-history",
+        })
+
+    events, _ = _attributed_history_events(rows, "RMS.PA", False, 3)
+    annual = _aggregate_annual_dividends(events)
+
+    assert annual[2024]["payments"] == 2
+    assert annual[2024]["amount"] == 15.0
+    assert annual[2025]["payments"] == 2
+    assert annual[2025]["amount"] == 16.0
+    assert len([event for event in annual[2024]["events"] if event["is_special"]]) == 1
+    assert len([event for event in annual[2025]["events"] if event["is_special"]]) == 1
+    assert {
+        event["amount"]
+        for event in events
+        if event["date"] == date(2024, 5, 2)
+    } == {10.0, 11.5}
+    assert {
+        event["amount"]
+        for event in events
+        if event["date"] == date(2025, 5, 5)
+    } == {10.0, 12.5}
+    assert next(
+        event for event in events if event["date"] == date(2025, 2, 17)
+    )["year"] == 2025
+
+    totals = {year: row["amount"] for year, row in annual.items()}
+    assert dividends_module._dividend_frequency(
+        [event for event in events if not event["is_special"]],
+        {year: row["payments"] for year, row in annual.items()},
+        2026,
+        "RMS.PA",
+    ) == 2
+    growth, basis = dividends_module._year_growth(
+        2025, annual, totals, {2023, 2024, 2025}, False
+    )
+    assert basis == "annual"
+    assert round(growth, 6) == round((16.0 / 15.0 - 1) * 100, 6)
 
 
 def test_split_adjusted_half_cent_stays_in_same_dividend_cycle():
@@ -867,6 +1274,40 @@ def test_normalize_lookup_ticker():
     assert normalize_lookup_ticker(" aapl ") == "AAPL"
     assert normalize_lookup_ticker("brk.b") == "BRK.B"
     assert normalize_lookup_ticker("") == ""
+
+
+def test_update_ticker_display_name():
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE tickers (ticker TEXT PRIMARY KEY, name TEXT, display_name TEXT)")
+    conn.execute("INSERT INTO tickers VALUES ('AAPL', 'Apple Inc.', 'Apple')")
+
+    @contextmanager
+    def fake_connect():
+        yield conn
+
+    original_connect = ticker_metadata_module.connect
+    try:
+        ticker_metadata_module.connect = fake_connect
+        result = ticker_metadata_module.update_ticker_display_name({
+            "ticker": " aapl ",
+            "display_name": "  애플   본사  ",
+        })
+        assert result == {"ok": True, "ticker": "AAPL", "name": "애플 본사"}
+        stored = conn.execute("SELECT display_name FROM tickers WHERE ticker = 'AAPL'").fetchone()
+        assert stored["display_name"] == "애플 본사"
+    finally:
+        ticker_metadata_module.connect = original_connect
+        conn.close()
+
+
+def test_clean_ticker_display_name_rejects_blank_and_long_values():
+    for value in ("", "   ", None, "x" * 81):
+        try:
+            ticker_metadata_module.clean_ticker_display_name(value)
+        except ValueError:
+            continue
+        raise AssertionError(f"invalid display name accepted: {value!r}")
 
 
 # --- logos ------------------------------------------------------------------

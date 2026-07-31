@@ -5,6 +5,9 @@ let activeSidebarTab = "accounts";
 let activeInterestGroupId = null;
 let editingInterestGroupId = null;
 let interestGroupOrderSaving = false;
+let draggedInterestGroupId = null;
+let interestDropTargetId = null;
+let interestDropAfter = false;
 const interestSortState = { key: "display_change_pct", dir: -1, manual: false };
 
 function interestModeActive() {
@@ -97,7 +100,7 @@ function isProtectedInterestItem(row, group = activeInterestGroup()) {
   return isProtectedInterestGroup(group) || category === "index" || category === "fx";
 }
 
-function interestGroupMarkup(group, index) {
+function interestGroupMarkup(group) {
   const active = group.id === activeInterestGroupId;
   const icon = interestGroupIcon(group.name, group.fixed);
   const protectedGroup = isProtectedInterestGroup(group);
@@ -129,9 +132,10 @@ function interestGroupMarkup(group, index) {
         <span class="interest-group-name">${esc(group.name)}</span>
         <span class="interest-count">${group.items.length}</span>
       </button>
-      <span class="interest-order-controls" aria-label="${esc(group.name)} 순서 변경">
-        <button type="button" data-interest-move="${group.id}" data-direction="-1" aria-label="${esc(group.name)} 위로 이동" title="위로 이동" ${index === 0 ? "disabled" : ""}>▲</button>
-        <button type="button" data-interest-move="${group.id}" data-direction="1" aria-label="${esc(group.name)} 아래로 이동" title="아래로 이동" ${index === interestWatchlists.length - 1 || interestWatchlists[index + 1]?.fixed ? "disabled" : ""}>▼</button>
+      <span class="interest-drag-handle" draggable="true" tabindex="0" role="button"
+            data-interest-drag="${group.id}" aria-label="${esc(group.name)} 순서 변경"
+            title="드래그하여 순서 변경">
+        <span aria-hidden="true">⠿</span>
       </span>
       <button class="interest-icon-btn" type="button" data-interest-rename="${group.id}" aria-label="${esc(group.name)} 이름 변경" title="이름 변경">✎</button>
       ${protectedGroup
@@ -208,27 +212,60 @@ async function mutateInterestWatchlist(action, progressText, main = false) {
   }
 }
 
-async function moveInterestGroup(groupId, direction) {
-  if (interestGroupOrderSaving) return;
+function reorderedInterestGroups(draggedId, targetId, insertAfter) {
   // 실제 그룹만 재정렬 — 가상 "기타"는 항상 최하위 고정(reorder 페이로드에서 제외).
   const realGroups = interestWatchlists.filter(group => !group.fixed && group.id > 0);
-  const index = realGroups.findIndex(group => group.id === groupId);
-  const targetIndex = index + direction;
-  if (index < 0 || targetIndex < 0 || targetIndex >= realGroups.length) return;
+  const sourceIndex = realGroups.findIndex(group => group.id === draggedId);
+  if (sourceIndex < 0 || draggedId === targetId) return null;
+  const originalIds = realGroups.map(group => group.id);
   const reordered = realGroups.slice();
-  [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
+  const [dragged] = reordered.splice(sourceIndex, 1);
+  const targetIndex = reordered.findIndex(group => group.id === targetId);
+  if (targetIndex < 0) return null;
+  reordered.splice(targetIndex + (insertAfter ? 1 : 0), 0, dragged);
+  return reordered.every((group, index) => group.id === originalIds[index]) ? null : reordered;
+}
+
+async function saveInterestGroupOrder(reordered) {
+  if (interestGroupOrderSaving || !reordered?.length) return;
+  const previous = interestWatchlists;
+  const fixedGroups = interestWatchlists.filter(group => group.fixed || group.id <= 0);
   interestGroupOrderSaving = true;
   setInterestStatus("순서 저장 중...");
+  interestWatchlists = [...reordered, ...fixedGroups];
+  renderInterestWatchlists();
   try {
     applyInterestWatchlistPayload(
       await apiReorderInterestGroups(reordered.map(group => group.id))
     );
     setInterestStatus("");
   } catch (err) {
+    interestWatchlists = previous;
+    renderInterestWatchlists();
     setInterestStatus(err.message || String(err), true);
   } finally {
     interestGroupOrderSaving = false;
   }
+}
+
+function moveInterestGroup(groupId, direction) {
+  if (interestGroupOrderSaving) return;
+  const realGroups = interestWatchlists.filter(group => !group.fixed && group.id > 0);
+  const index = realGroups.findIndex(group => group.id === groupId);
+  const targetIndex = index + direction;
+  if (index < 0 || targetIndex < 0 || targetIndex >= realGroups.length) return;
+  const targetId = realGroups[targetIndex].id;
+  saveInterestGroupOrder(reorderedInterestGroups(groupId, targetId, direction > 0));
+}
+
+function clearInterestGroupDragState() {
+  const container = document.getElementById("interestGroups");
+  container?.querySelectorAll(".dragging, .drag-over-before, .drag-over-after").forEach(element => {
+    element.classList.remove("dragging", "drag-over-before", "drag-over-after");
+  });
+  draggedInterestGroupId = null;
+  interestDropTargetId = null;
+  interestDropAfter = false;
 }
 
 function interestBulkCandidates() {
@@ -335,7 +372,6 @@ function interestBaseRows() {
   if (!group) return [];
   const isFxGroup = interestGroupIsFx(group);
   const currencyFilter = isFxGroup ? "all" : currencyFilterValue();
-  const fxAdjusted = isFxGroup ? false : fxAdjustedEnabled();
   const held = interestHeldOnlyEnabled() ? heldTickerSet() : null;   // '보유종목만' 필터
   return group.items
     .filter(item => !held || held.has(String(item.ticker).toUpperCase()))
@@ -349,11 +385,18 @@ function interestBaseRows() {
       }, null);
       return {
         ...row,
-        display_change_pct: holdingChangePct(row, fxAdjusted),
+        display_change_pct: holdingChangePct(row),
         current_price_krw: holdingUnitKrw(row),
       };
     })
     .filter(row => currencyFilter === "all" || row.currency === currencyFilter);
+}
+
+function upcomingInterestEarningsDate(dateText, todayText = todayLocal()) {
+  const date = localDateFromIso(dateText);
+  const today = localDateFromIso(todayText);
+  if (!date || !today || date < today) return null;
+  return String(dateText).slice(0, 10);
 }
 
 function sortInterestRows(rows, group = activeInterestGroup()) {
@@ -365,6 +408,15 @@ function sortInterestRows(rows, group = activeInterestGroup()) {
   const { key, dir } = interestSortState;
   rows.sort((a, b) => {
     const av = a[key], bv = b[key];
+    if (key === "next_earnings_date" || key === "risk_reward_score") {
+      const aMissing = key === "next_earnings_date"
+        ? !av
+        : av == null || !Number.isFinite(Number(av));
+      const bMissing = key === "next_earnings_date"
+        ? !bv
+        : bv == null || !Number.isFinite(Number(bv));
+      if (aMissing !== bMissing) return aMissing ? 1 : -1;
+    }
     if (typeof av === "string" || typeof bv === "string") {
       return String(av ?? "").localeCompare(String(bv ?? ""), "ko-KR", { numeric: true, sensitivity: "base" }) * dir;
     }
@@ -390,13 +442,14 @@ const interestColumnWidths = {
   display_change_pct: 85,
   extended_change_pct: 71,
   current_price: 109,
-  next_earnings_date: 45,
   market_cap_usd: 76,
   dividend_yield: 54,
   dividend_growth_5y: 78,
   drawdown_52w: 72,
+  risk_reward_score: 58,
   beta: 42,
   beta_adj: 44,
+  next_earnings_date: 45,
   rsi_day: 48,
   rsi_week: 48,
   rsi_month: 48,
@@ -406,6 +459,23 @@ const interestColumnWidths = {
   trailing_pe: 62,
   forward_pe: 62,
   price_to_book: 44,
+  gross_margin: 72,
+  operating_margin: 72,
+  ebitda_margin: 68,
+  profit_margin: 72,
+  return_on_assets: 54,
+  return_on_equity: 54,
+  revenue_growth: 62,
+  earnings_growth: 62,
+  earnings_quarterly_growth: 72,
+  debt_to_equity: 70,
+  free_cash_flow: 76,
+  payout_ratio: 66,
+  short_percent_float: 72,
+  short_percent_shares: 72,
+  short_ratio: 60,
+  insider_ownership: 64,
+  institutional_ownership: 64,
   perf_1m: 64,
   perf_3m: 64,
   perf_6m: 64,
@@ -413,7 +483,6 @@ const interestColumnWidths = {
   perf_1y: 64,
   perf_3y: 64,
   perf_5y: 64,
-  sector: 72,
   target_price: 67,
   upside_pct: 61,
   dispersion_pct: 54,
@@ -422,7 +491,7 @@ const interestColumnWidths = {
 };
 
 const interestAlwaysVisibleFields = new Set(["display_change_pct", "current_price"]);
-const INTEREST_TABLE_COLUMN_COUNT = 35;
+const INTEREST_TABLE_COLUMN_COUNT = 52;
 
 function interestEmptyRow(message) {
   return `<tr class="interest-empty-row">${Array.from({ length: INTEREST_TABLE_COLUMN_COUNT }, (_, index) => {
@@ -433,7 +502,6 @@ function interestEmptyRow(message) {
 
 function hasInterestColumnValue(row, field) {
   if (field === "next_earnings_date") return Boolean(row[field]);
-  if (field === "sector") return Boolean(String(row[field] || "").trim());
   if (field === "rating_rank") return row[field] != null;
   if (field === "dividend_yield") return Number(row[field]) > 0;
   return row[field] != null && Number.isFinite(Number(row[field]));
@@ -508,7 +576,7 @@ function syncInterestSectorFilter(rows) {
   const control = document.getElementById("interestSectorControl");
   const button = document.getElementById("interestSectorButton");
   if (!control || !button) return;
-  const showing = interestModeActive();
+  const showing = interestModeActive() && !chartTicker && !performanceChartOpen;
   interestSectorOptions = [...new Set(rows.map(row => String(row.sector || "").trim()).filter(Boolean))]
     .sort((a, b) => sectorLabel(a).localeCompare(sectorLabel(b), "ko-KR"));
   [...interestSectorSelection].forEach(s => {
@@ -538,7 +606,12 @@ function renderInterestMainTable() {
     body.innerHTML = interestEmptyRow("선택할 관심그룹이 없습니다.");
     return;
   }
-  const baseRows = statsRows(interestBaseRows()).map(attachConsensus);
+  const baseRows = statsRows(interestBaseRows())
+    .map(row => ({
+      ...row,
+      next_earnings_date: upcomingInterestEarningsDate(row.next_earnings_date),
+    }))
+    .map(attachConsensus);
   syncInterestSectorFilter(baseRows);
   const rows = interestSectorSelection.size === 0
     ? baseRows
@@ -561,22 +634,26 @@ function renderInterestMainTable() {
         <span class="ticker-text">
           <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
             <span class="asset-name">${esc(r.name)}</span>
-            <span class="ticker-symbol">${esc(r.ticker)}</span>
+            <span class="interest-ticker-meta">
+              <span class="ticker-symbol">${esc(r.ticker)}</span>
+              ${r.sector ? `<span class="sector-chip" title="${esc(sectorLabel(r.sector))}">${esc(sectorLabel(r.sector))}</span>` : ""}
+            </span>
           </a>
         </span>
       </td>
       <td class="group-start">${changeMarkup(r)}</td>
       <td>${extendedChangeText(r) || "-"}</td>
       <td>${currentPriceMarkup(r)}</td>
-      <td class="group-start">${earningsText(r.next_earnings_date)}</td>
       <td class="group-start">${marketCapMarkup(r)}</td>
       <td>${Number(r.dividend_yield) > 0
         ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(r.ticker)}">${dividendYieldText(r.dividend_yield)}</button>`
         : dividendYieldText(r.dividend_yield)}</td>
       <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
       <td>${signedPercentText(r.drawdown_52w, 1)}</td>
+      <td>${riskRewardScoreText(r.risk_reward_score, r.risk_reward_short)}</td>
       <td>${betaText(r.beta)}</td>
       <td>${betaText(r.beta_adj)}</td>
+      <td class="group-start">${earningsText(r.next_earnings_date)}</td>
       <td class="group-start">${indicatorText(r.rsi_day, "rsi")}</td>
       <td>${indicatorText(r.rsi_week, "rsi")}</td>
       <td>${indicatorText(r.rsi_month, "rsi")}</td>
@@ -593,7 +670,23 @@ function renderInterestMainTable() {
       <td>${signedPercentText(r.perf_1y, 0)}</td>
       <td>${signedPercentText(r.perf_3y, 0)}</td>
       <td>${signedPercentText(r.perf_5y, 0)}</td>
-      <td class="group-start interest-sector-cell">${r.sector ? `<span class="sector-chip">${esc(sectorLabel(r.sector))}</span>` : "-"}</td>
+      <td class="group-start">${fractionPercentText(r.gross_margin)}</td>
+      <td>${fractionPercentText(r.operating_margin)}</td>
+      <td>${fractionPercentText(r.ebitda_margin)}</td>
+      <td>${fractionPercentText(r.profit_margin)}</td>
+      <td>${fractionPercentText(r.return_on_assets)}</td>
+      <td>${fractionPercentText(r.return_on_equity)}</td>
+      <td class="group-start">${fractionSignedPercentText(r.revenue_growth)}</td>
+      <td>${fractionSignedPercentText(r.earnings_growth)}</td>
+      <td>${fractionSignedPercentText(r.earnings_quarterly_growth)}</td>
+      <td class="group-start">${rawPercentText(r.debt_to_equity)}</td>
+      <td>${freeCashFlowText(r.free_cash_flow, r.financial_currency || r.currency)}</td>
+      <td class="group-start">${fractionPercentText(r.payout_ratio)}</td>
+      <td class="group-start">${fractionPercentText(r.short_percent_float)}</td>
+      <td>${fractionPercentText(r.short_percent_shares)}</td>
+      <td>${numberText(r.short_ratio, 1)}</td>
+      <td class="group-start">${fractionPercentText(r.insider_ownership)}</td>
+      <td>${fractionPercentText(r.institutional_ownership)}</td>
       <td class="group-start">${consensusPriceText(r.target_price, r.consensus_currency || r.currency)}</td>
       <td>${upsideText(r.upside_pct)}</td>
       <td>${dispersionText(r.dispersion_pct, quoteFor(r.ticker)?.dispersion_basis)}</td>
@@ -652,10 +745,18 @@ function initInterestWatchlists() {
 
   document.querySelectorAll("[data-sidebar-tab]").forEach(btn => {
     btn.addEventListener("click", () => {
-      activeSidebarTab = btn.dataset.sidebarTab === "interest" ? "interest" : "accounts";
+      const nextTab = btn.dataset.sidebarTab === "interest" ? "interest" : "accounts";
+      const mobile = window.matchMedia("(max-width: 980px)").matches;
+      // 모바일에서 현재 선택된 탭을 다시 누르면 화살표와 동일하게 접는다.
+      if (mobile && nextTab === activeSidebarTab && !mobileAccountsCollapsed) {
+        mobileAccountsCollapsed = true;
+        syncMobileCollapsePanels();
+        return;
+      }
+      activeSidebarTab = nextTab;
       storageSet(sidebarStorage.activeTab, activeSidebarTab);
       syncSidebarTabs();
-      if (window.matchMedia("(max-width: 980px)").matches && mobileAccountsCollapsed) {
+      if (mobile) {
         mobileAccountsCollapsed = false;
         syncMobileCollapsePanels();
       }
@@ -680,12 +781,65 @@ function initInterestWatchlists() {
     input.value = "";
   });
 
-  document.getElementById("interestGroups")?.addEventListener("click", event => {
-    const move = event.target.closest("[data-interest-move]");
-    if (move) {
-      moveInterestGroup(Number(move.dataset.interestMove), Number(move.dataset.direction));
+  const interestGroupsElement = document.getElementById("interestGroups");
+  interestGroupsElement?.addEventListener("dragstart", event => {
+    const handle = event.target.closest("[data-interest-drag]");
+    if (!handle || interestGroupOrderSaving) {
+      event.preventDefault();
       return;
     }
+    draggedInterestGroupId = Number(handle.dataset.interestDrag);
+    handle.closest(".interest-group")?.classList.add("dragging");
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(draggedInterestGroupId));
+  });
+
+  interestGroupsElement?.addEventListener("dragover", event => {
+    if (draggedInterestGroupId == null) return;
+    const target = event.target.closest(".interest-group:not(.fixed)");
+    interestGroupsElement.querySelectorAll(".drag-over-before, .drag-over-after").forEach(element => {
+      element.classList.remove("drag-over-before", "drag-over-after");
+    });
+    const targetId = Number(target?.dataset.interestGroup);
+    if (!targetId || targetId === draggedInterestGroupId) {
+      interestDropTargetId = null;
+      interestDropAfter = false;
+      return;
+    }
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    const rect = target.getBoundingClientRect();
+    interestDropAfter = event.clientY >= rect.top + rect.height / 2;
+    interestDropTargetId = targetId;
+    target.classList.add(interestDropAfter ? "drag-over-after" : "drag-over-before");
+  });
+
+  interestGroupsElement?.addEventListener("drop", event => {
+    const targetId = Number(event.target.closest(".interest-group:not(.fixed)")?.dataset.interestGroup);
+    if (draggedInterestGroupId == null || interestDropTargetId == null || targetId !== interestDropTargetId) {
+      clearInterestGroupDragState();
+      return;
+    }
+    event.preventDefault();
+    const reordered = reorderedInterestGroups(
+      draggedInterestGroupId,
+      interestDropTargetId,
+      interestDropAfter,
+    );
+    clearInterestGroupDragState();
+    saveInterestGroupOrder(reordered);
+  });
+
+  interestGroupsElement?.addEventListener("dragend", clearInterestGroupDragState);
+
+  interestGroupsElement?.addEventListener("keydown", event => {
+    const handle = event.target.closest("[data-interest-drag]");
+    if (!handle || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
+    event.preventDefault();
+    moveInterestGroup(Number(handle.dataset.interestDrag), event.key === "ArrowUp" ? -1 : 1);
+  });
+
+  interestGroupsElement?.addEventListener("click", event => {
     const select = event.target.closest("[data-interest-select]");
     if (select) {
       const nextGroupId = Number(select.dataset.interestSelect);

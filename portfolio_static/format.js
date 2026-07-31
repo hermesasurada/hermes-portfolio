@@ -85,9 +85,6 @@ function tradeQtyText(qty, ticker = "") {
   if (!Number.isFinite(n)) return "-";
   return String(ticker).toUpperCase() === "BTC" ? btcQtyFmt.format(n) : fmt2.format(n);
 }
-function unitKrw(v) {
-  return Number.isFinite(v) ? `${fmt.format(v)}원` : '<span class="missing">조회불가</span>';
-}
 // 환율 행: 시세가 곧 "원/외화 1단위" → 통화기호·KRW환산 없이 원 단위로만 표기.
 function fxRateText(v) {
   const n = Number(v);
@@ -97,11 +94,7 @@ function fxRateText(v) {
 function currentPriceMarkup(row) {
   if (row.current_price == null) return '<span class="missing">조회불가</span>';
   if (row.category === "fx") return fxRateText(row.current_price);
-  const local = unitMoney(row.current_price, row.currency, row.ticker);
-  if (row.category === "index") return local;
-  // KRW 종목·환산 불가 시엔 현지가 한 줄만 (이전엔 별도 컬럼이라 따로 보였음)
-  if (row.currency === "KRW" || !Number.isFinite(row.current_price_krw)) return local;
-  return `<span class="price-cell"><span>${local}</span><span class="krw-sub">(${unitKrw(row.current_price_krw)})</span></span>`;
+  return unitMoney(row.current_price, row.currency, row.ticker);
 }
 function valueMarkup(row) {
   if (row.value == null) return '<span class="missing">조회불가</span>';
@@ -161,6 +154,23 @@ function signedPercentText(v, digits = 2) {
   const arrow = n > 0 ? "▲" : n < 0 ? "▼" : "→";
   return `<span class="${cls}"><span aria-hidden="true">${arrow}</span>${Math.abs(n).toLocaleString("ko-KR", { maximumFractionDigits: digits })}%</span>`;
 }
+function fractionPercentText(v, digits = 1) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "-";
+  return `${(n * 100).toLocaleString("ko-KR", { maximumFractionDigits: digits })}%`;
+}
+function fractionSignedPercentText(v, digits = 1) {
+  const n = Number(v);
+  return Number.isFinite(n) ? signedPercentText(n * 100, digits) : "-";
+}
+function rawPercentText(v, digits = 1) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "-";
+  return `${n.toLocaleString("ko-KR", { maximumFractionDigits: digits })}%`;
+}
+function freeCashFlowText(v, currency) {
+  return marketCapText(v, currency);
+}
 function dividendYieldText(v) {
   if (v == null || !Number.isFinite(Number(v)) || Number(v) === 0) return "-";
   return `${fmt2.format(Number(v))}%`;
@@ -200,6 +210,16 @@ function peText(v) {
 }
 function betaText(v) {
   return v != null && Number.isFinite(Number(v)) ? Number(v).toFixed(2) : "-";
+}
+/* 손익비 산식은 서버(portfolio_core/risk_reward.py)가 단일 진실 —
+   /api/stats 응답의 risk_reward_score·risk_reward_short를 표시만 한다. */
+function riskRewardScoreText(v, shortHistory) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "-";
+  const cls = n > 0 ? "up" : n < 0 ? "down" : "flat";
+  const sign = n > 0 ? "+" : "";
+  const mark = shortHistory ? `<small class="history-growth-basis" title="상장 이력이 짧아 3년 이하 수익률로 산출">*</small>` : "";
+  return `<span class="${cls}">${sign}${n.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}${mark}</span>`;
 }
 function indicatorToneAttr(v, kind) {
   const n = Number(v);

@@ -15,6 +15,8 @@ function statsRows(rows) {
       aum: isEtf ? stats.aum : null,
       dividend_yield: isIndex ? null : stats.dividend_yield,
       dividend_growth_5y: isIndex ? null : stats.dividend_growth_5y,
+      risk_reward_score: stats.risk_reward_score,
+      risk_reward_short: stats.risk_reward_short,
       beta: stats.beta,
       beta_adj: stats.beta_adj,
       next_earnings_date: stats.next_earnings_date || row.next_earnings_date || null,
@@ -27,6 +29,24 @@ function statsRows(rows) {
       trailing_pe: hideFundamentals ? null : stats.trailing_pe,
       forward_pe: hideFundamentals ? null : stats.forward_pe,
       price_to_book: hideFundamentals ? null : stats.price_to_book,
+      gross_margin: hideFundamentals ? null : stats.gross_margin,
+      operating_margin: hideFundamentals ? null : stats.operating_margin,
+      ebitda_margin: hideFundamentals ? null : stats.ebitda_margin,
+      profit_margin: hideFundamentals ? null : stats.profit_margin,
+      return_on_assets: hideFundamentals ? null : stats.return_on_assets,
+      return_on_equity: hideFundamentals ? null : stats.return_on_equity,
+      revenue_growth: hideFundamentals ? null : stats.revenue_growth,
+      earnings_growth: hideFundamentals ? null : stats.earnings_growth,
+      earnings_quarterly_growth: hideFundamentals ? null : stats.earnings_quarterly_growth,
+      debt_to_equity: hideFundamentals ? null : stats.debt_to_equity,
+      free_cash_flow: hideFundamentals ? null : stats.free_cash_flow,
+      financial_currency: hideFundamentals ? null : stats.financial_currency,
+      payout_ratio: hideFundamentals ? null : stats.payout_ratio,
+      short_percent_float: hideFundamentals ? null : stats.short_percent_float,
+      short_percent_shares: hideFundamentals ? null : stats.short_percent_shares,
+      short_ratio: hideFundamentals ? null : stats.short_ratio,
+      insider_ownership: hideFundamentals ? null : stats.insider_ownership,
+      institutional_ownership: hideFundamentals ? null : stats.institutional_ownership,
       drawdown_52w: stats.drawdown_52w,
       perf_1m: perf.one_month,
       perf_3m: perf.three_month,
@@ -46,19 +66,28 @@ function hasMissingTechnicalStats(stats) {
   return ["day", "week", "month"].some(key => !Number.isFinite(Number(rsi[key])) || !Number.isFinite(Number(bb[key])));
 }
 
+function resetStatsForPriceMode() {
+  statsData = {};
+  statsFetchedTickers = new Set();
+  statsLoadKey = "";
+  chartStatsLoadKey = "";
+}
+
 async function loadStatsForRows(rows) {
   const tickers = Array.from(new Set(rows.map(row => row.ticker).filter(Boolean))).sort();
   const missing = tickers.filter(ticker => !statsData[ticker] || (!statsFetchedTickers.has(ticker) && hasMissingTechnicalStats(statsData[ticker])));
-  const key = missing.join(",");
+  const extendedMode = usExtendedEnabled();
+  const key = `${extendedMode ? "extended" : "regular"}:${missing.join(",")}`;
   if (!missing.length || statsLoadKey === key || statsInFlight) return;
   statsLoadKey = key;
   // 관심목록은 통계가 표의 본체라 스켈레톤/에러를 tbody에 직접 그린다.
   // 세부내역은 보유 데이터가 이미 그려져 있으므로 표를 덮지 않는다(통계탭
   // 제거 후 죽은 #statsRows에 에러가 그려져 안 보이던 회귀 수정).
   const target = interestModeActive() ? document.getElementById("interestRows") : null;
-  if (target && !target.children.length) target.innerHTML = skeletonRows(28);
+  if (target && !target.children.length) target.innerHTML = skeletonRows(INTEREST_TABLE_COLUMN_COUNT);
   statsInFlight = (async () => {
-    const payload = await apiFetchStats(missing);
+    const payload = await apiFetchStats(missing, extendedMode);
+    if (usExtendedEnabled() !== extendedMode) return;
     statsData = { ...statsData, ...(payload.stats || {}) };
     missing.forEach(ticker => statsFetchedTickers.add(ticker));
   })();
@@ -73,7 +102,7 @@ async function loadStatsForRows(rows) {
     failed = true;
     statsLoadKey = "";
     const message = `통계 조회 실패: ${err.message || String(err)}`;
-    if (target) target.innerHTML = `<tr><td colspan="28">${esc(message)}</td></tr>`;
+    if (target) target.innerHTML = `<tr><td colspan="${INTEREST_TABLE_COLUMN_COUNT}">${esc(message)}</td></tr>`;
     else if (window.__bootBanner) window.__bootBanner(message);
   } finally {
     statsInFlight = null;
@@ -97,13 +126,13 @@ async function loadDividendsForSelection() {
   dividendLoadKey = key;
   const accounts = visibleAccounts();
   const allAccounts = selectionMode === "all";
-  document.getElementById("dividendRows").innerHTML = skeletonRows(12);
+  document.getElementById("dividendRows").innerHTML = skeletonRows(15);
   dividendInFlight = apiFetchDividends(accounts.map(account => account.id), allAccounts);
   try {
     dividendData = await dividendInFlight;
     renderDividendTable();
   } catch (err) {
-    document.getElementById("dividendRows").innerHTML = `<tr><td colspan="12">${esc(err.message || String(err))}</td></tr>`;
+    document.getElementById("dividendRows").innerHTML = `<tr><td colspan="15">${esc(err.message || String(err))}</td></tr>`;
   } finally {
     dividendInFlight = null;
   }
@@ -116,7 +145,7 @@ function renderDividendTable() {
   }
   const rows = [...(dividendData.rows || [])];
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
-  const empty = `<tr><td colspan="12" class="flat">예정 배당 없음</td></tr>`;
+  const empty = `<tr><td colspan="15" class="flat">예정 배당 없음</td></tr>`;
   const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : "confirmed-date"}">${dividendDateText(value)}</span>`;
   const targetInitial = value => {
     const match = String(value || "").match(/[A-Za-z]/);
@@ -139,12 +168,43 @@ function renderDividendTable() {
   const boundaryPaidState = (sortState.dividend?.dir || 1) < 0;
   const hasPaid = rows.some(row => payDateValue(row) && payDateValue(row) <= today);
   const hasUpcoming = rows.some(row => payDateValue(row) > today);
-  let todayBoundaryInserted = false;
-  document.getElementById("dividendRows").innerHTML = rows.length ? groupedDividendRows(rows).map(item => {
+  const groupedRows = groupedDividendRows(rows);
+  if (dateSort && hasPaid && hasUpcoming) {
+    const targetIndex = groupedRows.findIndex(item => {
+      if (item.kind !== "row") return false;
+      const payDate = payDateValue(item.row);
+      return Boolean(payDate) && (payDate <= today) === boundaryPaidState;
+    });
+    if (targetIndex >= 0) {
+      const target = groupedRows[targetIndex];
+      const previous = groupedRows[targetIndex - 1];
+      const currentMonth = today.slice(0, 7);
+      // 경계 대상이 다음/이전 달의 첫 행이면 해당 월 헤더보다 먼저 넣어
+      // '오늘' 표식이 잘못된 달 섹션 안으로 들어가지 않게 한다.
+      const insertIndex = previous?.kind === "month" && target.monthKey !== currentMonth
+        ? targetIndex - 1
+        : targetIndex;
+      groupedRows.splice(insertIndex, 0, { kind: "today" });
+    }
+  }
+  const [todayYear, todayMonth, todayDay] = today.split("-").map(Number);
+  const todayLabel = `${todayMonth}월 ${todayDay}일`;
+  document.getElementById("dividendRows").innerHTML = rows.length ? groupedRows.map(item => {
+    if (item.kind === "today") return `
+      <tr class="dividend-today-row">
+        <td colspan="15">
+          <span class="dividend-today-marker">
+            <span class="dividend-today-dot" aria-hidden="true"></span>
+            <strong>오늘</strong>
+            <time datetime="${todayYear}-${String(todayMonth).padStart(2, "0")}-${String(todayDay).padStart(2, "0")}">${todayLabel}</time>
+          </span>
+        </td>
+      </tr>
+    `;
     const collapsed = item.kind === "month" && collapsedDividendMonths.has(item.key);
     if (item.kind === "month") return `
     <tr class="dividend-month-row ${collapsed ? "collapsed" : ""}" data-month="${esc(item.key)}">
-      <td colspan="12">
+      <td colspan="15">
         <div class="dividend-month-summary">
           <button class="dividend-month-toggle" type="button" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${collapsed ? "월별 배당 펼치기" : "월별 배당 접기"}"></button>
           <span>${esc(item.label)}</span>
@@ -155,21 +215,7 @@ function renderDividendTable() {
   `;
     if (collapsedDividendMonths.has(item.monthKey)) return "";
     const paid = Boolean(payDateValue(item.row) && payDateValue(item.row) <= today);
-    const showTodayBoundary = dateSort
-      && hasPaid
-      && hasUpcoming
-      && !todayBoundaryInserted
-      && paid === boundaryPaidState;
-    if (showTodayBoundary) todayBoundaryInserted = true;
-    const todayBoundary = showTodayBoundary ? `
-      <tr class="dividend-today-row">
-        <td colspan="12">
-          <span class="dividend-today-marker">오늘 ${dividendDateText(today)}</span>
-        </td>
-      </tr>
-    ` : "";
     return `
-    ${todayBoundary}
     <tr class="${paid ? "dividend-paid-row" : "dividend-upcoming-row"}">
       <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
       <td class="dividend-target" title="${esc(item.row.target || item.row.member || "-")}"><span class="dividend-target-icon" aria-label="${esc(item.row.target || item.row.member || "-")}">${esc(targetInitial(item.row.target || item.row.member))}</span></td>
@@ -182,6 +228,9 @@ function renderDividendTable() {
       <td class="net-dividend">${dividendMoneyText(item.row.net, item.row.currency)}</td>
       <td class="fx-rate">${dividendFxText(item.row.fx_rate)}</td>
       <td class="net-krw">${dividendKrwText(item.row.net_krw)}</td>
+      <td class="dividend-yield">${dividendYieldText(item.row.dividend_yield)}</td>
+      <td class="dividend-growth">${signedPercentText(item.row.dividend_growth_5y, 1)}</td>
+      <td class="dividend-ex-date">${dateCell(item.row.ex_date, item.row.ex_date_estimated)}</td>
       <td class="dividend-detail-cell"><button class="ghost-btn dividend-detail-btn" type="button" data-dividend-history="${esc(item.row.ticker)}">상세</button></td>
     </tr>
   `;
@@ -211,13 +260,18 @@ function dividendHistoryPercent(value) {
 let dividendHistoryCollapseKey = "";
 let collapsedDividendHistoryYears = new Set();
 
+function dividendHistoryYearCollapsible(row) {
+  return Number(row?.expected_payments) !== 1;
+}
+
 function initDividendHistoryCollapsedYears(payload, rows) {
-  const key = `${payload.ticker || ""}:${rows.map(row => row.year).join(",")}`;
+  const key = `${payload.ticker || ""}:${rows.map(row => `${row.year}:${row.expected_payments}`).join(",")}`;
   if (dividendHistoryCollapseKey === key) return;
   dividendHistoryCollapseKey = key;
   const cutoffYear = new Date().getFullYear() - 5;
   collapsedDividendHistoryYears = new Set(
     rows
+      .filter(dividendHistoryYearCollapsible)
       .map(row => Number(row.year))
       .filter(year => Number.isFinite(year) && year <= cutoffYear)
       .map(String)
@@ -274,14 +328,21 @@ function renderDividendHistory(payload) {
               ? row.payments_detail
               : [null];
             const yearKey = String(row.year);
-            const collapsed = collapsedDividendHistoryYears.has(yearKey);
+            const rowCollapsible = dividendHistoryYearCollapsible(row);
+            const collapsed = rowCollapsible && collapsedDividendHistoryYears.has(yearKey);
             const detailCount = row.payments_detail?.length || 0;
             const toggleLabel = `${row.year}년 배당 상세 ${collapsed ? "펼치기" : "접기"}`;
             const yearCell = `
-              <td class="history-year-cell" data-dividend-history-year="${esc(yearKey)}" aria-label="${esc(toggleLabel)}">
-                <button class="history-year-toggle" type="button" data-dividend-history-year="${esc(yearKey)}" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${esc(toggleLabel)}">
-                  <span class="history-year-chevron" aria-hidden="true">${collapsed ? "›" : "⌄"}</span>
-                </button>
+              <td class="history-year-cell${rowCollapsible ? "" : " history-year-static"}"${
+                rowCollapsible
+                  ? ` data-dividend-history-year="${esc(yearKey)}" aria-label="${esc(toggleLabel)}"`
+                  : ""
+              }>
+                ${rowCollapsible ? `
+                  <button class="history-year-toggle" type="button" data-dividend-history-year="${esc(yearKey)}" aria-expanded="${collapsed ? "false" : "true"}" aria-label="${esc(toggleLabel)}">
+                    <span class="history-year-chevron" aria-hidden="true">${collapsed ? "›" : "⌄"}</span>
+                  </button>
+                ` : ""}
                 <span class="history-year-anchor">
                   <strong>${row.year}</strong>
                   ${row.current_ytd ? `<span class="history-ytd">YTD</span>` : ""}
@@ -351,15 +412,17 @@ function renderDividendHistory(payload) {
       </div>
     </div>
   `;
-  body.querySelector(".dividend-history-table")?.addEventListener("click", event => {
-    const target = event.target.closest("[data-dividend-history-year]");
-    if (!target) return;
-    const year = target.dataset.dividendHistoryYear;
-    if (!year) return;
-    if (collapsedDividendHistoryYears.has(year)) collapsedDividendHistoryYears.delete(year);
-    else collapsedDividendHistoryYears.add(year);
-    renderDividendHistory(payload);
-  });
+  if (rows.some(dividendHistoryYearCollapsible)) {
+    body.querySelector(".dividend-history-table")?.addEventListener("click", event => {
+      const target = event.target.closest("[data-dividend-history-year]");
+      if (!target) return;
+      const year = target.dataset.dividendHistoryYear;
+      if (!year) return;
+      if (collapsedDividendHistoryYears.has(year)) collapsedDividendHistoryYears.delete(year);
+      else collapsedDividendHistoryYears.add(year);
+      renderDividendHistory(payload);
+    });
+  }
 }
 
 async function openDividendHistory(ticker) {

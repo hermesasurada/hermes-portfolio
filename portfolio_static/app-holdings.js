@@ -30,27 +30,7 @@ function accountGroupKey(account) {
   if (type === "pension_kr" || type === "retirement_kr") return "pension";
   return type;
 }
-function portfolioKstHour() {
-  const asOfMatch = String(data?.as_of || "").match(/T(\d{2}):/);
-  if (asOfMatch) return Number(asOfMatch[1]);
-  const hourPart = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Seoul",
-    hour: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date()).find(part => part.type === "hour");
-  return Number(hourPart?.value || 0);
-}
-function defaultAccountTypesForHour(hour) {
-  const types = new Set(["bitcoin"]);
-  if (hour >= 17 || hour < 8) types.add("overseas");
-  if (hour >= 8 && hour < 17) {
-    types.add("kr_individual");
-    types.add("pension_kr");
-    types.add("retirement_kr");
-  }
-  return types;
-}
-// 실제 현재 KST 요일·시각 (갱신·계좌 기본값의 주말 구간 판정 공용).
+// 실제 현재 KST 요일·시각 — 자동갱신의 주말 정적 구간 판정에만 사용한다.
 function kstWeekdayHour() {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Seoul",
@@ -63,7 +43,6 @@ function kstWeekdayHour() {
     hour: Number(parts.find(part => part.type === "hour")?.value || 0),
   };
 }
-// 시장이 닫혀 있는 주말 정적 구간: 토 06:00 ~ 월 08:00 (KST).
 function isWeekendQuietWindow() {
   const { weekday, hour } = kstWeekdayHour();
   if (weekday === "Sat") return hour >= 6;
@@ -71,23 +50,35 @@ function isWeekendQuietWindow() {
   if (weekday === "Mon") return hour < 8;
   return false;
 }
-function applyTimeBasedDefaultAccountSelection() {
-  if (defaultAccountSelectionApplied || !data) return;
-  // 주말 정적 구간엔 시간대별 필터 없이 전체 계좌 선택.
-  if (isWeekendQuietWindow()) {
+function saveAccountSelection() {
+  storageSet(accountSelectionStorage.state, JSON.stringify({
+    mode: selectionMode,
+    accountIds: selectionMode === "all" ? [] : Array.from(selectedAccounts).sort(),
+  }));
+}
+function restoreAccountSelection() {
+  if (accountSelectionRestored || !data) return;
+  accountSelectionRestored = true;
+  const saved = storageGet(accountSelectionStorage.state);
+  if (!saved) return;
+  try {
+    const parsed = JSON.parse(saved);
+    if (parsed?.mode !== "custom" || !Array.isArray(parsed.accountIds)) {
+      selectionMode = "all";
+      selectedAccounts.clear();
+      return;
+    }
+    const validIds = new Set(flattenAccounts().map(account => String(account.id)));
+    selectedAccounts = new Set(
+      parsed.accountIds
+        .map(id => String(id))
+        .filter(id => validIds.has(id))
+    );
+    selectionMode = "custom";
+  } catch {
     selectionMode = "all";
-    selectedAccounts = new Set();
-    defaultAccountSelectionApplied = true;
-    return;
+    selectedAccounts.clear();
   }
-  const accountTypes = defaultAccountTypesForHour(portfolioKstHour());
-  selectedAccounts = new Set(
-    flattenAccounts()
-      .filter(account => accountTypes.has(account.type) && !isHenryOverseasAccount(account))
-      .map(account => account.id)
-  );
-  selectionMode = "custom";
-  defaultAccountSelectionApplied = true;
 }
 function isAccountSelected(id) {
   return selectionMode === "all" || selectedAccounts.has(id);
@@ -124,30 +115,46 @@ function performanceDetailEnabled() {
 function currencyFilterValue() {
   return document.getElementById("currencyFilter")?.value || "all";
 }
-function holdingChangePct(row, fxAdjusted = fxAdjustedEnabled()) {
-  if (fxAdjusted && row.currency !== "KRW" && Number.isFinite(row.change_krw_pct)) return row.change_krw_pct;
+function holdingChangePct(row) {
   return Number.isFinite(row.change_pct) ? row.change_pct : null;
 }
+function optionalNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+function holdingChangeBasePrice(row) {
+  const currentPrice = optionalNumber(row.current_price);
+  const extendedPrice = optionalNumber(row.extended_price);
+  const extendedBasePrice = optionalNumber(row.extended_base_price);
+  if (
+    data?.us_market?.include_extended &&
+    currentPrice !== null &&
+    extendedPrice !== null &&
+    extendedBasePrice !== null &&
+    currentPrice === extendedPrice
+  ) {
+    return extendedBasePrice;
+  }
+  return optionalNumber(row.regular_previous_price) ?? optionalNumber(row.previous_price);
+}
 function holdingChangeKrw(row, fxAdjusted = fxAdjustedEnabled()) {
+  const qty = optionalNumber(row.qty);
+  const currentPrice = optionalNumber(row.current_price);
+  const previousPrice = holdingChangeBasePrice(row);
+  if (
+    qty === null ||
+    currentPrice === null ||
+    previousPrice === null
+  ) return null;
+  const rate = krwRate(row);
   if (fxAdjusted && row.currency !== "KRW") {
-    const qty = Number(row.qty);
-    const valueKrw = Number(row.value_krw);
-    const previousPrice = Number(row.previous_price);
-    const previousFxRate = Number(row.previous_fx_rate);
-    if (
-      Number.isFinite(qty) &&
-      Number.isFinite(valueKrw) &&
-      Number.isFinite(previousPrice) &&
-      Number.isFinite(previousFxRate)
-    ) {
-      return valueKrw - qty * previousPrice * previousFxRate;
+    const previousFxRate = optionalNumber(row.previous_fx_rate);
+    if (previousFxRate !== null) {
+      return qty * (currentPrice * rate - previousPrice * previousFxRate);
     }
   }
-  const change = Number(row.change);
-  const qty = Number(row.qty);
-  if (!Number.isFinite(change) || !Number.isFinite(qty)) return null;
-  const rate = krwRate(row);
-  return qty * change * rate;
+  return qty * (currentPrice - previousPrice) * rate;
 }
 function holdingUnitKrw(row) {
   const price = Number(row.current_price);
@@ -410,6 +417,108 @@ function syncMobileCollapsePanels() {
 const priceFlashMap = new Map();
 
 // ── 히어로 요약 (총 평가액 + 오늘 손익) ──
+let heroSummaryPage = storageGet(heroSummaryStorage.page) === "indexes" ? "indexes" : "portfolio";
+
+function toggleHeroSummaryPage() {
+  heroSummaryPage = heroSummaryPage === "portfolio" ? "indexes" : "portfolio";
+  storageSet(heroSummaryStorage.page, heroSummaryPage);
+  renderHeroSummaryPage();
+}
+
+function renderHeroSummaryPage() {
+  const portfolioPage = document.getElementById("heroPortfolioPage");
+  const indexPage = document.getElementById("heroIndexPage");
+  if (!portfolioPage || !indexPage) return;
+  const showIndexes = heroSummaryPage === "indexes";
+  portfolioPage.classList.toggle("hidden", showIndexes);
+  indexPage.classList.toggle("hidden", !showIndexes);
+  portfolioPage.setAttribute("aria-hidden", String(showIndexes));
+  indexPage.setAttribute("aria-hidden", String(!showIndexes));
+
+  const nextLabel = showIndexes ? "계좌 요약 보기" : "주요 지수 보기";
+  [document.getElementById("heroPrev"), document.getElementById("heroNext")].forEach(button => {
+    if (!button) return;
+    const direction = button.id === "heroPrev" ? "이전" : "다음";
+    button.title = `${direction} 요약 · ${nextLabel}`;
+    button.setAttribute("aria-label", `${direction} 요약 · ${nextLabel}`);
+  });
+
+  if (!showIndexes) return;
+  const asOfEl = document.getElementById("heroIndexAsOf");
+  if (asOfEl) {
+    const updated = String(data?.price_updated_at || "").trim();
+    asOfEl.textContent = updated ? `주요 지수 · ${updated} 기준` : "주요 지수 · 현재 기준";
+  }
+  document.querySelectorAll("[data-hero-index]").forEach(item => {
+    const ticker = item.dataset.heroIndex;
+    const meta = findTickerMeta(ticker);
+    const price = meta?.current_price == null ? null : Number(meta.current_price);
+    const changePct = meta?.change_pct == null ? null : Number(meta.change_pct);
+    const valueEl = item.querySelector(".hero-index-value");
+    const changeEl = item.querySelector(".hero-index-change");
+    const priceFormatter = ticker === "SP500" || ticker === "NASDAQ" ? fmt1 : fmt2;
+    if (valueEl) valueEl.textContent = Number.isFinite(price) ? priceFormatter.format(price) : "조회불가";
+    if (!changeEl) return;
+    const cls = changePct > 0 ? "up" : changePct < 0 ? "down" : "flat";
+    const arrow = changePct > 0 ? "▲" : changePct < 0 ? "▼" : "→";
+    changeEl.className = `hero-index-change ${cls}`;
+    changeEl.textContent = Number.isFinite(changePct)
+      ? `${arrow} ${changePct > 0 ? "+" : changePct < 0 ? "−" : ""}${fmt2.format(Math.abs(changePct))}%`
+      : "-";
+  });
+}
+
+function initHeroSummaryCarousel() {
+  [document.getElementById("heroPrev"), document.getElementById("heroNext")].forEach(button => {
+    button?.addEventListener("click", toggleHeroSummaryPage);
+  });
+
+  const shell = document.getElementById("heroPageShell");
+  if (shell) {
+    let dragStart = null;
+    const clearDrag = () => { dragStart = null; };
+
+    shell.addEventListener("pointerdown", event => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      dragStart = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+      shell.setPointerCapture?.(event.pointerId);
+      if (event.pointerType === "mouse") event.preventDefault();
+    });
+    shell.addEventListener("pointerup", event => {
+      if (!dragStart || dragStart.pointerId !== event.pointerId) return;
+      const deltaX = event.clientX - dragStart.x;
+      const deltaY = event.clientY - dragStart.y;
+      clearDrag();
+      if (Math.abs(deltaX) >= 36 && Math.abs(deltaX) > Math.abs(deltaY) * 1.15) {
+        toggleHeroSummaryPage();
+      }
+    });
+    shell.addEventListener("pointercancel", clearDrag);
+
+    let wheelDistance = 0;
+    let wheelLocked = false;
+    let wheelResetTimer = null;
+    shell.addEventListener("wheel", event => {
+      const horizontal = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
+      if (!horizontal) return;
+      event.preventDefault();
+      window.clearTimeout(wheelResetTimer);
+      if (!wheelLocked) {
+        wheelDistance += event.shiftKey ? event.deltaY : event.deltaX;
+        if (Math.abs(wheelDistance) >= 32) {
+          toggleHeroSummaryPage();
+          wheelLocked = true;
+        }
+      }
+      wheelResetTimer = window.setTimeout(() => {
+        wheelDistance = 0;
+        wheelLocked = false;
+      }, 180);
+    }, { passive: false });
+  }
+  renderHeroSummaryPage();
+}
+
 // 값은 renderAccounts와 동일 기준(보유분 고정, 표 필터 무관)으로 현재 선택 계좌 합계.
 function updateHeroSummary(byAccount, totalStats, accounts) {
   const valueEl = document.getElementById("heroValue");
@@ -444,6 +553,7 @@ function updateHeroSummary(byAccount, totalStats, accounts) {
   changeEl.textContent = `${arrow} ${krw(Math.abs(change))}${
     pct == null ? "" : ` · ${pct > 0 ? "+" : pct < 0 ? "−" : ""}${fmt2.format(Math.abs(pct))}%`
   }`;
+  renderHeroSummaryPage();
 }
 
 function renderAccounts() {
@@ -538,6 +648,7 @@ function renderAccounts() {
         }
       }
       normalizeSelection(accounts);
+      saveAccountSelection();
       render();
       if (performanceChartOpen) openPerformanceChart();
       loadTransactions().catch(showTradeError);
@@ -557,6 +668,7 @@ function renderAccounts() {
         else selectedAccounts.add(id);
       });
       normalizeSelection(accounts);
+      saveAccountSelection();
       render();
       if (performanceChartOpen) openPerformanceChart();
       loadTransactions().catch(showTradeError);
@@ -578,7 +690,7 @@ function filteredRows(options = {}) {
   }
   const enrichRows = sourceRows => sourceRows.map(row => ({
       ...row,
-      display_change_pct: holdingChangePct(row, fxAdjusted),
+      display_change_pct: holdingChangePct(row),
       change_krw: holdingChangeKrw(row, fxAdjusted),
       current_price_krw: holdingUnitKrw(row),
       next_earnings_date: row.next_earnings_date || null
@@ -600,6 +712,11 @@ function sortRows(rows, tab = activeDetailTab) {
   const state = sortState[tab] || sortState.detail;
   rows.sort((a, b) => {
     const av = a[state.key], bv = b[state.key];
+    if (state.key === "risk_reward_score") {
+      const aMissing = av == null || !Number.isFinite(Number(av));
+      const bMissing = bv == null || !Number.isFinite(Number(bv));
+      if (aMissing !== bMissing) return aMissing ? 1 : -1;
+    }
     if (typeof av === "string" || typeof bv === "string") {
       return String(av ?? "").localeCompare(String(bv ?? ""), "ko-KR", { numeric: true, sensitivity: "base" }) * state.dir;
     }
@@ -651,6 +768,13 @@ function syncDetailTabs() {
   document.getElementById("showIndexesControl")?.classList.toggle("hidden", showingChart || showingInterest);
   // '보유종목만' 필터는 관심목록 페이지에서만 노출(환율 그룹 제외 — FX는 보유개념 없음)
   document.getElementById("interestHeldControl")?.classList.toggle("hidden", !showingInterest || showingFxInterest);
+  const sectorControl = document.getElementById("interestSectorControl");
+  if (showingChart) {
+    sectorControl?.classList.add("hidden");
+    closeInterestSectorPanel();
+  }
+  document.getElementById("chartNameEdit")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
+  if (!chartTicker || performanceChartOpen) closeChartNameEditor();
   // '기타'(자동 분류 가상 그룹)는 직접 추가 불가 → 추가 폼 숨김
   document.getElementById("interestMainItemForm")?.classList.toggle(
     "hidden",
@@ -800,6 +924,7 @@ function renderTable() {
       <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
       <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
       <td class="group-start">${signedPercentText(r.drawdown_52w, 1)}</td>
+      <td>${riskRewardScoreText(r.risk_reward_score, r.risk_reward_short)}</td>
       <td>${betaText(r.beta)}</td>
       <td>${betaText(r.beta_adj)}</td>
       <td class="group-start">${indicatorText(r.rsi_day, "rsi")}</td>
