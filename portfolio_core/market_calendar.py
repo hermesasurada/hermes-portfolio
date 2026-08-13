@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta
 
-from .paths import US_EASTERN
+from .dates import parse_iso_date
+from .paths import KST, US_EASTERN
 
 
 def _nth_weekday(year: int, month: int, weekday: int, nth: int) -> date:
@@ -76,6 +77,87 @@ def us_equity_calendar_day(day: date) -> dict:
     if day.weekday() >= 5:
         return {"status": "closed", "reason": "Weekend", "early_close_time": None}
     return {"status": "open", "reason": None, "early_close_time": None}
+
+
+def _japanese_equinox_day(year: int, spring: bool) -> int:
+    """2000~2099년 일본 춘분·추분일 근사식(일본 공휴일 산식)."""
+    base = 20.8431 if spring else 23.2488
+    return int(base + 0.242194 * (year - 1980) - int((year - 1980) / 4))
+
+
+def japan_equity_calendar_day(day: date) -> dict:
+    """도쿄증권거래소 휴장일. 주말·국경일·대체휴일·연말연시를 포함한다."""
+    year = day.year
+    holidays: dict[date, str] = {
+        date(year, 1, 1): "신정",
+        date(year, 1, 2): "연말연시",
+        date(year, 1, 3): "연말연시",
+        _nth_weekday(year, 1, 0, 2): "성인의 날",
+        date(year, 2, 11): "건국기념일",
+        date(year, 2, 23): "천황탄생일",
+        date(year, 3, _japanese_equinox_day(year, True)): "춘분의 날",
+        date(year, 4, 29): "쇼와의 날",
+        date(year, 5, 3): "헌법기념일",
+        date(year, 5, 4): "녹색의 날",
+        date(year, 5, 5): "어린이날",
+        _nth_weekday(year, 7, 0, 3): "바다의 날",
+        date(year, 8, 11): "산의 날",
+        _nth_weekday(year, 9, 0, 3): "경로의 날",
+        date(year, 9, _japanese_equinox_day(year, False)): "추분의 날",
+        _nth_weekday(year, 10, 0, 2): "스포츠의 날",
+        date(year, 11, 3): "문화의 날",
+        date(year, 11, 23): "근로감사의 날",
+        date(year, 12, 31): "연말연시",
+    }
+
+    # 일요일 공휴일은 다음 비공휴일로 순연한다(골든위크 연속 대체휴일 포함).
+    for holiday, reason in sorted(tuple(holidays.items())):
+        if holiday.weekday() != 6:
+            continue
+        substitute = holiday + timedelta(days=1)
+        while substitute in holidays:
+            substitute += timedelta(days=1)
+        holidays[substitute] = f"{reason} 대체휴일"
+
+    # 앞뒤가 모두 국경일인 평일은 국민의 휴일이다.
+    current = date(year, 1, 2)
+    while current.year == year and current < date(year, 12, 31):
+        if (
+            current.weekday() < 5
+            and current not in holidays
+            and current - timedelta(days=1) in holidays
+            and current + timedelta(days=1) in holidays
+        ):
+            holidays[current] = "국민의 휴일"
+        current += timedelta(days=1)
+
+    if day.weekday() >= 5:
+        return {"status": "closed", "reason": "주말"}
+    if day in holidays:
+        return {"status": "closed", "reason": holidays[day]}
+    return {"status": "open", "reason": None}
+
+
+def holiday_change_session_note(
+    ticker: str,
+    price_date: str | None,
+    now: datetime | None = None,
+) -> dict | None:
+    """휴장일에 남아 있는 직전 거래일 등락임을 표시할 메타데이터."""
+    clean_ticker = str(ticker or "").upper()
+    if not (clean_ticker.endswith(".T") or clean_ticker == "NIKKEI225"):
+        return None
+    local_today = (now.astimezone(KST) if now else datetime.now(KST)).date()
+    quote_day = parse_iso_date(price_date)
+    calendar = japan_equity_calendar_day(local_today)
+    if calendar["status"] != "closed" or quote_day is None or quote_day >= local_today:
+        return None
+    return {
+        "kind": "holiday_previous_session",
+        "label": "휴",
+        "price_date": quote_day.isoformat(),
+        "reason": calendar["reason"],
+    }
 
 
 def us_equity_market_status(now: datetime | None = None) -> dict:

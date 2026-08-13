@@ -182,7 +182,7 @@ async function addChartCompareTicker(value) {
   if (input) input.value = "";
   compareAddPendingTickers.add(ticker);
   try {
-    const payload = await apiFetchChart(ticker);
+    const payload = await apiFetchChart(ticker, usExtendedEnabled(), priceChartRequestOptions());
     const pricedPoints = (payload.points || []).filter(point => point.date && Number.isFinite(Number(point.close)));
     if (pricedPoints.length < 2) {
       showTradeStatus(`${ticker} 가격 이력이 없습니다.`, true);

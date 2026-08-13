@@ -1,17 +1,30 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from itertools import groupby
 
 from .constants import MARKET_INDEXES
 from .dates import parse_iso_date, today_kst
 from .db import connect
-from .indicators import shift_months
+from .indicators import rsi_series, shift_months
+from .market_calendar import holiday_change_session_note
 from .paths import US_EASTERN
 from .prices import build_market_snapshot, fx_rates, latest_prices, price_view
 from .queries import account_filter_clause, clean_account_ids, load_holding_rows
+from .technical_stats import price_adjusted_rows
 from .tickers import account_label, ticker_currency
 from .us_live_quotes import us_market_status
+
+
+PRICE_CHART_RANGE_MONTHS = {
+    "1m": 1,
+    "3m": 3,
+    "6m": 6,
+    "1y": 12,
+    "3y": 36,
+    "5y": 60,
+    "10y": 120,
+}
 
 
 def _mean(values: list[float]) -> float:
@@ -74,7 +87,66 @@ def _chart_overlay_series(rows) -> dict[str, dict[str, float | None]]:
     return overlay
 
 
-def load_price_chart(ticker: str) -> dict:
+def price_chart_date_bounds(
+    points: list[dict],
+    range_key: str | None,
+    start: str | None = None,
+    end: str | None = None,
+) -> tuple[date | None, date | None]:
+    """Resolve the requested chart window without changing legacy all-history calls."""
+    clean_range = str(range_key or "").strip().lower()
+    if clean_range == "custom":
+        start_date = parse_iso_date(start)
+        end_date = parse_iso_date(end)
+        if start_date and end_date and start_date > end_date:
+            raise ValueError("chart start must not be after end")
+        return start_date, end_date
+    if clean_range in {"", "all", "cmax"} or not points:
+        return None, None
+    last_date = parse_iso_date(points[-1].get("date"))
+    if last_date is None:
+        return None, None
+    if clean_range == "ytd":
+        return date(last_date.year, 1, 1), None
+    months = PRICE_CHART_RANGE_MONTHS.get(clean_range)
+    return (shift_months(last_date, -months), None) if months else (None, None)
+
+
+def price_chart_points_for_range(
+    points: list[dict],
+    range_key: str | None,
+    start: str | None = None,
+    end: str | None = None,
+) -> tuple[list[dict], date | None, date | None]:
+    start_date, end_date = price_chart_date_bounds(points, range_key, start, end)
+    if start_date is None and end_date is None:
+        return points, start_date, end_date
+    filtered = [
+        point
+        for point in points
+        if (point_date := parse_iso_date(point.get("date"))) is not None
+        and (start_date is None or point_date >= start_date)
+        and (end_date is None or point_date <= end_date)
+    ]
+    if str(range_key or "").lower() == "custom":
+        return filtered, start_date, end_date
+    return (filtered if len(filtered) >= 2 else points[-2:]), start_date, end_date
+
+
+def date_in_chart_window(value: str | None, start: date | None, end: date | None) -> bool:
+    if start is None and end is None:
+        return bool(value)
+    parsed = parse_iso_date(value)
+    return parsed is not None and (start is None or parsed >= start) and (end is None or parsed <= end)
+
+
+def load_price_chart(
+    ticker: str,
+    us_extended: bool = False,
+    range_key: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+) -> dict:
     clean_ticker = (ticker or "").strip().upper()
     if not clean_ticker:
         raise ValueError("ticker is required")
@@ -90,12 +162,10 @@ def load_price_chart(ticker: str) -> dict:
         ).fetchone()
         rows = conn.execute(
             """
-            SELECT p.date, p.high, p.low, p.close, i.rsi_14
-            FROM daily_prices p
-            LEFT JOIN daily_technical_indicators i
-              ON i.ticker = p.ticker AND i.date = p.date
-            WHERE p.ticker = ? AND p.close IS NOT NULL
-            ORDER BY p.date
+            SELECT date, open, high, low, close, volume
+            FROM daily_prices
+            WHERE ticker = ? AND close IS NOT NULL
+            ORDER BY date
             """,
             (clean_ticker,),
         ).fetchall()
@@ -125,24 +195,31 @@ def load_price_chart(ticker: str) -> dict:
     snapshot = build_market_snapshot(
         base_prices,
         [meta] if meta else [],
-        include_extended=not bool(market_status.get("is_regular")),
+        include_extended=us_extended,
         market_status=market_status,
     )
     market_view = price_view(clean_ticker, currency, snapshot)
     price_record = market_view["price_record"]
     overlays = _chart_overlay_series(rows)
+    rsi_values = rsi_series([float(row["close"]) for row in rows])
     points = []
-    for row in rows:
+    for row, rsi in zip(rows, rsi_values):
         if not row["date"] or row["close"] is None:
             continue
         point = {"date": row["date"], "close": float(row["close"])}
-        if row["rsi_14"] is not None:
-            point["rsi"] = float(row["rsi_14"])
+        for key in ("open", "high", "low", "volume"):
+            if row[key] is not None:
+                point[key] = float(row[key])
+        if rsi is not None:
+            point["rsi"] = rsi
         overlay = overlays.get(row["date"]) or {}
         if any(value is not None for value in overlay.values()):
             point.update({key: value for key, value in overlay.items() if value is not None})
         points.append(point)
-    _append_market_chart_point(price_record, snapshot["market_status"], points)
+    _append_market_chart_point(price_record, snapshot["market_status"], points, rows)
+    history_start = points[0]["date"] if points else None
+    history_end = points[-1]["date"] if points else None
+    points, window_start, window_end = price_chart_points_for_range(points, range_key, start, end)
 
     return {
         "ticker": clean_ticker,
@@ -150,7 +227,11 @@ def load_price_chart(ticker: str) -> dict:
         "currency": currency,
         "category": (meta["category"] if meta else None),
         "current_price": market_view["current_price"],
+        "price_date": price_record.get("date"),
         "previous_price": market_view["previous_price"],
+        "change_session_note": holiday_change_session_note(
+            clean_ticker, price_record.get("date")
+        ),
         "change": market_view["change"],
         "change_pct": market_view["change_pct"],
         "regular_price": price_record.get("regular_price"),
@@ -164,6 +245,9 @@ def load_price_chart(ticker: str) -> dict:
         "extended_source": price_record.get("extended_source"),
         "extended_market_state": price_record.get("extended_market_state") or price_record.get("market_state"),
         "market": snapshot["market_status"],
+        "history_start": history_start,
+        "history_end": history_end,
+        "range": str(range_key or "all").lower(),
         "points": points,
         "transactions": [
             {
@@ -177,11 +261,17 @@ def load_price_chart(ticker: str) -> dict:
             }
             for row in transaction_rows
             if row["trade_date"] and row["side"] in {"BUY", "SELL"}
+            and date_in_chart_window(row["trade_date"], window_start, window_end)
         ],
     }
 
 
-def _append_market_chart_point(price_record: dict, market_status: dict, points: list[dict]) -> None:
+def _append_market_chart_point(
+    price_record: dict,
+    market_status: dict,
+    points: list[dict],
+    rows,
+) -> None:
     """공용 시장 스냅샷이 선택한 라이브 가격을 차트 마지막 점으로 추가한다."""
     if not market_status.get("use_live"):
         return
@@ -191,14 +281,47 @@ def _append_market_chart_point(price_record: dict, market_status: dict, points: 
     today = datetime.now(US_EASTERN).strftime("%Y-%m-%d")
     last_close = points[-1]["close"] if points else None
     if last_close is None or abs(float(value) - last_close) > 1e-9:
-        points.append(
-            {
+        adjusted_rows = price_adjusted_rows(rows, float(value), today)
+        adjusted_rsi = rsi_series([float(row["close"]) for row in adjusted_rows])
+        adjusted_overlays = _chart_overlay_series(adjusted_rows)
+        existing = next((item for item in reversed(points) if item.get("date") == today), None)
+        if existing is not None:
+            point = existing
+            if market_status.get("include_extended"):
+                # 장외가는 현재가·지표에는 반영하되 확정된 정규장 캔들 몸통은 보존한다.
+                point["candle_close"] = point["close"]
+            else:
+                if point.get("high") is not None:
+                    point["high"] = max(float(point["high"]), float(value))
+                if point.get("low") is not None:
+                    point["low"] = min(float(point["low"]), float(value))
+            point.update(
+                {
+                    "close": float(value),
+                    "live": True,
+                    "extended": bool(market_status.get("include_extended")),
+                }
+            )
+        else:
+            point = {
                 "date": today,
                 "close": float(value),
                 "live": True,
                 "extended": bool(market_status.get("include_extended")),
             }
+        latest_rsi = next((item for item in reversed(adjusted_rsi) if item is not None), None)
+        if latest_rsi is not None:
+            point["rsi"] = latest_rsi
+        overlay = adjusted_overlays.get(today) or {}
+        point.update(
+            {
+                key: item
+                for key, item in overlay.items()
+                if key.startswith("bb_") and item is not None
+            }
         )
+        if existing is None:
+            points.append(point)
 
 
 PERFORMANCE_INDEXES = ("SP500", "NASDAQ", "KOSPI")

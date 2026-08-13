@@ -1,4 +1,5 @@
 // 단일 종목 가격차트 + 통계 패널 + 기간/모달 컨트롤. (공용=app-chart-scale.js, 비교=app-chart-compare.js)
+let chartNameSaveInFlight = false;
 function chartPayloadExtent(payloads, common = false) {
   const items = (Array.isArray(payloads) ? payloads : [payloads]).filter(Boolean);
   const extents = items.map(item => {
@@ -7,7 +8,11 @@ function chartPayloadExtent(payloads, common = false) {
       .map(point => new Date(`${point.date}T00:00:00`).getTime())
       .filter(time => Number.isFinite(time))
       .sort((a, b) => a - b);
-    return pts.length >= 2 ? { start: pts[0], end: pts[pts.length - 1] } : null;
+    const historyStart = new Date(`${item.history_start || ""}T00:00:00`).getTime();
+    const historyEnd = new Date(`${item.history_end || ""}T00:00:00`).getTime();
+    const start = Number.isFinite(historyStart) ? historyStart : pts[0];
+    const end = Number.isFinite(historyEnd) ? historyEnd : pts[pts.length - 1];
+    return Number.isFinite(start) && Number.isFinite(end) && end > start ? { start, end } : null;
   }).filter(Boolean);
   if (!extents.length) return null;
   const start = common ? Math.max(...extents.map(item => item.start)) : Math.min(...extents.map(item => item.start));
@@ -48,23 +53,27 @@ function normalizeChartRangeForPayloads(payloads, common = false, fallback = "al
   }
 }
 
-function renderChartRangeButtons() {
-  // 비교 모드: '전체' 대신 공통기간 '최대' 노출 (상장일 차이로 못 쓰는 구간 제외)
+function availableChartRangeChoices() {
   const isCompare = chartComparePayloads.length > 0;
   const ranges = isCompare ? chartRanges.filter(range => range.key !== "all") : chartRanges;
   const extent = currentChartRangeExtent();
-  const maxBtn = isCompare
-    ? `<button class="chart-range-btn ${chartRange === "cmax" ? "active" : ""}" type="button" data-chart-range="cmax">최대</button>`
-    : "";
+  return [
+    ...ranges.map(range => ({
+      ...range,
+      disabled: chartRangeUnavailable(range, extent),
+    })),
+    ...(isCompare ? [{ key: "cmax", label: "최대", disabled: false }] : []),
+  ];
+}
+
+function renderChartRangeButtons() {
+  const isCompare = chartComparePayloads.length > 0;
+  const choices = availableChartRangeChoices();
+  const currentChoice = choices.find(range => range.key === chartRange);
+  const rangeLabel = chartRange === "custom" ? "직접" : (currentChoice?.label || "전체");
   return `
     <div class="chart-ranges" role="group" aria-label="차트 기간">
-      ${ranges.map(range => {
-        const disabled = chartRangeUnavailable(range, extent);
-        const title = disabled ? `가격 이력이 부족해 ${range.label} 기간을 선택할 수 없습니다.` : "";
-        return `<button class="chart-range-btn ${range.key === chartRange ? "active" : ""}${disabled ? " disabled" : ""}" type="button" data-chart-range="${range.key}"${disabled ? ` disabled title="${esc(title)}"` : ""}>${range.label}</button>`;
-      }).join("")}
-      ${maxBtn}
-      <button class="chart-range-btn custom-range-btn ${chartRange === "custom" ? "active" : ""}" type="button" data-chart-custom aria-label="기간 직접 설정" title="기간 직접 설정">기간</button>
+      <button class="chart-range-btn range-popup-btn active" type="button" data-chart-range-popup aria-haspopup="dialog" aria-label="현재 조회 기간 ${rangeLabel}, 기간 선택">${rangeLabel}</button>
       ${(!isCompare && !performanceChartOpen) ? `
         <span class="chart-marker-toggles" role="group" aria-label="거래 마커 표시">
           <button class="chart-range-btn marker-toggle buy ${chartShowBuys ? "active" : ""}" type="button" data-marker-toggle="buy" aria-label="매수 마커" title="매수 마커" aria-pressed="${chartShowBuys}" ${chartInterval === "day" ? "" : `disabled title="일 단위에서만 표시"`}><i></i>B</button>
@@ -115,26 +124,25 @@ function syncChartBottomControls(visible = Boolean(chartTicker || performanceCha
 }
 
 function syncChartIntervalControl() {
-  const control = document.getElementById("chartIntervalControl");
-  if (!control) return;
-  control.classList.toggle("hidden", !chartTicker || performanceChartOpen);
-  control.querySelectorAll("[data-chart-interval]").forEach(btn => {
-    const active = btn.dataset.chartInterval === chartInterval;
-    btn.classList.toggle("active", active);
-    btn.setAttribute("aria-pressed", String(active));
-  });
+  const toggle = document.getElementById("chartIntervalToggle");
+  if (!toggle) return;
+  const order = ["day", "week", "month"];
+  const labels = { day: "일", week: "주", month: "월" };
+  const next = order[(order.indexOf(chartInterval) + 1) % order.length];
+  toggle.classList.toggle("hidden", !chartTicker || performanceChartOpen);
+  toggle.textContent = labels[chartInterval] || "일";
+  toggle.setAttribute("aria-pressed", "true");
+  toggle.setAttribute("aria-label", `현재 ${labels[chartInterval] || "일"} 단위, 클릭하면 ${labels[next]}`);
+  toggle.title = `차트 단위: ${labels[chartInterval] || "일"} → ${labels[next]}`;
 }
 
 function initChartIntervalControl() {
-  const control = document.getElementById("chartIntervalControl");
-  if (!control) return;
+  const toggle = document.getElementById("chartIntervalToggle");
+  if (!toggle) return;
   syncChartIntervalControl();
-  control.addEventListener("click", event => {
-    const btn = event.target.closest?.("[data-chart-interval]");
-    if (!btn) return;
-    const interval = btn.dataset.chartInterval;
-    if (!["day", "week", "month"].includes(interval) || interval === chartInterval) return;
-    chartInterval = interval;
+  toggle.addEventListener("click", () => {
+    const order = ["day", "week", "month"];
+    chartInterval = order[(order.indexOf(chartInterval) + 1) % order.length];
     storageSet(detailStorage.chartInterval, chartInterval);
     syncChartIntervalControl();
     if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
@@ -149,8 +157,17 @@ function syncChartDisplayControls(visible = Boolean(chartTicker) && !performance
   const logToggle = document.getElementById("chartLogToggle");
   const bollingerToggle = document.getElementById("chartBollingerToggle");
   const ichimokuToggle = document.getElementById("chartIchimokuToggle");
+  const typeToggle = document.getElementById("chartTypeToggle");
+  const nextTypeLabel = chartType === "line" ? "캔들" : "선";
+  if (typeToggle) {
+    typeToggle.textContent = chartType === "line" ? "선" : "캔들";
+    typeToggle.setAttribute("aria-pressed", "true");
+    typeToggle.setAttribute("aria-label", `현재 ${chartType === "line" ? "선" : "캔들"} 차트, 클릭하면 ${nextTypeLabel}`);
+    typeToggle.title = `차트 종류: ${chartType === "line" ? "선" : "캔들"} → ${nextTypeLabel}`;
+  }
   smoothToggle?.classList.toggle("active", chartSmoothLines);
   smoothToggle?.setAttribute("aria-pressed", String(chartSmoothLines));
+  smoothToggle?.classList.toggle("hidden", chartType === "candle");
   logToggle?.classList.toggle("active", chartLogScale);
   logToggle?.setAttribute("aria-pressed", String(chartLogScale));
   bollingerToggle?.classList.toggle("active", chartShowBollinger);
@@ -166,6 +183,12 @@ function initChartDisplayControls() {
   const logToggle = document.getElementById("chartLogToggle");
   const bollingerToggle = document.getElementById("chartBollingerToggle");
   const ichimokuToggle = document.getElementById("chartIchimokuToggle");
+  document.getElementById("chartTypeToggle")?.addEventListener("click", () => {
+    chartType = chartType === "line" ? "candle" : "line";
+    storageSet(detailStorage.chartType, chartType);
+    syncChartDisplayControls();
+    if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
+  });
   smoothToggle?.addEventListener("click", () => {
     chartSmoothLines = !chartSmoothLines;
     storageSet(detailStorage.chartSmoothLines, String(chartSmoothLines));
@@ -221,6 +244,20 @@ function setChartRangeStatus(message, error = false) {
   el.classList.toggle("error", error);
 }
 
+function renderChartRangeModalPresets() {
+  const host = document.getElementById("chartRangePresets");
+  if (!host) return;
+  host.innerHTML = availableChartRangeChoices().map(range => `
+    <button
+      class="chart-range-preset ${chartRange === range.key ? "active" : ""}"
+      type="button"
+      data-chart-range-choice="${range.key}"
+      aria-pressed="${chartRange === range.key}"
+      ${range.disabled ? "disabled" : ""}
+    >${range.label}</button>
+  `).join("");
+}
+
 function openChartRangeModal() {
   const modal = document.getElementById("chartRangeModal");
   const startInput = document.getElementById("chartRangeStart");
@@ -228,9 +265,21 @@ function openChartRangeModal() {
   const defaults = chartPointDatesForModal();
   startInput.value = chartCustomRange.start || defaults.start;
   endInput.value = chartCustomRange.end || defaults.end;
+  renderChartRangeModalPresets();
   setChartRangeStatus("");
   modal.showModal();
-  startInput.focus();
+  requestAnimationFrame(() => {
+    modal.querySelector(".chart-range-preset.active:not(:disabled), .chart-range-preset:not(:disabled)")?.focus();
+  });
+}
+
+function applyChartPresetRange(rangeKey) {
+  const choice = availableChartRangeChoices().find(range => range.key === rangeKey);
+  if (!choice || choice.disabled) return;
+  chartRange = choice.key;
+  document.getElementById("chartRangeModal").close();
+  if (performanceChartOpen) reloadPerformanceChart();
+  else if (chartPayload) reloadPriceChartForMarketMode({ skeleton: true });
 }
 
 function applyChartCustomRange() {
@@ -251,7 +300,7 @@ function applyChartCustomRange() {
   chartRange = "custom";
   modal.close();
   if (performanceChartOpen) reloadPerformanceChart();
-  else if (chartPayload) renderLineChart(chartPayload);
+  else if (chartPayload) reloadPriceChartForMarketMode({ skeleton: true });
 }
 
 function initChartRangeModal() {
@@ -259,6 +308,11 @@ function initChartRangeModal() {
     document.getElementById("chartRangeModal").close();
   });
   document.getElementById("chartRangeApply").addEventListener("click", applyChartCustomRange);
+  document.getElementById("chartRangePresets").addEventListener("click", event => {
+    const button = event.target.closest("[data-chart-range-choice]");
+    if (!button || button.disabled) return;
+    applyChartPresetRange(button.dataset.chartRangeChoice);
+  });
   ["chartRangeStart", "chartRangeEnd"].forEach(id => {
     document.getElementById(id).addEventListener("keydown", event => {
       if (event.key === "Enter") {
@@ -311,11 +365,121 @@ function clearChartExternalLinks() {
   }
 }
 
+function closeChartNameEditor() {
+  document.getElementById("chartIdText")?.classList.remove("editing");
+  document.getElementById("chartNameEditForm")?.classList.add("hidden");
+  const input = document.getElementById("chartNameInput");
+  if (input) input.dataset.ticker = "";
+  const status = document.getElementById("chartNameEditStatus");
+  if (status) status.textContent = "";
+}
+
+function currentChartDisplayName(ticker = chartTicker) {
+  const key = String(ticker || "").toUpperCase();
+  if (String(chartPayload?.ticker || "").toUpperCase() === key && chartPayload?.name) return chartPayload.name;
+  return findTickerMeta(key)?.name || key;
+}
+
+function openChartNameEditor() {
+  const ticker = String(chartTicker || "").toUpperCase();
+  if (!ticker || performanceChartOpen || chartNameSaveInFlight) return;
+  const input = document.getElementById("chartNameInput");
+  if (!input) return;
+  input.value = currentChartDisplayName(ticker);
+  input.dataset.ticker = ticker;
+  document.getElementById("chartNameEditStatus").textContent = "";
+  document.getElementById("chartIdText")?.classList.add("editing");
+  document.getElementById("chartNameEditForm")?.classList.remove("hidden");
+  input.focus();
+  input.select();
+}
+
+function applyTickerDisplayNameLocally(ticker, name) {
+  const key = String(ticker || "").toUpperCase();
+  (data?.tickers || []).forEach(item => {
+    if (String(item.ticker || "").toUpperCase() === key) item.name = name;
+  });
+  (data?.members || []).forEach(member => {
+    (member.accounts || []).forEach(account => {
+      (account.holdings || []).forEach(holding => {
+        if (String(holding.ticker || "").toUpperCase() === key) holding.name = name;
+      });
+    });
+  });
+  if (typeof interestWatchlists !== "undefined") {
+    interestWatchlists.forEach(group => {
+      (group.items || []).forEach(item => {
+        if (String(item.ticker || "").toUpperCase() === key) item.name = name;
+      });
+    });
+  }
+  if (typeof tickerSearchDirectory !== "undefined" && Array.isArray(tickerSearchDirectory)) {
+    tickerSearchDirectory.forEach(item => {
+      if (String(item.ticker || "").toUpperCase() === key) item.name = name;
+    });
+  }
+  if (String(chartPayload?.ticker || "").toUpperCase() === key) chartPayload.name = name;
+  chartComparePayloads.forEach(item => {
+    if (String(item.ticker || "").toUpperCase() === key) item.name = name;
+  });
+}
+
+async function saveChartDisplayName(event) {
+  event.preventDefault();
+  if (chartNameSaveInFlight) return;
+  const input = document.getElementById("chartNameInput");
+  const status = document.getElementById("chartNameEditStatus");
+  const ticker = String(input?.dataset.ticker || chartTicker || "").toUpperCase();
+  const name = String(input?.value || "").replace(/\s+/g, " ").trim();
+  if (!ticker || !name) {
+    if (status) status.textContent = "노출명칭을 입력하세요.";
+    input?.focus();
+    return;
+  }
+  if (name === currentChartDisplayName(ticker)) {
+    closeChartNameEditor();
+    return;
+  }
+  chartNameSaveInFlight = true;
+  document.querySelectorAll("#chartNameEditForm input, #chartNameEditForm button").forEach(el => { el.disabled = true; });
+  if (status) status.textContent = "저장 중...";
+  try {
+    const result = await apiUpdateTickerDisplayName(ticker, name);
+    applyTickerDisplayNameLocally(result.ticker, result.name);
+    if (String(chartTicker || "").toUpperCase() === ticker) {
+      document.getElementById("tableTitle").textContent = result.name;
+      closeChartNameEditor();
+      renderChartIdentity(chartPayload || { ticker, name: result.name });
+    }
+    renderInterestWatchlists();
+  } catch (err) {
+    if (status) status.textContent = err.message || String(err);
+  } finally {
+    chartNameSaveInFlight = false;
+    document.querySelectorAll("#chartNameEditForm input, #chartNameEditForm button").forEach(el => { el.disabled = false; });
+  }
+}
+
+function initChartNameEditor() {
+  document.getElementById("chartNameEdit")?.addEventListener("click", openChartNameEditor);
+  document.getElementById("chartNameEditForm")?.addEventListener("submit", saveChartDisplayName);
+  document.getElementById("chartNameEditCancel")?.addEventListener("click", closeChartNameEditor);
+  document.getElementById("chartNameInput")?.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeChartNameEditor();
+    }
+  });
+}
+
 function renderChartIdentity(payload) {
   const row = chartLogoRow(payload);
+  const editingTicker = String(document.getElementById("chartNameInput")?.dataset.ticker || "").toUpperCase();
+  if (editingTicker && editingTicker !== String(row.ticker || "").toUpperCase()) closeChartNameEditor();
   document.getElementById("chartIcon").innerHTML = logoMarkup(row);
   document.getElementById("chartTicker").textContent = row.ticker || "";
   document.getElementById("chartName").textContent = row.name || row.ticker || "";
+  document.getElementById("chartNameEdit")?.classList.toggle("hidden", !row.ticker || performanceChartOpen);
   document.getElementById("chartInterestOpen")?.classList.toggle("hidden", !row.ticker);
   renderChartExternalLinks(row);
   renderChartPriceSummary(payload);
@@ -381,7 +545,7 @@ function chartShouldShowExtendedLine(meta, metric, isUsTicker) {
   return true;
 }
 
-function renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, isUsTicker, extendedLabel) {
+function renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, isUsTicker, extendedLabel, sessionNote = null) {
   const extendedLine = isUsTicker && extendedMetric.price != null
     ? `
       <div class="chart-price-row extended">
@@ -397,6 +561,7 @@ function renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, isUs
         <span class="chart-price-row-label">정규</span>
         <strong class="chart-price-current">${dayMetric.price == null ? "-" : esc(chartMoney(dayMetric.price, currency, ticker))}</strong>
         ${chartPricePctPill(dayMetric)}
+        ${sessionNote?.label ? `<sup class="change-session-note chart-session-note" title="${esc([sessionNote.price_date ? `${String(sessionNote.price_date).replaceAll("-", ".")} 기준 등락` : "직전 거래일 등락", sessionNote.reason ? `${sessionNote.reason} 휴장` : "휴장"].join(" · "))}">${esc(sessionNote.label)}</sup>` : ""}
       </div>
       ${extendedLine}
     </div>
@@ -427,7 +592,7 @@ function renderChartPriceSummary(payload) {
   );
   const isUsTicker = currency === "USD" && !ticker.includes(".");
   const showExtended = chartShouldShowExtendedLine(meta, extendedMetric, isUsTicker);
-  el.innerHTML = renderChartPriceQuote(dayMetric, showExtended ? extendedMetric : {}, currency, ticker, isUsTicker, chartExtendedLabel(meta));
+  el.innerHTML = renderChartPriceQuote(dayMetric, showExtended ? extendedMetric : {}, currency, ticker, isUsTicker, chartExtendedLabel(meta), meta.change_session_note);
 }
 
 function chartInterestGroups(ticker) {
@@ -554,12 +719,12 @@ function bindLineChartControls(payload) {
         renderLineChart(payload);
         return;
       }
-      if (btn.dataset.chartCustom != null) {
+      if (btn.dataset.chartRangePopup != null || btn.dataset.chartCustom != null) {
         openChartRangeModal();
         return;
       }
       chartRange = btn.dataset.chartRange || "1y";
-      renderLineChart(payload);
+      reloadPriceChartForMarketMode({ skeleton: true });
     });
   });
 }
@@ -567,6 +732,52 @@ function bindLineChartControls(payload) {
 function chartNumericValue(point, key) {
   const value = Number(point?.[key]);
   return Number.isFinite(value) ? value : null;
+}
+
+function chartCandleValues(point) {
+  if (!chartPointHasCandle(point)) return null;
+  const open = Number(point.open);
+  const close = chartCandleClose(point);
+  const high = Math.max(Number(point.high), open, close);
+  const low = Math.min(Number(point.low), open, close);
+  return { open, high, low, close };
+}
+
+function chartCandleExtremes(points) {
+  const samples = points.map((point, index) => {
+    const candle = chartCandleValues(point);
+    const close = Number(point.close);
+    return {
+      index,
+      high: candle?.high ?? close,
+      low: candle?.low ?? close,
+    };
+  }).filter(item => Number.isFinite(item.high) && Number.isFinite(item.low));
+  if (!samples.length) return [];
+  const high = samples.reduce((best, item) => item.high > best.high ? item : best, samples[0]);
+  const low = samples.reduce((best, item) => item.low < best.low ? item : best, samples[0]);
+  return [
+    { kind: "high", label: "고점", index: high.index, value: high.high },
+    { kind: "low", label: "저점", index: low.index, value: low.low },
+  ].filter((item, index, items) => index === 0 || item.index !== items[0].index);
+}
+
+function chartPointTooltipLines(point, payload) {
+  const lines = [chartFullDateLabel(point.date)];
+  const candle = chartType === "candle" ? chartCandleValues(point) : null;
+  if (candle) {
+    lines.push(`시 ${chartMoney(candle.open, payload.currency, payload.ticker)}   고 ${chartMoney(candle.high, payload.currency, payload.ticker)}`);
+    lines.push(`저 ${chartMoney(candle.low, payload.currency, payload.ticker)}   종 ${chartMoney(candle.close, payload.currency, payload.ticker)}`);
+    const current = Number(point.close);
+    if (point.live && Number.isFinite(current) && Math.abs(current - candle.close) > 1e-9) {
+      lines.push(`${point.extended ? "장외" : "현재"} ${chartMoney(current, payload.currency, payload.ticker)}`);
+    }
+  } else {
+    lines.push(`가격 ${chartMoney(Number(point.close), payload.currency, payload.ticker)}`);
+  }
+  const rsiValue = Number(point.rsi);
+  if (Number.isFinite(rsiValue)) lines.push(`RSI ${rsiValue.toFixed(1)}`);
+  return lines;
 }
 
 function chartOverlayScaleValues(points) {
@@ -695,12 +906,32 @@ function bindChartInteractions(points, payload, geometry) {
   const selectionRect = document.getElementById("chartSelectionRect");
   const selectionStartLine = document.getElementById("chartSelectionStartLine");
   const selectionEndLine = document.getElementById("chartSelectionEndLine");
-  const selectionTooltip = document.getElementById("chartSelectionTooltip");
-  const selectionTooltipBox = document.getElementById("chartSelectionTooltipBox");
+  const selectionSummary = document.getElementById("chartSelectionSummary");
+  const selectionSummaryBox = document.getElementById("chartSelectionSummaryBox");
+  const selectionSummaryText = document.getElementById("chartSelectionSummaryText");
   let dragStartIndex = null;
   let isDragging = false;
   let touchPinned = false;
   if (!svg || !hoverLayer || !hoverGroup || !hoverLine || !hoverDot || !tooltip) return;
+
+  const setTooltipX = value => {
+    const formatted = Number(value).toFixed(2);
+    tooltip.setAttribute("x", formatted);
+    tooltip.querySelectorAll("tspan").forEach(line => line.setAttribute("x", formatted));
+  };
+
+  const setTooltipLines = (lines, x, y) => {
+    tooltip.replaceChildren();
+    tooltip.setAttribute("y", Number(y).toFixed(2));
+    lines.filter(Boolean).forEach((line, index) => {
+      const span = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+      span.textContent = line;
+      span.setAttribute("dy", index === 0 ? "0" : "1.35em");
+      if (index === 0) span.classList.add("chart-tooltip-date");
+      tooltip.appendChild(span);
+    });
+    setTooltipX(x);
+  };
 
   const updateTooltipBox = () => {
     if (!tooltipBox) return;
@@ -711,7 +942,7 @@ function bindChartInteractions(points, payload, geometry) {
     if (bbox.x + bbox.width > geometry.width - 6) x -= bbox.x + bbox.width - (geometry.width - 6);
     if (bbox.y < 6) y += 6 - bbox.y;
     if (bbox.y + bbox.height > geometry.height - 6) y -= bbox.y + bbox.height - (geometry.height - 6);
-    tooltip.setAttribute("x", x.toFixed(2));
+    setTooltipX(x);
     tooltip.setAttribute("y", y.toFixed(2));
     bbox = tooltip.getBBox();
     tooltipBox.setAttribute("x", (bbox.x - 8).toFixed(2));
@@ -725,15 +956,14 @@ function bindChartInteractions(points, payload, geometry) {
     const y = Number(marker.dataset.y);
     const hoverRsiDot = document.getElementById("chartHoverRsiDot");
     hoverRsiDot?.classList.add("hidden");
-    const tooltipY = y < geometry.pad.top + geometry.plotH / 2 ? y + 42 : y - 58;
+    const tooltipY = y < geometry.pad.top + geometry.plotH / 2 ? y + 38 : y - 70;
+    const tooltipLines = String(marker.dataset.tooltip || "").split(/\s*·\s*/).filter(Boolean);
     hoverGroup.classList.remove("hidden");
     hoverLine.setAttribute("x1", x.toFixed(2));
     hoverLine.setAttribute("x2", x.toFixed(2));
     hoverDot.setAttribute("cx", x.toFixed(2));
     hoverDot.setAttribute("cy", y.toFixed(2));
-    tooltip.setAttribute("x", (x > geometry.width - 280 ? x - 218 : x + 14).toFixed(2));
-    tooltip.setAttribute("y", tooltipY.toFixed(2));
-    tooltip.textContent = marker.dataset.tooltip || "";
+    setTooltipLines(tooltipLines, x > geometry.width - 190 ? x - 160 : x + 14, tooltipY);
     updateTooltipBox();
   }
 
@@ -750,15 +980,18 @@ function bindChartInteractions(points, payload, geometry) {
       showMarker(marker);
       return;
     }
-    const ratio = Math.min(1, Math.max(0, (svgX - geometry.pad.left) / geometry.plotW));
+    const xStart = geometry.xStart ?? geometry.pad.left;
+    const xSpan = geometry.xSpan ?? geometry.plotW;
+    const ratio = Math.min(1, Math.max(0, (svgX - xStart) / xSpan));
     const index = Math.min(points.length - 1, Math.max(0, Math.round(ratio * (points.length - 1))));
     const point = points[index];
     const x = geometry.xFor(index);
     const y = geometry.yFor(Number(point.close));
     const rsiValue = Number(point.rsi);
     const hoverRsiDot = document.getElementById("chartHoverRsiDot");
-    const tooltipX = x > geometry.width - 250 ? x - 188 : x + 12;
-    const tooltipY = y < geometry.pad.top + geometry.plotH / 2 ? y + 42 : y - 58;
+    const tooltipLines = chartPointTooltipLines(point, payload);
+    const tooltipX = x > geometry.width - 190 ? x - 160 : x + 12;
+    const tooltipY = y < geometry.pad.top + geometry.plotH / 2 ? y + 38 : y - (tooltipLines.length > 3 ? 76 : 60);
     hoverGroup.classList.remove("hidden");
     hoverLine.setAttribute("x1", x.toFixed(2));
     hoverLine.setAttribute("x2", x.toFixed(2));
@@ -771,21 +1004,29 @@ function bindChartInteractions(points, payload, geometry) {
     } else {
       hoverRsiDot?.classList.add("hidden");
     }
-    tooltip.setAttribute("x", tooltipX.toFixed(2));
-    tooltip.setAttribute("y", tooltipY.toFixed(2));
-    tooltip.textContent = `${chartFullDateLabel(point.date)} · ${chartMoney(Number(point.close), payload.currency, payload.ticker)}${Number.isFinite(rsiValue) ? ` · RSI ${rsiValue.toFixed(1)}` : ""}`;
+    setTooltipLines(tooltipLines, tooltipX, tooltipY);
     updateTooltipBox();
   }
 
   function pointIndexFromClientX(clientX) {
     const rect = svg.getBoundingClientRect();
     const svgX = (clientX - rect.left) / rect.width * geometry.width;
-    const ratio = Math.min(1, Math.max(0, (svgX - geometry.pad.left) / geometry.plotW));
+    const xStart = geometry.xStart ?? geometry.pad.left;
+    const xSpan = geometry.xSpan ?? geometry.plotW;
+    const ratio = Math.min(1, Math.max(0, (svgX - xStart) / xSpan));
     return Math.min(points.length - 1, Math.max(0, Math.round(ratio * (points.length - 1))));
   }
 
   function updateSelection(fromIndex, toIndex) {
-    if (!selectionGroup || !selectionRect || !selectionStartLine || !selectionEndLine || !selectionTooltip || !selectionTooltipBox) return;
+    if (
+      !selectionGroup
+      || !selectionRect
+      || !selectionStartLine
+      || !selectionEndLine
+      || !selectionSummary
+      || !selectionSummaryBox
+      || !selectionSummaryText
+    ) return;
     const startIndex = Math.min(fromIndex, toIndex);
     const endIndex = Math.max(fromIndex, toIndex);
     if (startIndex === endIndex) return;
@@ -800,12 +1041,6 @@ function bindChartInteractions(points, payload, geometry) {
     const arrow = change > 0 ? "▲" : change < 0 ? "▼" : "→";
     const x1 = geometry.xFor(startIndex);
     const x2 = geometry.xFor(endIndex);
-    const labelX = Math.min(geometry.width - 10, Math.max(10, (x1 + x2) / 2));
-    const lines = [
-      `${arrow}${signedChartMoney(change, payload.currency, payload.ticker)} (${changePct > 0 ? "+" : ""}${fmt2.format(changePct)}%)`,
-      `${chartFullDateLabel(start.date)} - ${chartFullDateLabel(end.date)}`,
-      `${chartMoney(startPrice, payload.currency, payload.ticker)} → ${chartMoney(endPrice, payload.currency, payload.ticker)}`,
-    ];
 
     selectionGroup.classList.remove("hidden", "up", "down", "flat");
     selectionGroup.classList.add(cls);
@@ -816,30 +1051,27 @@ function bindChartInteractions(points, payload, geometry) {
       line.setAttribute("x1", x.toFixed(2));
       line.setAttribute("x2", x.toFixed(2));
     });
-    selectionTooltip.setAttribute("x", labelX.toFixed(2));
-    selectionTooltip.setAttribute("y", (geometry.pad.top + 16).toFixed(2));
-    selectionTooltip.textContent = "";
-    lines.forEach((line, index) => {
-      const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-      tspan.setAttribute("x", labelX.toFixed(2));
-      tspan.setAttribute("dy", index === 0 ? "0" : "15");
-      tspan.textContent = line;
-      selectionTooltip.appendChild(tspan);
-    });
+    selectionSummary.classList.remove("hidden", "up", "down", "flat");
+    selectionSummary.classList.add(cls);
+    selectionSummaryText.textContent = [
+      `${shortDateText(start.date)}–${shortDateText(end.date)}`,
+      `${chartMoney(startPrice, payload.currency, payload.ticker)} → ${chartMoney(endPrice, payload.currency, payload.ticker)}`,
+      `${arrow} ${changePct > 0 ? "+" : ""}${fmt2.format(changePct)}% (${signedChartMoney(change, payload.currency, payload.ticker)})`,
+    ].join(" · ");
 
-    let bbox = selectionTooltip.getBBox();
-    let adjustedX = labelX;
-    if (bbox.x < 8) adjustedX += 8 - bbox.x;
-    if (bbox.x + bbox.width > geometry.width - 8) adjustedX -= bbox.x + bbox.width - (geometry.width - 8);
-    if (adjustedX !== labelX) {
-      selectionTooltip.setAttribute("x", adjustedX.toFixed(2));
-      selectionTooltip.querySelectorAll("tspan").forEach(tspan => tspan.setAttribute("x", adjustedX.toFixed(2)));
-      bbox = selectionTooltip.getBBox();
-    }
-    selectionTooltipBox.setAttribute("x", (bbox.x - 9).toFixed(2));
-    selectionTooltipBox.setAttribute("y", (bbox.y - 7).toFixed(2));
-    selectionTooltipBox.setAttribute("width", (bbox.width + 18).toFixed(2));
-    selectionTooltipBox.setAttribute("height", (bbox.height + 14).toFixed(2));
+    const inset = geometry.pad.left + 8;
+    const rightEdge = geometry.pad.left + geometry.plotW - 8;
+    let summaryX = geometry.pad.left + geometry.plotW / 2;
+    selectionSummaryText.setAttribute("x", summaryX.toFixed(2));
+    let textBox = selectionSummaryText.getBBox();
+    if (textBox.x < inset) summaryX += inset - textBox.x;
+    if (textBox.x + textBox.width > rightEdge) summaryX -= textBox.x + textBox.width - rightEdge;
+    selectionSummaryText.setAttribute("x", summaryX.toFixed(2));
+    textBox = selectionSummaryText.getBBox();
+    selectionSummaryBox.setAttribute("x", (textBox.x - 10).toFixed(2));
+    selectionSummaryBox.setAttribute("y", (textBox.y - 5).toFixed(2));
+    selectionSummaryBox.setAttribute("width", (textBox.width + 20).toFixed(2));
+    selectionSummaryBox.setAttribute("height", (textBox.height + 10).toFixed(2));
   }
 
   hoverLayer.addEventListener("pointerdown", event => {
@@ -850,6 +1082,8 @@ function bindChartInteractions(points, payload, geometry) {
     }
     dragStartIndex = pointIndexFromClientX(event.clientX);
     isDragging = true;
+    selectionGroup?.classList.add("hidden");
+    selectionSummary?.classList.add("hidden");
     hoverGroup.classList.add("hidden");
     hoverLayer.setPointerCapture?.(event.pointerId);
     event.preventDefault();
@@ -923,12 +1157,18 @@ function renderLineChart(payload) {
   syncChartLogToggle(true);
 
   const values = points.map(point => Number(point.close));
+  const candleScaleValues = chartType === "candle"
+    ? points.flatMap(point => {
+        const candle = chartCandleValues(point);
+        return candle ? [candle.open, candle.high, candle.low, candle.close] : [];
+      })
+    : [];
   const overlayValues = chartOverlayScaleValues(points);
   const markerValues = chartTransactions.map(tx => tx.price);
   // 로그 스케일은 모든 값이 양수일 때만 적용 (아니면 선형 폴백)
-  const scaleValues = [...values, ...markerValues, ...overlayValues];
+  const scaleValues = [...values, ...candleScaleValues, ...markerValues, ...overlayValues];
   const useLog = chartLogScale && scaleValues.every(value => value > 0);
-  const scale = useLog ? logChartScale(scaleValues) : niceChartScale(scaleValues);
+  const scale = useLog ? logChartScale(scaleValues) : tightLowerChartScale(scaleValues);
   const min = scale.min;
   const max = scale.max;
   const width = 980;
@@ -953,24 +1193,58 @@ function renderLineChart(payload) {
   const canvasEl = document.getElementById("chartCanvas");
   const pxToView = width / Math.max(1, canvasEl?.clientWidth || width);
   const dataHeadroom = Math.ceil(headroomPx * pxToView);
-  const pad = { top: 12, right: 58, bottom: 22, left: 14 };
+  // RSI 아래·날짜축 위의 차트 내부 스트립을 드래그 구간 요약에 사용한다.
+  const pad = { top: 12, right: 58, bottom: compactChart ? 54 : 44, left: 14 };
   const plotW = width - pad.left - pad.right;
   const rsiGap = compactChart ? 24 : 18;
   const rsiH = compactChart ? 180 : 96;
   const plotH = height - pad.top - pad.bottom - rsiGap - rsiH;
   const rsiTop = pad.top + plotH + rsiGap;
   const rsiBottom = rsiTop + rsiH;
+  const selectionSummaryY = compactChart ? height - 32 : height - 27;
   const range = max - min || Math.max(1, Math.abs(max));
   const logMax = useLog ? Math.log10(max) : 0;
   const logSpan = useLog ? ((Math.log10(max) - Math.log10(min)) || 1) : 1;
-  const xFor = index => pad.left + (points.length === 1 ? 0 : index / (points.length - 1) * plotW);
+  const candleWidth = Math.max(.75, Math.min(compactChart ? 10 : 8, plotW / Math.max(1, points.length) * .68));
+  // 캔들 중심을 플롯 경계에 두면 clipPath가 몸통 절반을 잘라낸다. 캔들
+  // 모드에서만 몸통 바깥으로 약 8 viewBox 단위의 숨 쉴 여백을 확보한다.
+  const candleInset = chartType === "candle" ? Math.max(10, candleWidth / 2 + 8) : 0;
+  const xStart = pad.left + candleInset;
+  const xSpan = Math.max(1, plotW - candleInset * 2);
+  const xFor = index => points.length === 1
+    ? pad.left + plotW / 2
+    : xStart + index / (points.length - 1) * xSpan;
   // 데이터는 플롯 상단 헤드룸(컨트롤 오버레이 영역) 아래에서 시작
   const dataTop = pad.top + dataHeadroom;
   const dataH = Math.max(40, plotH - dataHeadroom);
   const yFor = useLog
     ? (value => dataTop + (logMax - Math.log10(value)) / logSpan * dataH)
     : (value => dataTop + (max - value) / range * dataH);
-  const rsiYFor = value => rsiTop + (100 - Math.max(0, Math.min(100, value))) / 100 * rsiH;
+  const candleMarkup = chartType === "candle" ? points.map((point, index) => {
+    const candle = chartCandleValues(point);
+    if (!candle) return "";
+    const x = xFor(index);
+    const openY = yFor(candle.open);
+    const closeY = yFor(candle.close);
+    const bodyY = Math.min(openY, closeY);
+    const bodyH = Math.max(1.15, Math.abs(closeY - openY));
+    const cls = candle.close > candle.open ? "up" : candle.close < candle.open ? "down" : "flat";
+    return `
+      <g class="chart-candle ${cls}">
+        <line class="chart-candle-wick" x1="${x.toFixed(2)}" x2="${x.toFixed(2)}" y1="${yFor(candle.high).toFixed(2)}" y2="${yFor(candle.low).toFixed(2)}"></line>
+        <rect class="chart-candle-body" x="${(x - candleWidth / 2).toFixed(2)}" y="${bodyY.toFixed(2)}" width="${candleWidth.toFixed(2)}" height="${bodyH.toFixed(2)}" rx="${Math.min(.7, candleWidth / 5).toFixed(2)}"></rect>
+      </g>
+    `;
+  }).join("") : "";
+  const rsiValues = points
+    .map(point => Number(point.rsi))
+    .filter(value => Number.isFinite(value));
+  const rsiScale = dynamicRsiChartScale(rsiValues);
+  const rsiSpan = rsiScale.max - rsiScale.min || 1;
+  const rsiYFor = value => {
+    const bounded = Math.max(rsiScale.min, Math.min(rsiScale.max, value));
+    return rsiTop + (rsiScale.max - bounded) / rsiSpan * rsiH;
+  };
   const line = chartLinePath(points.map((point, index) => ({ x: xFor(index), y: yFor(Number(point.close)) })));
   const area = `${line} L${pad.left + plotW},${pad.top + plotH} L${pad.left},${pad.top + plotH} Z`;
   const bbUpperPaths = chartShowBollinger ? chartSeriesPaths(points, "bb_upper", xFor, yFor) : [];
@@ -1005,7 +1279,11 @@ function renderLineChart(payload) {
   );
   const rsiOverboughtAreas = rsiThresholdAreaPaths(points, 70, "above", xFor, rsiYFor);
   const rsiOversoldAreas = rsiThresholdAreaPaths(points, 30, "below", xFor, rsiYFor);
-  const rsiGuides = [30, 50, 70].map(value => ({ value, y: rsiYFor(value) }));
+  const rsiGuides = rsiScale.ticks.map(value => ({
+    value,
+    y: rsiYFor(value),
+    boundary: value === rsiScale.min || value === rsiScale.max,
+  }));
   const latestRsi = [...points].reverse().map(point => Number(point.rsi)).find(value => Number.isFinite(value));
   const currentRsiY = Number.isFinite(latestRsi) ? rsiYFor(latestRsi) : null;
   const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
@@ -1028,7 +1306,7 @@ function renderLineChart(payload) {
       tooltip: `${chartFullDateLabel(tx.date)} · ${tx.side === "BUY" ? "매수" : "매도"} ${fmt2.format(tx.qty)}주 · ${chartMoney(tx.price, tx.currency || payload.currency, payload.ticker)} · ${tx.account || tx.member || "-"}`,
     };
   });
-  const extremes = chartExtremes(values).map(item => {
+  const extremes = (chartType === "candle" ? chartCandleExtremes(points) : chartExtremes(values)).map(item => {
     const x = xFor(item.index);
     const y = yFor(item.value);
     const leftSide = x > width - 180;
@@ -1049,15 +1327,18 @@ function renderLineChart(payload) {
   });
 
   document.getElementById("chartCanvas").innerHTML = `
-    <svg class="line-chart single-price-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(payload.name)} 종가 및 RSI 차트">
+    <svg class="line-chart single-price-chart ${chartType === "candle" ? "candle-chart" : "price-line-chart"}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(payload.name)} ${chartType === "candle" ? "캔들" : "종가"} 및 RSI 차트">
       <defs>
         <linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stop-color="var(--brand)" stop-opacity=".18"></stop>
-          <stop offset="72%" stop-color="var(--brand)" stop-opacity=".045"></stop>
-          <stop offset="100%" stop-color="var(--brand)" stop-opacity="0"></stop>
+          <stop offset="0%" stop-color="var(--chart-price)" stop-opacity=".18"></stop>
+          <stop offset="72%" stop-color="var(--chart-price)" stop-opacity=".045"></stop>
+          <stop offset="100%" stop-color="var(--chart-price)" stop-opacity="0"></stop>
         </linearGradient>
         <clipPath id="chartPlotClip">
           <rect x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
+        </clipPath>
+        <clipPath id="chartRsiClip">
+          <rect x="${pad.left}" y="${rsiTop}" width="${plotW}" height="${rsiH}"></rect>
         </clipPath>
       </defs>
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
@@ -1076,7 +1357,7 @@ function renderLineChart(payload) {
         const anchor = tick.x < pad.left + 18 ? "start" : tick.x > pad.left + plotW - 18 ? "end" : "middle";
         return `<text class="chart-x-label" x="${tick.x.toFixed(2)}" y="${height - 6}" text-anchor="${anchor}">${esc(perfGridLabel(tick.time, vGrid.unit))}</text>`;
       }).join("")}
-      <path class="chart-area" d="${area}"></path>
+      ${chartType === "line" ? `<path class="chart-area" d="${area}"></path>` : ""}
       <g class="chart-price-overlays" clip-path="url(#chartPlotClip)">
         ${ichiCloudAreas.map(item => `<path class="chart-ichi-cloud ${item.bullish ? "bullish" : "bearish"}" d="${item.d}"></path>`).join("")}
         ${ichiSpanAPaths.map(path => `<path class="chart-ichi-line span-a" d="${path}"></path>`).join("")}
@@ -1088,17 +1369,23 @@ function renderLineChart(payload) {
         ${bbMidPaths.map(path => `<path class="chart-bb-line mid" d="${path}"></path>`).join("")}
         ${bbLowerPaths.map(path => `<path class="chart-bb-line outer" d="${path}"></path>`).join("")}
       </g>
-      <path class="chart-line" d="${line}"></path>
+      ${chartType === "candle"
+        ? `<g class="chart-candles" clip-path="url(#chartPlotClip)">${candleMarkup}</g>`
+        : `<path class="chart-line" d="${line}"></path>`}
       <line class="chart-current-price-tick" x1="${(pad.left + plotW).toFixed(2)}" x2="${(width - 8).toFixed(2)}" y1="${currentPriceY.toFixed(2)}" y2="${currentPriceY.toFixed(2)}"></line>
       <text class="chart-current-price-label" x="${width - 6}" y="${(currentPriceY + 4).toFixed(2)}">${esc(currentPriceLabel)}</text>
-      ${rsiOverboughtAreas.map(path => `<path class="chart-rsi-zone overbought" d="${path}"></path>`).join("")}
-      ${rsiOversoldAreas.map(path => `<path class="chart-rsi-zone oversold" d="${path}"></path>`).join("")}
+      <g class="chart-rsi-series" clip-path="url(#chartRsiClip)">
+        ${rsiOverboughtAreas.map(path => `<path class="chart-rsi-zone overbought" d="${path}"></path>`).join("")}
+        ${rsiOversoldAreas.map(path => `<path class="chart-rsi-zone oversold" d="${path}"></path>`).join("")}
+      </g>
       ${rsiGuides.map(guide => `
-        <line class="chart-rsi-guide level-${guide.value}" x1="${pad.left}" x2="${pad.left + plotW}" y1="${guide.y.toFixed(2)}" y2="${guide.y.toFixed(2)}"></line>
+        <line class="chart-rsi-guide ${guide.boundary ? "boundary" : `level-${guide.value}`}" x1="${pad.left}" x2="${pad.left + plotW}" y1="${guide.y.toFixed(2)}" y2="${guide.y.toFixed(2)}"></line>
         <text class="chart-rsi-axis" x="${width - 6}" y="${(guide.y + 4).toFixed(2)}">${guide.value}</text>
       `).join("")}
       <text class="chart-rsi-title" x="${pad.left + 7}" y="${rsiTop + 14}">RSI (14)</text>
-      ${rsiLine ? `<path class="chart-rsi-line" d="${rsiLine}"></path>` : ""}
+      <g class="chart-rsi-line-series" clip-path="url(#chartRsiClip)">
+        ${rsiLine ? `<path class="chart-rsi-line" d="${rsiLine}"></path>` : ""}
+      </g>
       ${currentRsiY != null ? `
         <line class="chart-rsi-current-tick" x1="${(pad.left + plotW).toFixed(2)}" x2="${(width - 8).toFixed(2)}" y1="${currentRsiY.toFixed(2)}" y2="${currentRsiY.toFixed(2)}"></line>
         <text class="chart-rsi-current-label" x="${width - 6}" y="${(currentRsiY + 4).toFixed(2)}">${Math.round(latestRsi)}</text>
@@ -1114,8 +1401,6 @@ function renderLineChart(payload) {
         <rect id="chartSelectionRect" class="chart-selection-range" x="0" y="${pad.top}" width="0" height="${plotH}"></rect>
         <line id="chartSelectionStartLine" class="chart-selection-line" x1="0" x2="0" y1="${pad.top}" y2="${rsiBottom}"></line>
         <line id="chartSelectionEndLine" class="chart-selection-line" x1="0" x2="0" y1="${pad.top}" y2="${rsiBottom}"></line>
-        <rect id="chartSelectionTooltipBox" class="chart-selection-box" x="0" y="0" width="0" height="0" rx="5"></rect>
-        <text id="chartSelectionTooltip" class="chart-selection-tooltip" x="0" y="0"></text>
       </g>
       <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${rsiBottom - pad.top}"></rect>
       ${markers.map(marker => `
@@ -1124,7 +1409,9 @@ function renderLineChart(payload) {
           <text x="${marker.x.toFixed(2)}" y="${(marker.y + (compactChart ? 4.5 : 3)).toFixed(2)}" text-anchor="middle">${marker.label}</text>
         </g>
       `).join("")}
-      <circle class="chart-last-dot" cx="${xFor(points.length - 1).toFixed(2)}" cy="${yFor(last).toFixed(2)}" r="4"></circle>
+      ${(chartType === "line" || !chartPointHasCandle(points[points.length - 1]) || Math.abs(last - chartCandleClose(points[points.length - 1])) > 1e-9)
+        ? `<circle class="chart-last-dot" cx="${xFor(points.length - 1).toFixed(2)}" cy="${yFor(last).toFixed(2)}" r="4"></circle>`
+        : ""}
       <g id="chartHoverGroup" class="chart-hover hidden">
         <line id="chartHoverLine" class="chart-hover-line" x1="0" x2="0" y1="${pad.top}" y2="${rsiBottom}"></line>
         <circle id="chartHoverDot" class="chart-hover-dot" cx="0" cy="0" r="4"></circle>
@@ -1132,11 +1419,15 @@ function renderLineChart(payload) {
         <rect id="chartTooltipBox" class="chart-tooltip-box" x="0" y="0" width="0" height="0" rx="6"></rect>
         <text id="chartTooltip" class="chart-tooltip" x="0" y="0">-</text>
       </g>
+      <g id="chartSelectionSummary" class="chart-selection-summary hidden" aria-live="polite">
+        <rect id="chartSelectionSummaryBox" class="chart-selection-summary-box" x="0" y="0" width="0" height="0" rx="6"></rect>
+        <text id="chartSelectionSummaryText" class="chart-selection-summary-text" x="${(pad.left + plotW / 2).toFixed(2)}" y="${selectionSummaryY}" text-anchor="middle"></text>
+      </g>
     </svg>
     ${renderChartCompareControls()}
   `;
   renderChartRangeControls();
-  bindChartInteractions(points, payload, { width, height, pad, plotW, plotH, xFor, yFor, rsiYFor });
+  bindChartInteractions(points, payload, { width, height, pad, plotW, plotH, xStart, xSpan, xFor, yFor, rsiYFor });
   bindChartCompareControls(payload);
   bindLineChartControls(payload);
   renderChartStats(payload);

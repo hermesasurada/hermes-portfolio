@@ -270,7 +270,7 @@ function bindPerformanceChartControls() {
   });
   document.querySelectorAll(".chart-range-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      if (btn.dataset.chartCustom != null) {
+      if (btn.dataset.chartRangePopup != null || btn.dataset.chartCustom != null) {
         openChartRangeModal();
         return;
       }
@@ -319,6 +319,7 @@ async function reloadPerformanceChart({ skeleton = false } = {}) {
 
 async function openPerformanceChart() {
   performanceChartOpen = true;
+  discardHiddenListRowsForChart();
   syncTransactionPanel();
   chartTicker = null;
   chartPayload = null;
@@ -336,6 +337,21 @@ async function openPerformanceChart() {
   await reloadPerformanceChart();
 }
 
+function priceChartRequestOptions() {
+  return {
+    range: chartRange,
+    start: chartRange === "custom" ? chartCustomRange.start : "",
+    end: chartRange === "custom" ? chartCustomRange.end : "",
+  };
+}
+
+function discardHiddenListRowsForChart() {
+  const holdings = document.getElementById("holdings");
+  const interest = document.getElementById("interestRows");
+  if (holdings) holdings.innerHTML = "";
+  if (interest) interest.innerHTML = "";
+}
+
 async function openChart(ticker) {
   const cleanTicker = String(ticker || "").trim().toUpperCase();
   if (!cleanTicker) return;
@@ -345,6 +361,7 @@ async function openChart(ticker) {
   performanceLoadToken += 1;
   if (chartTicker !== cleanTicker) chartComparePayloads = [];
   chartTicker = cleanTicker;
+  discardHiddenListRowsForChart();
   syncTransactionPanel();
   syncDetailTabs();
   document.getElementById("tableTitle").textContent = cleanTicker;
@@ -353,7 +370,7 @@ async function openChart(ticker) {
   if (rangeHost) rangeHost.innerHTML = "";
   document.getElementById("chartMeta").textContent = "loading...";
   document.getElementById("chartCanvas").innerHTML = `<div class="chart-skeleton"></div>`;
-  chartLoadInFlight = apiFetchChart(cleanTicker);
+  chartLoadInFlight = apiFetchChart(cleanTicker, usExtendedEnabled(), priceChartRequestOptions());
   try {
     const payload = await chartLoadInFlight;
     if (chartTicker !== cleanTicker) return;
@@ -366,6 +383,37 @@ async function openChart(ticker) {
     document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">${esc(err.message || String(err))}</div>`;
   } finally {
     if (chartLoadInFlight) chartLoadInFlight = null;
+  }
+}
+
+async function reloadPriceChartForMarketMode({ skeleton = false } = {}) {
+  const cleanTicker = String(chartTicker || "").trim().toUpperCase();
+  if (!cleanTicker || performanceChartOpen) return;
+  const compareTickers = chartComparePayloads
+    .map(item => String(item?.ticker || "").trim().toUpperCase())
+    .filter(Boolean);
+  if (skeleton) {
+    document.getElementById("chartMeta").textContent = "loading...";
+    document.getElementById("chartCanvas").innerHTML = `<div class="chart-skeleton"></div>`;
+  }
+  const options = priceChartRequestOptions();
+  chartLoadInFlight = apiFetchChart(cleanTicker, usExtendedEnabled(), options);
+  try {
+    const payloads = await Promise.all([
+      chartLoadInFlight,
+      ...compareTickers.map(ticker => apiFetchChart(ticker, usExtendedEnabled(), options)),
+    ]);
+    if (chartTicker !== cleanTicker) return;
+    chartPayload = payloads[0];
+    chartComparePayloads = payloads.slice(1);
+    document.getElementById("tableTitle").textContent = chartPayload.name || chartPayload.ticker;
+    renderLineChart(chartPayload);
+  } catch (err) {
+    if (chartTicker !== cleanTicker) return;
+    document.getElementById("chartMeta").textContent = "";
+    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">${esc(err.message || String(err))}</div>`;
+  } finally {
+    chartLoadInFlight = null;
   }
 }
 

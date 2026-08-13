@@ -15,6 +15,8 @@ from portfolio_core.collectors import (
     fetch_investing_kr_earnings_date,
     fetch_price,
     fetch_yahoo_earnings_date,
+    fetch_yahoo_prices_batch,
+    yahoo_batch_target,
 )
 from portfolio_core.collect_common import collector_lock, parse_categories
 from portfolio_core.corporate_actions import refresh_stock_splits
@@ -75,13 +77,47 @@ def backfill_new_tickers(categories: list[str], tickers: list[str] | None) -> tu
     return rows_saved, backfilled
 
 
-def collect_prices(categories: list[str], tickers: list[str] | None, history_start: str) -> tuple[list[CollectedPrice], list[str]]:
+def collect_prices(
+    categories: list[str],
+    tickers: list[str] | None,
+    history_start: str | None,
+) -> tuple[list[CollectedPrice], list[str]]:
     watch = load_watch(categories=categories, tickers=tickers)
     fetched: list[CollectedPrice] = []
     errors: list[str] = []
+    batch_targets: list[tuple[str, str, str]] = []
+    batched_tickers: set[str] = set()
 
     for category in categories:
         for ticker in watch.get(category, []):
+            target = yahoo_batch_target(category, ticker)
+            if target is None:
+                continue
+            batch_targets.append(target)
+            batched_tickers.add(ticker)
+
+    if batch_targets:
+        try:
+            batch_fetched, batch_errors = fetch_yahoo_prices_batch(batch_targets)
+            fetched.extend(batch_fetched)
+            errors.extend(batch_errors)
+            for result in batch_fetched:
+                print(
+                    f"  + {result.ticker}: {result.price:,.4f} "
+                    f"{result.currency} ({result.price_date}, {result.source})"
+                )
+            for ticker in batch_errors:
+                print(f"  x {ticker} (yahoo batch): no price")
+        except Exception as exc:
+            failed = [target[0] for target in batch_targets]
+            print(f"  x Yahoo batch ({len(failed)} tickers): {exc}")
+            print("  ↺ falling back to individual Yahoo requests")
+            batched_tickers.clear()
+
+    for category in categories:
+        for ticker in watch.get(category, []):
+            if ticker in batched_tickers:
+                continue
             try:
                 result = fetch_price(category, ticker, history_start=history_start)
             except Exception as exc:
@@ -215,7 +251,11 @@ def main() -> int:
         help="Category to update: fx, crypto, overseas, kr, index, all. Can be repeated or comma-separated.",
     )
     parser.add_argument("--ticker", action="append", help="Limit to a ticker. Can be repeated.")
-    parser.add_argument("--history-start", default="20250101", help="FDR start date for Korean stock history.")
+    parser.add_argument(
+        "--history-start",
+        default=None,
+        help="FDR start date for Korean stock history (default: recent 30 days).",
+    )
     parser.add_argument("--skip-earnings", action="store_true", help="Do not update earnings dates.")
     parser.add_argument("--skip-fundamentals", action="store_true", help="Do not refresh fundamental statistics.")
     parser.add_argument("--skip-dividends", action="store_true", help="Do not update dividend event cache.")

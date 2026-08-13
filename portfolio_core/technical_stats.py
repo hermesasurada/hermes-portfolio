@@ -18,8 +18,9 @@ from .indicators import bollinger_pband, recent_performance, resample_last, rsi_
 from .paths import KST
 from .tickers import ticker_currency
 
-TECHNICAL_CACHE_VERSION = 5  # 5: 총수익(배당 재투자) 기간별 CAGR·변동성(risk_reward)
-TECHNICAL_LOOKBACK_DAYS = 6 * 366
+TECHNICAL_CACHE_VERSION = 6  # 6: 기간별 가격 성과에 1주·10년 추가
+TECHNICAL_LOOKBACK_DAYS = 11 * 366
+PRICE_ADJUSTED_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
 BETA_WINDOW = 180
 

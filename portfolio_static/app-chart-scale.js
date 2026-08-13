@@ -72,6 +72,16 @@ function chartIntervalKey(dateText, interval) {
   return date.toISOString().slice(0, 10);
 }
 
+function chartCandleClose(point) {
+  const value = point?.candle_close != null ? Number(point.candle_close) : Number(point?.close);
+  return Number.isFinite(value) ? value : null;
+}
+
+function chartPointHasCandle(point) {
+  return [point?.open, point?.high, point?.low, chartCandleClose(point)]
+    .every(value => Number.isFinite(Number(value)));
+}
+
 function aggregateChartPoints(points, interval = chartInterval) {
   const clean = (points || []).filter(point => point?.date);
   if (interval === "day") return clean;
@@ -91,7 +101,31 @@ function aggregateChartPoints(points, interval = chartInterval) {
         : previous?.[itemKey];
       if (Number.isFinite(value)) carried[itemKey] = value;
     });
-    grouped.set(key, { ...point, ...carried });
+    const next = { ...point, ...carried };
+    const pointHasCandle = chartPointHasCandle(point);
+    const previousHasCandle = chartPointHasCandle(previous);
+    if (pointHasCandle) {
+      const candleClose = chartCandleClose(point);
+      next.open = previousHasCandle ? Number(previous.open) : Number(point.open);
+      next.high = previousHasCandle
+        ? Math.max(Number(previous.high), Number(point.high))
+        : Number(point.high);
+      next.low = previousHasCandle
+        ? Math.min(Number(previous.low), Number(point.low))
+        : Number(point.low);
+      next.candle_close = candleClose;
+    } else if (previousHasCandle) {
+      next.open = Number(previous.open);
+      next.high = Number(previous.high);
+      next.low = Number(previous.low);
+      next.candle_close = chartCandleClose(previous);
+    } else {
+      delete next.open;
+      delete next.high;
+      delete next.low;
+      delete next.candle_close;
+    }
+    grouped.set(key, next);
   });
   return Array.from(grouped.values());
 }
@@ -119,6 +153,64 @@ function niceChartScale(values, desiredTicks = 5) {
   for (let value = min; value <= max + step / 2; value += step) {
     ticks.push(Math.abs(value) < step / 1_000_000 ? 0 : value);
   }
+  return { min, max, ticks };
+}
+
+// 단일 가격차트용 선형축. 눈금은 기존 nice 단위를 유지하되, 하단 도메인까지
+// 눈금 단위로 내리지는 않는다. 고가 종목에서 $950가 $500으로 과도하게
+// 확장되는 문제를 막고 실제 최저값 아래에는 가격 범위의 4%만 확보한다.
+function tightLowerChartScale(values, desiredTicks = 5) {
+  const scale = niceChartScale(values, desiredTicks);
+  const cleanValues = values.filter(value => Number.isFinite(value));
+  if (!cleanValues.length) return scale;
+  const rawMin = Math.min(...cleanValues);
+  const rawMax = Math.max(...cleanValues);
+  const rawRange = rawMax - rawMin || Math.max(1, Math.abs(rawMax));
+  const paddedMin = rawMin - rawRange * 0.04;
+  const min = rawMin >= 0 ? Math.max(0, paddedMin) : paddedMin;
+  const tolerance = Math.max(1, Math.abs(scale.max - min)) / 1_000_000;
+  const ticks = scale.ticks.filter(value => value >= min - tolerance);
+  return { ...scale, min, ticks };
+}
+
+// RSI는 이론상 0~100이지만 실제 관측 구간만 확대해서 변화를 읽기 쉽게 한다.
+// 축 경계는 5단위로 정리하되 실제 최저·최고에서 최소 3포인트 여백을 둔다.
+function dynamicRsiChartScale(values) {
+  const cleanValues = (values || [])
+    .map(value => Number(value))
+    .filter(value => Number.isFinite(value))
+    .map(value => Math.max(0, Math.min(100, value)));
+  if (!cleanValues.length) {
+    return { min: 0, max: 100, ticks: [0, 30, 50, 70, 100] };
+  }
+
+  const rawMin = Math.min(...cleanValues);
+  const rawMax = Math.max(...cleanValues);
+  const minimumPadding = 3;
+  let min = Math.max(0, Math.floor(rawMin / 5) * 5);
+  let max = Math.min(100, Math.ceil(rawMax / 5) * 5);
+  if (rawMin - min < minimumPadding && min > 0) min = Math.max(0, min - 5);
+  if (max - rawMax < minimumPadding && max < 100) max = Math.min(100, max + 5);
+
+  const minimumSpan = 10;
+  if (max - min < minimumSpan) {
+    const center = (rawMin + rawMax) / 2;
+    min = Math.max(0, center - minimumSpan / 2);
+    max = Math.min(100, center + minimumSpan / 2);
+    if (max - min < minimumSpan) {
+      if (min === 0) max = Math.min(100, minimumSpan);
+      else if (max === 100) min = Math.max(0, 100 - minimumSpan);
+    }
+  }
+  if (max <= min) {
+    min = Math.max(0, min - 5);
+    max = Math.min(100, max + 5);
+  }
+
+  const ticks = [min, 30, 50, 70, max]
+    .filter(value => value >= min && value <= max)
+    .filter((value, index, items) => items.indexOf(value) === index)
+    .sort((left, right) => left - right);
   return { min, max, ticks };
 }
 

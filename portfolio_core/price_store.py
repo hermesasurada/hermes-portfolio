@@ -2,11 +2,18 @@ from __future__ import annotations
 
 import json
 from datetime import date, datetime, timedelta, timezone
+from collections.abc import Mapping, Sequence
 from typing import Iterable
 
 from .constants import CRYPTO_MARKETS, FX_TICKERS, MARKET_INDEXES
 from .dates import parse_iso_date
-from .db import connect, ensure_collector_runs_table, ensure_stock_split_tables, ensure_ticker_metadata_columns
+from .db import (
+    connect,
+    ensure_collector_runs_table,
+    ensure_earnings_events_table,
+    ensure_stock_split_tables,
+    ensure_ticker_metadata_columns,
+)
 from .paths import KST
 from .tickers import ticker_currency
 
@@ -100,19 +107,77 @@ def load_ticker_profiles(tickers: Iterable[str]) -> dict[str, dict[str, str | No
 REPAIR_SCAN_BUFFER_DAYS = 30
 
 
-def save_daily_prices(ticker: str, rows: Iterable[tuple[str, float]], source: str) -> int:
+def _optional_number(value):
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number else None
+
+
+def _normalize_daily_price_row(row, ticker: str, source: str) -> tuple | None:
+    """신규 OHLC dict와 기존 (date, close) tuple을 모두 저장 형태로 변환한다."""
+    if isinstance(row, Mapping):
+        date_str = row.get("date")
+        close = _optional_number(row.get("close"))
+        open_value = _optional_number(row.get("open"))
+        high = _optional_number(row.get("high"))
+        low = _optional_number(row.get("low"))
+        volume = _optional_number(row.get("volume"))
+        adj_close = _optional_number(row.get("adj_close"))
+    elif isinstance(row, Sequence) and not isinstance(row, (str, bytes)) and len(row) >= 2:
+        date_str = row[0]
+        if len(row) >= 5:
+            open_value = _optional_number(row[1])
+            high = _optional_number(row[2])
+            low = _optional_number(row[3])
+            close = _optional_number(row[4])
+            volume = _optional_number(row[5]) if len(row) > 5 else None
+            adj_close = _optional_number(row[6]) if len(row) > 6 else None
+        else:
+            close = _optional_number(row[1])
+            open_value = high = low = volume = adj_close = None
+    else:
+        return None
+    if not date_str or close is None or close <= 0:
+        return None
+    return (
+        str(date_str),
+        ticker,
+        open_value,
+        high,
+        low,
+        close,
+        volume,
+        adj_close,
+        source,
+    )
+
+
+def save_daily_prices(ticker: str, rows: Iterable, source: str) -> int:
     clean_rows = [
-        (date_str, ticker, float(price), source)
-        for date_str, price in rows
-        if date_str and price is not None
+        normalized
+        for row in rows
+        if (normalized := _normalize_daily_price_row(row, ticker, source)) is not None
     ]
     if not clean_rows:
         return 0
     with connect() as conn:
         conn.executemany(
             """
-            INSERT OR REPLACE INTO daily_prices (date, ticker, close, source)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO daily_prices
+              (date, ticker, open, high, low, close, volume, adj_close, source)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(date, ticker) DO UPDATE SET
+              open = COALESCE(excluded.open, daily_prices.open),
+              high = COALESCE(excluded.high, daily_prices.high),
+              low = COALESCE(excluded.low, daily_prices.low),
+              close = excluded.close,
+              volume = COALESCE(excluded.volume, daily_prices.volume),
+              adj_close = COALESCE(excluded.adj_close, daily_prices.adj_close),
+              source = excluded.source
             """,
             clean_rows,
         )
@@ -263,11 +328,14 @@ def repair_split_adjusted_daily_prices(tickers: Iterable[str], since: str | None
                 conn.execute(
                     f"""
                     UPDATE daily_prices
-                    SET close = close / ?
+                    SET open = CASE WHEN open IS NULL THEN NULL ELSE open / ? END,
+                        high = CASE WHEN high IS NULL THEN NULL ELSE high / ? END,
+                        low = CASE WHEN low IS NULL THEN NULL ELSE low / ? END,
+                        close = close / ?
                     WHERE ticker = ?
                       AND date < ?{start_clause}
                     """,
-                    params,
+                    (ratio, ratio, ratio, *params),
                 )
                 for prior in rows[start_idx:idx]:
                     prior["close"] /= ratio
@@ -424,6 +492,23 @@ def update_earnings_dates(entries: Iterable[tuple[str, str | None]]) -> int:
     updated_at = datetime.now(KST).isoformat(timespec="seconds")
     with connect() as conn:
         ensure_ticker_metadata_columns(conn)
+        # ensure 단계가 기존 next_earnings_date를 먼저 이력으로 옮긴다. 이후 새로
+        # 수집된 날짜도 누적해 다음 분기 값으로 덮어써져도 과거 일정이 남는다.
+        ensure_earnings_events_table(conn)
+        event_entries = []
+        for ticker, date_text in clean_entries:
+            parsed = parse_iso_date(date_text)
+            if parsed is not None:
+                event_entries.append((ticker, parsed.isoformat(), "collector", updated_at))
+        if event_entries:
+            conn.executemany(
+                """
+                INSERT OR IGNORE INTO earnings_events
+                  (ticker, earnings_date, source, observed_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                event_entries,
+            )
         conn.executemany(
             """
             UPDATE tickers

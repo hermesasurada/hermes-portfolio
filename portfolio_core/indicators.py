@@ -1,18 +1,12 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import date, datetime
-from functools import lru_cache
+from bisect import bisect_right
+from datetime import date, timedelta
 
 
-@lru_cache(maxsize=1)
 def technical_indicators_available() -> bool:
-    try:
-        import pandas  # noqa: F401
-        import ta  # noqa: F401
-    except Exception as exc:
-        print(f"[stats] technical indicators unavailable: {exc}")
-        return False
+    """기술지표는 표준 라이브러리만으로 계산하므로 항상 사용할 수 있다."""
     return True
 
 
@@ -34,44 +28,56 @@ def rsi_value(values: list[float], period: int = 14) -> float | None:
 
 
 def rsi_series(values: list[float], period: int = 14) -> list[float | None]:
-    if len(values) <= period:
-        return [None] * len(values)
-    try:
-        import pandas as pd
-        from ta.momentum import RSIIndicator
+    """Wilder RSI 시계열.
 
-        close = pd.Series(values, dtype="float64")
-        result = RSIIndicator(close=close, window=period).rsi()
-        return [
-            None if value != value else float(value)
-            for value in result
-        ]
-    except Exception as exc:
-        print(f"[stats] RSI failed: {exc}")
+    기존 ``ta`` 패키지의 EWM(alpha=1/period, adjust=False) 계산과 같은
+    초기화 규칙을 사용하되 pandas Series 생성 비용은 없앤다.
+    """
+    if period <= 0 or len(values) < period:
         return [None] * len(values)
+    alpha = 1.0 / period
+    average_gain = 0.0
+    average_loss = 0.0
+    result: list[float | None] = [None] * len(values)
+    previous = float(values[0])
+    for index in range(1, len(values)):
+        current = float(values[index])
+        change = current - previous
+        gain = max(change, 0.0)
+        loss = max(-change, 0.0)
+        average_gain = (1.0 - alpha) * average_gain + alpha * gain
+        average_loss = (1.0 - alpha) * average_loss + alpha * loss
+        if index >= period - 1:
+            result[index] = (
+                100.0
+                if average_loss == 0
+                else 100.0 - (100.0 / (1.0 + average_gain / average_loss))
+            )
+        previous = current
+    return result
 
 
 def bollinger_pband(values: list[float], period: int = 20, deviations: float = 2.0) -> float | None:
     if len(values) < period:
         return None
-    try:
-        import pandas as pd
-        from ta.volatility import BollingerBands
-
-        close = pd.Series(values, dtype="float64")
-        bands = BollingerBands(close=close, window=period, window_dev=deviations)
-        value = last_number(bands.bollinger_pband())
-        return value * 100 if value is not None else None
-    except Exception as exc:
-        print(f"[stats] Bollinger PBand failed: {exc}")
+    window = [float(value) for value in values[-period:]]
+    average = sum(window) / period
+    variance = sum((value - average) ** 2 for value in window) / period
+    width = (variance ** 0.5) * deviations
+    if width == 0:
         return None
+    return (window[-1] - (average - width)) / (width * 2) * 100
 
 
 def resample_last(rows: list[sqlite3.Row], period: str) -> list[float]:
     grouped: dict[str, float] = {}
     for row in rows:
-        row_date = datetime.strptime(row["date"], "%Y-%m-%d").date()
-        key = f"{row_date.isocalendar().year}-W{row_date.isocalendar().week:02d}" if period == "week" else row_date.strftime("%Y-%m")
+        date_text = row["date"]
+        if period == "week":
+            iso_year, iso_week, _ = date.fromisoformat(date_text).isocalendar()
+            key = f"{iso_year}-W{iso_week:02d}"
+        else:
+            key = date_text[:7]
         grouped[key] = float(row["close"])
     return [grouped[key] for key in sorted(grouped)]
 
@@ -85,11 +91,11 @@ def shift_months(day: date, months: int) -> date:
 
 
 def price_on_or_before(rows: list[sqlite3.Row], target: date) -> float | None:
-    for row in reversed(rows):
-        row_date = datetime.strptime(row["date"], "%Y-%m-%d").date()
-        if row_date <= target:
-            return float(row["close"])
-    return None
+    if not rows:
+        return None
+    dates = [row["date"] for row in rows]
+    index = bisect_right(dates, target.isoformat()) - 1
+    return float(rows[index]["close"]) if index >= 0 else None
 
 
 def price_near_target(rows: list[sqlite3.Row], target: date, max_forward_days: int = 7) -> float | None:
@@ -98,7 +104,7 @@ def price_near_target(rows: list[sqlite3.Row], target: date, max_forward_days: i
         return before
     if not rows:
         return None
-    first_date = datetime.strptime(rows[0]["date"], "%Y-%m-%d").date()
+    first_date = date.fromisoformat(rows[0]["date"])
     if 0 <= (first_date - target).days <= max_forward_days:
         return float(rows[0]["close"])
     return None
@@ -117,6 +123,7 @@ def performance_pct(rows: list[sqlite3.Row], target: date) -> float | None:
 def recent_performance(rows: list[sqlite3.Row]) -> dict[str, float | None]:
     if not rows:
         return {
+            "one_week": None,
             "one_month": None,
             "three_month": None,
             "six_month": None,
@@ -124,9 +131,11 @@ def recent_performance(rows: list[sqlite3.Row]) -> dict[str, float | None]:
             "one_year": None,
             "three_year": None,
             "five_year": None,
+            "ten_year": None,
         }
-    latest_date = datetime.strptime(rows[-1]["date"], "%Y-%m-%d").date()
+    latest_date = date.fromisoformat(rows[-1]["date"])
     return {
+        "one_week": performance_pct(rows, latest_date - timedelta(days=7)),
         "one_month": performance_pct(rows, shift_months(latest_date, -1)),
         "three_month": performance_pct(rows, shift_months(latest_date, -3)),
         "six_month": performance_pct(rows, shift_months(latest_date, -6)),
@@ -134,4 +143,5 @@ def recent_performance(rows: list[sqlite3.Row]) -> dict[str, float | None]:
         "one_year": performance_pct(rows, shift_months(latest_date, -12)),
         "three_year": performance_pct(rows, shift_months(latest_date, -36)),
         "five_year": performance_pct(rows, shift_months(latest_date, -60)),
+        "ten_year": performance_pct(rows, shift_months(latest_date, -120)),
     }

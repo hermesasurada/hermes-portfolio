@@ -38,7 +38,9 @@ def latest_prices(conn: sqlite3.Connection, tickers: list[str] | None = None) ->
             l.close,
             l.source,
             previous.date AS previous_date,
-            previous.close AS previous_close
+            previous.close AS previous_close,
+            prior.date AS prior_date,
+            prior.close AS prior_close
         FROM latest l
         LEFT JOIN daily_prices previous
           ON previous.rowid = (
@@ -48,6 +50,16 @@ def latest_prices(conn: sqlite3.Connection, tickers: list[str] | None = None) ->
               AND p.close IS NOT NULL
               AND p.date < l.date
               AND ABS(p.close - l.close) > MAX(ABS(l.close) * 0.000001, 0.0001)
+            ORDER BY p.date DESC
+              LIMIT 1
+          )
+        LEFT JOIN daily_prices prior
+          ON prior.rowid = (
+            SELECT p.rowid
+            FROM daily_prices AS p INDEXED BY idx_daily_prices_ticker_date_desc
+            WHERE p.ticker = l.ticker
+              AND p.close IS NOT NULL
+              AND p.date < l.date
             ORDER BY p.date DESC
             LIMIT 1
           )
@@ -63,6 +75,8 @@ def latest_prices(conn: sqlite3.Connection, tickers: list[str] | None = None) ->
             "source": row["source"],
             "previous_price": row["previous_close"],
             "previous_date": row["previous_date"],
+            "prior_price": row["prior_close"],
+            "prior_date": row["prior_date"],
         }
     return prices
 
@@ -103,7 +117,8 @@ def price_view(
         change = float(current_price) - float(previous_price)
         change_pct = change / float(previous_price) * 100
     if regular_price is not None and regular_previous_price not in (None, 0):
-        change_pct = (float(regular_price) - float(regular_previous_price)) / float(regular_previous_price) * 100
+        change = float(regular_price) - float(regular_previous_price)
+        change_pct = change / float(regular_previous_price) * 100
 
     rate = rates.get(currency, 1.0)
     previous_rate = previous_rates.get(currency, rate)
@@ -144,7 +159,8 @@ def fx_rates(prices: dict[str, dict]) -> dict[str, float]:
 def fx_previous_rates(prices: dict[str, dict]) -> dict[str, float]:
     return {
         currency: float(
-            prices.get(ticker, {}).get("previous_price")
+            prices.get(ticker, {}).get("prior_price")
+            or prices.get(ticker, {}).get("previous_price")
             or prices.get(ticker, {}).get("price")
             or FX_DEFAULT_RATES[currency]
         )

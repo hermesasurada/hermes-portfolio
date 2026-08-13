@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from html import unescape
 from urllib.parse import quote
+from typing import Any
 
 from .constants import CRYPTO_MARKETS, MARKET_INDEXES
 from .paths import KST
@@ -28,6 +29,7 @@ FX_SYMBOLS = {
     "SGDKRW": "SGDKRW=X",
     "HKDKRW": "HKDKRW=X",
 }
+YAHOO_INDEX_SYMBOL_OVERRIDES = {"KOSPI": "^KS11"}
 INVESTING_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
@@ -46,34 +48,78 @@ class CollectedPrice:
     currency: str
     source: str
     price_date: str
-    recent: list[tuple[str, float]]
+    recent: list[dict[str, Any] | tuple[str, float]]
 
 
-def _rows_from_close_series(series) -> list[tuple[str, float]]:
-    closes = series.dropna()
-    return [(date.strftime("%Y-%m-%d"), float(price)) for date, price in closes.tail(7).items()]
+def _finite_number(value) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number else None
 
 
-def fetch_kr_price(ticker: str, history_start: str = "20250101") -> CollectedPrice | None:
+def _rows_from_frame(frame, tail: int | None = None) -> list[dict[str, Any]]:
+    """pandas 일봉 프레임을 저장용 OHLC 행으로 정규화한다."""
+    if frame is None or frame.empty or "Close" not in frame:
+        return []
+    selected = frame.tail(tail) if tail else frame
+    rows: list[dict[str, Any]] = []
+    for date, item in selected.iterrows():
+        close = _finite_number(item.get("Close"))
+        if close is None or close <= 0:
+            continue
+        rows.append(
+            {
+                "date": date.strftime("%Y-%m-%d"),
+                "open": _finite_number(item.get("Open")),
+                "high": _finite_number(item.get("High")),
+                "low": _finite_number(item.get("Low")),
+                "close": close,
+                "volume": _finite_number(item.get("Volume")),
+                "adj_close": _finite_number(item.get("Adj Close")),
+            }
+        )
+    return rows
+
+
+def _upbit_candle_row(item: dict) -> dict[str, Any] | None:
+    date_text = str(item.get("candle_date_time_kst") or "")[:10]
+    close = _finite_number(item.get("trade_price"))
+    if not date_text or close is None or close <= 0:
+        return None
+    return {
+        "date": date_text,
+        "open": _finite_number(item.get("opening_price")),
+        "high": _finite_number(item.get("high_price")),
+        "low": _finite_number(item.get("low_price")),
+        "close": close,
+        "volume": _finite_number(item.get("candle_acc_trade_volume")),
+        "adj_close": None,
+    }
+
+
+def recent_history_start(days: int = 30) -> str:
+    return (datetime.now(KST).date() - timedelta(days=days)).strftime("%Y%m%d")
+
+
+def fetch_kr_price(ticker: str, history_start: str | None = None) -> CollectedPrice | None:
     from FinanceDataReader import DataReader as fdr
 
     code = kr_ticker_code(ticker)
-    df = fdr(code, history_start)
+    df = fdr(code, history_start or recent_history_start())
     if df is None or df.empty or "Close" not in df:
         return None
     df = df.dropna(subset=["Close"])
     if df.empty:
         return None
-    recent = [
-        (date.strftime("%Y-%m-%d"), float(row["Close"]))
-        for date, row in df.tail(7).iterrows()
-    ]
-    price_date, price = recent[-1]
+    recent = _rows_from_frame(df, tail=7)
+    price_date, price = recent[-1]["date"], recent[-1]["close"]
     return CollectedPrice(ticker, price, "KRW", "fdr", price_date, recent)
 
 
-def fetch_history_rows(category: str, ticker: str, period: str = "10y") -> list[tuple[str, float]]:
-    """장기 일별 종가 — 신규 보유 종목의 과거 이력 1회 백필용.
+def fetch_history_rows(category: str, ticker: str, period: str = "10y") -> list[dict[str, Any]]:
+    """장기 일별 OHLC — 신규 종목 및 캔들차트 과거 이력 백필용.
 
     일일 수집기는 해외 7일치 / KR history_start 이후만 받으므로, 새로 추가된
     종목은 RSI·볼린저·베타·기간수익률 계산에 필요한 과거가 비어버린다. 이 함수로
@@ -89,11 +135,7 @@ def fetch_history_rows(category: str, ticker: str, period: str = "10y") -> list[
         if df is None or df.empty or "Close" not in df:
             return []
         df = df.dropna(subset=["Close"])
-        return [
-            (date.strftime("%Y-%m-%d"), float(row["Close"]))
-            for date, row in df.iterrows()
-            if row["Close"] and row["Close"] > 0
-        ]
+        return _rows_from_frame(df)
 
     if category == "crypto":
         meta = CRYPTO_MARKETS.get(str(ticker or "").strip().upper())
@@ -105,17 +147,15 @@ def fetch_history_rows(category: str, ticker: str, period: str = "10y") -> list[
 
     if category == "fx":
         symbol = FX_SYMBOLS.get(ticker, f"{ticker}=X")
+    elif category == "index":
+        meta = MARKET_INDEXES.get(ticker)
+        symbol = YAHOO_INDEX_SYMBOL_OVERRIDES.get(ticker) or (str(meta["symbol"]) if meta else ticker)
     else:
         symbol = normalize_yfinance_symbol(ticker) or ticker
     hist = yf.Ticker(symbol).history(period=period, auto_adjust=False)
     if hist is None or hist.empty or "Close" not in hist:
         return []
-    closes = hist["Close"].dropna()
-    return [
-        (date.strftime("%Y-%m-%d"), float(price))
-        for date, price in closes.items()
-        if price == price and price > 0
-    ]
+    return _rows_from_frame(hist)
 
 
 def fetch_yahoo_price(ticker: str, cache_ticker: str | None = None, currency: str | None = None) -> CollectedPrice | None:
@@ -124,11 +164,11 @@ def fetch_yahoo_price(ticker: str, cache_ticker: str | None = None, currency: st
     cache_ticker = cache_ticker or ticker
     currency = currency or ticker_currency(cache_ticker)
     stock = yf.Ticker(ticker)
-    hist = stock.history(period="7d")
+    hist = stock.history(period="7d", auto_adjust=False)
     if hist is not None and not hist.empty and "Close" in hist:
-        recent = _rows_from_close_series(hist["Close"])
+        recent = _rows_from_frame(hist, tail=7)
         if recent:
-            price_date, price = recent[-1]
+            price_date, price = recent[-1]["date"], recent[-1]["close"]
             return CollectedPrice(cache_ticker, price, currency, "yf", price_date, recent)
 
     info = stock.info or {}
@@ -137,6 +177,123 @@ def fetch_yahoo_price(ticker: str, cache_ticker: str | None = None, currency: st
         price_date = datetime.now(KST).strftime("%Y-%m-%d")
         return CollectedPrice(cache_ticker, float(price), currency, "yf", price_date, [(price_date, float(price))])
     return None
+
+
+def yahoo_batch_target(category: str, ticker: str) -> tuple[str, str, str] | None:
+    """배치 다운로드용 (저장 티커, Yahoo 심볼, 통화) 변환."""
+    if category == "overseas":
+        return ticker, normalize_yfinance_symbol(ticker) or ticker, ticker_currency(ticker)
+    if category == "fx":
+        return ticker, FX_SYMBOLS.get(ticker, f"{ticker}=X"), "FX"
+    if category == "index" and ticker != "KOSPI":
+        meta = MARKET_INDEXES.get(ticker)
+        if meta:
+            symbol = YAHOO_INDEX_SYMBOL_OVERRIDES.get(ticker) or str(meta["symbol"])
+            return ticker, symbol, str(meta["currency"])
+    return None
+
+
+def _download_symbol_frame(frame, symbol: str, single_symbol: bool):
+    """yfinance 단일/복수 다운로드의 컬럼 레벨 차이를 흡수한다."""
+    if frame is None or frame.empty:
+        return None
+    columns = frame.columns
+    if getattr(columns, "nlevels", 1) == 1:
+        return frame if "Close" in columns else None
+    level_zero = set(columns.get_level_values(0))
+    level_one = set(columns.get_level_values(1))
+    if symbol in level_zero:
+        return frame[symbol]
+    if symbol in level_one:
+        return frame.xs(symbol, axis=1, level=1)
+    if single_symbol and "Close" in level_zero:
+        return frame.droplevel(1, axis=1)
+    return None
+
+
+def _download_close_series(frame, symbol: str, single_symbol: bool):
+    """기존 호출부 호환용 종가 시리즈 헬퍼."""
+    symbol_frame = _download_symbol_frame(frame, symbol, single_symbol)
+    return symbol_frame["Close"] if symbol_frame is not None and "Close" in symbol_frame else None
+
+
+def fetch_yahoo_prices_batch(
+    targets: list[tuple[str, str, str]],
+    chunk_size: int = 100,
+) -> tuple[list[CollectedPrice], list[str]]:
+    """Yahoo 대상의 최근 일봉을 묶어서 병렬 다운로드한다."""
+    import yfinance as yf
+
+    unique_targets = {
+        cache_ticker: (cache_ticker, symbol, currency)
+        for cache_ticker, symbol, currency in targets
+    }
+    ordered = list(unique_targets.values())
+    fetched: list[CollectedPrice] = []
+    errors: list[str] = []
+    for offset in range(0, len(ordered), chunk_size):
+        chunk = ordered[offset : offset + chunk_size]
+        symbols = [symbol for _, symbol, _ in chunk]
+        frame = yf.download(
+            symbols,
+            period="1mo",
+            auto_adjust=False,
+            actions=False,
+            group_by="ticker",
+            threads=True,
+            progress=False,
+        )
+        single_symbol = len(symbols) == 1
+        for cache_ticker, symbol, currency in chunk:
+            try:
+                symbol_frame = _download_symbol_frame(frame, symbol, single_symbol)
+                recent = _rows_from_frame(symbol_frame, tail=7)
+            except Exception:
+                recent = []
+            if not recent:
+                errors.append(cache_ticker)
+                continue
+            price_date, price = recent[-1]["date"], recent[-1]["close"]
+            fetched.append(
+                CollectedPrice(cache_ticker, price, currency, "yf-batch", price_date, recent)
+            )
+    return fetched, errors
+
+
+def fetch_yahoo_history_batch(
+    targets: list[tuple[str, str, str]],
+    period: str = "10y",
+) -> tuple[dict[str, list[dict[str, Any]]], list[str]]:
+    """여러 Yahoo 종목의 장기 OHLC를 한 요청으로 내려받는다."""
+    import yfinance as yf
+
+    unique_targets = list({ticker: (ticker, symbol, currency) for ticker, symbol, currency in targets}.values())
+    if not unique_targets:
+        return {}, []
+    symbols = [symbol for _, symbol, _ in unique_targets]
+    frame = yf.download(
+        symbols,
+        period=period,
+        auto_adjust=False,
+        actions=False,
+        group_by="ticker",
+        threads=True,
+        progress=False,
+    )
+    single_symbol = len(symbols) == 1
+    result: dict[str, list[dict[str, Any]]] = {}
+    errors: list[str] = []
+    for cache_ticker, symbol, _currency in unique_targets:
+        try:
+            symbol_frame = _download_symbol_frame(frame, symbol, single_symbol)
+            rows = _rows_from_frame(symbol_frame)
+        except Exception:
+            rows = []
+        if rows:
+            result[cache_ticker] = rows
+        else:
+            errors.append(cache_ticker)
+    return result, errors
 
 
 def normalize_earnings_date(value) -> str | None:
@@ -207,23 +364,27 @@ def fetch_fx_price(label: str) -> CollectedPrice | None:
     return fetch_yahoo_price(symbol, cache_ticker=label, currency="FX")
 
 
-def fetch_index_price(label: str) -> CollectedPrice | None:
+def fetch_index_price(label: str, history_start: str | None = None) -> CollectedPrice | None:
     meta = MARKET_INDEXES.get(label)
     if not meta:
         return None
     if label == "KOSPI":
         from FinanceDataReader import DataReader as fdr
 
-        df = fdr(meta["symbol"], "20250101")
+        try:
+            df = fdr(meta["symbol"], history_start or recent_history_start())
+        except Exception:
+            df = None
         if df is None or df.empty or "Close" not in df:
-            return None
-        recent = [
-            (date.strftime("%Y-%m-%d"), float(row["Close"]))
-            for date, row in df.dropna(subset=["Close"]).tail(7).iterrows()
-        ]
+            return fetch_yahoo_price(
+                YAHOO_INDEX_SYMBOL_OVERRIDES["KOSPI"],
+                cache_ticker=label,
+                currency=meta["currency"],
+            )
+        recent = _rows_from_frame(df.dropna(subset=["Close"]), tail=7)
         if not recent:
             return None
-        price_date, price = recent[-1]
+        price_date, price = recent[-1]["date"], recent[-1]["close"]
         return CollectedPrice(label, price, meta["currency"], "fdr-index", price_date, recent)
     return fetch_yahoo_price(meta["symbol"], cache_ticker=label, currency=meta["currency"])
 
@@ -248,16 +409,21 @@ def fetch_crypto_krw(ticker: str) -> CollectedPrice | None:
         return None
     price_date = datetime.now(KST).strftime("%Y-%m-%d")
     recent = fetch_crypto_daily_rows(market)
-    if recent and recent[-1][0] == price_date:
-        recent[-1] = (price_date, price)
+    if recent and recent[-1]["date"] == price_date:
+        recent[-1] = {
+            **recent[-1],
+            "high": max(float(recent[-1].get("high") or price), price),
+            "low": min(float(recent[-1].get("low") or price), price),
+            "close": price,
+        }
     elif recent:
-        recent.append((price_date, price))
+        recent.append({"date": price_date, "open": price, "high": price, "low": price, "close": price})
     else:
-        recent = [(price_date, price)]
+        recent = [{"date": price_date, "open": price, "high": price, "low": price, "close": price}]
     return CollectedPrice(ticker, price, str(meta["currency"]), "upbit", price_date, recent[-7:])
 
 
-def fetch_crypto_daily_rows(market: str, count: int = 7) -> list[tuple[str, float]]:
+def fetch_crypto_daily_rows(market: str, count: int = 7) -> list[dict[str, Any]]:
     ctx = ssl.create_default_context()
     req = urllib.request.Request(
         f"https://api.upbit.com/v1/candles/days?market={market}&count={count}",
@@ -265,19 +431,14 @@ def fetch_crypto_daily_rows(market: str, count: int = 7) -> list[tuple[str, floa
     )
     with urllib.request.urlopen(req, context=ctx, timeout=10) as resp:
         data = json.loads(resp.read())
-    rows = []
-    for item in data or []:
-        date_text = str(item.get("candle_date_time_kst") or "")[:10]
-        price = item.get("trade_price")
-        if date_text and price not in (None, 0):
-            rows.append((date_text, float(price)))
-    return sorted(rows)
+    rows = [row for item in data or [] if (row := _upbit_candle_row(item)) is not None]
+    return sorted(rows, key=lambda row: row["date"])
 
 
-def fetch_crypto_history_rows(market: str, days: int = 3650) -> list[tuple[str, float]]:
+def fetch_crypto_history_rows(market: str, days: int = 3650) -> list[dict[str, Any]]:
     """Upbit KRW daily candles for long-horizon crypto technical indicators."""
     ctx = ssl.create_default_context()
-    rows: dict[str, float] = {}
+    rows: dict[str, dict[str, Any]] = {}
     to_dt: datetime | None = None
     remaining = max(1, int(days))
     while remaining > 0:
@@ -301,10 +462,9 @@ def fetch_crypto_history_rows(market: str, days: int = 3650) -> list[tuple[str, 
             break
         oldest_utc = None
         for item in data:
-            date_text = str(item.get("candle_date_time_kst") or "")[:10]
-            price = item.get("trade_price")
-            if date_text and price not in (None, 0):
-                rows[date_text] = float(price)
+            candle = _upbit_candle_row(item)
+            if candle is not None:
+                rows[candle["date"]] = candle
             utc_text = str(item.get("candle_date_time_utc") or "")
             if utc_text:
                 parsed = datetime.strptime(utc_text[:19], "%Y-%m-%dT%H:%M:%S")
@@ -313,16 +473,16 @@ def fetch_crypto_history_rows(market: str, days: int = 3650) -> list[tuple[str, 
             break
         to_dt = oldest_utc - timedelta(seconds=1)
         remaining -= len(data)
-    return sorted(rows.items())
+    return [rows[key] for key in sorted(rows)]
 
 
-def fetch_price(category: str, ticker: str, history_start: str = "20250101") -> CollectedPrice | None:
+def fetch_price(category: str, ticker: str, history_start: str | None = None) -> CollectedPrice | None:
     if category == "kr":
         return fetch_kr_price(ticker, history_start)
     if category == "fx":
         return fetch_fx_price(ticker)
     if category == "index":
-        return fetch_index_price(ticker)
+        return fetch_index_price(ticker, history_start)
     if category == "crypto":
         return fetch_crypto_krw(ticker)
     return fetch_yahoo_price(ticker)

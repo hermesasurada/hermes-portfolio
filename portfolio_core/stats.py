@@ -8,7 +8,7 @@ from .paths import KST
 from .prices import build_market_snapshot, latest_prices
 from .risk_reward import risk_reward_score
 from .technical_stats import (
-    TECHNICAL_LOOKBACK_DAYS,
+    PRICE_ADJUSTED_LOOKBACK_DAYS,
     calculate_price_adjusted_indicators,
     load_technical_stats_cache,
 )
@@ -49,7 +49,7 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
                 clean_tickers,
             ).fetchall()
             prices = latest_prices(conn, clean_tickers)
-            cutoff = (datetime.now(KST).date() - timedelta(days=TECHNICAL_LOOKBACK_DAYS)).isoformat()
+            cutoff = (datetime.now(KST).date() - timedelta(days=PRICE_ADJUSTED_LOOKBACK_DAYS)).isoformat()
             rows = conn.execute(
                 f"""
                 SELECT ticker, date, close
