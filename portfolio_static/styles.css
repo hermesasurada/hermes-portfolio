@@ -6,53 +6,61 @@
 :root {
   color-scheme: light dark;
   /* surfaces & text */
-  --bg: #f0ebe1;
-  --panel: #f9f5eb;
-  --surface-2: #e8e1d2;     /* pills, table head, tab track */
-  --surface-hover: #f0eadb; /* row hover */
-  --index-row-bg: #e7e6d3;
-  --index-row-hover: #dfdec6;
-  --index-row-line: #6b6f45;
-  --ink: #2e2a22;
-  --muted: #68614f;         /* darkened for AA contrast */
-  --line: #d8cfbc;
+  --bg: #f4f8ff;
+  --panel: #ffffff;
+  --surface-2: #f1f6fd;     /* pills, table head, tab track */
+  --surface-hover: #edf5ff; /* row hover */
+  --index-row-bg: #f5f9ff;
+  --index-row-hover: #e9f3ff;
+  --index-row-line: #72a7e8;
+  --ink: #10233f;
+  --muted: #63748b;
+  --line: #dce7f4;
   /* brand / semantic */
-  --accent: #3f5c48;
-  --accent-2: #8a5a2b;
-  --brand: #3f5c48;         /* unified interactive accent (charts, toggles, ranges) */
-  --brand-soft: #e2e8dd;
+  --accent: #2563eb;
+  --accent-2: #0f7be8;
+  --brand: #2563eb;
+  --brand-soft: #eaf2ff;
   --on-accent: #ffffff;
-  --schedule-earnings: #7a5686;
-  --schedule-earnings-soft: #efe7f2;
-  --schedule-earnings-border: #c5aecd;
-  --schedule-dividend: #2a7a5c;
-  --schedule-dividend-soft: #e2efe6;
-  --schedule-dividend-border: #93c3ab;
+  --schedule-earnings: #4f46e5;
+  --schedule-earnings-soft: #eef0ff;
+  --schedule-earnings-border: #c9ceff;
+  --schedule-dividend: #0284c7;
+  --schedule-dividend-soft: #e9f7ff;
+  --schedule-dividend-border: #b9e4fa;
   --schedule-tag-ink: #ffffff;
-  --up: #b0392e;            /* KR convention: 상승=빨강 */
-  --down: #31608f;          /* 하락=파랑 */
-  --buy: #15803d;
-  --sell: #b91c1c;
-  --warn: #8c5a13;
-  --focus: #5c7a63;
-  --focus-soft: rgba(92, 122, 99, .22);
+  --up: #dc3545;            /* KR convention: 상승=빨강 */
+  --down: #1976d2;          /* 하락=파랑 */
+  --buy: #0284c7;
+  --sell: #e5484d;
+  --warn: #b7791f;
+  --focus: #2563eb;
+  --focus-soft: rgba(37, 99, 235, .18);
   /* interactive surfaces */
-  --accent-soft: #e2e8dd;
-  --accent-soft-border: #9db08f;
-  --track-off: #ccc1a9;
-  --track-off-border: #bcae91;
+  --accent-soft: #eaf2ff;
+  --accent-soft-border: #a9c8f7;
+  --track-off: #dbe5f1;
+  --track-off-border: #c7d5e7;
   /* chart surfaces */
-  --chart-bg: #f9f5eb;
-  --chart-grid: #e3dac6;
-  --chart-axis: #77705c;
-  --chart-ink: #2e2a22;
-  --chart-tooltip-bg: rgba(249, 245, 235, .97);
-  --chart-tooltip-border: #d0c5ab;
-  --chart-dot-fill: #f9f5eb;
-  --chart-label-halo: #f9f5eb;
-  --chart-hover-line: #9c9179;
-  --chart-selection-fill: rgba(63, 92, 72, .10);
-  --chart-shadow: drop-shadow(0 2px 6px rgba(70, 58, 40, .18));
+  --chart-bg: #ffffff;
+  --chart-grid: #e6eef8;
+  --chart-axis: #718198;
+  --chart-ink: #10233f;
+  --chart-tooltip-bg: rgba(255, 255, 255, .98);
+  --chart-tooltip-border: #cdddf0;
+  --chart-dot-fill: #ffffff;
+  --chart-label-halo: #ffffff;
+  --chart-hover-line: #8aa7ca;
+  --chart-selection-fill: rgba(37, 99, 235, .09);
+  --chart-shadow: drop-shadow(0 5px 14px rgba(37, 99, 235, .12));
+  /* chart series — 의미가 다른 선은 hue 자체를 분리한다. */
+  --chart-price: #2563eb;
+  --chart-bb: #7c3aed;
+  --chart-rsi: #0d9488;
+  --chart-ichi-tenkan: #db2777;
+  --chart-ichi-kijun: #d97706;
+  --chart-ichi-span-a: #16a34a;
+  --chart-ichi-span-b: #ea580c;
   /* type scale */
   --fs-xs: 10.5px;
   --fs-sm: 11.5px;
@@ -74,77 +82,83 @@
   --sp-2: 8px;
   --sp-3: 12px;
   --sp-4: 16px;
-  --radius: 8px;
-  --radius-sm: 6px;
-  --button-radius: 6px;
-  --button-height: 26px;
-  --button-surface: #ede6d6;
-  --button-active: #3f5c48;
-  --button-active-soft: #dde6da;
-  --button-active-ink: #2c4433;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --button-radius: 9px;
+  --button-height: 28px;
+  --button-surface: #f6f9fe;
+  --button-active: #2563eb;
+  --button-active-soft: #eaf2ff;
+  --button-active-ink: #ffffff;
   --button-shadow-raised:
-    0 1px 2px rgba(74, 60, 40, .10),
-    0 2px 6px rgba(74, 60, 40, .07);
+    0 1px 2px rgba(30, 64, 175, .08),
+    0 3px 9px rgba(30, 64, 175, .06);
   --button-shadow-hover:
-    0 2px 4px rgba(74, 60, 40, .13),
-    0 4px 10px rgba(74, 60, 40, .09);
+    0 2px 5px rgba(30, 64, 175, .13),
+    0 6px 15px rgba(30, 64, 175, .08);
   --button-shadow-pressed:
-    inset 0 1px 3px rgba(74, 60, 40, .18);
-  --shadow: 0 1px 3px rgba(74, 60, 40, .07), 0 4px 14px rgba(74, 60, 40, .05);
+    inset 0 1px 3px rgba(30, 64, 175, .16);
+  --shadow: 0 1px 2px rgba(30, 64, 175, .04), 0 10px 28px rgba(30, 64, 175, .07);
   --t-fast: .15s ease;
-  --header-bg: rgba(240, 235, 225, 0.94);
+  --header-bg: rgba(255, 255, 255, .92);
 }
-/* dark palette — JS sets data-theme to the resolved value (auto follows OS) */
+/* dark palette — 동일한 블루 시스템의 야간 변형 */
 :root[data-theme="dark"] {
-    /* 3단 표면(배경<패널<요소)의 명도차를 키워 보더 의존도를 낮춘다 */
-    --bg: #1b1612;
-    --panel: #262019;
-    --surface-2: #332b20;
-    --surface-hover: #2e261c;
-    --index-row-bg: #33301f;
-    --index-row-hover: #3c3826;
-    --index-row-line: #b3ab6d;
-    --ink: #ece4d4;
-    --muted: #a89c86;
-    --line: #453b2c;
-    --accent: #8fb598;
-    --accent-2: #c99b62;
-    --brand: #8fb598;
-    --brand-soft: #2c352b;
-    --schedule-earnings: #bf9cc9;
-    --schedule-earnings-soft: #3a2e3e;
-    --schedule-earnings-border: #77607e;
-    --schedule-dividend: #8fd0ac;
-    --schedule-dividend-soft: #24382c;
-    --schedule-dividend-border: #4c6f57;
-    --schedule-tag-ink: #11161d;
-    --up: #ef8b7a;          /* dark-bg-safe 상승=빨강 (웜 톤) */
-    --down: #8bacd8;        /* 하락=파랑 */
-    --buy: #4ade80;
-    --sell: #f87171;
-    --warn: #dcaa5e;
-    --focus: #8fb598;
-    --focus-soft: rgba(143, 181, 152, .24);
-    --accent-soft: #2c352b;
-    --accent-soft-border: #55684f;
-    --track-off: #524736;
-    --track-off-border: #5f5340;
-    --header-bg: rgba(27, 22, 18, 0.94);
-    --chart-bg: #241e17;
-    --chart-grid: #423828;
-    --chart-axis: #a89c86;
-    --chart-ink: #ece4d4;
-    --chart-tooltip-bg: rgba(38, 32, 25, .97);
-    --chart-tooltip-border: #594c37;
-    --chart-dot-fill: #241e17;
-    --chart-label-halo: #241e17;
-    --chart-hover-line: #8d8069;
-    --chart-selection-fill: rgba(143, 181, 152, .16);
+    --bg: #07111f;
+    --panel: #0d1a2c;
+    --surface-2: #14243a;
+    --surface-hover: #112b48;
+    --index-row-bg: #10233a;
+    --index-row-hover: #153354;
+    --index-row-line: #5c94d7;
+    --ink: #edf5ff;
+    --muted: #95a8bf;
+    --line: #263a55;
+    --accent: #60a5fa;
+    --accent-2: #38bdf8;
+    --brand: #60a5fa;
+    --brand-soft: #112f53;
+    --schedule-earnings: #a5b4fc;
+    --schedule-earnings-soft: #202852;
+    --schedule-earnings-border: #4e5e9c;
+    --schedule-dividend: #7dd3fc;
+    --schedule-dividend-soft: #123b54;
+    --schedule-dividend-border: #2c6683;
+    --schedule-tag-ink: #07111f;
+    --up: #fb7185;
+    --down: #60a5fa;
+    --buy: #38bdf8;
+    --sell: #fb7185;
+    --warn: #fbbf24;
+    --focus: #60a5fa;
+    --focus-soft: rgba(96, 165, 250, .24);
+    --accent-soft: #112f53;
+    --accent-soft-border: #315d8f;
+    --track-off: #33465f;
+    --track-off-border: #445b77;
+    --header-bg: rgba(7, 17, 31, .91);
+    --chart-bg: #0d1a2c;
+    --chart-grid: #223651;
+    --chart-axis: #95a8bf;
+    --chart-ink: #edf5ff;
+    --chart-tooltip-bg: rgba(13, 26, 44, .98);
+    --chart-tooltip-border: #355071;
+    --chart-dot-fill: #0d1a2c;
+    --chart-label-halo: #0d1a2c;
+    --chart-hover-line: #6686aa;
+    --chart-selection-fill: rgba(96, 165, 250, .16);
     --chart-shadow: drop-shadow(0 8px 18px rgba(0, 0, 0, .35));
-    --button-surface: #332b20;
-    --button-active: #5f8a6b;
-    --button-active-soft: #34443a;
-    --button-active-ink: #b9d4c1;
+    --chart-price: #60a5fa;
+    --chart-bb: #c084fc;
+    --chart-rsi: #2dd4bf;
+    --chart-ichi-tenkan: #f472b6;
+    --chart-ichi-kijun: #fbbf24;
+    --chart-ichi-span-a: #4ade80;
+    --chart-ichi-span-b: #fb923c;
+    --button-surface: #14243a;
+    --button-active: #2563eb;
+    --button-active-soft: #112f53;
+    --button-active-ink: #ffffff;
     --button-shadow-raised:
       0 1px 2px rgba(0, 0, 0, .35),
       0 2px 6px rgba(0, 0, 0, .25);
@@ -154,7 +168,7 @@
     --button-shadow-pressed:
       inset 0 1px 3px rgba(0, 0, 0, .5);
 }
-/* 밤의 서재: 큰 카드에는 뉴모픽 하이라이트가 halo처럼 번져 평면+보더로 */
+/* 야간에는 카드 그림자를 줄여 정보 밀도를 유지한다. */
 :root[data-theme="dark"] .account,
 :root[data-theme="dark"] .interest-group {
   box-shadow: none !important;
@@ -167,8 +181,7 @@
   font-weight: 45 920;
   font-display: swap;
 }
-/* 서재 테마 헤딩 세리프 — 타이틀·종목명 헤더 전용(본문·숫자는 Pretendard 유지).
-   latin을 먼저 선언해 숫자·영문은 라틴 파일에서, 한글은 korean 파일에서 로드. */
+/* 구형 세리프 폰트는 정적 호환을 위해 보존하지만 새 디자인은 산세리프를 사용한다. */
 @font-face {
   font-family: "Noto Serif KR";
   src: url("/static/NotoSerifKR-600-latin.woff2") format("woff2");
@@ -194,26 +207,28 @@ h1,
 .consensus-title,
 .modal-head strong,
 #scheduleMonthLabel {
-  font-family: "Noto Serif KR", "Iowan Old Style", Georgia, "Pretendard Variable", serif;
-  font-weight: 600;
-  letter-spacing: 0;
+  font-family: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 760;
+  letter-spacing: -.018em;
 }
 * { box-sizing: border-box; }
-/* 종이 결 — 서재 테마의 미세 그레인. fixed 오버레이라 스크롤 성능 무해,
-   pointer-events 차단 없음. 다크는 더 약하게. */
+/* 종이 질감을 제거하고 화면 가장자리에 아주 옅은 블루 광원만 둔다. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: .5;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.05'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 1;
+  background:
+    radial-gradient(circle at 8% -6%, color-mix(in srgb, var(--brand) 12%, transparent), transparent 32rem),
+    radial-gradient(circle at 92% 2%, color-mix(in srgb, var(--accent-2) 7%, transparent), transparent 28rem);
 }
-:root[data-theme="dark"] body::before { opacity: .3; }
+:root[data-theme="dark"] body::before { opacity: .72; }
 body > * { position: relative; z-index: 1; }
 body {
   margin: 0;
+  min-height: 100vh;
   font-family: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 12.5px;
   background: var(--bg);
@@ -246,20 +261,27 @@ header {
   z-index: 20;
   background: var(--header-bg);
   border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(10px);
+  box-shadow: 0 5px 22px rgba(30, 64, 175, .06);
+  backdrop-filter: blur(18px) saturate(1.25);
 }
 .bar {
   width: 100%;
   max-width: 1760px;
   margin: 0 auto;
-  padding: 12px 24px 10px;
+  padding: 13px 24px 12px;
   display: grid;
   grid-template-columns: minmax(220px, 1fr) auto;
   gap: 16px;
   align-items: center;
 }
 /* 브랜드 텍스트는 정보가치가 낮으므로 작게 — 큰 숫자는 히어로 요약이 담당 */
-h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
+h1 {
+  margin: 0 0 3px;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 820;
+  letter-spacing: -.03em;
+}
 .home-link {
   color: var(--ink);
   text-decoration: none;
@@ -285,7 +307,7 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
   place-items: center;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 50%;
+  border-radius: 7px;
   background: var(--surface-2);
   color: var(--muted);
   font-size: 10.5px;
@@ -424,7 +446,7 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
   top: 1px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 2px rgba(60, 48, 32, .22);
+  box-shadow: 0 1px 3px rgba(15, 35, 65, .22);
   transition: transform .18s ease;
 }
 .toggle-switch input:checked + .toggle-ui {
@@ -435,8 +457,8 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
   transform: translateX(14px);
 }
 .toggle-switch input:disabled + .toggle-ui {
-  background: #e2e8f0;
-  border-color: #d5dde6;
+  background: #e6edf6;
+  border-color: #d3deeb;
 }
 .toggle-switch input:focus-visible + .toggle-ui {
   outline: 2px solid var(--focus);
@@ -500,7 +522,7 @@ h1 { margin: 0 0 3px; font-size: 16px; letter-spacing: -0.2px; }
 button, input, select, textarea {
   height: 36px;
   border: 1px solid var(--line);
-  background: var(--panel);
+  background: color-mix(in srgb, var(--panel) 96%, var(--brand-soft));
   color: var(--ink);
   border-radius: var(--radius-sm);
   padding: 0 10px;
@@ -551,6 +573,26 @@ textarea {
   font-size: 10.5px;
   font-weight: 800;
 }
+.name-filter-control input {
+  width: 112px;
+  min-width: 0;
+  height: 20px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  font-size: 10.5px;
+  font-weight: 750;
+}
+.name-filter-control input:focus {
+  outline: 0;
+}
+.name-filter-control:focus-within {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
 .currency-filter-control.active {
   border-color: var(--brand);
   background: var(--brand-soft);
@@ -570,7 +612,7 @@ main {
   width: 100%;
   max-width: 1760px;
   margin: 0 auto;
-  padding: 18px 24px 42px;
+  padding: 22px 24px 48px;
 }
 .metric, .section {
   background: var(--panel);
@@ -583,16 +625,58 @@ main {
 
 /* ── 히어로 요약 (총 평가액 · 오늘 손익) ─────────────────── */
 .hero-strip {
-  display: flex;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 14px 18px;
+  gap: 12px;
+  padding: 12px 14px;
   margin-bottom: var(--sp-4);
+  background:
+    linear-gradient(120deg, var(--panel) 0%, color-mix(in srgb, var(--brand-soft) 48%, var(--panel)) 100%);
+  border-color: color-mix(in srgb, var(--brand) 16%, var(--line));
+}
+.hero-page-shell,
+.hero-summary-page,
+.hero-main {
+  min-width: 0;
+}
+.hero-page-shell {
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+}
+.hero-page-shell:active { cursor: grabbing; }
+.hero-summary-nav {
+  width: 34px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--button-radius);
+  color: var(--brand);
+  background: var(--panel);
+  box-shadow: var(--button-shadow-raised);
+  cursor: pointer;
+}
+.hero-summary-nav span {
+  font-size: 27px;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+.hero-summary-nav:hover {
+  color: var(--ink);
+  border-color: var(--brand);
+  box-shadow: var(--button-shadow-hover);
+}
+.hero-summary-nav:active { box-shadow: var(--button-shadow-pressed); }
+.hero-summary-nav:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 .hero-label {
-  color: var(--muted);
+  color: var(--brand);
   font-size: var(--fs-xs);
   font-weight: var(--fw-bold);
   letter-spacing: .04em;
@@ -621,6 +705,50 @@ main {
 .hero-change.up { color: var(--up); background: color-mix(in srgb, var(--up) 11%, transparent); }
 .hero-change.down { color: var(--down); background: color-mix(in srgb, var(--down) 11%, transparent); }
 .hero-change.flat { color: var(--muted); background: var(--surface-2); }
+.hero-index-grid {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+.hero-index-item {
+  display: grid;
+  grid-template-columns: max-content minmax(76px, max-content) minmax(66px, max-content);
+  align-items: baseline;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 0 14px;
+  border-left: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.hero-index-item:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.hero-index-item:last-child { padding-right: 0; }
+.hero-index-name {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+}
+.hero-index-value {
+  min-width: 0;
+  font-size: 20px;
+  font-weight: var(--fw-strong);
+  letter-spacing: -.25px;
+  text-align: right;
+  white-space: nowrap;
+}
+.hero-index-change {
+  font-size: 14px;
+  font-weight: var(--fw-strong);
+  text-align: right;
+  white-space: nowrap;
+}
+.hero-index-change.up { color: var(--up); }
+.hero-index-change.down { color: var(--down); }
+.hero-index-change.flat { color: var(--muted); }
 
 /* ── 레이아웃 · 계좌 패널 · 거래내역 패널 ────────────────────────────────── */
 .layout {
@@ -661,10 +789,10 @@ main {
   height: 32px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2px;
-  padding: 3px;
+  gap: 4px;
+  padding: 4px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border-radius: 11px;
   background: var(--surface-2);
 }
 .sidebar-tab {
@@ -672,7 +800,7 @@ main {
   height: 24px;
   padding: 0 10px;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 7px;
   background: transparent;
   color: var(--muted);
   font-size: 12px;
@@ -683,8 +811,9 @@ main {
   color: var(--ink);
 }
 .sidebar-tab.active {
-  background: var(--brand);
+  background: linear-gradient(135deg, var(--brand), var(--accent-2));
   color: var(--on-accent);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 24%, transparent);
 }
 .mobile-collapse-toggle {
   display: none;
@@ -716,6 +845,7 @@ main {
   margin: 0;
   padding: 13px 14px;
   font-size: 15px;
+  font-weight: 780;
   border-bottom: 1px solid var(--line);
 }
 .section .mobile-panel-head h2 {
@@ -773,6 +903,7 @@ main {
   padding: 8px;
 }
 .interest-group {
+  position: relative;
   min-width: 0;
   min-height: 40px;
   display: grid;
@@ -781,14 +912,14 @@ main {
   gap: 4px;
   padding: 3px 7px 3px 8px;
   border: 1px solid var(--line);
-  border-left-width: 3px;
-  border-radius: var(--radius-sm);
+  border-left-width: 1px;
+  border-radius: 10px;
   background: var(--panel);
 }
 .interest-group.active {
   background: var(--brand-soft);
-  border-color: color-mix(in srgb, var(--brand) 38%, transparent);
-  border-left-color: var(--brand);
+  border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
+  box-shadow: inset 3px 0 0 var(--brand);
 }
 .interest-group.fixed {
   grid-template-columns: minmax(0, 1fr);
@@ -812,7 +943,7 @@ main {
   height: 26px;
   display: inline-grid;
   place-items: center;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   background: var(--surface-2);
   color: var(--muted);
   font-size: 14px;
@@ -837,7 +968,7 @@ main {
 .interest-count {
   min-width: 24px;
   padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   background: var(--surface-2);
   color: var(--muted);
   font-size: 11px;
@@ -848,38 +979,53 @@ main {
   background: var(--panel);
   color: var(--brand);
 }
-.interest-order-controls {
+.interest-drag-handle {
   width: 24px;
+  min-width: 24px;
   height: 28px;
-  display: grid;
-  grid-template-rows: 1fr 1fr;
-  overflow: hidden;
+  display: inline-grid;
+  place-items: center;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--panel);
-}
-.interest-order-controls button {
-  width: 22px;
-  min-width: 22px;
-  height: 13px;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
   color: var(--muted);
-  font-size: 7px;
+  font-size: 16px;
+  font-weight: 800;
   line-height: 1;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
 }
-.interest-order-controls button + button {
-  border-top: 1px solid var(--line);
-}
-.interest-order-controls button:hover:not(:disabled) {
+.interest-drag-handle:hover,
+.interest-drag-handle:focus-visible {
+  border-color: var(--brand);
   background: var(--brand-soft);
   color: var(--brand);
+  outline: none;
 }
-.interest-order-controls button:disabled {
-  opacity: .25;
-  cursor: default;
+.interest-drag-handle:active {
+  cursor: grabbing;
+}
+.interest-group.dragging {
+  opacity: .42;
+}
+.interest-group.drag-over-before::before,
+.interest-group.drag-over-after::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  right: 2px;
+  left: 2px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--brand);
+  pointer-events: none;
+}
+.interest-group.drag-over-before::before {
+  top: -6px;
+}
+.interest-group.drag-over-after::after {
+  bottom: -6px;
 }
 .interest-icon-btn {
   width: 26px;
@@ -1039,16 +1185,14 @@ main {
 }
 #interestTableWrap .interest-detail-list th[data-interest-col="4"],
 #interestTableWrap .interest-detail-list td:nth-child(5),
-#interestTableWrap .interest-detail-list th[data-interest-col="5"],
-#interestTableWrap .interest-detail-list td:nth-child(6),
-#interestTableWrap .interest-detail-list th[data-interest-col="11"],
-#interestTableWrap .interest-detail-list td:nth-child(12),
-#interestTableWrap .interest-detail-list th[data-interest-col="17"],
-#interestTableWrap .interest-detail-list td:nth-child(18),
-#interestTableWrap .interest-detail-list th[data-interest-col="20"],
-#interestTableWrap .interest-detail-list td:nth-child(21),
-#interestTableWrap .interest-detail-list th[data-interest-col="27"],
-#interestTableWrap .interest-detail-list td:nth-child(28) {
+#interestTableWrap .interest-detail-list th[data-interest-col="12"],
+#interestTableWrap .interest-detail-list td:nth-child(13),
+#interestTableWrap .interest-detail-list th[data-interest-col="18"],
+#interestTableWrap .interest-detail-list td:nth-child(19),
+#interestTableWrap .interest-detail-list th[data-interest-col="21"],
+#interestTableWrap .interest-detail-list td:nth-child(22),
+#interestTableWrap .interest-detail-list th[data-interest-col="30"],
+#interestTableWrap .interest-detail-list td:nth-child(31) {
   padding-right: 9px;
 }
 .interest-detail-list th.logo-col {
@@ -1122,17 +1266,17 @@ main {
 }
 .interest-detail-list th[data-interest-col="4"],
 .interest-detail-list td:nth-child(5),
-.interest-detail-list th[data-interest-col="6"],
-.interest-detail-list td:nth-child(7) {
+.interest-detail-list th[data-interest-col="5"],
+.interest-detail-list td:nth-child(6) {
   width: 112px;
 }
-.interest-detail-list th[data-interest-col="12"],
 .interest-detail-list th[data-interest-col="13"],
 .interest-detail-list th[data-interest-col="14"],
 .interest-detail-list th[data-interest-col="15"],
 .interest-detail-list th[data-interest-col="16"],
 .interest-detail-list th[data-interest-col="17"],
-.interest-detail-list td:nth-child(n+13):nth-child(-n+18) {
+.interest-detail-list th[data-interest-col="18"],
+.interest-detail-list td:nth-child(n+14):nth-child(-n+19) {
   width: 48px;
   padding-left: 2px;
   padding-right: 2px;
@@ -1163,47 +1307,55 @@ main {
   background: color-mix(in srgb, var(--sell) 8%, var(--panel));
   color: var(--sell);
 }
-/* 계좌 = 2줄 미니 카드 (이름 / 평가액·등락). 선택 상태는 좌측 브랜드 바 + 옅은 채움 */
+/* 관심목록 카드와 같은 한 줄 계좌 카드. 좁은 폭에서는 계좌명만 말줄임한다. */
 .account {
   width: 100%;
   height: auto;
-  min-height: 48px;
+  min-height: 40px;
   text-align: left;
-  padding: 7px 10px;
-  border-radius: var(--radius-sm);
-  border-left-width: 3px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  border-left-width: 1px;
   display: grid;
-  grid-template-rows: minmax(15px, auto) minmax(14px, auto);
-  align-content: center;
-  row-gap: 4px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  background: var(--panel);
 }
 .account.active {
   background: var(--brand-soft);
   color: var(--ink);
-  border-color: color-mix(in srgb, var(--brand) 38%, transparent);
-  border-left-color: var(--brand);
+  border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
+  box-shadow: inset 3px 0 0 var(--brand);
 }
 .account .name {
   display: block;
-  font-weight: 700;
-  font-size: 12px;
-  line-height: 15px;
   min-width: 0;
   overflow: hidden;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 30px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .account .meta {
-  width: 100%;
-  min-height: 14px;
+  width: auto;
+  min-width: 0;
+  min-height: 30px;
   color: var(--muted);
   font-size: 11px;
-  line-height: 14px;
+  font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.account .meta > span:first-child {
+  color: var(--ink);
+  font-weight: 800;
 }
 .account-change {
   display: inline-flex;
@@ -1264,13 +1416,13 @@ main {
 .dividend-history-table-wrap::-webkit-scrollbar-corner { background: transparent; }
 
 
-/* 책 표제선 — 표 헤더 아래만 살짝 진한 룰로 본문과 위계 구분 */
+/* 표 헤더 아래에 옅은 블루 룰을 둬 본문과 위계를 구분한다. */
 #detailTableWrap thead tr:last-child th,
 #dividendTableWrap thead tr:last-child th,
 #interestTableWrap thead tr:last-child th,
 .tx-list thead th,
 .dividend-history-table-wrap thead th {
-  border-bottom: 2px solid color-mix(in srgb, var(--ink) 24%, var(--line));
+  border-bottom: 2px solid color-mix(in srgb, var(--brand) 22%, var(--line));
 }
 /* ── 테이블 공통 · 통계/배당 테이블 ────────────────────────────────────── */
 table { width: 100%; border-collapse: collapse; min-width: 660px; }
@@ -1317,7 +1469,7 @@ th {
   z-index: 3;   /* body 틀고정 컬럼(1)보다 위 — 세로 스크롤 시 헤더가 덮는다 */
   height: 48px;
   padding: 8px 8px;
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--surface-2) 88%, var(--panel));
   color: var(--muted);
   font-weight: 700;
   line-height: 1.15;
@@ -1380,8 +1532,9 @@ th:first-child, td:first-child { text-align: left; }
   padding: 0;
 }
 .dividend-list {
-  /* 콘텐츠 실측 기반 px 고정폭 — 넓은 화면에서 비례 확장으로 성겨지던 것 방지 */
-  width: max-content;
+  /* 데스크톱에서는 표 영역을 가득 채우고, 좁은 화면에서는 밀도를 유지한 채 스크롤. */
+  width: 100%;
+  min-width: 980px;
   table-layout: fixed;
   margin: 0;
   background: var(--panel);
@@ -1393,10 +1546,25 @@ th:first-child, td:first-child { text-align: left; }
   font-size: 12.5px;
   white-space: nowrap;
 }
+#dividendTableWrap .indicator-head {
+  line-height: 1.05;
+  white-space: normal;
+}
+#dividendTableWrap .indicator-head::after {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: auto;
+  margin-left: 0;
+}
+#dividendTableWrap .indicator-head span {
+  display: block;
+}
 .dividend-list th:nth-child(1),
 .dividend-list td:nth-child(1) {
   text-align: center;
-  width: 56px;
+  width: 58px;
 }
 .dividend-list th:nth-child(2),
 .dividend-list td:nth-child(2) {
@@ -1405,44 +1573,57 @@ th:first-child, td:first-child { text-align: left; }
 }
 .dividend-list th:nth-child(3),
 .dividend-list td:nth-child(3) {
-  width: 238px; /* 최장 종목명 실측 225px + 패딩 — 말줄임 없이 전량 표시 */
+  width: 172px;
   text-align: left;
 }
 .dividend-list th:nth-child(4),
 .dividend-list td:nth-child(4) {
-  width: 70px;
+  width: 68px;
 }
 .dividend-list th:nth-child(5),
 .dividend-list td:nth-child(5) {
-  width: 46px;
+  width: 44px;
 }
 .dividend-list th:nth-child(6),
 .dividend-list td:nth-child(6) {
-  width: 70px;
+  width: 64px;
 }
 .dividend-list th:nth-child(7),
 .dividend-list td:nth-child(7) {
-  width: 60px;
+  width: 56px;
 }
 .dividend-list th:nth-child(8),
 .dividend-list td:nth-child(8) {
-  width: 46px;
+  width: 42px;
 }
 .dividend-list th:nth-child(9),
 .dividend-list td:nth-child(9) {
-  width: 74px;
+  width: 64px;
 }
 .dividend-list th:nth-child(10),
 .dividend-list td:nth-child(10) {
-  width: 56px;
+  width: 50px;
 }
 .dividend-list th:nth-child(11),
 .dividend-list td:nth-child(11) {
-  width: 74px;
+  width: 72px;
 }
 .dividend-list th:nth-child(12),
 .dividend-list td:nth-child(12) {
+  width: 56px;
+}
+.dividend-list th:nth-child(13),
+.dividend-list td:nth-child(13) {
+  width: 76px;
+}
+.dividend-list th:nth-child(14),
+.dividend-list td:nth-child(14) {
   width: 58px;
+  text-align: center;
+}
+.dividend-list th:nth-child(15),
+.dividend-list td:nth-child(15) {
+  width: 50px;
 }
 /* 대상→종목, 종목→주당배당금 경계는 촘촘하게 유지 */
 .dividend-list th:nth-child(2),
@@ -1501,8 +1682,8 @@ th:first-child, td:first-child { text-align: left; }
 tbody tr.dividend-today-row:nth-child(even) td,
 tr.dividend-today-row:hover td {
   position: relative;
-  height: 18px;
-  padding: 0 10px;
+  height: 32px;
+  padding: 4px 10px;
   border: 0;
   background: var(--panel);
   text-align: left;
@@ -1511,19 +1692,41 @@ tr.dividend-today-row:hover td {
   content: "";
   position: absolute;
   inset: 50% 0 auto;
-  border-top: 1px solid color-mix(in srgb, var(--brand) 65%, var(--line));
+  border-top: 1px dashed color-mix(in srgb, var(--brand) 58%, var(--line));
 }
 .dividend-today-marker {
-  position: absolute;
-  top: 50%;
+  position: sticky;
   left: 12px;
-  transform: translateY(-50%);
-  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 2px 9px 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--brand) 34%, var(--line));
+  border-radius: 999px;
   background: var(--panel);
   color: var(--brand);
   font-size: 11px;
-  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--brand) 10%, transparent);
   z-index: 1;
+}
+.dividend-today-dot {
+  width: 7px;
+  height: 7px;
+  border: 2px solid var(--panel);
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 0 1px var(--brand);
+}
+.dividend-today-marker strong {
+  font-size: 11px;
+  font-weight: 850;
+}
+.dividend-today-marker time {
+  color: var(--muted);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 /* 통계탭 배당율 → 배당이력 모달 링크 (셀 우측정렬·tnum 유지) */
 .stat-yield-link {
@@ -1619,7 +1822,9 @@ tr.dividend-month-row:hover td {
 }
 .tax-dividend,
 .net-dividend,
-.net-krw {
+.net-krw,
+.dividend-yield,
+.dividend-growth {
   font-weight: 800;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -1628,9 +1833,13 @@ tr.dividend-month-row:hover td {
 .dividend-list th:nth-child(7),
 .dividend-list th:nth-child(9),
 .dividend-list th:nth-child(11),
+.dividend-list th:nth-child(12),
+.dividend-list th:nth-child(13),
 .dividend-list td:nth-child(7),
 .dividend-list td:nth-child(9),
-.dividend-list td:nth-child(11) {
+.dividend-list td:nth-child(11),
+.dividend-list td:nth-child(12),
+.dividend-list td:nth-child(13) {
   text-align: right;
 }
 #detailTableWrap th:first-child,
@@ -1644,8 +1853,8 @@ tr.dividend-month-row:hover td {
 #detailTableWrap th:nth-child(3), #detailTableWrap td:nth-child(3) { min-width: 76px; }   /* 등락 */
 #detailTableWrap th:nth-child(4), #detailTableWrap td:nth-child(4) { min-width: 56px; }   /* 연장 */
 #detailTableWrap th:nth-child(5), #detailTableWrap td:nth-child(5) { min-width: 86px; }   /* 현재단가 */
-#detailTableWrap th:nth-child(6), #detailTableWrap td:nth-child(6) { min-width: 80px; }   /* 등락금액 */
-#detailTableWrap th:nth-child(7), #detailTableWrap td:nth-child(7) { min-width: 44px; }   /* 수량 */
+#detailTableWrap th:nth-child(6), #detailTableWrap td:nth-child(6) { min-width: 44px; }   /* 수량 */
+#detailTableWrap th:nth-child(7), #detailTableWrap td:nth-child(7) { min-width: 80px; }   /* 등락금액 */
 #detailTableWrap th:nth-child(8), #detailTableWrap td:nth-child(8) { min-width: 74px; }   /* 평가액 */
 #detailTableWrap th:nth-child(9), #detailTableWrap td:nth-child(9) { min-width: 54px; }   /* 비중 */
 #detailTableWrap th:nth-child(10), #detailTableWrap td:nth-child(10) { min-width: 76px; } /* 시총/AUM */
@@ -1653,26 +1862,27 @@ tr.dividend-month-row:hover td {
 #detailTableWrap th:nth-child(12), #detailTableWrap td:nth-child(12) { min-width: 72px; } /* 5년 배당성장 */
 #detailTableWrap th:nth-child(13), #detailTableWrap td:nth-child(13) { min-width: 46px; } /* 실적 */
 #detailTableWrap th:nth-child(14), #detailTableWrap td:nth-child(14) { min-width: 62px; } /* 52주高 */
-#detailTableWrap th:nth-child(15), #detailTableWrap td:nth-child(15),
-#detailTableWrap th:nth-child(16), #detailTableWrap td:nth-child(16) { min-width: 42px; } /* β */
-#detailTableWrap th:nth-child(n+17):nth-child(-n+22),
-#detailTableWrap td:nth-child(n+17):nth-child(-n+22) {
+#detailTableWrap th:nth-child(15), #detailTableWrap td:nth-child(15) { min-width: 58px; } /* 변동성 손익비 */
+#detailTableWrap th:nth-child(16), #detailTableWrap td:nth-child(16),
+#detailTableWrap th:nth-child(17), #detailTableWrap td:nth-child(17) { min-width: 42px; } /* β */
+#detailTableWrap th:nth-child(n+18):nth-child(-n+23),
+#detailTableWrap td:nth-child(n+18):nth-child(-n+23) {
   min-width: 43px;
   padding-left: 1px;
   padding-right: 1px;
 } /* RSI/BB */
-#detailTableWrap th:nth-child(23), #detailTableWrap td:nth-child(23),
-#detailTableWrap th:nth-child(24), #detailTableWrap td:nth-child(24) { min-width: 56px; } /* P/E */
-#detailTableWrap th:nth-child(25), #detailTableWrap td:nth-child(25) { min-width: 40px; } /* P/B */
-#detailTableWrap th:nth-child(n+26):nth-child(-n+32),
-#detailTableWrap td:nth-child(n+26):nth-child(-n+32) { min-width: 58px; } /* 기간 수익률 */
-#detailTableWrap th:nth-child(33), #detailTableWrap td:nth-child(33) { min-width: 54px; } /* 거래 */
-#detailTableWrap th:nth-child(16),
-#detailTableWrap td:nth-child(16),
-#detailTableWrap th:nth-child(22),
-#detailTableWrap td:nth-child(22),
-#detailTableWrap th:nth-child(25),
-#detailTableWrap td:nth-child(25) { padding-right: 8px; }
+#detailTableWrap th:nth-child(24), #detailTableWrap td:nth-child(24),
+#detailTableWrap th:nth-child(25), #detailTableWrap td:nth-child(25) { min-width: 56px; } /* P/E */
+#detailTableWrap th:nth-child(26), #detailTableWrap td:nth-child(26) { min-width: 40px; } /* P/B */
+#detailTableWrap th:nth-child(n+27):nth-child(-n+35),
+#detailTableWrap td:nth-child(n+27):nth-child(-n+35) { min-width: 58px; } /* 기간 수익률 */
+#detailTableWrap th:nth-child(36), #detailTableWrap td:nth-child(36) { min-width: 54px; } /* 거래 */
+#detailTableWrap th:nth-child(17),
+#detailTableWrap td:nth-child(17),
+#detailTableWrap th:nth-child(23),
+#detailTableWrap td:nth-child(23),
+#detailTableWrap th:nth-child(26),
+#detailTableWrap td:nth-child(26) { padding-right: 8px; }
 /* 행 처리 단일화: 지브라+보더+호버 3중첩에서 보더+호버만 남김 */
 tr:hover td { background: var(--surface-hover); }
 tbody tr.index-row td {
@@ -1736,10 +1946,15 @@ th.pc-frozen-edge {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 9px 12px;
+  min-height: 48px;
+  padding: 9px 14px;
   border-bottom: 1px solid var(--line);
 }
-.toolbar strong { font-size: 15px; }
+.toolbar strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 780;
+}
 .title-tools {
   display: flex;
   align-items: center;
@@ -1749,13 +1964,17 @@ th.pc-frozen-edge {
 .detail-tabs {
   display: inline-flex;
   align-items: center;
-  gap: 5px;   /* 감싸는 박스 없이 뉴모픽 버튼 두 개만 나란히 */
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-2);
 }
 .tab-btn {
   height: 30px;
   min-width: 72px;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 7px;
   background: transparent;
   color: var(--muted);
   padding: 0 9px;
@@ -1763,8 +1982,9 @@ th.pc-frozen-edge {
   font-weight: 800;
 }
 .tab-btn.active {
-  background: var(--accent-2);
+  background: linear-gradient(135deg, var(--brand), var(--accent-2));
   color: white;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 22%, transparent);
 }
 .pill {
   display: inline-flex;
@@ -1794,7 +2014,7 @@ th.pc-frozen-edge {
   position: relative;
 }
 .asset-icon.has-image {
-  background: #fdfcf9;   /* 로고 가독용 밝은 종이 — 순백보다 웜 */
+  background: #ffffff;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
 }
@@ -1840,9 +2060,7 @@ th.pc-frozen-edge {
   max-width: 100%;
 }
 .ticker-link:hover .asset-name {
-  color: var(--accent-2);
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  color: var(--brand);
 }
 .ticker-link:focus-visible {
   outline: 2px solid var(--focus);
@@ -1881,12 +2099,31 @@ th.pc-frozen-edge {
 /* 등락% 칩 — 색칠은 이 칩 하나로 제한해 '온통 빨강' 화면을 진정시킨다 */
 .pct-chip {
   padding: 2px 9px;
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   font-size: 11px;
 }
 .pct-chip.up { background: color-mix(in srgb, var(--up) 10%, transparent); }
 .pct-chip.down { background: color-mix(in srgb, var(--down) 10%, transparent); }
 .pct-chip.flat { color: var(--muted); background: var(--surface-2); }
+.change-with-session {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1px;
+  white-space: nowrap;
+}
+.change-session-note {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 750;
+  line-height: 1;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+  transform: translateY(-.6em);
+}
+.chart-session-note {
+  font-size: 8px;
+}
 .up { color: var(--up); }
 .down { color: var(--down); }
 .flat { color: var(--muted); }
@@ -1902,13 +2139,16 @@ th.pc-frozen-edge {
 }
 
 /* ── 차트 공통 (헤더·바로가기·기간 버튼·통계 보드) ───────────────────────────── */
-.chart-view { padding: 8px 10px 10px; }
+.chart-view {
+  padding: 12px 14px 14px;
+  background: var(--panel);
+}
 .chart-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 6px;
+  margin-bottom: 12px;
 }
 .chart-identity {
   min-width: 0;
@@ -2009,25 +2249,18 @@ th.pc-frozen-edge {
 .chart-price-row.extended .chart-price-today {
   font-size: 12px;
 }
-.chart-interval-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.chart-interval-control .seg-btn {
-  height: var(--button-height);
-  min-width: 25px;
-  padding: 0 5px;
-  font-size: 10.5px;
-}
 .chart-display-controls {
   display: inline-flex;
   align-items: center;
   gap: 5px;
 }
 .chart-head-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   height: var(--button-height);
-  min-width: 27px;
+  min-width: 29px;
   padding: 0 6px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -2039,6 +2272,8 @@ th.pc-frozen-edge {
   flex: 0 0 auto;
   transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
+#chartTypeToggle { min-width: 37px; }
+#chartIntervalToggle { min-width: 29px; }
 .chart-head-toggle.icon-toggle {
   padding: 0;
   font-size: 17px;
@@ -2050,10 +2285,10 @@ th.pc-frozen-edge {
   color: var(--brand);
 }
 .chart-head-toggle.active {
-  background: var(--brand);
+  background: linear-gradient(135deg, var(--brand), var(--accent-2));
   border-color: var(--brand);
   color: var(--on-accent);
-  box-shadow: 0 1px 3px rgba(60, 48, 32, .18);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 24%, transparent);
 }
 .chart-icon-slot {
   display: inline-flex;
@@ -2070,6 +2305,75 @@ th.pc-frozen-edge {
   gap: 1px;
   min-width: 0;
 }
+.chart-name-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.chart-name-edit-btn {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.chart-name-edit-btn:hover,
+.chart-name-edit-btn:focus-visible {
+  background: var(--brand-soft);
+  color: var(--brand);
+  outline: none;
+}
+.chart-name-edit-form {
+  display: grid;
+  grid-template-columns: minmax(140px, 260px) auto auto;
+  align-items: center;
+  gap: 5px;
+}
+.chart-name-edit-form.hidden { display: none; }
+.chart-name-edit-form input {
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--brand);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+.chart-name-edit-form button {
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.chart-name-edit-form button[type="submit"] {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--on-accent);
+}
+.chart-name-edit-form button:disabled { opacity: .55; cursor: wait; }
+.chart-name-edit-status {
+  grid-column: 1 / -1;
+  min-height: 0;
+  color: var(--down) !important;
+  font-size: 10.5px !important;
+}
+.chart-id-text.editing .chart-name-line { display: none; }
 .chart-links:empty {
   display: none;
 }
@@ -2175,7 +2479,7 @@ th.pc-frozen-edge {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--panel);
-  box-shadow: 0 6px 18px rgba(60, 48, 32, .16);
+  box-shadow: 0 10px 28px rgba(30, 64, 175, .16);
 }
 .sector-filter-item {
   display: flex;
@@ -2211,6 +2515,24 @@ th.pc-frozen-edge {
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.interest-ticker-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+}
+.interest-ticker-meta .ticker-symbol {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.interest-ticker-meta .sector-chip {
+  flex: 0 1 auto;
+  max-width: 88px;
+  padding: 0 5px;
+  font-size: 9px;
+  line-height: 14px;
 }
 /* 투자의견 칩: 매수=빨강 틴트, 매도=파랑 틴트, 중립=무채색 */
 .rating-chip {
@@ -2342,7 +2664,7 @@ th.pc-frozen-edge {
   position: fixed;
   inset: 0;
   z-index: 120;
-  background: rgba(40, 32, 22, 0.45);
+  background: rgba(8, 20, 40, .48);
   display: none;
 }
 .report-modal-host.on { display: block; }
@@ -2574,53 +2896,53 @@ th.pc-frozen-edge {
   padding: 7px 2px 0;
 }
 :root[data-theme="dark"] .cstat-board {
-  background: #20252e;
-  border-color: #4a5262;
+  background: var(--panel);
+  border-color: var(--line);
 }
 :root[data-theme="dark"] .consensus-block {
-  background: #20252e;
-  border-color: #4a5262;
+  background: var(--panel);
+  border-color: var(--line);
 }
 :root[data-theme="dark"] .consensus-head,
 :root[data-theme="dark"] .consensus-k {
-  border-color: #4a4032;
-  background: #29313d;
-  color: #b3a892;
+  border-color: var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
 }
 :root[data-theme="dark"] .consensus-cell {
-  border-color: #4a4032;
+  border-color: var(--line);
 }
 :root[data-theme="dark"] .consensus-v,
 :root[data-theme="dark"] .consensus-range {
-  color: #ece4d4;
+  color: var(--ink);
 }
 :root[data-theme="dark"] .consensus-report-link {
-  border-color: #4a4032;
-  background: #20252e;
-  color: #b3a892;
+  border-color: var(--line);
+  background: var(--panel);
+  color: var(--muted);
 }
 :root[data-theme="dark"] .consensus-report-link:hover {
-  border-color: #5f83c7;
-  background: rgba(95, 131, 199, .16);
-  color: #c7d7ff;
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
 }
 :root[data-theme="dark"] .buy-meter-track {
-  background: #4a4032;
+  background: var(--track-off);
 }
 :root[data-theme="dark"] .rating-chip {
-  border-color: #4a4032;
-  background: rgba(170, 179, 195, .08);
+  border-color: var(--line);
+  background: var(--surface-2);
 }
 :root[data-theme="dark"] .cstat-column,
 :root[data-theme="dark"] .cstat-row {
-  border-color: #4a4032;
+  border-color: var(--line);
 }
 :root[data-theme="dark"] .cstat-k {
-  border-right-color: #4a4032;
-  background: #29313d;
-  color: #b3a892;
+  border-right-color: var(--line);
+  background: var(--surface-2);
+  color: var(--muted);
 }
-:root[data-theme="dark"] .cstat-v { color: #ece4d4; }
+:root[data-theme="dark"] .cstat-v { color: var(--ink); }
 :root[data-theme="dark"] .cstat-compare-val.best {
   color: color-mix(in srgb, #fbbf24 42%, #eef2f7);
   background:
@@ -2645,8 +2967,8 @@ th.pc-frozen-edge {
 .chart-canvas {
   width: 100%;
   min-height: 408px;
-  border: 0;
-  border-radius: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
   background: var(--chart-bg);
   overflow: hidden;
   position: relative;
@@ -2682,7 +3004,7 @@ th.pc-frozen-edge {
   border-radius: 10px;
   background: color-mix(in srgb, var(--chart-tooltip-bg) 88%, transparent);
   box-shadow: var(--chart-shadow);
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(10px) saturate(1.2);
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
@@ -2732,28 +3054,56 @@ th.pc-frozen-edge {
 }
 .chart-line {
   fill: none;
-  stroke: var(--brand);
+  stroke: var(--chart-price);
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
   pointer-events: none;
+}
+.chart-candles,
+.chart-candle {
+  pointer-events: none;
+}
+.chart-candle-wick {
+  stroke-width: .45;
+  vector-effect: non-scaling-stroke;
+}
+.chart-candle-body {
+  stroke-width: .65;
+  vector-effect: non-scaling-stroke;
+}
+/* 국내 표기 관례: 상승=빨강, 하락=파랑 */
+.chart-candle.up .chart-candle-wick,
+.chart-candle.up .chart-candle-body {
+  stroke: var(--up);
+  fill: var(--up);
+}
+.chart-candle.down .chart-candle-wick,
+.chart-candle.down .chart-candle-body {
+  stroke: var(--down);
+  fill: var(--down);
+}
+.chart-candle.flat .chart-candle-wick,
+.chart-candle.flat .chart-candle-body {
+  stroke: var(--muted);
+  fill: var(--muted);
 }
 .chart-price-overlays,
 .chart-price-overlays * {
   pointer-events: none;
 }
 .chart-bb-fill {
-  fill: color-mix(in srgb, var(--accent) 13%, transparent);
+  fill: color-mix(in srgb, var(--chart-bb) 13%, transparent);
 }
 .chart-bb-line {
   fill: none;
-  stroke: color-mix(in srgb, var(--accent) 74%, transparent);
+  stroke: color-mix(in srgb, var(--chart-bb) 82%, transparent);
   stroke-width: 1.05;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 .chart-bb-line.mid {
-  stroke: color-mix(in srgb, var(--accent) 52%, transparent);
+  stroke: color-mix(in srgb, var(--chart-bb) 62%, transparent);
   stroke-width: .9;
   stroke-dasharray: 4 4;
 }
@@ -2773,10 +3123,10 @@ th.pc-frozen-edge {
   stroke-linejoin: round;
 }
 .chart-ichi-line.tenkan {
-  stroke: color-mix(in srgb, var(--up) 82%, var(--ink));
+  stroke: var(--chart-ichi-tenkan);
 }
 .chart-ichi-line.kijun {
-  stroke: color-mix(in srgb, var(--down) 82%, var(--ink));
+  stroke: var(--chart-ichi-kijun);
 }
 .chart-ichi-line.span-a,
 .chart-ichi-line.span-b {
@@ -2785,10 +3135,10 @@ th.pc-frozen-edge {
   opacity: .85;
 }
 .chart-ichi-line.span-a {
-  stroke: var(--up);
+  stroke: var(--chart-ichi-span-a);
 }
 .chart-ichi-line.span-b {
-  stroke: var(--down);
+  stroke: var(--chart-ichi-span-b);
 }
 .chart-grid,
 .chart-bg,
@@ -2797,18 +3147,18 @@ th.pc-frozen-edge {
 }
 .chart-last-dot {
   fill: var(--chart-dot-fill);
-  stroke: var(--brand);
+  stroke: var(--chart-price);
   stroke-width: 2;
 }
 .chart-current-price-tick {
-  stroke: var(--brand);
+  stroke: var(--chart-price);
   stroke-width: 1;
   stroke-dasharray: 3 3;
   opacity: .75;
   pointer-events: none;
 }
 .chart-current-price-label {
-  fill: var(--brand);
+  fill: var(--chart-price);
   font-size: 10.5px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
@@ -2856,7 +3206,7 @@ th.pc-frozen-edge {
 }
 .chart-rsi-line {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--chart-rsi);
   stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -2872,15 +3222,19 @@ th.pc-frozen-edge {
   stroke-dasharray: none;
   opacity: .75;
 }
+.chart-rsi-guide.boundary {
+  stroke-dasharray: none;
+  opacity: .55;
+}
 .chart-rsi-current-tick {
-  stroke: var(--accent);
+  stroke: var(--chart-rsi);
   stroke-width: 1;
   stroke-dasharray: 3 3;
   opacity: .85;
   pointer-events: none;
 }
 .chart-rsi-current-label {
-  fill: var(--accent);
+  fill: var(--chart-rsi);
   font-size: 10px;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
@@ -2901,6 +3255,7 @@ th.pc-frozen-edge {
   stroke-width: 2.5px;
   pointer-events: none;
 }
+.chart-rsi-title { fill: var(--chart-rsi); }
 .chart-rsi-axis { text-anchor: end; }
 .chart-extreme {
   pointer-events: none;
@@ -2935,7 +3290,7 @@ th.pc-frozen-edge {
   fill: color-mix(in srgb, var(--chart-tooltip-bg) 88%, transparent);
   stroke: color-mix(in srgb, var(--chart-tooltip-border) 82%, transparent);
   stroke-width: 1;
-  filter: drop-shadow(0 4px 10px rgba(60, 48, 32, .07));
+  filter: drop-shadow(0 4px 10px rgba(30, 64, 175, .09));
 }
 .chart-metric-title {
   fill: var(--muted);
@@ -2961,13 +3316,17 @@ th.pc-frozen-edge {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 5px;
   padding: 0;
   flex-wrap: nowrap;
 }
 .chart-range-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   height: var(--button-height);
-  min-width: 31px;
+  min-width: 33px;
   padding: 0 7px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
@@ -2976,17 +3335,18 @@ th.pc-frozen-edge {
   font-size: 10.5px;
   font-weight: var(--fw-bold);
 }
-.chart-range-btn.custom-range-btn { min-width: 35px; }
+.chart-range-btn.range-popup-btn { min-width: 46px; }
+.chart-range-btn.custom-range-btn { min-width: 37px; }
 .chart-range-btn:hover {
   background: var(--brand-soft);
   border-color: var(--brand);
   color: var(--brand);
 }
 .chart-range-btn.active {
-  background: var(--brand);
+  background: linear-gradient(135deg, var(--brand), var(--accent-2));
   border-color: var(--brand);
   color: var(--on-accent);
-  box-shadow: 0 1px 3px rgba(60, 48, 32, .18);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--brand) 22%, transparent);
 }
 .chart-range-btn.disabled,
 .chart-range-btn:disabled {
@@ -3052,22 +3412,27 @@ th.pc-frozen-edge {
   stroke-width: 1.2;
   stroke-dasharray: 2.5 4;
 }
-.chart-selection-box {
-  fill: var(--chart-tooltip-bg);
-  stroke: var(--chart-tooltip-border);
+.chart-selection-summary {
+  pointer-events: none;
+}
+.chart-selection-summary-box {
+  fill: color-mix(in srgb, var(--chart-tooltip-bg) 90%, transparent);
+  stroke: color-mix(in srgb, var(--chart-axis) 62%, transparent);
+  stroke-width: 1;
   filter: var(--chart-shadow);
 }
-.chart-selection-tooltip {
+.chart-selection-summary-text {
   fill: var(--chart-ink);
-  font-size: 11px;
-  font-weight: 700;
-  text-anchor: middle;
+  font-size: 11.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.chart-selection.up .chart-selection-tooltip tspan:first-child {
-  fill: var(--up);
-}
-.chart-selection.down .chart-selection-tooltip tspan:first-child {
-  fill: var(--down);
+.chart-selection-summary.up .chart-selection-summary-text { fill: var(--up); }
+.chart-selection-summary.down .chart-selection-summary-text { fill: var(--down); }
+.chart-selection-summary.flat .chart-selection-summary-text { fill: var(--muted); }
+@media (max-width: 980px) {
+  .chart-selection-summary-text { font-size: 15px; }
 }
 .chart-hover-layer {
   fill: transparent;
@@ -3086,23 +3451,29 @@ th.pc-frozen-edge {
 }
 .chart-hover-dot {
   fill: var(--chart-dot-fill);
-  stroke: var(--brand);
+  stroke: var(--chart-price);
   stroke-width: 2;
 }
 .chart-hover-rsi-dot {
   fill: var(--chart-dot-fill);
-  stroke: var(--accent);
+  stroke: var(--chart-rsi);
   stroke-width: 2;
 }
 .chart-tooltip-box {
   fill: var(--chart-tooltip-bg);
   stroke: var(--chart-tooltip-border);
+  stroke-width: 1;
   filter: var(--chart-shadow);
 }
 .chart-tooltip {
   fill: var(--chart-ink);
-  font-size: 9.5px;
+  font-size: 10px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.chart-tooltip-date {
+  fill: var(--muted);
+  font-weight: 850;
 }
 
 /* ── 성과·비교 차트 (범례·지수 토글) ───────────────────────────────────── */
@@ -3251,7 +3622,7 @@ th.pc-frozen-edge {
   border: 1px solid var(--chart-tooltip-border);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
-  box-shadow: 0 6px 18px rgba(60, 48, 32, .22);
+  box-shadow: 0 12px 32px rgba(30, 64, 175, .20);
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -3739,7 +4110,8 @@ th.pc-frozen-edge {
   font-size: 10.5px;
   font-weight: 750;
 }
-.schedule-legend > span {
+.schedule-legend > span,
+.schedule-legend > button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -3749,6 +4121,12 @@ th.pc-frozen-edge {
   padding: 2px 8px 2px 3px;
   border: 1px solid;
   border-radius: 999px;
+}
+.schedule-type-toggle {
+  height: auto;
+  box-shadow: none !important;
+  cursor: pointer;
+  transition: opacity var(--t-fast), border-color var(--t-fast), background var(--t-fast), color var(--t-fast);
 }
 .schedule-legend-item.earnings {
   border-color: var(--schedule-earnings-border);
@@ -3774,6 +4152,19 @@ th.pc-frozen-edge {
 }
 .schedule-legend-item.earnings i { background: var(--schedule-earnings); }
 .schedule-legend-item.dividend i { background: var(--schedule-dividend); }
+.schedule-type-toggle:not(.active) {
+  border-color: var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  opacity: .52;
+}
+.schedule-type-toggle:not(.active) i {
+  background: var(--muted);
+}
+.schedule-type-toggle:hover,
+.schedule-type-toggle:focus-visible {
+  opacity: 1;
+}
 .schedule-estimate-note { margin-left: auto; font-style: italic; }
 .schedule-body {
   min-height: 470px;
@@ -4056,13 +4447,16 @@ th.pc-frozen-edge {
   }
   .schedule-options {
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 5px;
   }
   .schedule-options .segmented {
     flex: 0 1 auto;
   }
   .schedule-view-toggle .seg-btn,
-  .schedule-held-toggle .seg-btn {
+  .schedule-held-toggle .seg-btn,
+  .schedule-region-toggle .seg-btn {
     min-width: 48px;
     padding: 0 7px;
     font-size: 10.5px;
@@ -4149,8 +4543,8 @@ th.pc-frozen-edge {
   white-space: nowrap;
 }
 .watch-modal::backdrop {
-  background: rgba(40, 32, 22, .45);
-  backdrop-filter: blur(3px);
+  background: rgba(8, 20, 40, .48);
+  backdrop-filter: blur(6px);
 }
 /* 모달 진입: 150ms 페이드+살짝 솟기 (reduced-motion에선 비활성) */
 @media (prefers-reduced-motion: no-preference) {
@@ -4218,7 +4612,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   border-radius: var(--radius);
   background: var(--panel);
   color: var(--ink);
-  box-shadow: 0 8px 24px rgba(60, 48, 32, .16);
+  box-shadow: 0 24px 70px rgba(16, 48, 96, .22);
 }
 .modal-head,
 .watch-search,
@@ -4409,8 +4803,11 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   text-align: left;
   cursor: pointer;
 }
-.dividend-history-table.detailed .history-year-cell:hover {
+.dividend-history-table.detailed .history-year-cell:not(.history-year-static):hover {
   background: var(--surface-2);
+}
+.history-year-cell.history-year-static {
+  cursor: default;
 }
 .history-year-toggle {
   width: 16px;
@@ -4460,6 +4857,26 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   flex-direction: column;
   align-items: flex-end;
   justify-content: center;
+}
+.history-count-anchor {
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+.history-count-total,
+.history-count-regular {
+  display: block;
+  line-height: 1;
+}
+.history-count-total {
+  font-size: 12px;
+  font-weight: 800;
+}
+.history-count-regular {
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
 }
 .history-annual-anchor .history-amount,
 .history-annual-anchor .history-estimate {
@@ -4691,6 +5108,48 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
+.chart-range-card {
+  width: min(430px, calc(100vw - 28px));
+}
+.chart-range-presets {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+.chart-range-preset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 34px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+}
+.chart-range-preset:hover:not(:disabled) {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+.chart-range-preset.active {
+  border-color: var(--brand);
+  background: linear-gradient(135deg, var(--brand), var(--accent-2));
+  color: var(--on-accent);
+}
+.chart-range-preset:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+.chart-range-custom-title {
+  padding-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
+}
 .range-actions {
   display: flex;
   justify-content: flex-end;
@@ -4712,7 +5171,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   border-color: var(--brand);
   background: var(--brand);
   color: var(--on-accent);
-  box-shadow: 0 1px 3px rgba(60, 48, 32, .18);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--brand) 22%, transparent);
 }
 .watch-hint {
   flex: 1 1 180px;
@@ -5176,8 +5635,53 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .theme-btn .theme-label {
     display: none;
   }
-  .hero-value-row strong { font-size: 24px; }
-  .hero-strip { padding: 12px 14px; }
+  .hero-value-row strong { font-size: clamp(20px, 6.15vw, 24px); }
+  .hero-strip {
+    grid-template-columns: 28px minmax(0, 1fr) 28px;
+    gap: 8px;
+    padding: 10px;
+  }
+  .hero-summary-nav {
+    width: 28px;
+    height: 42px;
+  }
+  .hero-summary-nav span { font-size: 24px; }
+  .hero-page-shell {
+    display: grid;
+    align-items: center;
+    height: 64px;
+  }
+  .hero-summary-page { width: 100%; }
+  .hero-value-row {
+    flex-wrap: nowrap;
+    gap: clamp(4px, 2vw, 8px);
+  }
+  .hero-change {
+    padding: 3px clamp(4px, 1.8vw, 7px);
+    font-size: clamp(11px, 3.58vw, 14px);
+  }
+  .hero-index-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+  }
+  .hero-index-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    padding: 0 clamp(7px, 2.6vw, 10px);
+  }
+  .hero-index-item:first-child { padding-left: 0; }
+  .hero-index-item:last-child { padding-right: 0; }
+  .hero-index-value {
+    font-size: clamp(14px, 4.1vw, 16px);
+    text-align: left;
+  }
+  .hero-index-change {
+    font-size: 11px;
+    text-align: left;
+  }
   .summary { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
   .layout { grid-template-columns: 1fr; }
   #interestSidebarPane {
@@ -5190,8 +5694,16 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     overflow-x: auto;
     overflow-y: auto;
   }
-  /* 배당표는 데스크톱 규칙이 이미 px 고정폭(width:max-content + 컬럼 px)이라
-     모바일 오버라이드 불필요 — 과거 width:100% 시절의 Safari 압축 대응 잔재 제거. */
+  /* 모바일에서는 긴 기업명을 말줄임해 고정 영역을 줄이고 금액·배당지표를
+     더 일찍 볼 수 있게 한다. 전체 표는 가로 스크롤을 계속 유지한다. */
+  .dividend-list {
+    min-width: 910px;
+  }
+  .dividend-list th:nth-child(3),
+  .dividend-list td:nth-child(3) {
+    width: 110px;
+    max-width: 110px;
+  }
   /* 배당이력 팝업도 px 고정폭 — 모바일은 가로 스크롤만 허용(압축 금지) */
   .dividend-history-table-wrap {
     overflow-x: auto;
@@ -5271,8 +5783,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     flex-wrap: wrap;
     gap: 6px;
   }
-      .chart-display-controls,
-  .chart-interval-control {
+  .chart-display-controls {
     max-width: 100%;
   }
   .chart-display-controls {
@@ -5284,15 +5795,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     padding: 0 6px;
     font-size: 10.5px;
   }
-  .chart-interval-control {
-    height: 32px;
-  }
-  .chart-interval-control .seg-btn {
-    height: var(--button-height);
-    min-width: 25px;
-    padding: 0 5px;
-    font-size: 10.5px;
-  }
   .chart-meta {
     order: 2;
     justify-content: flex-start;
@@ -5302,19 +5804,29 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .chart-bottom-controls {
     position: relative;
     inset: auto;
-    display: grid;
-    grid-template-columns: max-content max-content;
+    display: flex;
+    flex-wrap: nowrap;
     justify-content: center;
     align-items: center;
     width: 100%;
     max-width: none;
-    gap: 5px 6px;
+    gap: 3px;
     margin: 0 0 5px;
-    padding: 5px 4px;
-    overflow: visible;
-    white-space: normal;
+    padding: 5px 3px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
     box-shadow: none;
     backdrop-filter: none;
+  }
+  .chart-stage .chart-bottom-controls {
+    flex-wrap: nowrap;
+  }
+  .chart-bottom-controls .chart-display-controls:not(.hidden),
+  .chart-bottom-controls .chart-range-host,
+  .chart-bottom-controls .chart-ranges,
+  .chart-bottom-controls .chart-marker-toggles {
+    display: contents;
   }
   .chart-bottom-controls > * + *,
   .chart-bottom-controls .chart-marker-toggles {
@@ -5322,30 +5834,24 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     padding-left: 0;
     border-left: 0;
   }
-  .chart-bottom-controls .chart-range-host {
-    grid-column: 1 / -1;
-    width: 100%;
-  }
-  .chart-bottom-controls .chart-ranges {
-    width: 100%;
-    justify-content: center;
-    gap: 2px;
-  }
+  .chart-bottom-controls .chart-head-toggle,
   .chart-bottom-controls .chart-range-btn {
-    min-width: 27px;
-    padding-right: 5px;
-    padding-left: 5px;
+    flex: 1 1 0;
+    min-width: 0;
+    padding-right: 3px;
+    padding-left: 3px;
     font-size: 10px;
+    text-align: center;
   }
+  .chart-bottom-controls #chartTypeToggle,
+  .chart-bottom-controls #chartIntervalToggle,
+  .chart-bottom-controls .chart-range-btn.range-popup-btn,
   .chart-bottom-controls .chart-range-btn.custom-range-btn {
-    min-width: 29px;
-  }
-  .chart-bottom-controls .chart-marker-toggles {
-    gap: 2px;
+    min-width: 0;
   }
   .chart-bottom-controls .chart-range-btn.marker-toggle {
-    padding-right: 4px;
-    padding-left: 4px;
+    padding-right: 3px;
+    padding-left: 3px;
   }
   .chart-view {
     padding: 8px;
@@ -5370,7 +5876,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   :root[data-theme="dark"] #chartStats .cstat-row:nth-child(4n),
   :root[data-theme="dark"] #chartStats .cstat-row:nth-last-child(-n + 4) {
-    border-color: #4a4032;
+    border-color: var(--line);
   }
   .cstat-column:nth-child(2) {
     border-right: 0;
@@ -5379,7 +5885,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     border-bottom: 1px solid var(--line);
   }
   :root[data-theme="dark"] .cstat-column:nth-child(-n + 2) {
-    border-bottom-color: #4a4032;
+    border-bottom-color: var(--line);
   }
   .chart-canvas {
     min-height: 0;
@@ -5552,7 +6058,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   :root[data-theme="dark"] #chartStats .cstat-row:nth-last-child(-n + 2),
   :root[data-theme="dark"] #chartStats .cstat-row:nth-last-child(-n + 4) {
-    border-bottom-color: #4a4032;
+    border-bottom-color: var(--line);
   }
   .cstat-column,
   .cstat-column:nth-child(2) {
@@ -5574,7 +6080,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     padding-right: 12px;
   }
   :root[data-theme="dark"] .cstat-column {
-    border-bottom-color: #4a4032;
+    border-bottom-color: var(--line);
   }
   .watch-modal.trade-modal {
     width: min(520px, calc(100vw - 10px));
@@ -5700,7 +6206,7 @@ button {
 ) {
   border-color: var(--button-active) !important;
   background: var(--button-active) !important;
-  color: #fff !important;
+  color: var(--button-active-ink) !important;
   /* inset 눌림 그림자가 파랑 위에서 명암 그라데이션처럼 번짐 → 평평한 단색 */
   box-shadow: none !important;
 }
@@ -5712,10 +6218,10 @@ button {
 ) {
   border-color: var(--button-active) !important;
   background: var(--button-active) !important;
-  color: #fff !important;
+  color: var(--button-active-ink) !important;
 }
 .account.active {
-  border-color: var(--button-active) !important;
+  border-color: color-mix(in srgb, var(--button-active) 48%, transparent) !important;
   border-left-color: var(--button-active) !important;
   background: var(--button-active-soft) !important;
 }
@@ -5743,6 +6249,7 @@ button {
 }
 /* 링크·표 값·사이드바 행처럼 button 태그만 빌린 요소는 평면을 유지한다. */
 :where(
+  button.account,
   button.ticker-link,
   button.interest-group-select,
   button.group-head,
@@ -5751,8 +6258,11 @@ button {
   button.dividend-detail-btn,
   button.dividend-month-toggle,
   button.history-year-toggle,
-  .interest-order-controls button
+  .interest-drag-handle
 ) {
   box-shadow: none !important;
   background: transparent;
+}
+button.account {
+  background: var(--panel);
 }
