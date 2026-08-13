@@ -219,11 +219,14 @@ def estimated_events(history_rows, start: date, end: date, actual_rows) -> list[
             continue
         _, amount, currency = latest
         seen.add(key)
+        historical_ex_date = parse_date(event.get("ex_date"))
         estimates.append(
             {
                 "ticker": event["ticker"],
-                "ex_date": None,
+                "ex_date": add_one_year(historical_ex_date).isoformat() if historical_ex_date else None,
                 "pay_date": estimated_pay_date.isoformat(),
+                "ex_date_estimated": historical_ex_date is not None,
+                "pay_date_estimated": True,
                 "amount": amount,
                 "currency": currency,
                 "source": "estimated-history",
@@ -272,4 +275,5 @@ def consolidated_dividend_events(event_rows, history_rows) -> list[dict]:
             current["source"] = f"{current['source']}+history" if "history" not in str(current.get("source")) else current["source"]
         if not current.get("ex_date") and candidate.get("ex_date"):
             current["ex_date"] = candidate["ex_date"]
+            current["ex_date_estimated"] = bool(candidate.get("ex_date_estimated"))
     return list(grouped.values())

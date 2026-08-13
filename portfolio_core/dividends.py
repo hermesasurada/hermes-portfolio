@@ -44,6 +44,15 @@ DIVIDEND_YEAR_OVERRIDES = {
 DIVIDEND_FREQUENCY_OVERRIDES = {
     "RMS.PA": 2,
 }
+# Polygon 배당 이벤트에는 소득분배/자본이득 분배 구분이 없으므로 공식 공시로
+# 확인된 연말 자본이득 분배를 명시한다. 배당 상세에는 지급건으로 남기되
+# 정기배당 회차·연간배당·배당성장률에서는 제외한다.
+CAPITAL_GAIN_DISTRIBUTION_OVERRIDES = {
+    ("TSLL", "2022-12-08"),
+    ("TSLL", "2023-12-08"),
+    ("TSLL", "2024-12-12"),
+    ("TSLL", "2025-12-10"),
+}
 
 
 def _tax_rate(currency: str, account_type: str | None = None) -> float:
@@ -137,6 +146,16 @@ def _dividend_components(
     if components and abs(sum(amount for amount, _special in components) - raw_amount) <= 0.01:
         return components
     return ((raw_amount, None),)
+
+
+def _distribution_type_override(ticker: str, event: Any) -> str | None:
+    """원천에 유형 필드가 없는 분배 이벤트의 공식 구분을 반환한다."""
+    event_date = _history_date(event["ex_date"]) or _entitlement_date(event)
+    if event_date and (
+        str(ticker or "").upper(), event_date.isoformat()
+    ) in CAPITAL_GAIN_DISTRIBUTION_OVERRIDES:
+        return "capital_gain"
+    return None
 
 
 # 중복 병합·정보 점수는 corporate_actions로 공용화 — 배당이력·총수익 시계열이 공유
@@ -301,6 +320,90 @@ def _frequency_label(frequency: int) -> str:
     return {12: "월배당", 4: "분기배당", 2: "반기배당", 1: "연배당"}.get(frequency, "비정기")
 
 
+def _is_monthly_distribution(events: list[dict]) -> bool:
+    """최근 지급 간격으로 월배당(그보다 잦은 분배 포함)을 판별한다.
+
+    연말 영업일 사정으로 한 달에 두 번 지급되거나 특정 달 지급이 없어도
+    연간 지급건수에 의존하지 않도록 날짜 간격의 중앙값을 사용한다.
+    """
+    event_dates = sorted({event["date"] for event in events if event.get("date")})[-18:]
+    if len(event_dates) < 8:
+        return False
+    intervals = [
+        (right - left).days
+        for left, right in zip(event_dates, event_dates[1:])
+        if 0 < (right - left).days <= 62
+    ]
+    return len(intervals) >= 6 and median(intervals) <= 45
+
+
+def _shift_calendar_month(month_key: tuple[int, int], offset: int) -> tuple[int, int]:
+    year, month = month_key
+    ordinal = year * 12 + month - 1 + offset
+    return ordinal // 12, ordinal % 12 + 1
+
+
+def _rolling_monthly_growth(events: list[dict], months: int = 4) -> dict | None:
+    """최근 N개월 분배금 합계와 전년 동일 월 합계의 증감률.
+
+    지급 *건수*가 아니라 달력 월별 합계를 먼저 만들기 때문에 12월 두 번
+    지급처럼 지급일 이동으로 회차가 흔들리는 월배당 ETF도 안정적으로 비교된다.
+    """
+    monthly_totals: dict[tuple[int, int], float] = {}
+    for event in events:
+        event_date = event.get("date")
+        amount = float(event.get("amount") or 0)
+        if event_date is None or amount <= 0:
+            continue
+        key = (event_date.year, event_date.month)
+        monthly_totals[key] = monthly_totals.get(key, 0.0) + amount
+    if not monthly_totals:
+        return None
+
+    latest_month = max(monthly_totals)
+    recent_months = [
+        _shift_calendar_month(latest_month, offset)
+        for offset in range(-(months - 1), 1)
+    ]
+    previous_months = [(year - 1, month) for year, month in recent_months]
+    if not all(key in monthly_totals for key in (*recent_months, *previous_months)):
+        return None
+
+    current_amount = sum(monthly_totals[key] for key in recent_months)
+    previous_amount = sum(monthly_totals[key] for key in previous_months)
+    growth_pct = _annual_growth(current_amount, previous_amount)
+    if growth_pct is None:
+        return None
+
+    month_text = lambda key: f"{key[0]:04d}-{key[1]:02d}"
+    return {
+        "months": months,
+        "current_amount": current_amount,
+        "previous_amount": previous_amount,
+        "growth_pct": growth_pct,
+        "period_start": month_text(recent_months[0]),
+        "period_end": month_text(recent_months[-1]),
+        "previous_period_start": month_text(previous_months[0]),
+        "previous_period_end": month_text(previous_months[-1]),
+    }
+
+
+def _monthly_annual_estimate(
+    totals: dict[int, float], current_year: int, rolling_growth: dict | None,
+) -> float | None:
+    """월배당의 현재 연간치는 전년 연간합계에 최근 4개월 전년비를 적용한다."""
+    if not rolling_growth or not str(rolling_growth.get("period_end", "")).startswith(
+        f"{current_year:04d}-"
+    ):
+        return None
+    previous_total = totals.get(current_year - 1)
+    previous_window = float(rolling_growth.get("previous_amount") or 0)
+    current_window = float(rolling_growth.get("current_amount") or 0)
+    if previous_total is None or previous_total <= 0 or previous_window <= 0:
+        return None
+    return previous_total * current_window / previous_window
+
+
 def _same_period_reference(events: list[dict], current: dict) -> dict | None:
     candidates = [
         event
@@ -387,11 +490,12 @@ def _attributed_history_events(
     is_korean: bool,
     fiscal_end_month: int | None,
     splits: list[dict] | None = None,
+    calendar_year: bool = False,
 ) -> tuple[list[dict], int]:
     """DB 행 → 귀속연도가 매겨진 이벤트 목록 + 결산배당 횟수."""
     # 해외 역년결산/신규배당 종목의 anchor — 가장 이른 배당 회차의 월
     anchor_month = None
-    if not is_korean and not fiscal_end_month:
+    if not is_korean and not fiscal_end_month and not calendar_year:
         for event in event_rows:
             first_date = _entitlement_date(event)
             if first_date is not None:
@@ -408,10 +512,13 @@ def _attributed_history_events(
         if entitlement_date is None or attributed_year is None:
             continue
         raw_amount = float(event["amount"])
+        distribution_type = _distribution_type_override(ticker, event)
         final_dividend_count += int(is_final)
         for component_amount, special_override in _dividend_components(
             ticker, entitlement_date, raw_amount
         ):
+            if distribution_type == "capital_gain" and special_override is None:
+                special_override = True
             amount, split_factor = _split_adjusted_amount(
                 component_amount, entitlement_date, event["source"], splits
             )
@@ -428,6 +535,7 @@ def _attributed_history_events(
                     "pay_date": _history_date(event["pay_date"]),
                     "is_final": is_final and special_override is not True,
                     "special_override": special_override,
+                    "distribution_type": distribution_type,
                 }
             )
 
@@ -438,6 +546,7 @@ def _attributed_history_events(
     # 동률이면 더 늦은 해. 한국·오버라이드(예: NVDA)는 기존 라벨 유지.
     relabel = (
         not is_korean
+        and not calendar_year
         and str(ticker or "").upper() not in FISCAL_END_MONTH_OVERRIDES
         and str(ticker or "").upper() not in PAY_DATE_YEAR_TICKERS
     )
@@ -450,6 +559,9 @@ def _attributed_history_events(
             event["is_special"] = False
     else:
         _mark_special_dividends(events)
+    for event in events:
+        if not event.get("distribution_type"):
+            event["distribution_type"] = "special" if event["is_special"] else "income"
     regular_events = [event for event in events if not event["is_special"]]
 
     if relabel and regular_events:
@@ -600,13 +712,21 @@ def _history_year_rows(
     annual: dict[int, dict], totals: dict[int, float], complete_years: set[int],
     frequency: int, current_estimate: float | None, current_year: int, is_korean: bool,
     expected_payments_by_year: dict[int, int] | None = None,
+    rolling_monthly_growth: dict | None = None,
 ) -> list[dict]:
     """연도별 응답 행 직렬화 (최신 연도부터)."""
     rows = []
     for year in sorted(annual, reverse=True):
         row = annual[year]
+        total_payments = len({
+            (event.get("ex_date") or event["date"], event.get("pay_date"))
+            for event in row["events"]
+        })
         current_ytd = year == current_year
-        if current_ytd and current_estimate is not None and year - 1 in complete_years:
+        if current_ytd and rolling_monthly_growth is not None:
+            growth_pct = rolling_monthly_growth["growth_pct"]
+            growth_basis = "rolling_4m"
+        elif current_ytd and current_estimate is not None and year - 1 in complete_years:
             growth_pct = _annual_growth(current_estimate, totals.get(year - 1))
             growth_basis = "estimate" if growth_pct is not None else None
         else:
@@ -618,7 +738,12 @@ def _history_year_rows(
                 "growth_pct": growth_pct,
                 "growth_basis": growth_basis,
                 "payments": row["payments"],
-                "expected_payments": (expected_payments_by_year or {}).get(year, frequency),
+                "total_payments": total_payments,
+                "expected_payments": (
+                    None
+                    if frequency == 12
+                    else (expected_payments_by_year or {}).get(year, frequency)
+                ),
                 "complete": year in complete_years,
                 "estimated_amount": current_estimate if current_ytd else None,
                 "last_date": row["last_date"].isoformat(),
@@ -637,6 +762,7 @@ def _history_year_rows(
                         "source": event["source"],
                         "is_final": event["is_final"],
                         "is_special": bool(event.get("is_special")),
+                        "distribution_type": event.get("distribution_type") or "income",
                     }
                     for event in sorted(row["events"], key=lambda item: item["date"], reverse=True)
                 ],
@@ -668,19 +794,26 @@ def _history_summary(
     events: list[dict], totals: dict[int, float], complete_years: set[int],
     frequency: int, current_estimate: float | None, current_year: int,
     final_dividend_count: int,
+    rolling_monthly_growth: dict | None = None,
 ) -> dict:
     completed_years = sorted(complete_years)
     latest_completed = completed_years[-1] if completed_years else None
-    latest_growth_estimated = (
-        current_estimate is not None and current_year - 1 in complete_years
-    )
-    latest_growth = (
-        _annual_growth(current_estimate, totals.get(current_year - 1))
-        if latest_growth_estimated
-        else _annual_growth(totals[latest_completed], totals.get(latest_completed - 1))
-        if latest_completed is not None and latest_completed - 1 in complete_years
-        else None
-    )
+    if rolling_monthly_growth is not None:
+        latest_growth_estimated = False
+        latest_growth = rolling_monthly_growth["growth_pct"]
+        latest_growth_basis = "rolling_4m"
+    else:
+        latest_growth_estimated = (
+            current_estimate is not None and current_year - 1 in complete_years
+        )
+        latest_growth = (
+            _annual_growth(current_estimate, totals.get(current_year - 1))
+            if latest_growth_estimated
+            else _annual_growth(totals[latest_completed], totals.get(latest_completed - 1))
+            if latest_completed is not None and latest_completed - 1 in complete_years
+            else None
+        )
+        latest_growth_basis = "estimate" if latest_growth_estimated else "annual"
     estimated_cagr_3y = _estimated_annual_cagr(
         totals, complete_years, current_year, current_estimate, 3
     )
@@ -699,6 +832,8 @@ def _history_summary(
         "latest_completed_year": latest_completed,
         "latest_growth_pct": latest_growth,
         "latest_growth_estimated": latest_growth_estimated and latest_growth is not None,
+        "latest_growth_basis": latest_growth_basis if latest_growth is not None else None,
+        "rolling_monthly_growth": rolling_monthly_growth,
         "cagr_3y": cagr_3y,
         "cagr_3y_estimated": estimated_cagr_3y is not None,
         "cagr_5y": cagr_5y,
@@ -760,6 +895,8 @@ def load_dividend_history(ticker: str) -> dict:
             event_date = _entitlement_date(event)
             if event_date is None:
                 continue
+            if _distribution_type_override(ticker_row["ticker"], event) == "capital_gain":
+                continue
             for component_amount, special_override in _dividend_components(
                 ticker_row["ticker"], event_date, float(event["amount"])
             ):
@@ -771,12 +908,16 @@ def load_dividend_history(ticker: str) -> dict:
                 adjusted_events.append({"date": event_date, "amount": amount})
         adjusted_events.sort(key=lambda item: item["date"])
         pay_date_year_ticker = ticker_row["ticker"].upper() in PAY_DATE_YEAR_TICKERS
-        fiscal_end_month = None if is_korean or pay_date_year_ticker else _dividend_fiscal_end_month(
-            ticker_row["ticker"], adjusted_events
+        monthly_distribution = _is_monthly_distribution(adjusted_events)
+        fiscal_end_month = (
+            None
+            if is_korean or pay_date_year_ticker or monthly_distribution
+            else _dividend_fiscal_end_month(ticker_row["ticker"], adjusted_events)
         )
 
     events, final_dividend_count = _attributed_history_events(
-        event_rows, ticker_row["ticker"], is_korean, fiscal_end_month, split_rows
+        event_rows, ticker_row["ticker"], is_korean, fiscal_end_month, split_rows,
+        calendar_year=monthly_distribution,
     )
     annual = _aggregate_annual_dividends(events)
 
@@ -791,19 +932,30 @@ def load_dividend_history(ticker: str) -> dict:
     totals = {year: row["amount"] for year, row in annual.items()}
     payment_counts = {year: row["payments"] for year, row in annual.items()}
     regular_events = [event for event in events if not event.get("is_special")]
-    frequency = _dividend_frequency(
+    frequency = 12 if monthly_distribution else _dividend_frequency(
         regular_events, payment_counts, active_year, ticker_row["ticker"]
     )
     expected_payments_by_year = _yearly_expected_payment_counts(
         payment_counts, active_year, frequency
     )
-    complete_years = {
-        year for year, count in payment_counts.items()
-        if year < active_year and count >= expected_payments_by_year.get(year, frequency)
-    }
+    complete_years = (
+        {year for year, total in totals.items() if year < active_year and total > 0}
+        if monthly_distribution
+        else {
+            year for year, count in payment_counts.items()
+            if year < active_year and count >= expected_payments_by_year.get(year, frequency)
+        }
+    )
     if fiscal_end_month:
         final_dividend_count += _mark_fiscal_finals(annual, complete_years)
-    current_estimate = _current_year_estimate(regular_events, frequency, active_year)
+    rolling_monthly_growth = (
+        _rolling_monthly_growth(regular_events) if monthly_distribution else None
+    )
+    current_estimate = (
+        _monthly_annual_estimate(totals, active_year, rolling_monthly_growth)
+        if monthly_distribution
+        else _current_year_estimate(regular_events, frequency, active_year)
+    )
 
     return {
         "ticker": ticker_row["ticker"],
@@ -812,11 +964,11 @@ def load_dividend_history(ticker: str) -> dict:
         "start_year": history_start.year,
         "rows": _history_year_rows(
             annual, totals, complete_years, frequency, current_estimate, active_year, is_korean,
-            expected_payments_by_year
+            expected_payments_by_year, rolling_monthly_growth
         ),
         "summary": _history_summary(
             regular_events, totals, complete_years, frequency, current_estimate, active_year,
-            final_dividend_count
+            final_dividend_count, rolling_monthly_growth
         ),
     }
 

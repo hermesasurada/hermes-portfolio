@@ -4,6 +4,7 @@ import json
 import os
 import re
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta
@@ -454,6 +455,13 @@ def _fetch_stockanalysis_dividends(ticker: str) -> list[dict]:
             html = _fetch_text(url, STOCKANALYSIS_HEADERS)
             if "history:[" in html:
                 break
+        except urllib.error.HTTPError as exc:
+            # 배당 내역 페이지가 없는 무배당주·미지원 티커는 StockAnalysis가
+            # 404를 반환한다. 이는 수집 장애가 아니라 빈 결과다. 두 후보
+            # (주식/ETF)가 모두 404인 경우 stockanalysis0으로 기록한다.
+            if exc.code == 404:
+                continue
+            last_error = exc
         except Exception as exc:
             last_error = exc
             continue

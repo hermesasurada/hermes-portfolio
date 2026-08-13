@@ -35,7 +35,7 @@ def hydrate_ticker(ticker: str, years: int = 10) -> dict:
         source = "fdr-history" if category == "kr" else "upbit-history" if category == "crypto" else "yf-history"
         if rows:
             result["history_rows"] = save_daily_prices(ticker, rows, source)
-            last_date, _ = rows[-1]
+            last_date = rows[-1]["date"] if isinstance(rows[-1], dict) else rows[-1][0]
             result["last_date"] = last_date
             result["technical_stats"] = refresh_technical_stats_cache([ticker])
     except Exception as exc:
