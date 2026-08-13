@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from collections.abc import Iterable
 from datetime import datetime
 
+from .constants import FX_TICKERS, MARKET_INDEXES
 from .db import connect
+from .market_calendar import holiday_change_session_note
 from .paths import DB_PATH, KST
 from .prices import build_market_snapshot, fx_updated_at, latest_prices, price_cache_updated_at, price_updated_at, price_view
 from .tickers import account_kind, account_label, account_scope, asset_class, ticker_currency, ticker_scope
@@ -36,10 +39,19 @@ def ensure_account(members: dict[str, dict], row) -> dict:
     )
 
 
-def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str], dict[str, str | None]] | None = None) -> dict:
+def load_portfolio(
+    us_extended: bool = False,
+    logo_hint_fn: Callable[[str, str], dict[str, str | None]] | None = None,
+    ticker_filter: Iterable[str] | None = None,
+    compact: bool = False,
+) -> dict:
     logo_hint = logo_hint_fn or default_logo_hint
+    requested_tickers = {
+        str(ticker).strip().upper()
+        for ticker in ticker_filter or []
+        if ticker and str(ticker).strip()
+    }
     with connect() as conn:
-        prices = latest_prices(conn)
         account_rows = conn.execute(
             """
             SELECT
@@ -74,15 +86,33 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
             ORDER BY h.account_id, h.ticker
             """
         ).fetchall()
+        selected_tickers = (
+            {
+                *(row["ticker"] for row in rows if row["ticker"]),
+                *requested_tickers,
+                *FX_TICKERS,
+                *MARKET_INDEXES.keys(),
+            }
+            if compact
+            else set()
+        )
+        ticker_where = ""
+        ticker_params: list[str] = []
+        if selected_tickers:
+            ticker_params = sorted(selected_tickers)
+            ticker_where = f"AND UPPER(ticker) IN ({','.join('?' for _ in ticker_params)})"
         ticker_rows = conn.execute(
-            """
+            f"""
             SELECT ticker, COALESCE(NULLIF(display_name, ''), name) AS name,
                    currency, category, sector, next_earnings_date, earnings_updated_at
             FROM tickers
             WHERE ticker IS NOT NULL AND TRIM(ticker) <> ''
+              {ticker_where}
             ORDER BY ticker
-            """
+            """,
+            ticker_params,
         ).fetchall()
+        prices = latest_prices(conn, sorted(selected_tickers) if compact else None)
 
     snapshot = build_market_snapshot(prices, ticker_rows, us_extended)
     prices = snapshot["prices"]
@@ -119,11 +149,17 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
             "asset_class": asset_class(row["ticker"], name),
             "logo": logo_hint(row["ticker"], name),
             "current_price": current_price,
+            "price_date": current.get("date"),
             "previous_price": view["previous_price"],
             "previous_date": current.get("previous_date"),
+            "change_session_note": holiday_change_session_note(
+                row["ticker"], current.get("date")
+            ),
             "change": view["change"],
             "change_pct": view["change_pct"],
             "change_krw_pct": view["change_krw_pct"],
+            "regular_price": current.get("regular_price"),
+            "regular_previous_price": current.get("regular_previous_price"),
             "extended_price": current.get("extended_price"),
             "extended_base_price": current.get("extended_base_price"),
             "extended_change": current.get("extended_change"),
@@ -168,8 +204,12 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
                     ticker_currency_value,
                 ),
                 "current_price": view["current_price"],
+                "price_date": ticker_price.get("date"),
                 "previous_price": view["previous_price"],
                 "previous_date": ticker_price.get("previous_date"),
+                "change_session_note": holiday_change_session_note(
+                    row["ticker"], ticker_price.get("date")
+                ),
                 "change": view["change"],
                 "change_pct": view["change_pct"],
                 "change_krw_pct": view["change_krw_pct"],
@@ -192,6 +232,7 @@ def load_portfolio(us_extended: bool = False, logo_hint_fn: Callable[[str, str],
 
     return {
         "as_of": datetime.now(KST).isoformat(timespec="seconds"),
+        "compact": compact,
         "db": str(DB_PATH),
         "fx": rates,
         "fx_updated": fx_updated_at(prices),

@@ -1,6 +1,7 @@
 const fmt = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 });
 const fmt2 = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 2 });
 const fmt1 = new Intl.NumberFormat("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const lowPriceFmt = new Intl.NumberFormat("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const btcQtyFmt = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 8 });
 
 function esc(v) {
@@ -64,21 +65,27 @@ function money(v, cur) {
   }[cur] || "";
   return prefix + fmt.format(v);
 }
+function unitPriceNumberText(v, defaultFormatter = fmt1) {
+  const number = Number(v);
+  if (!Number.isFinite(number)) return "-";
+  return (Math.abs(number) <= 100 ? lowPriceFmt : defaultFormatter).format(number);
+}
 function unitMoney(v, cur, ticker = "") {
   if (v == null) return '<span class="missing">조회불가</span>';
   if (String(ticker).toUpperCase() === "BTC") return `₩${fmt.format(Number(v) / 1000)}K`;
-  if (cur === "KRW") return fmt.format(v) + "원";
-  if (cur === "USD") return "$" + fmt1.format(v);
-  if (cur === "EUR") return "€" + fmt1.format(v);
-  if (cur === "JPY") return "¥" + fmt.format(v);
-  if (cur === "GBP") return "£" + fmt1.format(v);
-  if (cur === "CHF") return "CHF " + fmt1.format(v);
-  if (cur === "CAD") return "C$" + fmt1.format(v);
-  if (cur === "AUD") return "A$" + fmt1.format(v);
-  if (cur === "SGD") return "S$" + fmt1.format(v);
-  if (cur === "HKD") return "HK$" + fmt1.format(v);
-  if (cur === "INR") return "₹" + fmt1.format(v);
-  return fmt1.format(v) + " " + cur;
+  const text = unitPriceNumberText(v, cur === "KRW" || cur === "JPY" ? fmt : fmt1);
+  if (cur === "KRW") return text + "원";
+  if (cur === "USD") return "$" + text;
+  if (cur === "EUR") return "€" + text;
+  if (cur === "JPY") return "¥" + text;
+  if (cur === "GBP") return "£" + text;
+  if (cur === "CHF") return "CHF " + text;
+  if (cur === "CAD") return "C$" + text;
+  if (cur === "AUD") return "A$" + text;
+  if (cur === "SGD") return "S$" + text;
+  if (cur === "HKD") return "HK$" + text;
+  if (cur === "INR") return "₹" + text;
+  return text + " " + cur;
 }
 function tradeQtyText(qty, ticker = "") {
   const n = Number(qty);
@@ -109,7 +116,12 @@ function changePercentText(pct, chip = false) {
   return `<span class="change-cell ${chip ? "pct-chip " : ""}${cls}"><span aria-hidden="true">${arrow}</span>${fmt2.format(Math.abs(pct))}%</span>`;
 }
 function changeMarkup(row) {
-  return changePercentText(row.display_change_pct, true);   // 등락 컬럼은 칩 스타일
+  const change = changePercentText(row.display_change_pct, true);
+  const note = row?.change_session_note;
+  if (!note?.label) return change;
+  const dateText = String(note.price_date || "").replaceAll("-", ".");
+  const title = [dateText ? `${dateText} 기준 등락` : "직전 거래일 등락", note.reason ? `${note.reason} 휴장` : "휴장"].join(" · ");
+  return `<span class="change-with-session">${change}<sup class="change-session-note" title="${esc(title)}">${esc(note.label)}</sup></span>`;
 }
 // 표 로딩 스켈레톤 — colspan 한 셀에 폭 다른 바를 여러 행 깔아 형태를 암시
 function skeletonRows(colspan, rows = 8) {
@@ -125,7 +137,8 @@ function changeKrwText(v) {
   if (!Number.isFinite(v)) return "-";
   const cls = v > 0 ? "up" : v < 0 ? "down" : "flat";
   const arrow = v > 0 ? "▲" : v < 0 ? "▼" : "→";
-  return `<span class="change-cell ${cls}"><span aria-hidden="true">${arrow}</span>${krwRoundedMan(Math.abs(v))}</span>`;
+  const amount = Math.abs(v) < 0.5 ? "0원" : krwRoundedMan(Math.abs(v));
+  return `<span class="change-cell ${cls}"><span aria-hidden="true">${arrow}</span>${amount}</span>`;
 }
 function weightText(pct) {
   return Number.isFinite(pct) ? `${fmt2.format(pct)}%` : "-";

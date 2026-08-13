@@ -5,14 +5,21 @@ async function fetchJson(url, options = {}) {
   return payload;
 }
 
-function apiFetchPortfolio(usExtended) {
+function apiFetchPortfolio(usExtended, options = {}) {
   const query = new URLSearchParams({ us_extended: usExtended ? "1" : "0" });
+  if (options.compact) query.set("compact", "1");
+  const tickers = Array.from(new Set(options.tickers || [])).filter(Boolean).sort();
+  if (tickers.length) query.set("tickers", tickers.join(","));
   return fetchJson(`/api/portfolio?${query.toString()}`);
 }
 
-function apiFetchStats(tickers) {
+function apiFetchStats(tickers, usExtended = usExtendedEnabled()) {
   const key = Array.from(new Set(tickers || [])).filter(Boolean).sort().join(",");
-  return fetchJson(`/api/stats?tickers=${encodeURIComponent(key)}`);
+  const query = new URLSearchParams({
+    tickers: key,
+    us_extended: usExtended ? "1" : "0",
+  });
+  return fetchJson(`/api/stats?${query.toString()}`);
 }
 
 function apiFetchQuotes(tickers) {
@@ -34,8 +41,15 @@ function apiFetchSchedule() {
   return fetchJson("/api/schedule");
 }
 
-function apiFetchChart(ticker) {
-  return fetchJson(`/api/chart?ticker=${encodeURIComponent(ticker || "")}`);
+function apiFetchChart(ticker, usExtended = usExtendedEnabled(), options = {}) {
+  const query = new URLSearchParams({
+    ticker: ticker || "",
+    us_extended: usExtended ? "1" : "0",
+  });
+  if (options.range) query.set("range", options.range);
+  if (options.start) query.set("start", options.start);
+  if (options.end) query.set("end", options.end);
+  return fetchJson(`/api/chart?${query.toString()}`);
 }
 
 function apiFetchAccountPerformance(accountIds, allAccounts, options = {}) {
@@ -83,6 +97,14 @@ function apiLookupTicker(query) {
 
 function apiFetchTickerDirectory() {
   return fetchJson("/api/tickers");
+}
+
+function apiUpdateTickerDisplayName(ticker, displayName) {
+  return fetchJson("/api/tickers/display-name", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ticker, display_name: displayName }),
+  });
 }
 
 function apiFetchDiagnostics() {

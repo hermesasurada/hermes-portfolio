@@ -1,7 +1,7 @@
 let data = null;
 let selectedAccounts = new Set();
 let selectionMode = "all";
-let defaultAccountSelectionApplied = false;
+let accountSelectionRestored = false;
 let sortState = {
   detail: { key: "value_krw", dir: -1 },
   dividend: { key: "pay_date", dir: 1 },
@@ -25,6 +25,7 @@ let chartLoadInFlight = null;
 let chartPayload = null;
 let chartRange = "1y";
 let chartInterval = "day";
+let chartType = "line";
 let chartLogScale = false;
 let chartSmoothLines = true;
 let chartShowBollinger = false;
@@ -48,18 +49,20 @@ const transactionPageSize = 10;
 
 const chartRanges = [
   { key: "1m", label: "1M", months: 1 },
+  { key: "3m", label: "3M", months: 3 },
   { key: "6m", label: "6M", months: 6 },
   { key: "1y", label: "1Y", months: 12 },
   { key: "ytd", label: "YTD", ytd: true },
   { key: "3y", label: "3Y", months: 36 },
   { key: "5y", label: "5Y", months: 60 },
+  { key: "10y", label: "10Y", months: 120 },
   { key: "all", label: "전체", all: true },
 ];
 const chartCompareLimit = 10;
 // 비교선 색: 1번은 브랜드(메인), 이후는 빨강(상승)·파랑(하락)으로 오인되지 않는 중립 hue
 const chartCompareColors = ["var(--brand)", "#7c3aed", "#0d9488", "#d97706", "#db2777", "#0891b2", "#65a30d", "#9333ea", "#b45309", "#0f766e", "#64748b"];
-const detailSortKeys = new Set(["ticker", "name", "display_change_pct", "extended_change_pct", "change_krw", "qty", "current_price", "current_price_krw", "value", "value_krw", "weight_pct", "market_cap_usd", "dividend_yield", "dividend_growth_5y", "next_earnings_date", "drawdown_52w", "beta", "beta_adj", "rsi_day", "rsi_week", "rsi_month", "bb_day", "bb_week", "bb_month", "trailing_pe", "forward_pe", "price_to_book", "perf_1m", "perf_3m", "perf_6m", "perf_ytd", "perf_1y", "perf_3y", "perf_5y"]);
-const dividendSortKeys = new Set(["pay_date", "target", "name", "amount", "qty", "gross", "tax", "tax_rate", "net", "fx_rate", "net_krw"]);
+const detailSortKeys = new Set(["ticker", "name", "display_change_pct", "extended_change_pct", "change_krw", "qty", "current_price", "current_price_krw", "value", "value_krw", "weight_pct", "market_cap_usd", "dividend_yield", "dividend_growth_5y", "next_earnings_date", "drawdown_52w", "risk_reward_score", "beta", "beta_adj", "rsi_day", "rsi_week", "rsi_month", "bb_day", "bb_week", "bb_month", "trailing_pe", "forward_pe", "price_to_book", "perf_1w", "perf_1m", "perf_3m", "perf_6m", "perf_ytd", "perf_1y", "perf_3y", "perf_5y", "perf_10y"]);
+const dividendSortKeys = new Set(["pay_date", "target", "name", "amount", "qty", "gross", "tax", "tax_rate", "net", "fx_rate", "net_krw", "dividend_yield", "dividend_growth_5y", "ex_date"]);
 
 // app-holdings.js loaded separately.
 // app-line-chart.js loaded separately.
@@ -156,11 +159,62 @@ function render() {
   syncMobileCollapsePanels();
 }
 
+function portfolioRefreshTickers() {
+  const tickers = new Set();
+  if (interestModeActive()) {
+    (activeInterestGroup()?.items || []).forEach(item => {
+      if (item.ticker) tickers.add(item.ticker);
+    });
+  }
+  if (chartTicker) tickers.add(chartTicker);
+  return Array.from(tickers);
+}
+
+function mergePortfolioRefresh(payload) {
+  if (!data || !payload?.compact) {
+    data = payload;
+    return;
+  }
+  const updates = new Map((payload.tickers || []).map(row => [row.ticker, row]));
+  const tickers = (data.tickers || []).map(row => {
+    const update = updates.get(row.ticker);
+    return update ? { ...row, ...update } : row;
+  });
+  data = { ...data, ...payload, tickers, compact: false };
+}
+
+function renderPortfolioRefresh() {
+  renderAccounts();
+  renderSummary();
+  renderTable();
+}
+
+async function refreshPortfolio() {
+  if (loadInFlight) return loadInFlight;
+  loadInFlight = (async () => {
+    const payload = await apiFetchPortfolio(usExtendedEnabled(), {
+      compact: true,
+      tickers: portfolioRefreshTickers(),
+    });
+    if (usExtendedEnabled() && payload?.us_market?.include_extended) {
+      resetStatsForPriceMode();
+    }
+    mergePortfolioRefresh(payload);
+    renderPortfolioRefresh();
+    if (transactionsExpanded) loadTransactions().catch(() => {});
+  })();
+  try {
+    await loadInFlight;
+  } finally {
+    loadInFlight = null;
+  }
+}
+
 async function load() {
   if (loadInFlight) return loadInFlight;
   loadInFlight = (async () => {
     data = await apiFetchPortfolio(usExtendedEnabled());
-    applyTimeBasedDefaultAccountSelection();
+    restoreAccountSelection();
     if (!document.getElementById("tradeDate").value) document.getElementById("tradeDate").value = todayLocal();
     renderCurrencyFilter();
     render();
@@ -209,7 +263,7 @@ function scheduleAutoRefresh() {
   if (mode === "off") return;
   const intervalMs = Number(mode) * 60 * 1000;
   autoRefreshTimer = setInterval(() => {
-    load().catch(err => showTradeStatus(err.message || String(err), true));
+    refreshPortfolio().catch(err => showTradeStatus(err.message || String(err), true));
   }, intervalMs);
 }
 
@@ -242,7 +296,13 @@ function initUsPriceControls() {
   toggle.checked = storageGet(usPriceStorage.extended) === "true";
   toggle.addEventListener("change", () => {
     storageSet(usPriceStorage.extended, String(toggle.checked));
-    load().catch(err => showTradeStatus(err.message || String(err), true));
+    resetStatsForPriceMode();
+    const activeChartTicker = chartTicker;
+    refreshPortfolio().then(() => {
+      if (activeChartTicker && chartTicker === activeChartTicker && !performanceChartOpen) {
+        reloadPriceChartForMarketMode();
+      }
+    }).catch(err => showTradeStatus(err.message || String(err), true));
   });
 }
 
@@ -337,6 +397,7 @@ document.getElementById("tradeForm").addEventListener("submit", async event => {
   }
 });
 chartLogScale = storageGet(detailStorage.chartLogScale) === "true";
+chartType = storageGet(detailStorage.chartType) === "candle" ? "candle" : "line";
 chartSmoothLines = storageGet(detailStorage.chartSmoothLines) !== "false";
 chartShowBollinger = storageGet(detailStorage.chartShowBollinger) === "true";
 chartShowIchimoku = storageGet(detailStorage.chartShowIchimoku) === "true";
@@ -361,6 +422,10 @@ document.getElementById("showIndexesToggle").addEventListener("change", () => {
 document.getElementById("interestHeldToggle").checked = storageGet(detailStorage.interestHeldOnly) === "true";
 document.getElementById("interestHeldToggle").addEventListener("change", () => {
   storageSet(detailStorage.interestHeldOnly, String(document.getElementById("interestHeldToggle").checked));
+  syncFilterToggleControls();
+  render();
+});
+document.getElementById("nameFilter").addEventListener("input", () => {
   syncFilterToggleControls();
   render();
 });
@@ -406,10 +471,19 @@ document.querySelectorAll("th[data-key], .name-head .sort-mini[data-key]").forEa
     renderTable();
   });
 });
+// 첫 렌더 전에 URL의 차트 상태를 세팅한다. 기존에는 목록을 먼저 그린 뒤
+// syncChartRoute가 실행되어, 차트 진입인데도 숨겨질 관심목록 전체 통계가 조회됐다.
+if (performanceChartFromHash()) {
+  performanceChartOpen = true;
+} else {
+  const initialChartTicker = chartTickerFromHash();
+  if (initialChartTicker) chartTicker = initialChartTicker;
+}
 initAutoRefreshControls();
 initUsPriceControls();
 initThemeControl();
 initDataHelpModal();
+initHeroSummaryCarousel();
 initScheduleModal();
 initDividendHistoryModal();
 initWatchlistControls();
@@ -418,6 +492,7 @@ initChartRangeModal();
 initChartInterestModal();
 initChartDisplayControls();
 initChartIntervalControl();
+initChartNameEditor();
 initTradeSideToggle();
 initTradeApplyToggle();
 initInterestWatchlists();

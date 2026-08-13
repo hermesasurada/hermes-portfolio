@@ -407,7 +407,7 @@ function sortInterestRows(rows, group = activeInterestGroup()) {
   }
   const { key, dir } = interestSortState;
   rows.sort((a, b) => {
-    const av = a[key], bv = b[key];
+    const av = listSortValue(a, key), bv = listSortValue(b, key);
     if (key === "next_earnings_date" || key === "risk_reward_score") {
       const aMissing = key === "next_earnings_date"
         ? !av
@@ -476,6 +476,7 @@ const interestColumnWidths = {
   short_ratio: 60,
   insider_ownership: 64,
   institutional_ownership: 64,
+  perf_1w: 64,
   perf_1m: 64,
   perf_3m: 64,
   perf_6m: 64,
@@ -483,6 +484,7 @@ const interestColumnWidths = {
   perf_1y: 64,
   perf_3y: 64,
   perf_5y: 64,
+  perf_10y: 64,
   target_price: 67,
   upside_pct: 61,
   dispersion_pct: 54,
@@ -491,7 +493,7 @@ const interestColumnWidths = {
 };
 
 const interestAlwaysVisibleFields = new Set(["display_change_pct", "current_price"]);
-const INTEREST_TABLE_COLUMN_COUNT = 52;
+const INTEREST_TABLE_COLUMN_COUNT = 54;
 
 function interestEmptyRow(message) {
   return `<tr class="interest-empty-row">${Array.from({ length: INTEREST_TABLE_COLUMN_COUNT }, (_, index) => {
@@ -613,9 +615,10 @@ function renderInterestMainTable() {
     }))
     .map(attachConsensus);
   syncInterestSectorFilter(baseRows);
-  const rows = interestSectorSelection.size === 0
+  const sectorRows = interestSectorSelection.size === 0
     ? baseRows
     : baseRows.filter(row => interestSectorSelection.has(String(row.sector || "").trim()));
+  const rows = sectorRows.filter(row => matchesNameFilter(row));
   sortInterestRows(rows, group);
   // lazy-load는 섹터 필터와 무관하게 그룹 전체(baseRows) 기준 — 필터 전환 시 재요청 방지
   const missingStats = baseRows.some(row => !statsData[row.ticker]
@@ -663,13 +666,15 @@ function renderInterestMainTable() {
       <td class="group-start">${peText(r.trailing_pe)}</td>
       <td>${peText(r.forward_pe)}</td>
       <td>${peText(r.price_to_book)}</td>
-      <td class="group-start">${signedPercentText(r.perf_1m, 1)}</td>
+      <td class="group-start">${signedPercentText(r.perf_1w, 1)}</td>
+      <td>${signedPercentText(r.perf_1m, 1)}</td>
       <td>${signedPercentText(r.perf_3m, 0)}</td>
       <td>${signedPercentText(r.perf_6m, 0)}</td>
       <td>${signedPercentText(r.perf_ytd, 0)}</td>
       <td>${signedPercentText(r.perf_1y, 0)}</td>
       <td>${signedPercentText(r.perf_3y, 0)}</td>
       <td>${signedPercentText(r.perf_5y, 0)}</td>
+      <td>${signedPercentText(r.perf_10y, 0)}</td>
       <td class="group-start">${fractionPercentText(r.gross_margin)}</td>
       <td>${fractionPercentText(r.operating_margin)}</td>
       <td>${fractionPercentText(r.ebitda_margin)}</td>
@@ -696,7 +701,9 @@ function renderInterestMainTable() {
         ? ""
         : `<button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button>`}</td>
     </tr>
-  `).join("") : interestEmptyRow(group.fixed ? "모든 수집 종목이 관심그룹에 분류되어 있습니다." : "이 그룹에 등록된 종목이 없습니다.");
+  `).join("") : interestEmptyRow(nameFilterValue()
+    ? "명칭 검색 결과가 없습니다."
+    : group.fixed ? "모든 수집 종목이 관심그룹에 분류되어 있습니다." : "이 그룹에 등록된 종목이 없습니다.");
   syncInterestVisibleColumns(rows);
   // 티커 링크·배당이력 버튼 클릭은 app.js의 문서 위임이 처리 (개별 바인딩 금지).
   // 로고·종목명 틀고정은 CSS sticky가 담당 — pc-frozen(JS) 대상 아님.

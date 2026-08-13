@@ -19,12 +19,7 @@ function setCurrentSort(key) {
 function flattenAccounts() {
   return data.members.flatMap(m => m.accounts.map(a => ({...a, memberName: m.name})));
 }
-function isHenryOverseasAccount(account) {
-  return String(account.memberName || "").trim().toLowerCase() === "henry"
-    && account.type === "overseas";
-}
 function accountGroupKey(account) {
-  if (isHenryOverseasAccount(account)) return "henry_overseas";
   const type = account.type || "other";
   // 연금저축(pension_kr)·퇴직연금(retirement_kr)을 하나의 "연금" 카테고리로 통합
   if (type === "pension_kr" || type === "retirement_kr") return "pension";
@@ -115,6 +110,17 @@ function performanceDetailEnabled() {
 function currencyFilterValue() {
   return document.getElementById("currencyFilter")?.value || "all";
 }
+function nameFilterValue() {
+  return String(document.getElementById("nameFilter")?.value || "").trim();
+}
+function normalizeListName(value) {
+  return String(value || "").toLocaleLowerCase().replace(/\s+/g, "");
+}
+function matchesNameFilter(row, query = nameFilterValue()) {
+  const needle = normalizeListName(query);
+  if (!needle) return true;
+  return [row?.name, row?.ticker].some(value => normalizeListName(value).includes(needle));
+}
 function holdingChangePct(row) {
   return Number.isFinite(row.change_pct) ? row.change_pct : null;
 }
@@ -122,6 +128,12 @@ function optionalNumber(value) {
   if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+function listSortValue(row, key) {
+  if (key !== "extended_change_pct") return row?.[key];
+  // 장외시장이 없는 유럽 등 비미국 종목도 연장 정렬에서 빠지지 않도록
+  // 장외 등락이 없을 때는 화면의 정규장 등락률을 정렬값으로 사용한다.
+  return optionalNumber(row?.extended_change_pct) ?? optionalNumber(row?.display_change_pct);
 }
 function holdingChangeBasePrice(row) {
   const currentPrice = optionalNumber(row.current_price);
@@ -141,7 +153,10 @@ function holdingChangeBasePrice(row) {
 function holdingChangeKrw(row, fxAdjusted = fxAdjustedEnabled()) {
   const qty = optionalNumber(row.qty);
   const currentPrice = optionalNumber(row.current_price);
-  const previousPrice = holdingChangeBasePrice(row);
+  // 휴장일에는 신규 체결가가 없으므로 현지통화 가격 손익은 0이다.
+  // 환율 적용 시에만 같은 수량·가격에 대한 당일 환율 변동분을 남긴다.
+  const isHolidayPreviousSession = row?.change_session_note?.kind === "holiday_previous_session";
+  const previousPrice = isHolidayPreviousSession ? currentPrice : holdingChangeBasePrice(row);
   if (
     qty === null ||
     currentPrice === null ||
@@ -230,8 +245,10 @@ function watchlistRowForAccount(tickerMeta, account) {
     assetClass,
     memberName: account?.memberName || "Watchlist",
     current_price: currentPrice,
+    price_date: tickerMeta.price_date || null,
     previous_price: previousPrice,
     previous_date: tickerMeta.previous_date || null,
+    change_session_note: tickerMeta.change_session_note || null,
     change,
     change_pct: changePct,
     change_krw_pct: Number.isFinite(Number(tickerMeta.change_krw_pct)) ? Number(tickerMeta.change_krw_pct) : null,
@@ -598,10 +615,9 @@ function renderAccounts() {
   const groups = [
     { key: "overseas", label: "해외주식" },
     { key: "kr_individual", label: "한국개별주" },
-    { key: "bitcoin", label: "비트코인" },
     { key: "pension", label: "연금" },
     { key: "other", label: "기타" },
-    { key: "henry_overseas", label: "Henry 해외주식" }
+    { key: "bitcoin", label: "비트코인" }
   ];
   const totalButton = `
     <button class="account ${selectionMode === "all" ? "active" : ""}" data-account="all">
@@ -711,7 +727,7 @@ function filteredRows(options = {}) {
 function sortRows(rows, tab = activeDetailTab) {
   const state = sortState[tab] || sortState.detail;
   rows.sort((a, b) => {
-    const av = a[state.key], bv = b[state.key];
+    const av = listSortValue(a, state.key), bv = listSortValue(b, state.key);
     if (state.key === "risk_reward_score") {
       const aMissing = av == null || !Number.isFinite(Number(av));
       const bMissing = bv == null || !Number.isFinite(Number(bv));
@@ -739,6 +755,7 @@ function syncFilterToggleControls() {
     if (toggle && control) control.classList.toggle("enabled", toggle.checked);
   });
   document.getElementById("currencyFilterControl")?.classList.toggle("active", currencyFilterValue() !== "all");
+  document.getElementById("nameFilterControl")?.classList.toggle("active", Boolean(nameFilterValue()));
 }
 
 function syncDetailTabs() {
@@ -763,6 +780,10 @@ function syncDetailTabs() {
   document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart || showingInterest);
   // 통계 지표 도움말 버튼은 통합 세부내역에서 노출
   document.getElementById("fxAdjustedControl")?.classList.toggle("hidden", showingChart || showingFxInterest);
+  document.getElementById("nameFilterControl")?.classList.toggle(
+    "hidden",
+    showingChart || (!showingInterest && activeDetailTab !== "detail")
+  );
   document.getElementById("currencyFilterControl")?.classList.toggle("hidden", showingChart || showingFxInterest);
   document.getElementById("rowCount")?.classList.toggle("hidden", showingChart);
   document.getElementById("showIndexesControl")?.classList.toggle("hidden", showingChart || showingInterest);
@@ -873,11 +894,14 @@ function renderTable() {
   syncTransactionPanel();
   syncFilterToggleControls();
   syncDetailTabs();
+  // 차트에서는 목록 표가 보이지 않는다. 숨은 40~234행을 다시 만들고 통계까지
+  // 조회하면 초기 차트 로딩과 자동갱신만 느려지므로 목록 복귀 때 재구성한다.
+  if (chartTicker || performanceChartOpen) return;
   if (interestModeActive() && !chartTicker && !performanceChartOpen) {
     renderInterestMainTable();
     return;
   }
-  const rows = statsRows(filteredRows());
+  const rows = statsRows(filteredRows()).filter(row => matchesNameFilter(row));
   sortRows(rows, "detail");
   if (rows.some(row => row.ticker && !statsData[row.ticker])) loadStatsForRows(rows);
   const hideExtendedColumn = Boolean(data?.us_market?.is_regular || data?.us_market?.is_closed);
@@ -913,8 +937,8 @@ function renderTable() {
       <td>${changeMarkup(r)}</td>
       <td class="extended-change-col ${hideExtendedColumn ? "hidden" : ""}">${extendedChangeText(r) || "-"}</td>
       <td class="price-cell-td${pulse}">${currentPriceMarkup(r)}</td>
-      <td>${noPosition ? "-" : changeKrwText(r.change_krw)}</td>
       <td>${noPosition ? "-" : fmt2.format(r.qty)}</td>
+      <td>${noPosition ? "-" : changeKrwText(r.change_krw)}</td>
       <td>${noPosition ? "-" : valueMarkup(r)}</td>
       <td>${noPosition ? "-" : weightText(r.weight_pct)}</td>
       <td>${marketCapMarkup(r)}</td>
@@ -936,13 +960,15 @@ function renderTable() {
       <td class="group-start">${peText(r.trailing_pe)}</td>
       <td>${peText(r.forward_pe)}</td>
       <td>${peText(r.price_to_book)}</td>
-      <td class="group-start">${signedPercentText(r.perf_1m, 1)}</td>
+      <td class="group-start">${signedPercentText(r.perf_1w, 1)}</td>
+      <td>${signedPercentText(r.perf_1m, 1)}</td>
       <td>${signedPercentText(r.perf_3m, 0)}</td>
       <td>${signedPercentText(r.perf_6m, 0)}</td>
       <td>${signedPercentText(r.perf_ytd, 0)}</td>
       <td>${signedPercentText(r.perf_1y, 0)}</td>
       <td>${signedPercentText(r.perf_3y, 0)}</td>
       <td>${signedPercentText(r.perf_5y, 0)}</td>
+      <td>${signedPercentText(r.perf_10y, 0)}</td>
       <td>${r.is_watchlist ? "-" : `<button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button>`}</td>
     </tr>
   `;

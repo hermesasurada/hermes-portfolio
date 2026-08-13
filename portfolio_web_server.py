@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import logging
 import math
@@ -43,6 +44,7 @@ from portfolio_core.stats import load_stats
 from portfolio_core.tickers import asset_class
 from portfolio_core.transactions import add_transaction, delete_transaction, load_transactions, update_transaction
 from portfolio_core.ticker_lookup import is_registered_ticker, lookup_ticker
+from portfolio_core.ticker_metadata import update_ticker_display_name
 from portfolio_core.watchlist import add_watchlist_async
 
 
@@ -150,8 +152,17 @@ def logo_hint(ticker: str, name: str) -> dict[str, str | bool | None]:
     }
 
 
-def load_portfolio(us_extended: bool = False) -> dict:
-    return load_portfolio_data(us_extended=us_extended, logo_hint_fn=logo_hint)
+def load_portfolio(
+    us_extended: bool = False,
+    ticker_filter: list[str] | None = None,
+    compact: bool = False,
+) -> dict:
+    return load_portfolio_data(
+        us_extended=us_extended,
+        logo_hint_fn=logo_hint,
+        ticker_filter=ticker_filter,
+        compact=compact,
+    )
 
 
 def json_safe(value):
@@ -162,6 +173,50 @@ def json_safe(value):
     if isinstance(value, list):
         return [json_safe(item) for item in value]
     return value
+
+
+COMPRESSIBLE_CONTENT_TYPES = (
+    "application/javascript",
+    "application/json",
+    "application/xml",
+    "image/svg+xml",
+    "text/",
+)
+MIN_GZIP_BYTES = 1024
+
+
+def accepts_gzip(header: str | None) -> bool:
+    """Return whether the request accepts gzip, respecting an explicit q=0."""
+    qualities: dict[str, float] = {}
+    for item in str(header or "").lower().split(","):
+        encoding, *parameters = (part.strip() for part in item.split(";"))
+        if not encoding:
+            continue
+        quality = 1.0
+        for parameter in parameters:
+            if not parameter.startswith("q="):
+                continue
+            try:
+                quality = float(parameter[2:])
+            except ValueError:
+                quality = 0.0
+        qualities[encoding] = quality
+    if "gzip" in qualities:
+        return qualities["gzip"] > 0
+    return qualities.get("*", 0) > 0
+
+
+def is_gzip_candidate(body: bytes, content_type: str) -> bool:
+    return len(body) >= MIN_GZIP_BYTES and any(
+        content_type.startswith(prefix) for prefix in COMPRESSIBLE_CONTENT_TYPES
+    )
+
+
+def gzip_response_body(body: bytes, content_type: str, accept_encoding: str | None) -> tuple[bytes, bool]:
+    if not is_gzip_candidate(body, content_type) or not accepts_gzip(accept_encoding):
+        return body, False
+    compressed = gzip.compress(body, compresslevel=5, mtime=0)
+    return (compressed, True) if len(compressed) < len(body) else (body, False)
 
 
 STATIC_DIR = Path(__file__).with_name("portfolio_static")
@@ -211,17 +266,27 @@ class Handler(BaseHTTPRequestHandler):
         )
 
     def send_bytes(self, body: bytes, content_type: str, status: int = 200) -> None:
+        varies_by_encoding = is_gzip_candidate(body, content_type)
+        response_body, compressed = gzip_response_body(
+            body,
+            content_type,
+            self.headers.get("Accept-Encoding"),
+        )
         self.send_response(status)
         self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Content-Length", str(len(response_body)))
         self.send_header("Cache-Control", "no-store")
+        if compressed:
+            self.send_header("Content-Encoding", "gzip")
+        if varies_by_encoding:
+            self.send_header("Vary", "Accept-Encoding")
         self.end_headers()
         try:
-            self.wfile.write(body)
+            self.wfile.write(response_body)
         except BrokenPipeError:
-            self.log_client_abort(status, len(body))
+            self.log_client_abort(status, len(response_body))
             raise
-        self.log_access(status, len(body))
+        self.log_access(status, len(response_body))
 
     def send_json(self, payload: dict, status: int = 200) -> None:
         self.send_bytes(
@@ -235,27 +300,41 @@ class Handler(BaseHTTPRequestHandler):
             self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
             return True
         stat = file_path.stat()
-        etag = f'"{stat.st_mtime_ns:x}-{stat.st_size:x}"'
+        resolved_content_type = content_type or mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
+        body = file_path.read_bytes()
+        varies_by_encoding = is_gzip_candidate(body, resolved_content_type)
+        response_body, compressed = gzip_response_body(
+            body,
+            resolved_content_type,
+            self.headers.get("Accept-Encoding"),
+        )
+        encoding_tag = "-gzip" if compressed else ""
+        etag = f'"{stat.st_mtime_ns:x}-{stat.st_size:x}{encoding_tag}"'
         if self.headers.get("If-None-Match") == etag:
             self.send_response(304)
             self.send_header("ETag", etag)
             self.send_header("Cache-Control", cache_control)
+            if varies_by_encoding:
+                self.send_header("Vary", "Accept-Encoding")
             self.end_headers()
             self.log_access(304)
             return True
-        body = file_path.read_bytes()
         self.send_response(200)
-        self.send_header("Content-Type", content_type or mimetypes.guess_type(str(file_path))[0] or "application/octet-stream")
-        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Content-Type", resolved_content_type)
+        self.send_header("Content-Length", str(len(response_body)))
         self.send_header("Cache-Control", cache_control)
         self.send_header("ETag", etag)
+        if compressed:
+            self.send_header("Content-Encoding", "gzip")
+        if varies_by_encoding:
+            self.send_header("Vary", "Accept-Encoding")
         self.end_headers()
         try:
-            self.wfile.write(body)
+            self.wfile.write(response_body)
         except BrokenPipeError:
-            self.log_client_abort(200, len(body))
+            self.log_client_abort(200, len(response_body))
             raise
-        self.log_access(200, len(body))
+        self.log_access(200, len(response_body))
         return True
 
     def read_json(self) -> dict:
@@ -271,10 +350,11 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
             return True
-        # 폰트(2MB woff2)는 거의 안 바뀌므로 no-store 예외 — 하루 캐시
+        # 폰트(2MB woff2)는 거의 안 바뀌므로 하루 캐시. 나머지 정적 파일은
+        # 본문을 보관하되 매번 ETag만 확인해 변경 즉시 반영한다.
         if static_path.suffix == ".woff2":
             return self.send_file(static_path, "font/woff2", cache_control="public, max-age=86400")
-        return self.send_file(static_path)
+        return self.send_file(static_path, cache_control="no-cache")
 
     def send_logo(self, name: str) -> bool:
         logo_path = (LOGO_DIR / name).resolve()
@@ -309,10 +389,33 @@ class Handler(BaseHTTPRequestHandler):
 
     def api_portfolio(self, query: dict[str, list[str]]) -> dict:
         us_extended = (query.get("us_extended") or ["0"])[0] in {"1", "true", "yes", "on"}
-        return load_portfolio(us_extended=us_extended)
+        compact = (query.get("compact") or ["0"])[0] in {"1", "true", "yes", "on"}
+        return load_portfolio(
+            us_extended=us_extended,
+            ticker_filter=self.query_values(query, "tickers"),
+            compact=compact,
+        )
+
+    def api_health(self, query: dict[str, list[str]]) -> dict:
+        with connect() as conn:
+            row = conn.execute(
+                """
+                SELECT updated_at, item_count
+                FROM collector_runs
+                WHERE name IN ('price', 'price-daily')
+                ORDER BY CASE name WHEN 'price' THEN 0 ELSE 1 END
+                LIMIT 1
+                """
+            ).fetchone()
+        return {
+            "ok": True,
+            "price_updated_at": row["updated_at"] if row else None,
+            "item_count": row["item_count"] if row else 0,
+        }
 
     def api_stats(self, query: dict[str, list[str]]) -> dict:
-        return load_stats(self.query_values(query, "tickers"))
+        us_extended = (query.get("us_extended") or ["0"])[0] in {"1", "true", "yes", "on"}
+        return load_stats(self.query_values(query, "tickers"), us_extended=us_extended)
 
     def api_quote(self, query: dict[str, list[str]]) -> dict:
         # 애널리스트 컨센서스(목표가·업사이드·매수강도)를 8767 서비스에서 프록시.
@@ -332,7 +435,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def api_chart(self, query: dict[str, list[str]]) -> dict:
         ticker = (query.get("ticker") or [""])[0]
-        return load_price_chart(ticker)
+        us_extended = (query.get("us_extended") or ["0"])[0] in {"1", "true", "yes", "on"}
+        return load_price_chart(
+            ticker,
+            us_extended=us_extended,
+            range_key=(query.get("range") or [None])[0],
+            start=(query.get("start") or [None])[0],
+            end=(query.get("end") or [None])[0],
+        )
 
     def api_account_performance(self, query: dict[str, list[str]]) -> dict:
         return load_account_performance(
@@ -398,6 +508,9 @@ class Handler(BaseHTTPRequestHandler):
     def post_interest_item_delete(self) -> dict:
         return delete_interest_item(self.read_json())
 
+    def post_ticker_display_name(self) -> dict:
+        return update_ticker_display_name(self.read_json())
+
     def _dispatch(self, verb: str, handler) -> None:
         """GET/POST 공통 에러 처리: 끊긴 파이프 무시, ValueError→400, 그 외→로그+500."""
         try:
@@ -427,6 +540,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_logo(Path(path).name)
                 return
             get_routes = {
+                "/api/health": self.api_health,
                 "/api/portfolio": self.api_portfolio,
                 "/api/stats": self.api_stats,
                 "/api/quote": self.api_quote,
@@ -467,6 +581,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/interest-watchlists/groups/delete": self.post_interest_group_delete,
                 "/api/interest-watchlists/items": self.post_interest_item,
                 "/api/interest-watchlists/items/delete": self.post_interest_item_delete,
+                "/api/tickers/display-name": self.post_ticker_display_name,
             }
             if path in post_routes:
                 self.send_json(post_routes[path]())

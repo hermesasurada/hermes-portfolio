@@ -99,6 +99,17 @@ TICKER_SEARCH_ALIASES = {
 }
 
 
+def dividend_status_total_failure(status: str | None) -> bool:
+    """모든 배당 소스가 실패했을 때만 실제 수집 실패로 본다.
+
+    상태는 ``yahoo0+stockanalysis_error(HTTPError)+nasdaq0``처럼 소스별
+    결과를 ``+``로 잇는다. 한 소스라도 정상 응답(데이터 0건 포함)이면 다른
+    보조 소스의 부분 실패는 사용자 알림 대상이 아니다.
+    """
+    results = [part.strip() for part in str(status or "").split("+") if part.strip()]
+    return bool(results) and all("_error" in result for result in results)
+
+
 def clean_account_ids(account_ids: Iterable[str] | None) -> list[int]:
     return [int(value) for value in (account_ids or []) if str(value).strip()]
 
@@ -106,9 +117,10 @@ def clean_account_ids(account_ids: Iterable[str] | None) -> list[int]:
 def load_collection_diagnostics(conn: sqlite3.Connection) -> dict:
     """수집 상태 진단 — 기존 DB 흔적만 노출(새 수집 없음). 조용히 삼켜지던 실패를
     화면에 보이게 하기 위함."""
-    dividend_errors = conn.execute(
+    dividend_rows = conn.execute(
         "SELECT ticker, status FROM ticker_dividend_cache WHERE status LIKE '%_error%' ORDER BY ticker"
     ).fetchall()
+    dividend_errors = [row for row in dividend_rows if dividend_status_total_failure(row["status"])]
     stale = conn.execute(
         """
         WITH latest AS (SELECT MAX(date) AS d FROM daily_prices)

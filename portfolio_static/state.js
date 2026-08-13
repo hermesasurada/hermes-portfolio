@@ -11,6 +11,7 @@ const detailStorage = {
   interestHeldOnly: "portfolio.detail.interestHeldOnly",
   currencyFilter: "portfolio.detail.currencyFilter",
   chartInterval: "portfolio.chart.interval",
+  chartType: "portfolio.chart.type",
   chartLogScale: "portfolio.chart.logScale",
   chartSmoothLines: "portfolio.chart.smoothLines",
   chartShowBollinger: "portfolio.chart.showBollinger",
@@ -21,6 +22,12 @@ const detailStorage = {
 const sidebarStorage = {
   activeTab: "portfolio.sidebar.activeTab",
   interestGroupId: "portfolio.sidebar.interestGroupId"
+};
+const accountSelectionStorage = {
+  state: "portfolio.accounts.selection"
+};
+const heroSummaryStorage = {
+  page: "portfolio.heroSummary.page"
 };
 const defaultSortDir = {
   name: 1,
@@ -58,16 +65,36 @@ const defaultSortDir = {
   trailing_pe: -1,
   forward_pe: -1,
   price_to_book: -1,
+  gross_margin: -1,
+  operating_margin: -1,
+  ebitda_margin: -1,
+  profit_margin: -1,
+  return_on_assets: -1,
+  return_on_equity: -1,
+  revenue_growth: -1,
+  earnings_growth: -1,
+  earnings_quarterly_growth: -1,
+  debt_to_equity: -1,
+  free_cash_flow: -1,
+  payout_ratio: -1,
+  short_percent_float: -1,
+  short_percent_shares: -1,
+  short_ratio: -1,
+  insider_ownership: -1,
+  institutional_ownership: -1,
+  risk_reward_score: -1,
   beta: -1,
   beta_adj: -1,
   drawdown_52w: -1,
+  perf_1w: -1,
   perf_1m: -1,
   perf_3m: -1,
   perf_6m: -1,
   perf_ytd: -1,
   perf_1y: -1,
   perf_3y: -1,
-  perf_5y: -1
+  perf_5y: -1,
+  perf_10y: -1
 };
 function storageGet(key) {
   try {

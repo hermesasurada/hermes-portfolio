@@ -71,6 +71,7 @@ function attachConsensus(row) {
 // ── 셀 포매터 (관심목록 컬럼 공용) ──────────────────────────────────
 function consensusPriceText(value, currency) {
   if (value == null || !Number.isFinite(Number(value))) return "-";
+  if (Math.abs(Number(value)) <= 100) return lowPriceFmt.format(Number(value));
   const digits = currency === "KRW" || currency === "JPY" || currency === "TWD" ? 0 : 2;
   return Number(value).toLocaleString("ko-KR", { maximumFractionDigits: digits });
 }

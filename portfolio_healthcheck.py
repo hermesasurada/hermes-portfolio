@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """포트폴리오 수집 파이프라인 일일 점검 — no_agent cron이 stdout을 Telegram으로
-전달한다. 문제가 있으면 ⚠️ 요약을, --heartbeat면 정상일 때도 ✅ 한 줄을 출력.
-(wm_healthcheck.py와 동일 패턴)
+전달한다. 실제 문제가 있을 때만 ⚠️ 요약을 출력하고, 정상일 때는 침묵한다.
 
 점검 항목 (DB 흔적만 읽음, 새 수집 없음 — load_collection_diagnostics 재사용):
-- 배당 수집 실패: ticker_dividend_cache.status LIKE '%_error%'
+- 배당 수집 실패: 시도한 모든 소스가 실패한 경우만
 - 펀더멘털·기술지표·배당·분할 캐시 최신성
-- 실적일 수집 최신성 및 7일 이상 지난 원천 날짜
+- 실적일 수집 최신성
 - 가격 정체: 전체 최신일 대비 4일 초과 뒤처진 종목
 - 실시간·일배치 가격 수집 중단/0건: collector_runs 'price', 'price-daily'
 """
@@ -27,7 +26,7 @@ from portfolio_core.tickers import asset_class
 
 PRICE_RUN_MAX_AGE_HOURS = 36  # 주말 고려 — 평일 10분 주기 수집이 이보다 오래 멈추면 이상
 DAILY_PRICE_RUN_MAX_AGE_HOURS = 48
-DAILY_CACHE_MAX_AGE_HOURS = 36
+DAILY_CACHE_MAX_AGE_HOURS = 60  # 24h TTL과 크론 시각 차이로 이틀째 갱신되는 정상 주기 허용
 MARKET_CACHE_MAX_AGE_HOURS = 120  # 주말·휴장 뒤 첫 일배치 전까지 허용
 
 
@@ -53,6 +52,17 @@ def _issue_summary(label: str, rows: list[dict]) -> str:
 def _older_than(value: str | None, max_age_hours: float) -> bool:
     age = _run_age_hours(value)
     return age is None or age > max_age_hours
+
+
+def _awaiting_first_daily_run(row: dict) -> bool:
+    """신규 종목은 등록 후 다음 배당 배치까지 누락 경고를 유예한다."""
+    if row.get("fetched_at"):
+        return False
+    try:
+        added = date.fromisoformat(str(row.get("added_date") or ""))
+    except ValueError:
+        return False
+    return (datetime.now(KST).date() - added).days <= 1
 
 
 def check() -> list[str]:
@@ -86,7 +96,7 @@ def check() -> list[str]:
         ).fetchall()]
         dividends = [dict(row) for row in conn.execute(
             """
-            SELECT t.ticker, c.fetched_at, c.status
+            SELECT t.ticker, t.added_date, c.fetched_at, c.status
             FROM tickers t
             LEFT JOIN ticker_dividend_cache c ON c.ticker = t.ticker
             WHERE t.category IN ('kr', 'overseas')
@@ -95,7 +105,7 @@ def check() -> list[str]:
         ).fetchall()]
         splits = [dict(row) for row in conn.execute(
             """
-            SELECT t.ticker, c.fetched_at, c.status
+            SELECT t.ticker, t.added_date, c.fetched_at, c.status
             FROM tickers t
             LEFT JOIN ticker_split_cache c ON c.ticker = t.ticker
             WHERE t.category IN ('kr', 'overseas')
@@ -139,21 +149,10 @@ def check() -> list[str]:
     if earnings_stale:
         problems.append(_issue_summary("실적일 조회 지연/누락", earnings_stale))
 
-    past_cutoff = datetime.now(KST).date().toordinal() - 7
-    earnings_past = []
-    for row in stock_earnings:
-        try:
-            is_past = date.fromisoformat(str(row["next_earnings_date"])).toordinal() < past_cutoff
-        except (TypeError, ValueError):
-            is_past = False
-        if is_past:
-            earnings_past.append(row)
-    if earnings_past:
-        problems.append(_issue_summary("실적일 원천이 과거 날짜", earnings_past))
-
     dividend_stale = [
         row for row in dividends
-        if _older_than(row["fetched_at"], DAILY_CACHE_MAX_AGE_HOURS)
+        if not _awaiting_first_daily_run(row)
+        and _older_than(row["fetched_at"], DAILY_CACHE_MAX_AGE_HOURS)
     ]
     if dividend_stale:
         problems.append(_issue_summary("배당 캐시 지연/누락", dividend_stale))
@@ -161,7 +160,10 @@ def check() -> list[str]:
     split_issues = [
         row for row in splits
         if str(row["status"] or "").startswith("error:")
-        or _older_than(row["fetched_at"], DAILY_CACHE_MAX_AGE_HOURS)
+        or (
+            not _awaiting_first_daily_run(row)
+            and _older_than(row["fetched_at"], DAILY_CACHE_MAX_AGE_HOURS)
+        )
     ]
     if split_issues:
         problems.append(_issue_summary("주식분할 캐시 지연/실패", split_issues))
@@ -195,8 +197,7 @@ def check() -> list[str]:
     return problems
 
 
-def main(argv: list[str]) -> int:
-    heartbeat = "--heartbeat" in argv
+def main(_argv: list[str]) -> int:
     problems = check()
     today = datetime.now(KST).strftime("%Y-%m-%d")
     if problems:
@@ -204,9 +205,8 @@ def main(argv: list[str]) -> int:
         for line in problems:
             print(f"- {line}")
         print("\n상세: 대시보드 ? 버튼 → 수집 진단")
-    elif heartbeat:
-        print(f"✅ 포트폴리오 수집 정상 ({today})")
-    # else: silent (no stdout → no Telegram delivery)
+    # 정상일 때는 --heartbeat가 전달되더라도 침묵한다.
+    # stdout이 비어 있어야 no_agent cron이 Telegram 메시지를 보내지 않는다.
     return 0
 
 

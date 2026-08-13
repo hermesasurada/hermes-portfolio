@@ -23,6 +23,8 @@ import portfolio_core.dividend_sources as dividend_sources_module
 import portfolio_core.dividends as dividends_module
 import portfolio_core.schedule as schedule_module
 import portfolio_core.ticker_metadata as ticker_metadata_module
+import portfolio_core.price_store as price_store_module
+from portfolio_core.earnings_history import backfill_earnings_month
 import collect_prices as collect_prices_module
 from portfolio_core.collect_common import parse_categories
 from portfolio_core.collectors import CollectedPrice
@@ -31,6 +33,7 @@ from portfolio_core.fundamentals import (
     fetch_fundamentals,
     normalize_pe,
     parse_number,
+    yfinance_dividend_yield,
     yfinance_profile_metrics,
 )
 from portfolio_core.dates import parse_iso_date, to_iso_text
@@ -42,6 +45,8 @@ from portfolio_core.dividends import (
     _history_summary,
     _history_year_rows,
     _mark_fiscal_finals,
+    _monthly_annual_estimate,
+    _rolling_monthly_growth,
     _split_adjusted_amount,
     _tax_rate,
 )
@@ -55,7 +60,12 @@ from portfolio_core.indicators import (
     rsi_series,
     shift_months,
 )
-from portfolio_core.market_calendar import us_equity_calendar_day
+from portfolio_core.market_calendar import (
+    holiday_change_session_note,
+    japan_equity_calendar_day,
+    us_equity_calendar_day,
+)
+from portfolio_core.paths import KST
 from portfolio_core.price_store import infer_category
 from portfolio_core.prices import fx_previous_rates, fx_rates, price_view
 from portfolio_core.queries import dividend_status_total_failure
@@ -83,6 +93,126 @@ from portfolio_core.tickers import (
 )
 from portfolio_core.logos import _is_square_logo, candidate_symbols, logo_stem
 from portfolio_core.watchlist import estimate_hydration_minutes, normalize_lookup_ticker
+
+
+def test_earnings_dates_are_preserved_when_next_date_changes():
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute(
+        """
+        CREATE TABLE tickers (
+            ticker TEXT PRIMARY KEY,
+            next_earnings_date TEXT,
+            earnings_updated_at TEXT,
+            display_name TEXT,
+            sector TEXT
+        )
+        """
+    )
+    conn.execute(
+        "INSERT INTO tickers (ticker, next_earnings_date, earnings_updated_at) VALUES (?, ?, ?)",
+        ("AAPL", "2026-07-30", "2026-07-01T00:00:00+09:00"),
+    )
+
+    @contextmanager
+    def fake_connect():
+        yield conn
+
+    original_connect = price_store_module.connect
+    try:
+        price_store_module.connect = fake_connect
+        price_store_module.update_earnings_dates([("AAPL", "2026-10-29")])
+        rows = conn.execute(
+            "SELECT earnings_date FROM earnings_events WHERE ticker = 'AAPL' ORDER BY earnings_date"
+        ).fetchall()
+        assert [row["earnings_date"] for row in rows] == ["2026-07-30", "2026-10-29"]
+        current = conn.execute(
+            "SELECT next_earnings_date FROM tickers WHERE ticker = 'AAPL'"
+        ).fetchone()
+        assert current["next_earnings_date"] == "2026-10-29"
+    finally:
+        price_store_module.connect = original_connect
+        conn.close()
+
+
+def test_earnings_history_backfill_prefers_cache_and_avoids_near_duplicates(tmp_path=None):
+    import json
+    import tempfile
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute(
+        """
+        CREATE TABLE tickers (
+            ticker TEXT PRIMARY KEY,
+            category TEXT,
+            next_earnings_date TEXT,
+            earnings_updated_at TEXT,
+            display_name TEXT,
+            sector TEXT
+        )
+        """
+    )
+    conn.executemany(
+        "INSERT INTO tickers (ticker, category, next_earnings_date) VALUES (?, 'overseas', ?)",
+        [("AAPL", "2026-07-30"), ("MSFT", "2026-10-29"), ("GOOG", "2026-10-23")],
+    )
+    conn.execute(
+        """
+        CREATE TABLE ticker_stats_cache (
+            ticker TEXT PRIMARY KEY,
+            raw_json TEXT,
+            fetched_at TEXT
+        )
+        """
+    )
+    conn.executemany(
+        "INSERT INTO ticker_stats_cache VALUES (?, ?, ?)",
+        [
+            (
+                "AAPL",
+                json.dumps({"info": {"earningsTimestamp": 1785355200, "exchangeTimezoneName": "America/New_York"}}),
+                "2026-07-31T10:00:00+09:00",
+            ),
+            (
+                "MSFT",
+                json.dumps({"info": {"earningsTimestamp": 1785355200, "exchangeTimezoneName": "America/New_York"}}),
+                "2026-07-31T10:00:00+09:00",
+            ),
+        ],
+    )
+
+    with tempfile.TemporaryDirectory() as directory:
+        log_path = Path(directory) / "collector.log"
+        log_path.write_text(
+            "\n".join(
+                [
+                    "[2026-07-22 10:00:00 KST] exit=0",
+                    "  + GOOG earnings: 2026-07-23",
+                    "[2026-07-23 10:00:00 KST] exit=0",
+                    "  + GOOG earnings: 2026-07-24",
+                    "  + MSFT earnings: 2026-07-30",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        result = backfill_earnings_month(conn, "2026-07", [log_path])
+
+    rows = conn.execute(
+        "SELECT ticker, earnings_date, source FROM earnings_events ORDER BY ticker, earnings_date"
+    ).fetchall()
+    assert [tuple(row) for row in rows] == [
+        ("AAPL", "2026-07-30", "ticker-cache"),
+        ("GOOG", "2026-07-24", "collector-log"),
+        ("GOOG", "2026-10-23", "ticker-cache"),
+        ("MSFT", "2026-07-29", "yfinance-info-cache"),
+        ("MSFT", "2026-10-29", "ticker-cache"),
+    ]
+    assert result["inserted"] == 2
+    assert result["inserted_collector_log"] == 1
+    assert result["inserted_yfinance_cache"] == 1
+    assert result["skipped_duplicate"] == 1
+    conn.close()
 
 
 # --- fundamentals.parse_number (the regression that started all this) -------
@@ -352,6 +482,35 @@ def test_dividend_growth_ignores_historical_payment_count_changes():
     assert _estimated_annual_cagr(missing_year, set(), 2026, estimate, 5) is None
 
 
+def test_monthly_dividend_growth_compares_four_calendar_month_sums():
+    events = []
+    amounts = {
+        (2025, 5): [0.30],
+        (2025, 6): [0.31],
+        (2025, 7): [0.32],
+        (2025, 8): [0.33],
+        (2026, 5): [0.28],
+        (2026, 6): [0.29],
+        (2026, 7): [0.30],
+        # 지급일 이동으로 같은 달에 두 건이어도 월 합계로 비교한다.
+        (2026, 8): [0.15, 0.16],
+    }
+    for (year, month), month_amounts in amounts.items():
+        for day, amount in enumerate(month_amounts, start=1):
+            events.append({"date": date(year, month, day), "amount": amount})
+
+    result = _rolling_monthly_growth(events)
+    assert result is not None
+    assert result["period_start"] == "2026-05"
+    assert result["period_end"] == "2026-08"
+    assert abs(result["current_amount"] - 1.18) < 1e-9
+    assert abs(result["previous_amount"] - 1.26) < 1e-9
+    assert abs(result["growth_pct"] - (1.18 / 1.26 - 1) * 100) < 1e-9
+
+    estimate = _monthly_annual_estimate({2025: 3.78}, 2026, result)
+    assert abs(estimate - 3.78 * 1.18 / 1.26) < 1e-9
+
+
 def test_dividend_network_fetch_runs_outside_db_transaction():
     active_connections = 0
     stored_tickers = []
@@ -540,6 +699,26 @@ def test_yfinance_profile_metrics_normalizes_interest_fields():
     assert metrics["financial_currency"] == "USD"
 
 
+def test_yfinance_dividend_yield_rejects_cross_currency_rate():
+    skhy = {
+        "currency": "USD",
+        "financialCurrency": "KRW",
+        "currentPrice": 143.53,
+        "trailingAnnualDividendRate": 2625.0,
+        "trailingAnnualDividendYield": 17.380653,
+    }
+    assert yfinance_dividend_yield(skhy) is None
+    assert yfinance_profile_metrics({"info": skhy})["dividend_yield"] is None
+
+    # 거래·재무통화가 달라도 거래가격 단위로 정상 환산된 배당금은 유지한다.
+    valid_adr = dict(
+        skhy,
+        trailingAnnualDividendRate=2.5,
+        trailingAnnualDividendYield=1.74,
+    )
+    assert yfinance_dividend_yield(valid_adr) == 1.74
+
+
 # --- tickers ----------------------------------------------------------------
 def test_ticker_currency():
     assert ticker_currency("BTC") == "KRW"
@@ -616,6 +795,11 @@ def test_fx_rates_uses_quotes_then_fallback():
     prev = fx_previous_rates(prices)
     assert prev["USD"] == 1490.0
     assert prev["EUR"] == 1700.0
+
+    # 전일 환율이 동일해도 '마지막으로 달랐던 값'을 쓰지 않고 실제 직전
+    # 거래일 종가를 사용해야 휴장 종목의 금일 환산손익이 0으로 남는다.
+    prices["USDKRW"]["prior_price"] = 1500.0
+    assert fx_previous_rates(prices)["USD"] == 1500.0
 
 
 def test_price_view_keeps_regular_change_separate_from_extended_price():
@@ -706,8 +890,8 @@ def test_price_near_target_uses_first_trading_day_for_edge_weekend():
 def test_recent_performance_keys():
     keys = set(recent_performance([]).keys())
     assert keys == {
-        "one_month", "three_month", "six_month", "ytd",
-        "one_year", "three_year", "five_year",
+        "one_week", "one_month", "three_month", "six_month", "ytd",
+        "one_year", "three_year", "five_year", "ten_year",
     }
 
 
@@ -1295,6 +1479,27 @@ def test_us_market_calendar_observed_independence_day_and_early_close():
     thanksgiving_after = us_equity_calendar_day(date(2026, 11, 27))
     assert thanksgiving_after["status"] == "early_close"
     assert thanksgiving_after["early_close_time"] == "13:00"
+
+
+def test_japan_market_holiday_marks_previous_session_change():
+    holiday = japan_equity_calendar_day(date(2026, 8, 11))
+    assert holiday == {"status": "closed", "reason": "산의 날"}
+    note = holiday_change_session_note(
+        "7974.T",
+        "2026-08-10",
+        datetime(2026, 8, 11, 12, 0, tzinfo=KST),
+    )
+    assert note == {
+        "kind": "holiday_previous_session",
+        "label": "휴",
+        "price_date": "2026-08-10",
+        "reason": "산의 날",
+    }
+    assert holiday_change_session_note(
+        "7974.T",
+        "2026-08-11",
+        datetime(2026, 8, 11, 12, 0, tzinfo=KST),
+    ) is None
 
 
 def test_fetch_us_live_quotes_uses_stale_cache_when_batch_fails():
