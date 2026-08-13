@@ -4,7 +4,13 @@ from collections.abc import Callable
 from datetime import timedelta
 
 from .dates import today_kst
-from .db import connect, ensure_dividend_tables, ensure_ticker_metadata_columns
+from .db import (
+    connect,
+    ensure_dividend_tables,
+    ensure_earnings_events_table,
+    ensure_stats_cache_table,
+    ensure_ticker_metadata_columns,
+)
 from .dividend_schedule import add_months, consolidated_dividend_events, event_schedule_date
 from .tickers import ticker_scope
 
@@ -29,19 +35,23 @@ def load_schedule(
 
     with connect() as conn:
         ensure_ticker_metadata_columns(conn)
+        ensure_earnings_events_table(conn)
         ensure_dividend_tables(conn)
+        ensure_stats_cache_table(conn)
         ticker_rows = conn.execute(
             """
-            SELECT ticker,
-                   COALESCE(NULLIF(display_name, ''), name, ticker) AS name,
-                   category,
-                   currency,
-                   next_earnings_date
-            FROM tickers
-            WHERE category IN ('kr', 'overseas')
-              AND ticker IS NOT NULL
-              AND TRIM(ticker) <> ''
-            ORDER BY ticker
+            SELECT t.ticker,
+                   COALESCE(NULLIF(t.display_name, ''), t.name, t.ticker) AS name,
+                   t.category,
+                   t.currency,
+                   t.next_earnings_date,
+                   s.market_cap
+            FROM tickers t
+            LEFT JOIN ticker_stats_cache s ON s.ticker = t.ticker
+            WHERE t.category IN ('kr', 'overseas')
+              AND t.ticker IS NOT NULL
+              AND TRIM(t.ticker) <> ''
+            ORDER BY t.ticker
             """
         ).fetchall()
         ticker_rows = [
@@ -60,6 +70,17 @@ def load_schedule(
                 """
             ).fetchall()
         }
+        earnings_rows = conn.execute(
+            """
+            SELECT e.ticker, e.earnings_date, e.source
+            FROM earnings_events e
+            JOIN tickers t ON t.ticker = e.ticker
+            WHERE t.category IN ('kr', 'overseas')
+              AND date(e.earnings_date) BETWEEN ? AND ?
+            ORDER BY date(e.earnings_date), e.ticker
+            """,
+            (start.isoformat(), end.isoformat()),
+        ).fetchall()
         actual_rows = conn.execute(
             """
             SELECT d.ticker, d.ex_date, d.pay_date, d.amount, d.currency,
@@ -89,22 +110,29 @@ def load_schedule(
         str(row["ticker"]).upper(): {
             "ticker": str(row["ticker"]).upper(),
             "name": row["name"] or row["ticker"],
+            "currency": row["currency"],
+            "market_cap_currency": row["currency"],
+            "market_cap": row["market_cap"],
             "earnings_date": row["next_earnings_date"],
         }
         for row in ticker_rows
     }
     earnings = []
-    for meta in ticker_meta.values():
-        if not meta["earnings_date"]:
+    for event in earnings_rows:
+        ticker = str(event["ticker"]).upper()
+        meta = ticker_meta.get(ticker)
+        if not meta:
             continue
-        ticker = meta["ticker"]
         earnings.append(
             {
                 **meta,
+                "earnings_date": str(event["earnings_date"])[:10],
+                "source": event["source"],
                 "owned": ticker in owned,
                 "logo": logo_hint(ticker, meta["name"]),
             }
         )
+    earnings.sort(key=lambda row: (row["earnings_date"], row["ticker"]))
 
     dividends = []
     for event in consolidated_dividend_events(actual_rows, history_rows):
@@ -120,6 +148,8 @@ def load_schedule(
                 "date": schedule_date.isoformat(),
                 "ticker": ticker,
                 "name": meta["name"],
+                "market_cap_currency": meta["market_cap_currency"],
+                "market_cap": meta["market_cap"],
                 "owned": ticker in owned,
                 "estimated": bool(event.get("pay_date_estimated")),
                 "amount": event.get("amount"),

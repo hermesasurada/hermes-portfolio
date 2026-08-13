@@ -38,6 +38,42 @@ def ensure_ticker_metadata_columns(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE tickers ADD COLUMN sector TEXT")
 
 
+def ensure_earnings_events_table(conn: sqlite3.Connection) -> None:
+    """실적발표일 이력. `tickers.next_earnings_date`는 최신값으로 덮어쓰므로 별도 보존한다."""
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS earnings_events (
+            ticker TEXT NOT NULL,
+            earnings_date TEXT NOT NULL,
+            source TEXT,
+            observed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (ticker, earnings_date)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_earnings_events_date
+        ON earnings_events(earnings_date, ticker)
+        """
+    )
+    # 최초 마이그레이션과 신규 등록 종목을 위해 현재 단일값도 이력에 편입한다.
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO earnings_events
+          (ticker, earnings_date, source, observed_at)
+        SELECT ticker,
+               date(next_earnings_date),
+               'ticker-cache',
+               COALESCE(NULLIF(earnings_updated_at, ''), CURRENT_TIMESTAMP)
+        FROM tickers
+        WHERE ticker IS NOT NULL
+          AND TRIM(ticker) <> ''
+          AND date(next_earnings_date) IS NOT NULL
+        """
+    )
+
+
 def backfill_ticker_display_names(conn: sqlite3.Connection) -> None:
     from .tickers import display_name
 
@@ -323,6 +359,7 @@ def ensure_fx_tickers(conn: sqlite3.Connection) -> None:
 def initialize_schema() -> None:
     with connect() as conn:
         ensure_ticker_metadata_columns(conn)
+        ensure_earnings_events_table(conn)
         ensure_stats_cache_table(conn)
         ensure_technical_stats_cache_table(conn)
         ensure_daily_technical_indicators_table(conn)

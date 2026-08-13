@@ -1,6 +1,10 @@
 const scheduleStorage = {
   view: "portfolio.schedule.view",
   heldOnly: "portfolio.schedule.heldOnly",
+  earningsVisible: "portfolio.schedule.earningsVisible",
+  dividendsVisible: "portfolio.schedule.dividendsVisible",
+  koreaVisible: "portfolio.schedule.koreaVisible",
+  foreignVisible: "portfolio.schedule.foreignVisible",
 };
 
 let schedulePayload = null;
@@ -8,6 +12,14 @@ let scheduleLoadInFlight = null;
 let scheduleMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let scheduleView = storageGet(scheduleStorage.view) === "list" ? "list" : "grid";
 let scheduleHeldOnly = storageGet(scheduleStorage.heldOnly) === "1";
+const scheduleTypeVisible = {
+  earnings: storageGet(scheduleStorage.earningsVisible) !== "0",
+  dividend: storageGet(scheduleStorage.dividendsVisible) !== "0",
+};
+const scheduleRegionVisible = {
+  korea: storageGet(scheduleStorage.koreaVisible) !== "0",
+  foreign: storageGet(scheduleStorage.foreignVisible) !== "0",
+};
 let scheduleFocusDate = "";
 
 function scheduleDateKey(value) {
@@ -26,19 +38,45 @@ function scheduleTickerLabel(event) {
   return /\.(KS|KQ)$/i.test(event.ticker || "") ? event.name : event.ticker;
 }
 
+function scheduleEventRegion(event) {
+  return /\.(KS|KQ)$/i.test(event.ticker || "") ? "korea" : "foreign";
+}
+
+function scheduleMarketCapUsd(row) {
+  const marketCapUsd = toUsd(row.market_cap, row.market_cap_currency || row.currency);
+  return marketCapUsd != null && Number.isFinite(Number(marketCapUsd)) ? Number(marketCapUsd) : null;
+}
+
+function compareScheduleEvents(a, b) {
+  const dateOrder = a.date.localeCompare(b.date);
+  if (dateOrder) return dateOrder;
+  const typeOrder = (a.type === "earnings" ? 0 : 1) - (b.type === "earnings" ? 0 : 1);
+  if (typeOrder) return typeOrder;
+  const aCap = Number(a.marketCapUsd);
+  const bCap = Number(b.marketCapUsd);
+  const aHasCap = a.marketCapUsd != null && Number.isFinite(aCap);
+  const bHasCap = b.marketCapUsd != null && Number.isFinite(bCap);
+  if (aHasCap !== bHasCap) return aHasCap ? -1 : 1;
+  if (aHasCap && aCap !== bCap) return bCap - aCap;
+  return String(a.ticker || "").localeCompare(String(b.ticker || ""));
+}
+
 function normalizedScheduleEvents() {
   if (!schedulePayload) return [];
   const earnings = (schedulePayload.earnings || []).flatMap(row => {
-    const display = earningsDisplayDate(row.earnings_date);
-    if (!display) return [];
+    const earningsDate = String(row.earnings_date || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(earningsDate)) return [];
+    const today = String(schedulePayload.today || todayLocal()).slice(0, 10);
     return [{
       type: "earnings",
-      date: scheduleDateKey(display.date),
+      date: earningsDate,
       ticker: row.ticker,
       name: row.name,
       owned: Boolean(row.owned),
-      estimated: Boolean(display.estimated),
+      estimated: false,
+      past: earningsDate < today,
       logo: row.logo,
+      marketCapUsd: scheduleMarketCapUsd(row),
       sourceDate: row.earnings_date,
     }];
   });
@@ -52,18 +90,20 @@ function normalizedScheduleEvents() {
     logo: row.logo,
     amount: row.amount,
     currency: row.currency,
+    marketCapUsd: scheduleMarketCapUsd(row),
   }));
   return [...earnings, ...dividends]
     .filter(event => /^\d{4}-\d{2}-\d{2}$/.test(event.date))
-    .sort((a, b) => a.date.localeCompare(b.date)
-      || a.type.localeCompare(b.type)
-      || a.ticker.localeCompare(b.ticker));
+    .sort(compareScheduleEvents);
 }
 
 function visibleScheduleEvents() {
   const monthKey = `${scheduleMonth.getFullYear()}-${String(scheduleMonth.getMonth() + 1).padStart(2, "0")}`;
   return normalizedScheduleEvents().filter(event => (
-    event.date.startsWith(monthKey) && (!scheduleHeldOnly || event.owned)
+    event.date.startsWith(monthKey)
+      && scheduleTypeVisible[event.type]
+      && scheduleRegionVisible[scheduleEventRegion(event)]
+      && (!scheduleHeldOnly || event.owned)
   ));
 }
 
@@ -74,7 +114,8 @@ function scheduleEventButton(event) {
   const title = `${typeLabel} · ${event.name} (${event.ticker})${event.estimated ? " · 예상일" : ""}`;
   return `
     <button class="schedule-event ${event.type}${event.estimated ? " estimated" : ""}${event.owned ? " owned" : ""}"
-      type="button" data-chart-ticker="${esc(event.ticker)}" title="${esc(title)}" aria-label="${esc(title)}">
+      type="button" data-chart-ticker="${esc(event.ticker)}" data-market-cap-usd="${event.marketCapUsd ?? ""}"
+      title="${esc(title)}" aria-label="${esc(title)}">
       <span class="schedule-event-type" aria-hidden="true">${shortTypeLabel}</span>
       <span class="schedule-event-label">${esc(label)}</span>
     </button>`;
@@ -124,7 +165,7 @@ function renderScheduleGrid(events) {
 
 function scheduleEventDetail(event) {
   if (event.type === "earnings") {
-    return `<span class="schedule-list-note${event.estimated ? " estimated" : ""}">${event.estimated ? "예상 발표일" : "발표 예정"}</span>`;
+    return `<span class="schedule-list-note${event.estimated ? " estimated" : ""}">${event.past ? "발표일" : event.estimated ? "예상 발표일" : "발표 예정"}</span>`;
   }
   const amount = event.amount == null ? "금액 미정" : `주당 ${unitMoney(event.amount, event.currency, event.ticker)}`;
   return `<span class="schedule-list-note${event.estimated ? " estimated" : ""}">${event.estimated ? "예상 지급일" : "지급 예정"} · ${amount}</span>`;
@@ -145,7 +186,7 @@ function renderScheduleList(events) {
     const weekday = date?.toLocaleDateString("ko-KR", { weekday: "short" }) || "";
     const items = rows.map(event => `
       <button class="schedule-list-row ${event.type}${event.estimated ? " estimated" : ""}"
-        type="button" data-chart-ticker="${esc(event.ticker)}">
+        type="button" data-chart-ticker="${esc(event.ticker)}" data-market-cap-usd="${event.marketCapUsd ?? ""}">
         <span class="schedule-list-logo">${logoMarkup(event)}</span>
         <span class="schedule-type-badge ${event.type}">${event.type === "earnings" ? "실적발표" : "배당지급"}</span>
         <span class="schedule-list-identity">
@@ -177,6 +218,21 @@ function syncScheduleControls(events) {
     const active = (button.dataset.scheduleHeld === "1") === scheduleHeldOnly;
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  document.querySelectorAll("[data-schedule-type]").forEach(button => {
+    const active = Boolean(scheduleTypeVisible[button.dataset.scheduleType]);
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+    const typeLabel = button.dataset.scheduleType === "earnings" ? "실적발표" : "배당지급";
+    button.title = `${typeLabel} ${active ? "숨기기" : "표시하기"}`;
+  });
+  document.querySelectorAll("[data-schedule-region]").forEach(button => {
+    const region = button.dataset.scheduleRegion;
+    const active = Boolean(scheduleRegionVisible[region]);
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+    const regionLabel = region === "korea" ? "한국" : "외국";
+    button.title = `${regionLabel} 일정 ${active ? "숨기기" : "표시하기"}`;
   });
   const minDate = localDateFromIso(schedulePayload?.start);
   const maxDate = localDateFromIso(schedulePayload?.end);
@@ -254,6 +310,28 @@ function initScheduleModal() {
     button.addEventListener("click", () => {
       scheduleHeldOnly = button.dataset.scheduleHeld === "1";
       storageSet(scheduleStorage.heldOnly, scheduleHeldOnly ? "1" : "0");
+      scheduleFocusDate = "";
+      renderSchedule();
+    });
+  });
+  document.querySelectorAll("[data-schedule-type]").forEach(button => {
+    button.addEventListener("click", () => {
+      const type = button.dataset.scheduleType;
+      if (!(type in scheduleTypeVisible)) return;
+      scheduleTypeVisible[type] = !scheduleTypeVisible[type];
+      const storageKey = type === "earnings" ? scheduleStorage.earningsVisible : scheduleStorage.dividendsVisible;
+      storageSet(storageKey, scheduleTypeVisible[type] ? "1" : "0");
+      scheduleFocusDate = "";
+      renderSchedule();
+    });
+  });
+  document.querySelectorAll("[data-schedule-region]").forEach(button => {
+    button.addEventListener("click", () => {
+      const region = button.dataset.scheduleRegion;
+      if (!(region in scheduleRegionVisible)) return;
+      scheduleRegionVisible[region] = !scheduleRegionVisible[region];
+      const storageKey = region === "korea" ? scheduleStorage.koreaVisible : scheduleStorage.foreignVisible;
+      storageSet(storageKey, scheduleRegionVisible[region] ? "1" : "0");
       scheduleFocusDate = "";
       renderSchedule();
     });
