@@ -359,11 +359,30 @@ function usExtendedEnabled() {
   return document.getElementById("usExtendedToggle").checked;
 }
 
+function isUsExtendedRow(row) {
+  // 장외(프리·애프터) 시세는 미국 상장 종목에만 있다. 지수는 제외하고,
+  // 거래통화 USD + 접미사 없는 티커(.DE/.T/.KS 등이 아닌)를 미국 상장으로 본다.
+  if (isIndexRow(row)) return false;
+  if (String(row?.currency || "") !== "USD") return false;
+  return !String(row?.ticker || "").includes(".");
+}
+
+function hasUsExtendedRows() {
+  // 현재 화면(계좌 선택분 또는 관심그룹)에 미국 종목이 하나도 없으면
+  // 연장 토글은 아무것도 바꾸지 못하므로 감춘다.
+  const rows = interestModeActive() ? interestBaseRows() : filteredRows();
+  return rows.some(isUsExtendedRow);
+}
+
 function renderUsPriceControl() {
   const market = data?.us_market || {};
   const control = document.getElementById("usPriceControl");
   const toggle = document.getElementById("usExtendedToggle");
   const status = document.getElementById("usMarketStatus");
+  // 표시 여부만 제어하고 아래 상태 갱신·타이머 재설정은 그대로 태운다
+  // (조기 반환 시 scheduleUsPriceRefresh가 걸러져 옛 타이머가 남는다).
+  // 토글 체크 상태는 보존 — 미국 종목이 다시 보이면 그대로 복귀한다.
+  control.classList.toggle("hidden", !hasUsExtendedRows());
   const regular = Boolean(market.is_regular);
   const closed = Boolean(market.is_closed);
   const inactive = regular || closed;
