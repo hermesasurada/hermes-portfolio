@@ -185,6 +185,138 @@ INDEX_REGION_SESSIONS: dict[str, tuple[str, int, int]] = {
 US_SESSION = ("America/New_York", 9 * 60 + 30, 16 * 60)
 
 
+def _midsummer_eve(year: int) -> date:
+    """스웨덴·핀란드 하지 전야 — 6/19~25 사이의 금요일."""
+    for day in range(19, 26):
+        candidate = date(year, 6, day)
+        if candidate.weekday() == 4:
+            return candidate
+    return date(year, 6, 25)
+
+
+def _uk_substitute(holiday: date, taken: set[date]) -> date:
+    """영국·아일랜드식 대체휴일 — 주말이면 다음 평일로 밀린다."""
+    substitute = holiday
+    while substitute.weekday() >= 5 or substitute in taken:
+        substitute += timedelta(days=1)
+    return substitute
+
+
+def european_exchange_holidays(suffix: str, year: int) -> dict[date, str]:
+    """유럽 거래소별 휴장일. 공통(신정·부활절·성탄)에 거래소 고유일을 더한다."""
+    easter = _easter_date(year)
+    good_friday = easter - timedelta(days=2)
+    easter_monday = easter + timedelta(days=1)
+    maundy_thursday = easter - timedelta(days=3)
+    ascension = easter + timedelta(days=39)
+    whit_monday = easter + timedelta(days=50)
+
+    holidays: dict[date, str] = {
+        date(year, 1, 1): "신정",
+        good_friday: "성금요일",
+        easter_monday: "부활절 월요일",
+        date(year, 12, 25): "성탄절",
+        date(year, 12, 26): "성탄 연휴",
+    }
+    # 영국·아일랜드는 5/1 대신 은행 휴일 체계를 쓴다.
+    if suffix not in {".L", ".IR"}:
+        holidays[date(year, 5, 1)] = "노동절"
+
+    if suffix == ".L":
+        holidays[_nth_weekday(year, 5, 0, 1)] = "5월 은행휴일"
+        holidays[_last_weekday(year, 5, 0)] = "봄 은행휴일"
+        holidays[_last_weekday(year, 8, 0)] = "여름 은행휴일"
+    elif suffix == ".IR":
+        holidays[date(year, 3, 17)] = "성 패트릭의 날"
+        holidays[_nth_weekday(year, 5, 0, 1)] = "5월 은행휴일"
+        holidays[_nth_weekday(year, 6, 0, 1)] = "6월 은행휴일"
+        holidays[_nth_weekday(year, 8, 0, 1)] = "8월 은행휴일"
+        holidays[_last_weekday(year, 10, 0)] = "10월 은행휴일"
+    elif suffix == ".DE":
+        holidays[whit_monday] = "성령강림 월요일"
+        holidays[date(year, 12, 24)] = "성탄 전야"
+        holidays[date(year, 12, 31)] = "연말"
+    elif suffix == ".SW":
+        holidays[date(year, 1, 2)] = "베르히톨트의 날"
+        holidays[ascension] = "예수승천일"
+        holidays[whit_monday] = "성령강림 월요일"
+        holidays[date(year, 8, 1)] = "건국기념일"
+        holidays[date(year, 12, 24)] = "성탄 전야"
+        holidays[date(year, 12, 31)] = "연말"
+    elif suffix == ".MI":
+        holidays[date(year, 8, 15)] = "성모승천일"
+        holidays[date(year, 12, 24)] = "성탄 전야"
+        holidays[date(year, 12, 31)] = "연말"
+    elif suffix == ".MC":
+        holidays[date(year, 12, 24)] = "성탄 전야"
+        holidays[date(year, 12, 31)] = "연말"
+    elif suffix == ".VI":
+        holidays[whit_monday] = "성령강림 월요일"
+        holidays[date(year, 12, 24)] = "성탄 전야"
+        holidays[date(year, 12, 31)] = "연말"
+    elif suffix == ".ST":
+        holidays[date(year, 1, 6)] = "주현절"
+        holidays[ascension] = "예수승천일"
+        holidays[date(year, 6, 6)] = "건국기념일"
+        holidays[_midsummer_eve(year)] = "하지 전야"
+        holidays[date(year, 12, 24)] = "성탄 전야"
+        holidays[date(year, 12, 31)] = "연말"
+    elif suffix == ".CO":
+        holidays[maundy_thursday] = "성목요일"
+        holidays[ascension] = "예수승천일"
+        holidays[whit_monday] = "성령강림 월요일"
+        holidays[date(year, 6, 5)] = "제헌절"
+        holidays[date(year, 12, 24)] = "성탄 전야"
+        holidays[date(year, 12, 31)] = "연말"
+    elif suffix == ".OL":
+        holidays[maundy_thursday] = "성목요일"
+        holidays[date(year, 5, 17)] = "제헌절"
+        holidays[ascension] = "예수승천일"
+        holidays[whit_monday] = "성령강림 월요일"
+        holidays[date(year, 12, 24)] = "성탄 전야"
+        holidays[date(year, 12, 31)] = "연말"
+    elif suffix == ".HE":
+        holidays[date(year, 1, 6)] = "주현절"
+        holidays[ascension] = "예수승천일"
+        holidays[_midsummer_eve(year)] = "하지 전야"
+        holidays[date(year, 12, 24)] = "성탄 전야"
+    elif suffix == ".WA":
+        holidays[date(year, 1, 6)] = "주현절"
+        holidays[date(year, 5, 3)] = "제헌절"
+        holidays[easter + timedelta(days=60)] = "성체축일"
+        holidays[date(year, 8, 15)] = "성모승천일"
+        holidays[date(year, 11, 1)] = "만성절"
+        holidays[date(year, 11, 11)] = "독립기념일"
+        holidays[date(year, 12, 24)] = "성탄 전야"
+
+    if suffix in {".L", ".IR"}:
+        # 주말에 걸린 고정 휴일은 다음 평일로 대체된다.
+        adjusted: dict[date, str] = {}
+        for holiday, reason in sorted(holidays.items()):
+            if holiday.weekday() >= 5:
+                moved = _uk_substitute(holiday, set(adjusted))
+                adjusted[moved] = f"{reason} 대체휴일"
+            else:
+                adjusted[holiday] = reason
+        return adjusted
+    return holidays
+
+
+def european_equity_calendar_day(suffix: str, day: date) -> dict:
+    if day.weekday() >= 5:
+        return {"status": "closed", "reason": "주말"}
+    holidays = european_exchange_holidays(suffix, day.year)
+    if day in holidays:
+        return {"status": "closed", "reason": holidays[day]}
+    return {"status": "open", "reason": None}
+
+
+EUROPEAN_SUFFIXES = (
+    ".L", ".DE", ".PA", ".AS", ".BR", ".MI", ".MC", ".SW",
+    ".VI", ".ST", ".CO", ".OL", ".HE", ".WA", ".LS", ".IR",
+)
+
+
 def _exchange_session(ticker: str) -> tuple[str, int, int] | None:
     """티커 → (거래소 타임존, 개장 분, 폐장 분). 24시간장·미지원은 None."""
     upper = str(ticker or "").upper()
@@ -207,6 +339,16 @@ def _exchange_calendar_day(ticker: str, local_day: date) -> dict:
     session = _exchange_session(upper)
     if session and session[0] == "America/New_York":
         return us_equity_calendar_day(local_day)
+    index_meta = MARKET_INDEXES.get(upper)
+    if index_meta:   # 유럽 지수(DAX·CAC40·FTSE·EuroStoxx)는 대표 거래소 달력을 쓴다
+        suffix = {"GB": ".L", "DE": ".DE", "FR": ".PA", "EU": ".PA"}.get(
+            str(index_meta.get("region") or "")
+        )
+        if suffix:
+            return european_equity_calendar_day(suffix, local_day)
+    for suffix in EUROPEAN_SUFFIXES:
+        if upper.endswith(suffix):
+            return european_equity_calendar_day(suffix, local_day)
     if local_day.weekday() >= 5:
         return {"status": "closed", "reason": "주말"}
     return {"status": "open", "reason": None}
