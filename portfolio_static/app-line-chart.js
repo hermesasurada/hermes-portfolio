@@ -561,7 +561,7 @@ function renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, isUs
         <span class="chart-price-row-label">정규</span>
         <strong class="chart-price-current">${dayMetric.price == null ? "-" : esc(chartMoney(dayMetric.price, currency, ticker))}</strong>
         ${chartPricePctPill(dayMetric)}
-        ${sessionNote?.label ? `<sup class="change-session-note chart-session-note" title="${esc([sessionNote.price_date ? `${String(sessionNote.price_date).replaceAll("-", ".")} 기준 등락` : "직전 거래일 등락", sessionNote.reason ? `${sessionNote.reason} 휴장` : "휴장"].join(" · "))}">${esc(sessionNote.label)}</sup>` : ""}
+        ${sessionNote?.label ? `<sup class="change-session-note chart-session-note" title="${esc(sessionNoteTitle(sessionNote))}">${esc(sessionNote.label)}</sup>` : ""}
       </div>
       ${extendedLine}
     </div>

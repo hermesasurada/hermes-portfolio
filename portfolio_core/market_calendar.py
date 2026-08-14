@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
+from .constants import CRYPTO_MARKETS, FX_TICKERS, MARKET_INDEXES
 from .dates import parse_iso_date
 from .paths import KST, US_EASTERN
 
@@ -138,26 +140,125 @@ def japan_equity_calendar_day(day: date) -> dict:
     return {"status": "open", "reason": None}
 
 
-def holiday_change_session_note(
+# 거래소별 정규장 시간(현지시각 분 단위). 한국에서 보면 유럽장은 자정 전후에
+# 끝나고 미국장은 새벽에 끝나므로, 낮에 보는 등락은 대개 '이미 끝난 세션'의
+# 확정값이다 — 그 사실을 등락 열에 '종' 배지로 알린다.
+EXCHANGE_SESSIONS: dict[str, tuple[str, int, int]] = {
+    ".KS": ("Asia/Seoul", 9 * 60, 15 * 60 + 30),
+    ".KQ": ("Asia/Seoul", 9 * 60, 15 * 60 + 30),
+    ".T": ("Asia/Tokyo", 9 * 60, 15 * 60 + 30),
+    ".HK": ("Asia/Hong_Kong", 9 * 60 + 30, 16 * 60),
+    ".TW": ("Asia/Taipei", 9 * 60, 13 * 60 + 30),
+    ".SS": ("Asia/Shanghai", 9 * 60 + 30, 15 * 60),
+    ".SZ": ("Asia/Shanghai", 9 * 60 + 30, 15 * 60),
+    ".L": ("Europe/London", 8 * 60, 16 * 60 + 30),
+    ".DE": ("Europe/Berlin", 9 * 60, 17 * 60 + 30),
+    ".PA": ("Europe/Paris", 9 * 60, 17 * 60 + 30),
+    ".AS": ("Europe/Amsterdam", 9 * 60, 17 * 60 + 30),
+    ".BR": ("Europe/Brussels", 9 * 60, 17 * 60 + 30),
+    ".MI": ("Europe/Rome", 9 * 60, 17 * 60 + 30),
+    ".MC": ("Europe/Madrid", 9 * 60, 17 * 60 + 30),
+    ".SW": ("Europe/Zurich", 9 * 60, 17 * 60 + 30),
+    ".VI": ("Europe/Vienna", 9 * 60, 17 * 60 + 30),
+    ".ST": ("Europe/Stockholm", 9 * 60, 17 * 60 + 30),
+    ".CO": ("Europe/Copenhagen", 9 * 60, 17 * 60),
+    ".OL": ("Europe/Oslo", 9 * 60, 16 * 60 + 30),
+    ".HE": ("Europe/Helsinki", 10 * 60, 18 * 60 + 30),
+    ".WA": ("Europe/Warsaw", 9 * 60, 17 * 60),
+    ".LS": ("Europe/Lisbon", 8 * 60, 16 * 60 + 30),
+    ".IR": ("Europe/Dublin", 8 * 60, 16 * 60 + 30),
+}
+# 지수는 접미사가 없으므로 constants의 region으로 거래소를 찾는다.
+INDEX_REGION_SESSIONS: dict[str, tuple[str, int, int]] = {
+    "US": ("America/New_York", 9 * 60 + 30, 16 * 60),
+    "KR": ("Asia/Seoul", 9 * 60, 15 * 60 + 30),
+    "JP": ("Asia/Tokyo", 9 * 60, 15 * 60 + 30),
+    "CN": ("Asia/Shanghai", 9 * 60 + 30, 15 * 60),
+    "HK": ("Asia/Hong_Kong", 9 * 60 + 30, 16 * 60),
+    "TW": ("Asia/Taipei", 9 * 60, 13 * 60 + 30),
+    "GB": ("Europe/London", 8 * 60, 16 * 60 + 30),
+    "DE": ("Europe/Berlin", 9 * 60, 17 * 60 + 30),
+    "FR": ("Europe/Paris", 9 * 60, 17 * 60 + 30),
+    "EU": ("Europe/Paris", 9 * 60, 17 * 60 + 30),
+    "IN": ("Asia/Kolkata", 9 * 60 + 15, 15 * 60 + 30),
+}
+US_SESSION = ("America/New_York", 9 * 60 + 30, 16 * 60)
+
+
+def _exchange_session(ticker: str) -> tuple[str, int, int] | None:
+    """티커 → (거래소 타임존, 개장 분, 폐장 분). 24시간장·미지원은 None."""
+    upper = str(ticker or "").upper()
+    if not upper or upper in CRYPTO_MARKETS or upper in FX_TICKERS:
+        return None   # 크립토·환율은 24시간 거래라 '종료' 개념이 없다
+    index_meta = MARKET_INDEXES.get(upper)
+    if index_meta:
+        return INDEX_REGION_SESSIONS.get(str(index_meta.get("region") or ""))
+    for suffix, session in EXCHANGE_SESSIONS.items():
+        if upper.endswith(suffix):
+            return session
+    return US_SESSION if "." not in upper else None
+
+
+def _exchange_calendar_day(ticker: str, local_day: date) -> dict:
+    """거래소 휴장 여부. 일본·미국은 공휴일 달력까지, 나머지는 주말만 판정한다."""
+    upper = str(ticker or "").upper()
+    if upper.endswith(".T") or upper == "NIKKEI225":
+        return japan_equity_calendar_day(local_day)
+    session = _exchange_session(upper)
+    if session and session[0] == "America/New_York":
+        return us_equity_calendar_day(local_day)
+    if local_day.weekday() >= 5:
+        return {"status": "closed", "reason": "주말"}
+    return {"status": "open", "reason": None}
+
+
+def change_session_note(
     ticker: str,
     price_date: str | None,
     now: datetime | None = None,
 ) -> dict | None:
-    """휴장일에 남아 있는 직전 거래일 등락임을 표시할 메타데이터."""
-    clean_ticker = str(ticker or "").upper()
-    if not (clean_ticker.endswith(".T") or clean_ticker == "NIKKEI225"):
+    """등락 열에 붙일 세션 상태 배지.
+
+    휴장(주말·공휴일)이면 '휴', 거래일이지만 정규장 시간이 아니면 '종'.
+    정규장이 돌아가는 중이면 None(배지 없음).
+    """
+    session = _exchange_session(ticker)
+    if session is None:
         return None
-    local_today = (now.astimezone(KST) if now else datetime.now(KST)).date()
+    tz_name, open_minute, close_minute = session
+    local_now = (now or datetime.now(KST)).astimezone(ZoneInfo(tz_name))
+    local_day = local_now.date()
     quote_day = parse_iso_date(price_date)
-    calendar = japan_equity_calendar_day(local_today)
-    if calendar["status"] != "closed" or quote_day is None or quote_day >= local_today:
+    calendar = _exchange_calendar_day(ticker, local_day)
+
+    if calendar["status"] == "closed":
+        # 직전 거래일 등락이 그대로 남아 있을 때만 알린다(당일 시세면 무의미).
+        if quote_day is None or quote_day >= local_day:
+            return None
+        # holiday_previous_session은 프런트에서 현지통화 손익을 0으로 만드는
+        # 신호라 기존 대상(일본)만 유지한다. 다른 시장은 배지만 붙인다.
+        upper = str(ticker or "").upper()
+        is_japan = upper.endswith(".T") or upper == "NIKKEI225"
+        return {
+            "kind": "holiday_previous_session" if is_japan else "holiday_closed",
+            "label": "휴",
+            "price_date": quote_day.isoformat(),
+            "reason": calendar["reason"],
+        }
+
+    minutes = local_now.hour * 60 + local_now.minute
+    if open_minute <= minutes < close_minute:
         return None
     return {
-        "kind": "holiday_previous_session",
-        "label": "휴",
-        "price_date": quote_day.isoformat(),
-        "reason": calendar["reason"],
+        "kind": "session_closed",
+        "label": "종",
+        "price_date": quote_day.isoformat() if quote_day else None,
+        "reason": "장 종료" if minutes >= close_minute else "개장 전",
     }
+
+
+# 이전 이름 — 호출부 호환용
+holiday_change_session_note = change_session_note
 
 
 def us_equity_market_status(now: datetime | None = None) -> dict:

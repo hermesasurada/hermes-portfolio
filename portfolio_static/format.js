@@ -115,13 +115,20 @@ function changePercentText(pct, chip = false) {
   const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "→";
   return `<span class="change-cell ${chip ? "pct-chip " : ""}${cls}"><span aria-hidden="true">${arrow}</span>${fmt2.format(Math.abs(pct))}%</span>`;
 }
+// 세션 배지 툴팁 — 휴장('휴')과 장 종료·개장 전('종')을 같은 문구 규칙으로.
+// 차트 시세 표기(app-line-chart.js)도 이 함수를 공유한다.
+function sessionNoteTitle(note) {
+  const dateText = String(note?.price_date || "").replaceAll("-", ".");
+  if (note?.kind === "session_closed") {
+    return [dateText ? `${dateText} 종가 기준 등락` : "직전 세션 등락", note.reason || "장 종료"].join(" · ");
+  }
+  return [dateText ? `${dateText} 기준 등락` : "직전 거래일 등락", note?.reason ? `${note.reason} 휴장` : "휴장"].join(" · ");
+}
 function changeMarkup(row) {
   const change = changePercentText(row.display_change_pct, true);
   const note = row?.change_session_note;
   if (!note?.label) return change;
-  const dateText = String(note.price_date || "").replaceAll("-", ".");
-  const title = [dateText ? `${dateText} 기준 등락` : "직전 거래일 등락", note.reason ? `${note.reason} 휴장` : "휴장"].join(" · ");
-  return `<span class="change-with-session">${change}<sup class="change-session-note" title="${esc(title)}">${esc(note.label)}</sup></span>`;
+  return `<span class="change-with-session">${change}<sup class="change-session-note" title="${esc(sessionNoteTitle(note))}">${esc(note.label)}</sup></span>`;
 }
 // 표 로딩 스켈레톤 — colspan 한 셀에 폭 다른 바를 여러 행 깔아 형태를 암시
 function skeletonRows(colspan, rows = 8) {

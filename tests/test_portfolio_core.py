@@ -61,6 +61,7 @@ from portfolio_core.indicators import (
     shift_months,
 )
 from portfolio_core.market_calendar import (
+    change_session_note,
     holiday_change_session_note,
     japan_equity_calendar_day,
     us_equity_calendar_day,
@@ -1500,6 +1501,47 @@ def test_japan_market_holiday_marks_previous_session_change():
         "2026-08-11",
         datetime(2026, 8, 11, 12, 0, tzinfo=KST),
     ) is None
+
+
+def test_session_closed_badge_tracks_local_exchange_hours():
+    """정규장이 끝났거나 아직 안 열린 거래소는 등락 열에 '종' 배지를 단다."""
+    # 금요일 한국 오전 10시 — 한국장 진행중 / 유럽 개장 전 / 미국 폐장 후
+    morning = datetime(2026, 8, 14, 10, 0, tzinfo=KST)
+    assert change_session_note("005930.KS", "2026-08-14", morning) is None
+    assert change_session_note("7974.T", "2026-08-14", morning) is None
+    assert change_session_note("BMW.DE", "2026-08-13", morning) == {
+        "kind": "session_closed",
+        "label": "종",
+        "price_date": "2026-08-13",
+        "reason": "개장 전",
+    }
+    us_morning = change_session_note("AAPL", "2026-08-13", morning)
+    assert us_morning["label"] == "종" and us_morning["reason"] == "장 종료"
+
+    # 금요일 밤 11시 — 유럽·런던은 정규장, 한국·일본은 마감
+    night = datetime(2026, 8, 14, 23, 0, tzinfo=KST)
+    assert change_session_note("BMW.DE", "2026-08-14", night) is None
+    assert change_session_note("SHEL.L", "2026-08-14", night) is None
+    assert change_session_note("005930.KS", "2026-08-14", night)["label"] == "종"
+
+    # 토요일 새벽 — 유럽은 끝났고(현지 금요일 저녁) 미국은 아직 정규장
+    dawn = datetime(2026, 8, 15, 1, 30, tzinfo=KST)
+    assert change_session_note("BMW.DE", "2026-08-14", dawn)["reason"] == "장 종료"
+    assert change_session_note("AAPL", "2026-08-14", dawn) is None
+
+    # 주말은 '휴'. 현지통화 손익을 0으로 만드는 kind는 기존 대상(일본)만 유지한다.
+    saturday = datetime(2026, 8, 15, 12, 0, tzinfo=KST)
+    kr_weekend = change_session_note("005930.KS", "2026-08-14", saturday)
+    assert kr_weekend["label"] == "휴" and kr_weekend["kind"] == "holiday_closed"
+    assert change_session_note("7974.T", "2026-08-14", saturday)["kind"] == "holiday_previous_session"
+
+    # 24시간 거래(크립토·환율)와 미지원 거래소는 배지 없음
+    assert change_session_note("BTC", "2026-08-15", saturday) is None
+    assert change_session_note("USDKRW", "2026-08-14", saturday) is None
+
+    # 지수는 constants의 region으로 거래소를 찾는다
+    assert change_session_note("KOSPI", "2026-08-14", morning) is None
+    assert change_session_note("SP500", "2026-08-13", morning)["label"] == "종"
 
 
 def test_fetch_us_live_quotes_uses_stale_cache_when_batch_fails():
