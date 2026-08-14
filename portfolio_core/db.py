@@ -166,6 +166,36 @@ def ensure_daily_technical_indicators_table(conn: sqlite3.Connection) -> None:
     )
 
 
+def ensure_daily_prices_table(conn: sqlite3.Connection) -> None:
+    """일봉 테이블 + OHLC 확장 컬럼.
+
+    close만 있던 시절의 DB에는 open/high/low/volume/adj_close가 없다. 이 컬럼들은
+    한동안 코드 밖(수동 ALTER)에서 추가돼 있어 저장소만으로는 새 환경을 세울 수
+    없었다(`no such column: open`). 스키마 정의를 코드로 되돌린다.
+    """
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS daily_prices (
+            date TEXT NOT NULL,
+            ticker TEXT NOT NULL,
+            close REAL,
+            source TEXT,
+            PRIMARY KEY (date, ticker)
+        )
+        """
+    )
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(daily_prices)").fetchall()}
+    for column, column_type in (
+        ("open", "REAL"),
+        ("high", "REAL"),
+        ("low", "REAL"),
+        ("volume", "REAL"),
+        ("adj_close", "REAL"),
+    ):
+        if column not in columns:
+            conn.execute(f"ALTER TABLE daily_prices ADD COLUMN {column} {column_type}")
+
+
 def ensure_price_indexes(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
@@ -366,6 +396,7 @@ def initialize_schema() -> None:
         ensure_transaction_columns(conn)
         ensure_dividend_tables(conn)
         ensure_stock_split_tables(conn)
+        ensure_daily_prices_table(conn)   # 인덱스보다 먼저 — 테이블·OHLC 컬럼 보장
         ensure_price_indexes(conn)
         ensure_collector_runs_table(conn)
         ensure_live_quote_cache_table(conn)
