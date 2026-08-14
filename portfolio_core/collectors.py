@@ -234,15 +234,22 @@ def fetch_yahoo_prices_batch(
     for offset in range(0, len(ordered), chunk_size):
         chunk = ordered[offset : offset + chunk_size]
         symbols = [symbol for _, symbol, _ in chunk]
-        frame = yf.download(
-            symbols,
-            period="1mo",
-            auto_adjust=False,
-            actions=False,
-            group_by="ticker",
-            threads=True,
-            progress=False,
-        )
+        try:
+            frame = yf.download(
+                symbols,
+                period="1mo",
+                auto_adjust=False,
+                actions=False,
+                group_by="ticker",
+                threads=True,
+                progress=False,
+            )
+        except Exception as exc:
+            # 청크 단위로 격리 — 한 청크가 터져도 앞서 성공한 청크의 결과를
+            # 버리지 않는다. 실패분은 호출부가 개별 요청으로 재시도한다.
+            print(f"[prices] yahoo batch chunk failed ({len(symbols)} symbols): {exc}")
+            errors.extend(cache_ticker for cache_ticker, _symbol, _currency in chunk)
+            continue
         single_symbol = len(symbols) == 1
         for cache_ticker, symbol, currency in chunk:
             try:

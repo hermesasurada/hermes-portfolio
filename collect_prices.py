@@ -100,14 +100,17 @@ def collect_prices(
         try:
             batch_fetched, batch_errors = fetch_yahoo_prices_batch(batch_targets)
             fetched.extend(batch_fetched)
-            errors.extend(batch_errors)
             for result in batch_fetched:
                 print(
                     f"  + {result.ticker}: {result.price:,.4f} "
                     f"{result.currency} ({result.price_date}, {result.source})"
                 )
+            # 배치가 값을 못 준 종목은 개별 요청으로 되돌린다. 예전에는 배치가
+            # 통째로 예외일 때만 폴백해서, 부분 실패분은 그날 가격이 조용히
+            # 누락됐다. 최종 성패는 아래 개별 루프가 errors에 기록한다.
             for ticker in batch_errors:
-                print(f"  x {ticker} (yahoo batch): no price")
+                print(f"  ↺ {ticker} (yahoo batch): no price — 개별 재시도")
+                batched_tickers.discard(ticker)
         except Exception as exc:
             failed = [target[0] for target in batch_targets]
             print(f"  x Yahoo batch ({len(failed)} tickers): {exc}")
