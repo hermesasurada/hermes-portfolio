@@ -923,7 +923,14 @@ function renderTable() {
   const rows = statsRows(filteredRows()).filter(row => matchesNameFilter(row));
   sortRows(rows, "detail");
   if (rows.some(row => row.ticker && !statsData[row.ticker])) loadStatsForRows(rows);
-  const hideExtendedColumn = Boolean(data?.us_market?.is_regular || data?.us_market?.is_closed);
+  // 연장 컬럼은 장 상태만이 아니라 실제 값 유무로도 감춘다 — 국내 종목만
+  // 선택하면 전 행이 '-'인 빈 컬럼이 남았다. null을 Number()로 넘기면 0이
+  // 되어 유한값으로 오판하므로 != null 검사를 먼저 한다(관심목록의
+  // hasInterestColumnValue와 같은 규칙).
+  const hasExtendedValues = rows.some(row =>
+    row.extended_change_pct != null && Number.isFinite(Number(row.extended_change_pct)));
+  const hideExtendedColumn = !hasExtendedValues
+    || Boolean(data?.us_market?.is_regular || data?.us_market?.is_closed);
   const accounts = flattenAccounts();
   const selected = selectionMode === "all" ? accounts : accounts.filter(a => selectedAccounts.has(a.id));
   document.querySelector("#detailTableWrap thead .extended-change-col")
