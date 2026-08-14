@@ -408,10 +408,13 @@ function renderCurrencyFilter() {
   const select = document.getElementById("currencyFilter");
   if (!select || !data) return;
   const saved = storageGet(detailStorage.currencyFilter) || "all";
-  const currencies = Array.from(new Set([
-    ...flattenHoldings().map(row => row.currency),
-    ...(data.tickers || []).map(row => row.currency),
-  ].filter(Boolean))).sort((a, b) => {
+  // 지금 보고 있는 목록(선택 계좌 또는 관심그룹)에 실제로 있는 통화만 노출한다.
+  // 전 종목 기준으로 만들면 국내 계좌만 선택해도 USD·EUR가 남았다.
+  const scopeRows = interestModeActive()
+    ? interestBaseRows({ ignoreCurrency: true })
+    : filteredRows({ ignoreCurrency: true });
+  const currencies = Array.from(new Set(scopeRows.map(row => row.currency).filter(Boolean)))
+    .sort((a, b) => {
     const order = { KRW: 0, USD: 1, JPY: 2, EUR: 3 };
     return (order[a] ?? 99) - (order[b] ?? 99) || String(a).localeCompare(String(b));
   });

@@ -367,11 +367,13 @@ async function applyInterestBulkSelection() {
   }
 }
 
-function interestBaseRows() {
+function interestBaseRows(options = {}) {
   const group = activeInterestGroup();
   if (!group) return [];
   const isFxGroup = interestGroupIsFx(group);
-  const currencyFilter = isFxGroup ? "all" : currencyFilterValue();
+  // ignoreCurrency: 통화 선택지를 만들 때는 필터 자신을 빼야 목록이
+  // 선택한 통화 하나로 쪼그라들지 않는다.
+  const currencyFilter = (isFxGroup || options.ignoreCurrency) ? "all" : currencyFilterValue();
   const held = interestHeldOnlyEnabled() ? heldTickerSet() : null;   // '보유종목만' 필터
   return group.items
     .filter(item => !held || held.has(String(item.ticker).toUpperCase()))

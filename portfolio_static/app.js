@@ -154,6 +154,7 @@ function render() {
   renderAccounts();
   renderInterestWatchlists();
   document.getElementById("heroStrip")?.classList.toggle("hidden", interestModeActive());
+  renderCurrencyFilter();   // 계좌·관심그룹이 바뀌면 통화 선택지도 따라간다
   renderSummary();
   renderTable();
   renderTradeControls();
