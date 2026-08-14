@@ -31,9 +31,10 @@ function chartRangeStartDate(points, rangeKey) {
   if (rangeKey === "ytd") {
     return new Date(lastDate.getFullYear(), 0, 1);
   }
-  const range = chartRanges.find(item => item.key === rangeKey) || chartRanges.find(item => item.key === "1y");
+  const range = chartRanges.find(item => item.key === rangeKey)
+    || chartRanges.find(item => item.key === DEFAULT_CHART_RANGE);
   const start = new Date(lastDate);
-  start.setMonth(start.getMonth() - (range.months || 12));
+  start.setMonth(start.getMonth() - (range.months || 6));
   return start;
 }
 
