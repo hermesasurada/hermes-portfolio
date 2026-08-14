@@ -117,6 +117,29 @@ def _optional_number(value):
     return number if number == number else None
 
 
+def _coherent_candle_bounds(
+    open_value: float | None,
+    high: float | None,
+    low: float | None,
+    close: float,
+) -> tuple[float | None, float | None]:
+    """고가·저가가 시가·종가를 감싸도록 넓힌다.
+
+    캔들은 저가 ≤ min(시가, 종가) ≤ max(시가, 종가) ≤ 고가여야 하는데, 저장 시
+    종가는 항상 갱신하고 OHLC는 COALESCE로 보존하기 때문에 종가만 담긴 스냅샷이
+    뒤늦게 들어오면 옛 고가·저가와 어긋난다(실측 QBTS 2026-08-12: 저가 20.06인데
+    종가 16.21). 봉이 자기 꼬리를 뚫는 표시를 막고 차트 y축 도메인을 지킨다.
+    """
+    if high is None and low is None:
+        return high, low
+    bounds = [close] + [value for value in (open_value,) if value is not None]
+    if high is not None:
+        high = max(high, *bounds)
+    if low is not None:
+        low = min(low, *bounds)
+    return high, low
+
+
 def _normalize_daily_price_row(row, ticker: str, source: str) -> tuple | None:
     """신규 OHLC dict와 기존 (date, close) tuple을 모두 저장 형태로 변환한다."""
     if isinstance(row, Mapping):
@@ -143,6 +166,7 @@ def _normalize_daily_price_row(row, ticker: str, source: str) -> tuple | None:
         return None
     if not date_str or close is None or close <= 0:
         return None
+    high, low = _coherent_candle_bounds(open_value, high, low, close)
     return (
         str(date_str),
         ticker,
@@ -172,8 +196,11 @@ def save_daily_prices(ticker: str, rows: Iterable, source: str) -> int:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(date, ticker) DO UPDATE SET
               open = COALESCE(excluded.open, daily_prices.open),
-              high = COALESCE(excluded.high, daily_prices.high),
-              low = COALESCE(excluded.low, daily_prices.low),
+              -- 종가는 항상 갱신되므로 보존된 고가·저가가 새 종가를 벗어날 수 있다.
+              -- MAX/MIN으로 감싸 캔들 정합성을 유지한다(둘 중 NULL이면 결과도 NULL —
+              -- 종가만 있는 행에 가짜 고가·저가를 만들지 않는다).
+              high = MAX(COALESCE(excluded.high, daily_prices.high), excluded.close),
+              low = MIN(COALESCE(excluded.low, daily_prices.low), excluded.close),
               close = excluded.close,
               volume = COALESCE(excluded.volume, daily_prices.volume),
               adj_close = COALESCE(excluded.adj_close, daily_prices.adj_close),
