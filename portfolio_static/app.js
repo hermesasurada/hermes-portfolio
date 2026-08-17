@@ -159,6 +159,7 @@ function render() {
   renderTable();
   renderTradeControls();
   syncMobileCollapsePanels();
+  syncTableScrollNudges();   // 표 폭·표시 탭이 바뀌면 화살표 필요 여부 재판정
 }
 
 function portfolioRefreshTickers() {
@@ -498,6 +499,7 @@ initChartNameEditor();
 initTradeSideToggle();
 initTradeApplyToggle();
 initInterestWatchlists();
+initTableScrollNudges();
 setTransactionsExpanded(false);
 load().then(syncChartRoute).catch(err => showTradeStatus(err.message || String(err), true));
 

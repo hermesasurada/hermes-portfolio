@@ -426,6 +426,67 @@ function renderCurrencyFilter() {
   syncFilterToggleControls();
 }
 
+// ── 가로 스크롤 오버레이 화살표 (PC 전용, CSS가 모바일에서 숨김) ──────────
+// .table-wrap은 스크롤 컨테이너라 그 안에 absolute를 두면 내용과 함께 밀린다.
+// 바깥에 .table-scroll-shell을 씌우고 화살표를 그 위에 얹는다.
+function initTableScrollNudges() {
+  document.querySelectorAll(".table-wrap").forEach(wrap => {
+    if (wrap.parentElement?.classList.contains("table-scroll-shell")) return;
+    const shell = document.createElement("div");
+    shell.className = "table-scroll-shell";
+    wrap.parentElement.insertBefore(shell, wrap);
+    shell.appendChild(wrap);
+    shell.insertAdjacentHTML("beforeend", `
+      <button type="button" class="table-scroll-nudge left hidden" data-scroll-nudge="-1" aria-label="왼쪽으로 스크롤" tabindex="-1">‹</button>
+      <button type="button" class="table-scroll-nudge right hidden" data-scroll-nudge="1" aria-label="오른쪽으로 스크롤" tabindex="-1">›</button>
+    `);
+    wrap.addEventListener("scroll", () => syncTableScrollNudge(shell), { passive: true });
+    if (typeof ResizeObserver === "function") {
+      // 컬럼 숨김·정렬로 표 폭이 바뀌면 화살표 필요 여부도 달라진다
+      new ResizeObserver(() => syncTableScrollNudge(shell)).observe(wrap);
+    }
+  });
+  document.addEventListener("click", event => {
+    const button = event.target.closest("[data-scroll-nudge]");
+    if (!button) return;
+    const shell = button.closest(".table-scroll-shell");
+    const wrap = shell?.querySelector(".table-wrap");
+    if (!wrap) return;
+    const step = Math.max(200, Math.round(wrap.clientWidth * 0.8));
+    nudgeScrollLeft(wrap, wrap.scrollLeft + step * Number(button.dataset.scrollNudge));
+    // scroll 이벤트는 프레임 구동에 묶여 있어 창이 비활성이면 발화하지 않는다.
+    // 클릭 경로에서는 곧바로 화살표 상태를 맞춘다.
+    syncTableScrollNudge(shell);
+  });
+  window.addEventListener("resize", syncTableScrollNudges);
+  syncTableScrollNudges();
+}
+
+// 스크롤 이동은 scrollLeft 동기 할당으로만 한다. CSS scroll-behavior:smooth,
+// scrollBy({behavior:"smooth"}), rAF 보간은 모두 프레임 구동에 의존해 창이
+// 백그라운드·숨김 상태면 이동이 아예 일어나지 않는다(실측). 버튼이 조용히
+// 먹지 않는 것보다 즉시 이동이 낫다.
+function nudgeScrollLeft(wrap, target) {
+  wrap.scrollLeft = Math.max(0, Math.min(target, wrap.scrollWidth - wrap.clientWidth));
+}
+
+function syncTableScrollNudge(shell) {
+  const wrap = shell.querySelector(".table-wrap");
+  const left = shell.querySelector(".table-scroll-nudge.left");
+  const right = shell.querySelector(".table-scroll-nudge.right");
+  if (!wrap || !left || !right) return;
+  // 탭 전환으로 숨겨진 표(hidden)에는 화살표를 남기지 않는다
+  const visible = !wrap.classList.contains("hidden") && Boolean(wrap.offsetParent);
+  const max = wrap.scrollWidth - wrap.clientWidth;
+  const scrollable = visible && max > 4;
+  left.classList.toggle("hidden", !scrollable || wrap.scrollLeft <= 2);
+  right.classList.toggle("hidden", !scrollable || wrap.scrollLeft >= max - 2);
+}
+
+function syncTableScrollNudges() {
+  document.querySelectorAll(".table-scroll-shell").forEach(syncTableScrollNudge);
+}
+
 function scheduleUsPriceRefresh() {
   if (usPriceTimer) {
     clearInterval(usPriceTimer);
@@ -823,6 +884,8 @@ function syncDetailTabs() {
     "hidden",
     showingChart || !showingInterest || showingFxInterest || Boolean(activeInterestGroup()?.fixed)
   );
+  // 탭·차트 전환으로 표가 숨겨지면 그 표의 스크롤 화살표도 함께 내린다
+  syncTableScrollNudges();
 }
 
 function chartHref(ticker) {
