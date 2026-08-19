@@ -23,6 +23,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
+from .extended_quote_store import restore_extended_quotes, save_extended_quotes
 from .market_calendar import korea_equity_calendar_day
 from .paths import KST
 from .tickers import asset_class, is_korean_stock_ticker, kr_ticker_code
@@ -158,7 +159,11 @@ def apply_kr_live_prices(
         "live_count": 0,
         "candidate_count": len(candidates),
     }
-    if not meta["include_extended"] or not candidates:
+    if not candidates:
+        return meta
+    if not meta["include_extended"]:
+        # 세션 밖 — 마지막 연장가를 되살려 계속 보여준다(같은 거래일 한정).
+        meta["restored_count"] = restore_extended_quotes(prices, candidates) if include_extended else 0
         return meta
 
     quotes = fetch_nxt_quotes(candidates)
@@ -178,4 +183,7 @@ def apply_kr_live_prices(
         current["extended_source"] = f"nxt-{session['phase']}"
         current["extended_market_state"] = quote.get("market_state")
         meta["live_count"] += 1
+    save_extended_quotes(prices, candidates)
+    # 미상장·조회 실패 종목은 직전 세션 값이라도 유지한다.
+    meta["restored_count"] = restore_extended_quotes(prices, candidates)
     return meta

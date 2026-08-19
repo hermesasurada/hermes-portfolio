@@ -230,6 +230,30 @@ def ensure_live_quote_cache_table(conn: sqlite3.Connection) -> None:
     )
 
 
+def ensure_extended_quote_cache_table(conn: sqlite3.Connection) -> None:
+    """세션이 끝난 뒤에도 마지막 연장가(프리·애프터/장외)를 보여주기 위한 저장소.
+
+    라이브 조회는 세션 중에만 되지만, 사용자는 장이 닫힌 뒤에도 그 세션의
+    최종 연장가를 계속 보길 원한다. session_date가 그 종목의 정규장 가격
+    날짜와 같을 때만 되살려 묵은 값이 새어나가지 않게 한다.
+    """
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ticker_extended_quotes (
+            ticker TEXT PRIMARY KEY,
+            session_date TEXT NOT NULL,
+            price REAL NOT NULL,
+            base_price REAL,
+            change REAL,
+            change_pct REAL,
+            source TEXT,
+            market_state TEXT,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
 def ensure_quote_source_state_table(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
@@ -400,6 +424,7 @@ def initialize_schema() -> None:
         ensure_price_indexes(conn)
         ensure_collector_runs_table(conn)
         ensure_live_quote_cache_table(conn)
+        ensure_extended_quote_cache_table(conn)
         ensure_quote_source_state_table(conn)
         ensure_interest_watchlist_tables(conn)
         ensure_market_index_tickers(conn)

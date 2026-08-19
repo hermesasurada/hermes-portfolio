@@ -367,6 +367,8 @@ function krExtendedActive() {
 function isExtendedCandidateRow(row) {
   // 연장(프리·애프터) 시세가 존재할 수 있는 행인가.
   if (isIndexRow(row)) return false;
+  // 세션이 끝난 뒤에도 직전 세션의 확정 연장가가 남아 있으면 계속 노출한다.
+  if (row?.extended_change_pct != null) return true;
   const ticker = String(row?.ticker || "");
   // 미국: 거래통화 USD + 접미사 없는 티커(.DE/.T/.KS 등이 아닌)
   if (String(row?.currency || "") === "USD" && !ticker.includes(".")) return true;

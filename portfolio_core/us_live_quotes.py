@@ -10,6 +10,7 @@ import urllib.request
 from datetime import datetime
 from urllib.parse import quote
 
+from .extended_quote_store import restore_extended_quotes, save_extended_quotes
 from .db import connect
 from .market_calendar import us_equity_market_status
 from .paths import US_EASTERN
@@ -337,7 +338,11 @@ def apply_us_live_prices(
         "live_count": 0,
         "us_ticker_count": len(us_tickers),
     }
-    if not us_tickers or is_closed:
+    if not us_tickers:
+        return meta
+    if is_closed:
+        # 휴장(주말·공휴일) — 직전 장외 세션의 마지막 값을 되살린다.
+        meta["restored_count"] = restore_extended_quotes(prices, us_tickers) if include_extended else 0
         return meta
     live_quotes = fetch_us_live_quotes(us_tickers, include_extended or not regular_hours, regular_hours)
     market_today = datetime.now(US_EASTERN).strftime("%Y-%m-%d")
@@ -409,4 +414,8 @@ def apply_us_live_prices(
                 "previous_date": None,
             }
         meta["live_count"] += 1
+    save_extended_quotes(prices, us_tickers)
+    if include_extended:
+        # 정규장 재개 등으로 이번엔 연장가가 없는 종목은 직전 세션 값을 유지한다.
+        meta["restored_count"] = restore_extended_quotes(prices, us_tickers)
     return meta
