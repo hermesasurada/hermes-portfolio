@@ -342,7 +342,7 @@ def apply_us_live_prices(
         return meta
     if is_closed:
         # 휴장(주말·공휴일) — 직전 장외 세션의 마지막 값을 되살린다.
-        meta["restored_count"] = restore_extended_quotes(prices, us_tickers) if include_extended else 0
+        meta["restored_count"] = restore_extended_quotes(prices, us_tickers)
         return meta
     live_quotes = fetch_us_live_quotes(us_tickers, include_extended or not regular_hours, regular_hours)
     market_today = datetime.now(US_EASTERN).strftime("%Y-%m-%d")
@@ -415,7 +415,6 @@ def apply_us_live_prices(
             }
         meta["live_count"] += 1
     save_extended_quotes(prices, us_tickers)
-    if include_extended:
-        # 정규장 재개 등으로 이번엔 연장가가 없는 종목은 직전 세션 값을 유지한다.
-        meta["restored_count"] = restore_extended_quotes(prices, us_tickers)
+    # 정규장 재개 등으로 이번엔 연장가가 없는 종목은 직전 세션 값을 유지한다.
+    meta["restored_count"] = restore_extended_quotes(prices, us_tickers)
     return meta

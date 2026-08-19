@@ -155,15 +155,17 @@ def apply_kr_live_prices(
     ]
     meta = {
         **session,
+        # include_extended는 '잔고 반영' 여부일 뿐이다. 연장가 표시는 토글과
+        # 무관하게 항상 채운다(미국이 '표시만' 모드로 동작하는 것과 동일).
         "include_extended": bool(include_extended and session["is_extended"]),
         "live_count": 0,
         "candidate_count": len(candidates),
     }
     if not candidates:
         return meta
-    if not meta["include_extended"]:
+    if not session["is_extended"]:
         # 세션 밖 — 마지막 연장가를 되살려 계속 보여준다(같은 거래일 한정).
-        meta["restored_count"] = restore_extended_quotes(prices, candidates) if include_extended else 0
+        meta["restored_count"] = restore_extended_quotes(prices, candidates)
         return meta
 
     quotes = fetch_nxt_quotes(candidates)

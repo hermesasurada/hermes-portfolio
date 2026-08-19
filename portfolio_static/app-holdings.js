@@ -1020,8 +1020,9 @@ function renderTable() {
   // hasInterestColumnValue와 같은 규칙).
   const hasExtendedValues = rows.some(row =>
     row.extended_change_pct != null && Number.isFinite(Number(row.extended_change_pct)));
-  const hideExtendedColumn = !hasExtendedValues
-    || Boolean(data?.us_market?.is_regular || data?.us_market?.is_closed);
+  // 값 유무만으로 판단한다. 미국 정규장이어도 한국 NXT 연장가가 남아 있을 수
+  // 있어(그 반대도) 한쪽 시장 상태로 가리면 멀쩡한 값이 사라진다.
+  const hideExtendedColumn = !hasExtendedValues;
   const accounts = flattenAccounts();
   const selected = selectionMode === "all" ? accounts : accounts.filter(a => selectedAccounts.has(a.id));
   document.querySelector("#detailTableWrap thead .extended-change-col")
