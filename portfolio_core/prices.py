@@ -6,6 +6,7 @@ from datetime import datetime
 from .constants import FX_DEFAULT_RATES, FX_TICKERS
 from .db import connect
 from .paths import KST
+from .kr_live_quotes import apply_kr_live_prices
 from .us_live_quotes import apply_us_live_prices, us_market_status
 
 
@@ -89,11 +90,14 @@ def build_market_snapshot(
 ) -> dict:
     status = market_status or us_market_status()
     live_meta = apply_us_live_prices(prices, ticker_rows, include_extended, status)
+    # 한국 개별주는 NXT 프리·애프터마켓을 같은 연장 필드로 채운다(ETF는 미상장).
+    kr_meta = apply_kr_live_prices(prices, ticker_rows, include_extended)
     return {
         "prices": prices,
         "rates": fx_rates(prices),
         "previous_rates": fx_previous_rates(prices),
         "market_status": {**status, **live_meta},
+        "kr_market_status": kr_meta,
     }
 
 

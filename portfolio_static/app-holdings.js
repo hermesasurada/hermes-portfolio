@@ -359,47 +359,65 @@ function usExtendedEnabled() {
   return document.getElementById("usExtendedToggle").checked;
 }
 
-function isUsExtendedRow(row) {
-  // 장외(프리·애프터) 시세는 미국 상장 종목에만 있다. 지수는 제외하고,
-  // 거래통화 USD + 접미사 없는 티커(.DE/.T/.KS 등이 아닌)를 미국 상장으로 본다.
-  if (isIndexRow(row)) return false;
-  if (String(row?.currency || "") !== "USD") return false;
-  return !String(row?.ticker || "").includes(".");
+function krExtendedActive() {
+  // NXT 프리(08:00~08:50)·애프터(15:30~20:00)마켓 — 서버가 세션을 판정한다.
+  return Boolean(data?.kr_market?.is_extended);
 }
 
-function hasUsExtendedRows() {
-  // 현재 화면(계좌 선택분 또는 관심그룹)에 미국 종목이 하나도 없으면
+function isExtendedCandidateRow(row) {
+  // 연장(프리·애프터) 시세가 존재할 수 있는 행인가.
+  if (isIndexRow(row)) return false;
+  const ticker = String(row?.ticker || "");
+  // 미국: 거래통화 USD + 접미사 없는 티커(.DE/.T/.KS 등이 아닌)
+  if (String(row?.currency || "") === "USD" && !ticker.includes(".")) return true;
+  // 한국 개별주: NXT 연장 세션에만. ETF는 NXT 미상장이라 제외한다.
+  if (krExtendedActive() && /\.(KS|KQ)$/.test(ticker)) {
+    return (row.assetClass || row.asset_class) !== "etf";
+  }
+  return false;
+}
+
+function hasExtendedRows() {
+  // 현재 화면(계좌 선택분 또는 관심그룹)에 연장 대상이 하나도 없으면
   // 연장 토글은 아무것도 바꾸지 못하므로 감춘다.
   const rows = interestModeActive() ? interestBaseRows() : filteredRows();
-  return rows.some(isUsExtendedRow);
+  return rows.some(isExtendedCandidateRow);
 }
 
 function renderUsPriceControl() {
   const market = data?.us_market || {};
+  const krMarket = data?.kr_market || {};
   const control = document.getElementById("usPriceControl");
   const toggle = document.getElementById("usExtendedToggle");
   const status = document.getElementById("usMarketStatus");
   // 표시 여부만 제어하고 아래 상태 갱신·타이머 재설정은 그대로 태운다
   // (조기 반환 시 scheduleUsPriceRefresh가 걸러져 옛 타이머가 남는다).
-  // 토글 체크 상태는 보존 — 미국 종목이 다시 보이면 그대로 복귀한다.
-  control.classList.toggle("hidden", !hasUsExtendedRows());
+  // 토글 체크 상태는 보존 — 대상이 다시 보이면 그대로 복귀한다.
+  control.classList.toggle("hidden", !hasExtendedRows());
   const regular = Boolean(market.is_regular);
   const closed = Boolean(market.is_closed);
-  const inactive = regular || closed;
+  const krActive = Boolean(krMarket.is_extended);
+  // 미국이 정규장·휴장이어도 NXT 연장이 열려 있으면 토글은 살아 있어야 한다.
+  const usInactive = regular || closed;
+  const inactive = usInactive && !krActive;
   toggle.disabled = inactive;
   control.classList.toggle("disabled", inactive);
   control.classList.toggle("enabled", !inactive && toggle.checked);
-  control.classList.toggle("market-closed", closed);
-  if (closed) {
+  control.classList.toggle("market-closed", closed && !krActive);
+  if (inactive && closed) {
     toggle.checked = false;
     control.classList.remove("enabled");
     status.textContent = `휴장 · ${market.reason || "전 거래일 종가"}`;
-  } else if (regular) {
+  } else if (inactive && regular) {
     toggle.checked = false;
     control.classList.remove("enabled");
     status.textContent = market.is_early_close ? `조기폐장 · 실시간 반영` : `정규장 · 실시간 반영`;
+  } else if (usInactive && krActive) {
+    // 한국만 연장 중 — 미국은 정규장이거나 휴장
+    status.textContent = `NXT ${krMarket.label || "연장"} · ${toggle.checked ? "잔고 반영" : "표시만"}`;
   } else {
-    status.textContent = toggle.checked ? `장외 · 잔고 반영` : `장외 · 표시만`;
+    const krNote = krActive ? ` + NXT ${krMarket.label || ""}`.trimEnd() : "";
+    status.textContent = `장외${krNote} · ${toggle.checked ? "잔고 반영" : "표시만"}`;
   }
   scheduleUsPriceRefresh();
 }

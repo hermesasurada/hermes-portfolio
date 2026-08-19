@@ -41,7 +41,7 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
             placeholders = ",".join("?" for _ in clean_tickers)
             ticker_rows = conn.execute(
                 f"""
-                SELECT ticker, currency
+                SELECT ticker, COALESCE(NULLIF(display_name, ''), name) AS name, currency
                 FROM tickers
                 WHERE ticker IN ({placeholders})
                 ORDER BY ticker

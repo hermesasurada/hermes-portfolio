@@ -239,6 +239,7 @@ def load_portfolio(
         "price_updated": price_updated_at(prices),
         "price_updated_at": price_cache_updated_at(),
         "us_market": snapshot["market_status"],
+        "kr_market": snapshot.get("kr_market_status") or {},
         "totals": totals,
         "members": list(members.values()),
         "tickers": ticker_payload,
