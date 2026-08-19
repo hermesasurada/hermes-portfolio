@@ -166,6 +166,8 @@ def apply_kr_live_prices(
     if not session["is_extended"]:
         # 세션 밖 — 마지막 연장가를 되살려 계속 보여준다(같은 거래일 한정).
         meta["restored_count"] = restore_extended_quotes(prices, candidates)
+        meta["applied_count"] = _apply_to_valuation(prices, candidates, include_extended)
+        meta["include_extended"] = bool(include_extended and meta["applied_count"])
         return meta
 
     quotes = fetch_nxt_quotes(candidates)
@@ -188,4 +190,30 @@ def apply_kr_live_prices(
     save_extended_quotes(prices, candidates)
     # 미상장·조회 실패 종목은 직전 세션 값이라도 유지한다.
     meta["restored_count"] = restore_extended_quotes(prices, candidates)
+    meta["applied_count"] = _apply_to_valuation(prices, candidates, include_extended)
+    meta["include_extended"] = bool(include_extended and meta["applied_count"])
     return meta
+
+
+def _apply_to_valuation(prices: dict[str, dict], tickers: list[str], include_extended: bool) -> int:
+    """토글이 켜져 있으면 평가액 계산 가격을 연장가로 바꾼다(미국 장외와 동일).
+
+    등락 열이 정규장 기준을 유지하도록 regular_price/regular_previous_price에
+    KRX 종가와 전일 종가를 남긴다 — price만 바꾸면 등락률까지 연장가 기준이 된다.
+    """
+    if not include_extended:
+        return 0
+    applied = 0
+    for ticker in tickers:
+        record = prices.get(ticker)
+        if not record:
+            continue
+        extended_price = record.get("extended_price")
+        base_price = record.get("extended_base_price")
+        if extended_price is None or not base_price:
+            continue
+        record.setdefault("regular_price", base_price)
+        record.setdefault("regular_previous_price", record.get("previous_price"))
+        record["price"] = extended_price
+        applied += 1
+    return applied

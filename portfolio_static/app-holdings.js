@@ -139,8 +139,11 @@ function holdingChangeBasePrice(row) {
   const currentPrice = optionalNumber(row.current_price);
   const extendedPrice = optionalNumber(row.extended_price);
   const extendedBasePrice = optionalNumber(row.extended_base_price);
+  // 연장가가 평가액에 반영된 상태면 등락 기준가를 정규장 종가로 잡는다.
+  // 미국·한국(NXT) 어느 쪽이 반영됐든 동일하게 처리한다.
+  const extendedApplied = data?.us_market?.include_extended || data?.kr_market?.include_extended;
   if (
-    data?.us_market?.include_extended &&
+    extendedApplied &&
     currentPrice !== null &&
     extendedPrice !== null &&
     extendedBasePrice !== null &&
