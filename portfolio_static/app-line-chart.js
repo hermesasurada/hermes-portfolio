@@ -532,21 +532,23 @@ function chartPricePctPill(metric) {
 function chartExtendedLabel(meta) {
   const source = String(meta.extended_source || "").toLowerCase();
   const state = String(meta.extended_market_state || "").toUpperCase();
+  // 한국은 거래소명을 붙여 KRX 종가와 구분한다
+  if (source.startsWith("nxt")) return source.includes("pre") ? "NXT 프리" : "NXT 애프터";
   if (source.includes("pre") || state === "PRE") return "프리";
   if (source.includes("after") || state.includes("POST")) return "애프터";
   return "연장";
 }
 
-function chartShouldShowExtendedLine(meta, metric, isUsTicker) {
-  if (!isUsTicker || metric.price == null) return false;
+function chartShouldShowExtendedLine(meta, metric, hasExtendedMarket) {
+  if (!hasExtendedMarket || metric.price == null) return false;
   if (meta.category === "index") return false;
   const state = String(meta.extended_market_state || meta.market_state || "").toUpperCase();
   if (state === "REGULAR" || state === "REGULAR_MARKET") return false;
   return true;
 }
 
-function renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, isUsTicker, extendedLabel, sessionNote = null) {
-  const extendedLine = isUsTicker && extendedMetric.price != null
+function renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, hasExtendedMarket, extendedLabel, sessionNote = null) {
+  const extendedLine = hasExtendedMarket && extendedMetric.price != null
     ? `
       <div class="chart-price-row extended">
         <span class="chart-price-row-label">${esc(extendedLabel)}</span>
@@ -590,9 +592,11 @@ function renderChartPriceSummary(payload) {
     meta.extended_change,
     meta.extended_change_pct
   );
+  // 미국(장외) 또는 한국 NXT(프리·애프터) — 연장가가 실제로 온 종목이면 표기한다
   const isUsTicker = currency === "USD" && !ticker.includes(".");
-  const showExtended = chartShouldShowExtendedLine(meta, extendedMetric, isUsTicker);
-  el.innerHTML = renderChartPriceQuote(dayMetric, showExtended ? extendedMetric : {}, currency, ticker, isUsTicker, chartExtendedLabel(meta), meta.change_session_note);
+  const hasExtendedMarket = isUsTicker || meta.extended_price != null;
+  const showExtended = chartShouldShowExtendedLine(meta, extendedMetric, hasExtendedMarket);
+  el.innerHTML = renderChartPriceQuote(dayMetric, showExtended ? extendedMetric : {}, currency, ticker, hasExtendedMarket, chartExtendedLabel(meta), meta.change_session_note);
 }
 
 function chartInterestGroups(ticker) {

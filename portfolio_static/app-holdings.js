@@ -380,6 +380,11 @@ function isExtendedCandidateRow(row) {
 function hasExtendedRows() {
   // 현재 화면(계좌 선택분 또는 관심그룹)에 연장 대상이 하나도 없으면
   // 연장 토글은 아무것도 바꾸지 못하므로 감춘다.
+  // 차트를 보는 중이면 목록이 아니라 그 종목이 기준이다.
+  if (chartTicker) {
+    const meta = findTickerMeta(chartTicker);
+    return Boolean(meta) && isExtendedCandidateRow(meta);
+  }
   const rows = interestModeActive() ? interestBaseRows() : filteredRows();
   return rows.some(isExtendedCandidateRow);
 }

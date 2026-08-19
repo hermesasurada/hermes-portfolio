@@ -23,6 +23,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
+from .market_calendar import korea_equity_calendar_day
 from .paths import KST
 from .tickers import asset_class, is_korean_stock_ticker, kr_ticker_code
 
@@ -45,12 +46,13 @@ _CACHE_LOCK = threading.Lock()
 
 
 def nxt_session_state(now: datetime | None = None) -> dict:
-    """NXT 연장 세션 상태. 주말은 닫힘, 공휴일은 KRX 달력이 없어 판정하지 않는다."""
+    """NXT 연장 세션 상태. 주말·한국 공휴일은 닫힘."""
     current = now.astimezone(KST) if now else datetime.now(KST)
     minutes = current.hour * 60 + current.minute
-    weekday = current.weekday() < 5
+    calendar = korea_equity_calendar_day(current.date())
+    open_day = calendar["status"] != "closed"
     phase = "closed"
-    if weekday:
+    if open_day:
         if NXT_PRE_OPEN <= minutes < NXT_PRE_CLOSE:
             phase = "pre"
         elif NXT_AFTER_OPEN <= minutes < NXT_AFTER_CLOSE:
@@ -62,6 +64,7 @@ def nxt_session_state(now: datetime | None = None) -> dict:
         "phase": phase,
         "is_extended": phase in {"pre", "after"},
         "label": {"pre": "프리마켓", "after": "애프터마켓", "main": "정규장", "closed": "장 마감"}[phase],
+        "closed_reason": calendar["reason"] if not open_day else None,
     }
 
 
@@ -115,6 +118,11 @@ def fetch_nxt_quotes(tickers: list[str], now_ts: float | None = None) -> dict[st
             continue
         price = _number(payload.get("nowPrice"))
         if not price:
+            continue
+        # 체결시각이 오늘(KST)이 아니면 묵은 값이다. 공휴일 달력이 틀리거나
+        # 거래정지 종목이어도 옛 가격이 연장가로 새어나가지 않게 막는다.
+        trade_time = str(payload.get("tradeTime") or "")
+        if len(trade_time) >= 8 and trade_time[:8] != datetime.now(KST).strftime("%Y%m%d"):
             continue
         item = {
             "price": price,

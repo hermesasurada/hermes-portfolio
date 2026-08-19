@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from .constants import CRYPTO_MARKETS, FX_TICKERS, MARKET_INDEXES
+from .constants import CRYPTO_MARKETS, FX_TICKERS, KOREAN_SUFFIXES, MARKET_INDEXES
 from .dates import parse_iso_date
 from .paths import KST, US_EASTERN
 
@@ -185,6 +185,72 @@ INDEX_REGION_SESSIONS: dict[str, tuple[str, int, int]] = {
 US_SESSION = ("America/New_York", 9 * 60 + 30, 16 * 60)
 
 
+# 음력 공휴일(설날·추석·부처님오신날)은 표준 라이브러리로 계산할 수 없어
+# 연도별 양력 환산값을 둔다. 범위 밖 연도는 음력 휴일 없이 고정 휴일만 판정한다
+# — NXT 세션 게이팅은 체결시각(오늘) 검증이 이중으로 막으므로 오판이 무해하다.
+KOREAN_LUNAR_HOLIDAYS: dict[int, dict[str, tuple[date, ...]]] = {
+    2025: {
+        "설날": (date(2025, 1, 28), date(2025, 1, 29), date(2025, 1, 30)),
+        "추석": (date(2025, 10, 5), date(2025, 10, 6), date(2025, 10, 7)),
+        "부처님오신날": (date(2025, 5, 5),),
+    },
+    2026: {
+        "설날": (date(2026, 2, 16), date(2026, 2, 17), date(2026, 2, 18)),
+        "추석": (date(2026, 9, 24), date(2026, 9, 25), date(2026, 9, 26)),
+        "부처님오신날": (date(2026, 5, 24),),
+    },
+    2027: {
+        "설날": (date(2027, 2, 6), date(2027, 2, 7), date(2027, 2, 8)),
+        "추석": (date(2027, 9, 14), date(2027, 9, 15), date(2027, 9, 16)),
+        "부처님오신날": (date(2027, 5, 13),),
+    },
+    2028: {
+        "설날": (date(2028, 1, 26), date(2028, 1, 27), date(2028, 1, 28)),
+        "추석": (date(2028, 10, 2), date(2028, 10, 3), date(2028, 10, 4)),
+        "부처님오신날": (date(2028, 5, 2),),
+    },
+}
+
+
+def korean_exchange_holidays(year: int) -> dict[date, str]:
+    """KRX·NXT 휴장일. 고정 공휴일 + 음력 공휴일 + 대체공휴일 + 연말 폐장일."""
+    holidays: dict[date, str] = {
+        date(year, 1, 1): "신정",
+        date(year, 3, 1): "삼일절",
+        date(year, 5, 5): "어린이날",
+        date(year, 6, 6): "현충일",
+        date(year, 8, 15): "광복절",
+        date(year, 10, 3): "개천절",
+        date(year, 10, 9): "한글날",
+        date(year, 12, 25): "성탄절",
+        date(year, 12, 31): "연말 폐장",
+    }
+    for name, days in (KOREAN_LUNAR_HOLIDAYS.get(year) or {}).items():
+        for day in days:
+            holidays[day] = name
+
+    # 대체공휴일 — 설날·추석·어린이날은 주말과 겹치면 다음 평일로, 그 밖의
+    # 국경일은 일요일과 겹칠 때만 순연한다(공휴일법 기준 근사).
+    substitute_all = {"설날", "추석", "어린이날", "삼일절", "광복절", "개천절", "한글날", "부처님오신날"}
+    for holiday, reason in sorted(tuple(holidays.items())):
+        if reason not in substitute_all or holiday.weekday() < 5:
+            continue
+        moved = holiday + timedelta(days=1)
+        while moved.weekday() >= 5 or moved in holidays:
+            moved += timedelta(days=1)
+        holidays[moved] = f"{reason} 대체공휴일"
+    return holidays
+
+
+def korea_equity_calendar_day(day: date) -> dict:
+    if day.weekday() >= 5:
+        return {"status": "closed", "reason": "주말"}
+    holidays = korean_exchange_holidays(day.year)
+    if day in holidays:
+        return {"status": "closed", "reason": holidays[day]}
+    return {"status": "open", "reason": None}
+
+
 def _midsummer_eve(year: int) -> date:
     """스웨덴·핀란드 하지 전야 — 6/19~25 사이의 금요일."""
     for day in range(19, 26):
@@ -336,6 +402,8 @@ def _exchange_calendar_day(ticker: str, local_day: date) -> dict:
     upper = str(ticker or "").upper()
     if upper.endswith(".T") or upper == "NIKKEI225":
         return japan_equity_calendar_day(local_day)
+    if upper.endswith(KOREAN_SUFFIXES) or upper == "KOSPI":
+        return korea_equity_calendar_day(local_day)
     session = _exchange_session(upper)
     if session and session[0] == "America/New_York":
         return us_equity_calendar_day(local_day)
