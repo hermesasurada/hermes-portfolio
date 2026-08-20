@@ -6,6 +6,7 @@ from .db import connect
 from .fundamentals import fetch_fundamentals
 from .paths import KST
 from .prices import build_market_snapshot, latest_prices
+from .entry_reward import entry_risk_reward_score
 from .risk_reward import risk_reward_score
 from .technical_stats import (
     PRICE_ADJUSTED_LOOKBACK_DAYS,
@@ -108,6 +109,17 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
         merged["risk_reward_score"] = score
         merged["risk_reward_basis"] = basis
         merged["risk_reward_quality"] = quality
+        rsi = merged.get("rsi") or {}
+        bands = merged.get("bollinger_pband") or {}
+        performance = merged.get("performance") or {}
+        merged["entry_risk_reward"] = entry_risk_reward_score(
+            merged.get("drawdown_52w"),
+            merged.get("atr_pct"),
+            rsi.get("day"),
+            bands.get("day"),
+            performance.get("three_month"),
+            performance.get("six_month"),
+        )
         stats[ticker] = merged
 
     return {

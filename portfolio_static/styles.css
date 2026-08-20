@@ -1185,14 +1185,14 @@ main {
 }
 #interestTableWrap .interest-detail-list th[data-interest-col="4"],
 #interestTableWrap .interest-detail-list td:nth-child(5),
-#interestTableWrap .interest-detail-list th[data-interest-col="12"],
-#interestTableWrap .interest-detail-list td:nth-child(13),
-#interestTableWrap .interest-detail-list th[data-interest-col="18"],
-#interestTableWrap .interest-detail-list td:nth-child(19),
-#interestTableWrap .interest-detail-list th[data-interest-col="21"],
-#interestTableWrap .interest-detail-list td:nth-child(22),
-#interestTableWrap .interest-detail-list th[data-interest-col="30"],
-#interestTableWrap .interest-detail-list td:nth-child(31) {
+#interestTableWrap .interest-detail-list th[data-interest-col="13"],
+#interestTableWrap .interest-detail-list td:nth-child(14),
+#interestTableWrap .interest-detail-list th[data-interest-col="19"],
+#interestTableWrap .interest-detail-list td:nth-child(20),
+#interestTableWrap .interest-detail-list th[data-interest-col="22"],
+#interestTableWrap .interest-detail-list td:nth-child(23),
+#interestTableWrap .interest-detail-list th[data-interest-col="31"],
+#interestTableWrap .interest-detail-list td:nth-child(32) {
   padding-right: 9px;
 }
 .interest-detail-list th.logo-col {
@@ -1270,13 +1270,13 @@ main {
 .interest-detail-list td:nth-child(6) {
   width: 112px;
 }
-.interest-detail-list th[data-interest-col="13"],
 .interest-detail-list th[data-interest-col="14"],
 .interest-detail-list th[data-interest-col="15"],
 .interest-detail-list th[data-interest-col="16"],
 .interest-detail-list th[data-interest-col="17"],
 .interest-detail-list th[data-interest-col="18"],
-.interest-detail-list td:nth-child(n+14):nth-child(-n+19) {
+.interest-detail-list th[data-interest-col="19"],
+.interest-detail-list td:nth-child(n+15):nth-child(-n+20) {
   width: 48px;
   padding-left: 2px;
   padding-right: 2px;
@@ -1919,26 +1919,27 @@ tr.dividend-month-row:hover td {
 #detailTableWrap th:nth-child(13), #detailTableWrap td:nth-child(13) { min-width: 46px; } /* 실적 */
 #detailTableWrap th:nth-child(14), #detailTableWrap td:nth-child(14) { min-width: 62px; } /* 52주高 */
 #detailTableWrap th:nth-child(15), #detailTableWrap td:nth-child(15) { min-width: 58px; } /* 변동성 손익비 */
-#detailTableWrap th:nth-child(16), #detailTableWrap td:nth-child(16),
-#detailTableWrap th:nth-child(17), #detailTableWrap td:nth-child(17) { min-width: 42px; } /* β */
-#detailTableWrap th:nth-child(n+18):nth-child(-n+23),
-#detailTableWrap td:nth-child(n+18):nth-child(-n+23) {
+#detailTableWrap th:nth-child(16), #detailTableWrap td:nth-child(16) { min-width: 58px; } /* 진입 손익비 */
+#detailTableWrap th:nth-child(17), #detailTableWrap td:nth-child(17),
+#detailTableWrap th:nth-child(18), #detailTableWrap td:nth-child(18) { min-width: 42px; } /* β */
+#detailTableWrap th:nth-child(n+19):nth-child(-n+24),
+#detailTableWrap td:nth-child(n+19):nth-child(-n+24) {
   min-width: 43px;
   padding-left: 1px;
   padding-right: 1px;
 } /* RSI/BB */
-#detailTableWrap th:nth-child(24), #detailTableWrap td:nth-child(24),
-#detailTableWrap th:nth-child(25), #detailTableWrap td:nth-child(25) { min-width: 56px; } /* P/E */
-#detailTableWrap th:nth-child(26), #detailTableWrap td:nth-child(26) { min-width: 40px; } /* P/B */
-#detailTableWrap th:nth-child(n+27):nth-child(-n+35),
-#detailTableWrap td:nth-child(n+27):nth-child(-n+35) { min-width: 58px; } /* 기간 수익률 */
-#detailTableWrap th:nth-child(36), #detailTableWrap td:nth-child(36) { min-width: 54px; } /* 거래 */
-#detailTableWrap th:nth-child(17),
-#detailTableWrap td:nth-child(17),
-#detailTableWrap th:nth-child(23),
-#detailTableWrap td:nth-child(23),
-#detailTableWrap th:nth-child(26),
-#detailTableWrap td:nth-child(26) { padding-right: 8px; }
+#detailTableWrap th:nth-child(25), #detailTableWrap td:nth-child(25),
+#detailTableWrap th:nth-child(26), #detailTableWrap td:nth-child(26) { min-width: 56px; } /* P/E */
+#detailTableWrap th:nth-child(27), #detailTableWrap td:nth-child(27) { min-width: 40px; } /* P/B */
+#detailTableWrap th:nth-child(n+28):nth-child(-n+36),
+#detailTableWrap td:nth-child(n+28):nth-child(-n+36) { min-width: 58px; } /* 기간 수익률 */
+#detailTableWrap th:nth-child(37), #detailTableWrap td:nth-child(37) { min-width: 54px; } /* 거래 */
+#detailTableWrap th:nth-child(18),
+#detailTableWrap td:nth-child(18),
+#detailTableWrap th:nth-child(24),
+#detailTableWrap td:nth-child(24),
+#detailTableWrap th:nth-child(27),
+#detailTableWrap td:nth-child(27) { padding-right: 8px; }
 /* 행 처리 단일화: 지브라+보더+호버 3중첩에서 보더+호버만 남김 */
 tr:hover td { background: var(--surface-hover); }
 tbody tr.index-row td {

@@ -839,7 +839,7 @@ function sortRows(rows, tab = activeDetailTab) {
   const state = sortState[tab] || sortState.detail;
   rows.sort((a, b) => {
     const av = listSortValue(a, state.key), bv = listSortValue(b, state.key);
-    if (state.key === "risk_reward_score") {
+    if (state.key === "risk_reward_score" || state.key === "entry_risk_reward") {
       const aMissing = av == null || !Number.isFinite(Number(av));
       const bMissing = bv == null || !Number.isFinite(Number(bv));
       if (aMissing !== bMissing) return aMissing ? 1 : -1;
@@ -1070,6 +1070,7 @@ function renderTable() {
       <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
       <td class="group-start">${signedPercentText(r.drawdown_52w, 1)}</td>
       <td>${riskRewardScoreText(r.risk_reward_score, r.risk_reward_basis, r.risk_reward_quality)}</td>
+      <td>${entryRewardText(r.entry_risk_reward)}</td>
       <td>${betaText(r.beta)}</td>
       <td>${betaText(r.beta_adj)}</td>
       <td class="group-start">${indicatorText(r.rsi_day, "rsi")}</td>

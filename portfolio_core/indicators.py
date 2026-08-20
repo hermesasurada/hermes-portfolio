@@ -57,6 +57,56 @@ def rsi_series(values: list[float], period: int = 14) -> list[float | None]:
     return result
 
 
+def _row_number(row, key: str) -> float | None:
+    try:
+        value = row[key]
+    except (KeyError, IndexError, TypeError):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number and abs(number) != float("inf") else None
+
+
+def atr_percent(rows: list, period: int = 14) -> float | None:
+    """Wilder ATR(14)를 종가 대비 %로. high/low가 없으면 종가 절댓값 변화."""
+    if period <= 0 or len(rows) < period + 1:
+        return None
+    closes: list[float] = []
+    highs: list[float] = []
+    lows: list[float] = []
+    for row in rows:
+        close = _row_number(row, "close")
+        if close is None or close <= 0:
+            continue
+        high = _row_number(row, "high")
+        low = _row_number(row, "low")
+        closes.append(close)
+        highs.append(high if high is not None and high > 0 else close)
+        lows.append(low if low is not None and low > 0 else close)
+    if len(closes) < period + 1:
+        return None
+    true_ranges: list[float] = []
+    for index in range(1, len(closes)):
+        true_ranges.append(
+            max(
+                highs[index] - lows[index],
+                abs(highs[index] - closes[index - 1]),
+                abs(lows[index] - closes[index - 1]),
+            )
+        )
+    if len(true_ranges) < period:
+        return None
+    atr = sum(true_ranges[:period]) / period
+    for value in true_ranges[period:]:
+        atr = (atr * (period - 1) + value) / period
+    last = closes[-1]
+    if last <= 0 or atr < 0:
+        return None
+    return (atr / last) * 100
+
+
 def bollinger_pband(values: list[float], period: int = 20, deviations: float = 2.0) -> float | None:
     if len(values) < period:
         return None

@@ -14,7 +14,7 @@ from .corporate_actions import (
 )
 from .dates import parse_iso_date, positive_float
 from .db import connect, ensure_technical_stats_cache_table
-from .indicators import bollinger_pband, recent_performance, resample_last, rsi_series, rsi_value
+from .indicators import atr_percent, bollinger_pband, recent_performance, resample_last, rsi_series, rsi_value
 from .paths import KST
 from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
 from .tickers import ticker_currency
@@ -277,6 +277,7 @@ def calculate_technical_stats(
         },
         "performance": recent_performance(rows),
         "drawdown_52w": high_52w_drawdown(daily),
+        "atr_pct": None if (value := atr_percent(rows)) is None else round(value, 4),
         **beta_stats(rows, benchmark_rows or []),
     }
 
@@ -331,6 +332,7 @@ def calculate_price_adjusted_indicators(
             "week": bollinger_pband(weekly),
             "month": bollinger_pband(monthly),
         },
+        "drawdown_52w": high_52w_drawdown(daily),
     }
 
 
@@ -370,7 +372,7 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
         cutoff = (datetime.now(KST).date() - timedelta(days=TECHNICAL_LOOKBACK_DAYS)).isoformat()
         rows = conn.execute(
             f"""
-            SELECT ticker, date, close
+            SELECT ticker, date, close, high, low
             FROM daily_prices
             WHERE ticker IN ({placeholders(query_tickers)})
               AND date >= ?

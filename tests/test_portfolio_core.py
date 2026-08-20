@@ -1079,6 +1079,46 @@ def test_risk_reward_score_formula():
     assert risk_reward_score({"5y": None, "3y": None, "1y": None}) == (None, None, None)
 
 
+def test_entry_risk_reward_score_formula():
+    from portfolio_core.entry_reward import entry_risk_reward_score
+    from portfolio_core.indicators import atr_percent
+
+    # 고점: 업사이드 0
+    assert entry_risk_reward_score(0.0, 2.0, 50, 50, 10.0, 10.0) == 0.0
+
+    # 20% 낙폭 → 고점까지 +25%, ATR 2% → 손절 3% → 25/3
+    at_high = entry_risk_reward_score(-20.0, 2.0, 45, 30, 8.0, 12.0)
+    assert abs(at_high - 25.0 / 3.0) < 0.02
+
+    # 고점 근접이 고점보다 점수가 높다
+    near = entry_risk_reward_score(-5.0, 2.0, 45, 30, 8.0, 12.0)
+    far = entry_risk_reward_score(-20.0, 2.0, 45, 30, 8.0, 12.0)
+    assert far > near > 0
+
+    # 과열(RSI 85)은 0.5배
+    hot = entry_risk_reward_score(-20.0, 2.0, 85, 30, 8.0, 12.0)
+    assert abs(hot - at_high * 0.5) < 0.02
+
+    # 3·6개월 둘 다 음수면 0.25배
+    down = entry_risk_reward_score(-20.0, 2.0, 45, 30, -5.0, -8.0)
+    assert abs(down - at_high * 0.25) < 0.02
+
+    # ATR 바닥 1% — 25/1=25는 상한 20에 걸린다
+    floor = entry_risk_reward_score(-20.0, 0.2, 45, 30, 8.0, 12.0)
+    assert abs(floor - 20.0) < 0.02
+    uncapped = entry_risk_reward_score(-8.0, 0.2, 45, 30, 8.0, 12.0)
+    assert abs(uncapped - (8.0 / 92.0 * 100)) < 0.05
+
+    assert entry_risk_reward_score(None, 2.0) is None
+    assert entry_risk_reward_score(-10.0, None) is None
+
+    # ATR: 종가만 있으면 |Δclose|, high/low가 있으면 True Range
+    closes = [{"close": 100.0 + index} for index in range(20)]
+    assert atr_percent(closes) is not None and atr_percent(closes) > 0
+    ranges = [{"close": 100.0, "high": 110.0, "low": 90.0} for _ in range(20)]
+    assert atr_percent(ranges) > atr_percent(closes)
+
+
 def test_total_return_periods_dividend_mapping():
     from portfolio_core.technical_stats import total_return_periods
 

@@ -18,6 +18,7 @@ function statsRows(rows) {
       risk_reward_score: stats.risk_reward_score,
       risk_reward_basis: stats.risk_reward_basis,
       risk_reward_quality: stats.risk_reward_quality,
+      entry_risk_reward: stats.entry_risk_reward,
       beta: stats.beta,
       beta_adj: stats.beta_adj,
       next_earnings_date: stats.next_earnings_date || row.next_earnings_date || null,

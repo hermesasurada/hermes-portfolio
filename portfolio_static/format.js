@@ -249,6 +249,12 @@ function riskRewardScoreText(v, basis, quality) {
   }
   return `<span class="${cls}">${sign}${n.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}${mark}</span>`;
 }
+function entryRewardText(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "-";
+  const cls = n > 1 ? "up" : n > 0 ? "flat" : "flat";
+  return `<span class="${cls}">${n.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>`;
+}
 function indicatorToneAttr(v, kind) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "";

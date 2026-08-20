@@ -410,7 +410,7 @@ function sortInterestRows(rows, group = activeInterestGroup()) {
   const { key, dir } = interestSortState;
   rows.sort((a, b) => {
     const av = listSortValue(a, key), bv = listSortValue(b, key);
-    if (key === "next_earnings_date" || key === "risk_reward_score") {
+    if (key === "next_earnings_date" || key === "risk_reward_score" || key === "entry_risk_reward") {
       const aMissing = key === "next_earnings_date"
         ? !av
         : av == null || !Number.isFinite(Number(av));
@@ -449,6 +449,7 @@ const interestColumnWidths = {
   dividend_growth_5y: 78,
   drawdown_52w: 72,
   risk_reward_score: 58,
+  entry_risk_reward: 58,
   beta: 42,
   beta_adj: 44,
   next_earnings_date: 45,
@@ -495,7 +496,7 @@ const interestColumnWidths = {
 };
 
 const interestAlwaysVisibleFields = new Set(["display_change_pct", "current_price"]);
-const INTEREST_TABLE_COLUMN_COUNT = 54;
+const INTEREST_TABLE_COLUMN_COUNT = 55;
 
 function interestEmptyRow(message) {
   return `<tr class="interest-empty-row">${Array.from({ length: INTEREST_TABLE_COLUMN_COUNT }, (_, index) => {
@@ -656,6 +657,7 @@ function renderInterestMainTable() {
       <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
       <td>${signedPercentText(r.drawdown_52w, 1)}</td>
       <td>${riskRewardScoreText(r.risk_reward_score, r.risk_reward_basis, r.risk_reward_quality)}</td>
+      <td>${entryRewardText(r.entry_risk_reward)}</td>
       <td>${betaText(r.beta)}</td>
       <td>${betaText(r.beta_adj)}</td>
       <td class="group-start">${earningsText(r.next_earnings_date)}</td>
