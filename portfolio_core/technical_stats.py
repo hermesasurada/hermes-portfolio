@@ -19,7 +19,7 @@ from .paths import KST
 from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
 from .tickers import ticker_currency
 
-TECHNICAL_CACHE_VERSION = 7  # 7: KRW 초과수익 Sortino, 비겹침 창
+TECHNICAL_CACHE_VERSION = 8  # 8: 분모를 총변동성으로 (Sortino 하방 폐지)
 TECHNICAL_LOOKBACK_DAYS = 11 * 366
 PRICE_ADJUSTED_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
@@ -109,22 +109,17 @@ def _krw_rates_for_dates(
     return rates
 
 
-def _annualized_mean_and_sortino(
+def _annualized_mean_and_vol(
     window: list[float],
     rf_pct: float,
 ) -> tuple[float, float, float]:
-    """(산술 연율 %, 초과수익 %, Sortino 하방변동성 %)."""
+    """(산술 연율 %, 초과수익 %, 연율 총변동성 %)."""
     count = len(window)
     mean = sum(window) / count
     mean_ann = mean * 252 * 100
     excess = mean_ann - rf_pct
-    rf_daily = (rf_pct / 100.0) / 252.0
-    downside = 0.0
-    for value in window:
-        gap = value - rf_daily
-        if gap < 0:
-            downside += gap * gap
-    vol = (downside / count) ** 0.5 * (252 ** 0.5) * 100
+    variance = sum((value - mean) ** 2 for value in window) / count
+    vol = (variance ** 0.5) * (252 ** 0.5) * 100
     return mean_ann, excess, vol
 
 
@@ -137,7 +132,7 @@ def total_return_periods(
     dividend_yield: float | None = None,
     risk_free_pct: float | None = None,
 ) -> dict[str, dict | None]:
-    """기간별(5y/3y/1y, 비겹침) KRW 총수익 산술연율·Sortino·품질(TR/P).
+    """기간별(5y/3y/1y, 비겹침) KRW 총수익 산술연율·총변동성·품질(TR/P).
 
     일간 총수익률 r(t) = (P_krw(t) + 분할·통화보정 배당_krw(t)) / P_krw(t-1) - 1.
     배당은 배당락일(ex_date) 이후 첫 거래일에 가산하되 5일 초과 이월은
@@ -210,7 +205,7 @@ def total_return_periods(
         window_end = dates[hi]
         has_dividend = any(lo < index <= hi for index in dividend_by_index)
         has_unmapped = any(window_start <= day <= window_end for day in unmapped_dates)
-        mean_ann, excess, vol = _annualized_mean_and_sortino(window, rf_pct)
+        mean_ann, excess, vol = _annualized_mean_and_vol(window, rf_pct)
         quality = "TR"
         if has_unmapped or (not has_dividend and (dividend_yield or 0) > 0.5):
             quality = "P"

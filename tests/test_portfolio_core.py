@@ -1038,7 +1038,7 @@ def test_quarterly_dividend_cycle_never_groups_more_than_four_payments():
 def test_risk_reward_score_formula():
     from portfolio_core.risk_reward import risk_reward_score, vol_floor_pct
 
-    # 정상: 기간별 Sortino(clamp(excess)/max(vol, 자산군 바닥)) 가중평균 ×10
+    # 정상: 기간별 총변동성(clamp(excess)/max(vol, 자산군 바닥)) 가중평균 ×10
     # 52주 고점 보정 없음. 주식 바닥 8% — vol 20/25/40은 바닥에 안 걸림.
     periods = {
         "5y": {"excess": 16.0, "vol": 20.0, "quality": "TR"},
@@ -1199,7 +1199,7 @@ def _price_rows_from_returns(returns: list[float], start: date = date(2018, 1, 2
     return [{"date": day, "close": close} for day, close in zip(days, closes)]
 
 
-def test_total_return_periods_nonoverlap_sortino_krw():
+def test_total_return_periods_nonoverlap_vol_krw():
     from portfolio_core.technical_stats import total_return_periods
 
     # 비겹침: 3~5년 전 +0.04%일, 1~3년 전 0, 최근 1년 +0.08%일
@@ -1215,11 +1215,11 @@ def test_total_return_periods_nonoverlap_sortino_krw():
     # 창이 겹치지 않으므로 1y 평균이 5y에 섞이지 않는다
     assert result["5y"]["mean"] < result["1y"]["mean"] - 5
 
-    # Sortino: 상승 스파이크는 하방 변동성을 거의 키우지 않는다
+    # 총변동성: 10% 하루 스파이크는 연율 vol에 잡힌다
     quiet = [0.0] * 251
     spike = _price_rows_from_returns(quiet + [0.10])
     spiked = total_return_periods(spike, [], [], "KRW", risk_free_pct=0.0)
-    assert spiked["1y"]["vol"] < 1.0
+    assert spiked["1y"]["vol"] > 8.0
     assert spiked["1y"]["mean"] > 8.0
 
     # KRW 환산: 가격은 그대로인데 환율이 오르면 수익이 생긴다
