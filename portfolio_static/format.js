@@ -244,8 +244,8 @@ function riskRewardScoreText(v, basis, quality) {
     const label = `${basis.toUpperCase()}${quality === "P" ? "·P" : ""}`;
     const why = basis !== "5y"
       ? `이력이 짧아 ${basis.toUpperCase()} 기준으로 산출`
-      : "배당 이력 미비로 가격수익률 기준";
-    mark = ` <small class="history-growth-basis" title="${why}${quality === "P" ? " (P=가격 폴백)" : ""}">${label}</small>`;
+      : "배당 매핑 실패 또는 이력 미비";
+    mark = ` <small class="history-growth-basis" title="${why}${quality === "P" ? " (P=배당 일부 미반영)" : ""}">${label}</small>`;
   }
   return `<span class="${cls}">${sign}${n.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}${mark}</span>`;
 }

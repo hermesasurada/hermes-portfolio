@@ -103,7 +103,7 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
         }
         score, basis, quality = risk_reward_score(
             merged.get("risk_reward"),
-            merged.get("drawdown_52w"),
+            merged.get("asset_class"),
         )
         merged["risk_reward_score"] = score
         merged["risk_reward_basis"] = basis

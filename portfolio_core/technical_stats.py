@@ -6,7 +6,7 @@ from bisect import bisect_left
 from datetime import date, datetime, timedelta
 from typing import Callable, Iterable
 
-from .constants import FX_TICKERS
+from .constants import FX_DEFAULT_RATES, FX_TICKERS
 from .corporate_actions import (
     dedupe_dividend_event_rows,
     entitlement_date,
@@ -16,16 +16,19 @@ from .dates import parse_iso_date, positive_float
 from .db import connect, ensure_technical_stats_cache_table
 from .indicators import bollinger_pband, recent_performance, resample_last, rsi_series, rsi_value
 from .paths import KST
+from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
 from .tickers import ticker_currency
 
-TECHNICAL_CACHE_VERSION = 6  # 6: 기간별 가격 성과에 1주·10년 추가
+TECHNICAL_CACHE_VERSION = 7  # 7: KRW 초과수익 Sortino, 비겹침 창
 TECHNICAL_LOOKBACK_DAYS = 11 * 366
 PRICE_ADJUSTED_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
 BETA_WINDOW = 180
 
-# 손익비 점수용 총수익 기간(거래일). 가용 판정은 95% 이상 데이터.
-TOTAL_RETURN_PERIODS = (("5y", 1260), ("3y", 756), ("1y", 252))
+# 손익비 점수용 비겹침 창. (key, 필요 이력 거래일, 슬라이스 끝 오프셋)
+# 5y = 3~5년 전(returns[-1260:-756]), 3y = 1~3년 전, 1y = 최근 1년.
+# 가용 판정은 해당 이력의 95% 이상.
+TOTAL_RETURN_PERIODS = (("5y", 1260, 756), ("3y", 756, 252), ("1y", 252, 0))
 DIVIDEND_MAP_MAX_DAYS = 5   # 휴장일 이월 한도 — 초과 배당은 반영하지 않고 품질 P
 FX_LOOKUP_MAX_DAYS = 14
 
@@ -83,6 +86,48 @@ def build_fx_lookup(fx_series: dict[str, list[tuple[str, float]]]) -> Callable:
     return lookup
 
 
+def _krw_rates_for_dates(
+    dates: list[str],
+    currency: str,
+    fx_lookup: Callable | None,
+) -> list[float]:
+    """일자별 종목통화→KRW 환율. 룩업 실패 시 직전 성공값, 그것도 없으면 기본환율."""
+    if not currency or currency == "KRW":
+        return [1.0] * len(dates)
+    rates: list[float] = []
+    last: float | None = None
+    fallback = FX_DEFAULT_RATES.get(currency, 1.0)
+    for day in dates:
+        on = parse_iso_date(day)
+        rate = None
+        if on is not None and fx_lookup is not None:
+            rate = fx_lookup(currency, "KRW", on)
+        if rate is None:
+            rate = last if last is not None else fallback
+        last = rate
+        rates.append(rate)
+    return rates
+
+
+def _annualized_mean_and_sortino(
+    window: list[float],
+    rf_pct: float,
+) -> tuple[float, float, float]:
+    """(산술 연율 %, 초과수익 %, Sortino 하방변동성 %)."""
+    count = len(window)
+    mean = sum(window) / count
+    mean_ann = mean * 252 * 100
+    excess = mean_ann - rf_pct
+    rf_daily = (rf_pct / 100.0) / 252.0
+    downside = 0.0
+    for value in window:
+        gap = value - rf_daily
+        if gap < 0:
+            downside += gap * gap
+    vol = (downside / count) ** 0.5 * (252 ** 0.5) * 100
+    return mean_ann, excess, vol
+
+
 def total_return_periods(
     price_rows: list,
     dividend_rows: list,
@@ -90,19 +135,24 @@ def total_return_periods(
     currency: str,
     fx_lookup: Callable | None = None,
     dividend_yield: float | None = None,
+    risk_free_pct: float | None = None,
 ) -> dict[str, dict | None]:
-    """기간별(5y/3y/1y) 총수익 CAGR·연율 변동성·품질(TR/P).
+    """기간별(5y/3y/1y, 비겹침) KRW 총수익 산술연율·Sortino·품질(TR/P).
 
-    일간 총수익률 r(t) = (P(t) + 분할·통화보정 배당(t)) / P(t-1) - 1.
+    일간 총수익률 r(t) = (P_krw(t) + 분할·통화보정 배당_krw(t)) / P_krw(t-1) - 1.
     배당은 배당락일(ex_date) 이후 첫 거래일에 가산하되 5일 초과 이월은
-    반영하지 않고 품질을 P로 낮춘다. 통화가 다른 배당은 FX 크로스 환산,
-    불가하면 미반영+P. 배당수익률이 있는데 기간 내 반영된 배당이 없으면
-    가격수익률 폴백으로 보고 P."""
+    반영하지 않고 품질을 P로 낮춘다. 매핑된 배당은 그대로 남긴다.
+    통화가 다른 배당은 종목통화로 맞춘 뒤 KRW 환산, 불가하면 미반영+P.
+    배당수익률이 있는데 기간 내 반영된 배당이 없으면 품질 P."""
     dates = [row["date"] for row in price_rows]
     closes = [float(row["close"]) for row in price_rows]
-    result: dict[str, dict | None] = {key: None for key, _days in TOTAL_RETURN_PERIODS}
+    result: dict[str, dict | None] = {key: None for key, _hist, _end in TOTAL_RETURN_PERIODS}
     if len(closes) < 2:
         return result
+
+    rf_pct = RISK_FREE_RATE_PCT if risk_free_pct is None else float(risk_free_pct)
+    krw_rates = _krw_rates_for_dates(dates, currency, fx_lookup)
+    closes_krw = [close * rate for close, rate in zip(closes, krw_rates)]
 
     last_price_date = parse_iso_date(dates[-1])
     dividend_by_index: dict[int, float] = {}
@@ -134,47 +184,42 @@ def total_return_periods(
         ):
             unmapped_dates.append(event_date.isoformat())
             continue
+        adjusted *= krw_rates[index]
         dividend_by_index[index] = dividend_by_index.get(index, 0.0) + adjusted
 
     total_returns: list[float] = []
-    price_returns: list[float] = []
-    for index in range(1, len(closes)):
-        previous = closes[index - 1]
+    for index in range(1, len(closes_krw)):
+        previous = closes_krw[index - 1]
         if previous <= 0:
             total_returns.append(0.0)
-            price_returns.append(0.0)
             continue
-        price_return = closes[index] / previous - 1
-        price_returns.append(price_return)
-        total_returns.append(price_return + dividend_by_index.get(index, 0.0) / previous)
-
-    for key, period_days in TOTAL_RETURN_PERIODS:
-        if len(total_returns) < period_days * 0.95:
-            continue
-        count = min(period_days, len(total_returns))
-        window_start = dates[len(dates) - count - 1]
-        has_dividend = any(
-            index >= len(closes) - count for index in dividend_by_index
+        total_returns.append(
+            (closes_krw[index] + dividend_by_index.get(index, 0.0)) / previous - 1
         )
-        has_unmapped = any(day >= window_start for day in unmapped_dates)
-        # 매핑 실패가 하나라도 있으면 '부분 총수익'이 되므로 그 기간은
-        # 순수 가격수익률로 통째 재계산 — P 라벨(가격 폴백)과 실체를 일치.
-        series = price_returns if has_unmapped else total_returns
-        window = series[-count:]
-        growth = 1.0
-        for value in window:
-            growth *= 1 + value
-        if growth <= 0:
-            cagr = -100.0
-        else:
-            cagr = (growth ** (252 / count) - 1) * 100
-        mean = sum(window) / count
-        variance = sum((value - mean) ** 2 for value in window) / count
-        vol = (variance ** 0.5) * (252 ** 0.5) * 100
+
+    n = len(total_returns)
+    for key, history_days, end_offset in TOTAL_RETURN_PERIODS:
+        if n < history_days * 0.95:
+            continue
+        lo = max(0, n - history_days)
+        hi = n - end_offset if end_offset else n
+        window = total_returns[lo:hi]
+        if not window:
+            continue
+        window_start = dates[lo]
+        window_end = dates[hi]
+        has_dividend = any(lo < index <= hi for index in dividend_by_index)
+        has_unmapped = any(window_start <= day <= window_end for day in unmapped_dates)
+        mean_ann, excess, vol = _annualized_mean_and_sortino(window, rf_pct)
         quality = "TR"
         if has_unmapped or (not has_dividend and (dividend_yield or 0) > 0.5):
             quality = "P"
-        result[key] = {"cagr": round(cagr, 2), "vol": round(vol, 2), "quality": quality}
+        result[key] = {
+            "mean": round(mean_ann, 2),
+            "excess": round(excess, 2),
+            "vol": round(vol, 2),
+            "quality": quality,
+        }
     return result
 
 
@@ -384,13 +429,18 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
                 clean_tickers,
             ).fetchall()
         }
-        currency_by_ticker = {
-            row["ticker"]: row["currency"] or ticker_currency(row["ticker"])
-            for row in conn.execute(
-                f"SELECT ticker, currency FROM tickers WHERE ticker IN ({ticker_placeholders})",
-                clean_tickers,
-            ).fetchall()
-        }
+        currency_by_ticker: dict[str, str] = {}
+        name_by_ticker: dict[str, str] = {}
+        for row in conn.execute(
+            f"""
+            SELECT ticker, currency, COALESCE(NULLIF(display_name, ''), name) AS name
+            FROM tickers
+            WHERE ticker IN ({ticker_placeholders})
+            """,
+            clean_tickers,
+        ).fetchall():
+            currency_by_ticker[row["ticker"]] = row["currency"] or ticker_currency(row["ticker"])
+            name_by_ticker[row["ticker"]] = row["name"] or ""
 
         now_text = datetime.now(KST).isoformat(timespec="seconds")
         updated = 0
@@ -398,6 +448,7 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
             price_rows = grouped.get(ticker, [])
             daily_rsi = rsi_series([float(row["close"]) for row in price_rows])
             payload = calculate_technical_stats(price_rows, daily_rsi, grouped.get(BETA_BENCHMARK, []))
+            payload["asset_class"] = score_asset_kind(ticker, name_by_ticker.get(ticker) or "")
             payload["risk_reward"] = total_return_periods(
                 price_rows,
                 dividend_rows_by_ticker.get(ticker, []),

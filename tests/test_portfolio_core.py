@@ -1036,48 +1036,47 @@ def test_quarterly_dividend_cycle_never_groups_more_than_four_payments():
 
 
 def test_risk_reward_score_formula():
-    from portfolio_core.risk_reward import risk_reward_score
+    from portfolio_core.risk_reward import risk_reward_score, vol_floor_pct
 
-    # 정상: 기간별 Sharpe(clamp(cagr)/max(vol,5)) 가중평균 ×10 × 고점괴리 보정
+    # 정상: 기간별 Sortino(clamp(excess)/max(vol, 자산군 바닥)) 가중평균 ×10
+    # 52주 고점 보정 없음. 주식 바닥 8% — vol 20/25/40은 바닥에 안 걸림.
     periods = {
-        "5y": {"cagr": 16.0, "vol": 20.0, "quality": "TR"},
-        "3y": {"cagr": 12.0, "vol": 25.0, "quality": "TR"},
-        "1y": {"cagr": 30.0, "vol": 40.0, "quality": "TR"},
+        "5y": {"excess": 16.0, "vol": 20.0, "quality": "TR"},
+        "3y": {"excess": 12.0, "vol": 25.0, "quality": "TR"},
+        "1y": {"excess": 30.0, "vol": 40.0, "quality": "TR"},
     }
-    score, basis, quality = risk_reward_score(periods, -10.0)
-    expected = (0.6 * 16 / 20 + 0.3 * 12 / 25 + 0.1 * 30 / 40) * 10 * (1 - 10 / 200)
+    score, basis, quality = risk_reward_score(periods, "stock")
+    expected = (0.6 * 16 / 20 + 0.3 * 12 / 25 + 0.1 * 30 / 40) * 10
     assert basis == "5y" and quality == "TR"
     assert abs(score - round(expected, 2)) < 0.01
 
     # 결측 기간 가중 비례 재분배: 5y 없음 → 3y 0.75 / 1y 0.25
     score3, basis3, _q = risk_reward_score(
-        {"3y": {"cagr": 12.0, "vol": 25.0, "quality": "TR"},
-         "1y": {"cagr": 30.0, "vol": 40.0, "quality": "TR"}}, 0.0)
+        {"3y": {"excess": 12.0, "vol": 25.0, "quality": "TR"},
+         "1y": {"excess": 30.0, "vol": 40.0, "quality": "TR"}}, "stock")
     expected3 = (0.75 * 12 / 25 + 0.25 * 30 / 40) * 10
     assert basis3 == "3y"
     assert abs(score3 - round(expected3, 2)) < 0.01
 
     # 품질: 한 기간이라도 P면 P
     _s, _b, quality_p = risk_reward_score(
-        {"5y": {"cagr": 10.0, "vol": 20.0, "quality": "P"},
-         "1y": {"cagr": 10.0, "vol": 20.0, "quality": "TR"}}, 0.0)
+        {"5y": {"excess": 10.0, "vol": 20.0, "quality": "P"},
+         "1y": {"excess": 10.0, "vol": 20.0, "quality": "TR"}}, "stock")
     assert quality_p == "P"
 
-    # 음수 점수엔 고점괴리 보정이 나눗셈 — 괴리 클수록 더 나빠진다
-    down_small, _b1, _q1 = risk_reward_score({"1y": {"cagr": -20.0, "vol": 20.0, "quality": "TR"}}, -10.0)
-    down_big, _b2, _q2 = risk_reward_score({"1y": {"cagr": -20.0, "vol": 20.0, "quality": "TR"}}, -50.0)
-    assert down_big < down_small < 0
-
-    # 캡·변동성 바닥
-    capped, _b, _q = risk_reward_score({"1y": {"cagr": 500.0, "vol": 40.0, "quality": "TR"}}, 0.0)
+    # 캡·자산군별 변동성 바닥 (주식 8%, 크립토 20%)
+    capped, _b, _q = risk_reward_score({"1y": {"excess": 500.0, "vol": 40.0, "quality": "TR"}}, "stock")
     assert abs(capped - 100.0 / 40.0 * 10) < 0.01
-    floor, _b, _q = risk_reward_score({"1y": {"cagr": 4.0, "vol": 1.0, "quality": "TR"}}, 0.0)
-    assert abs(floor - 4.0 / 5.0 * 10) < 0.01
+    floor, _b, _q = risk_reward_score({"1y": {"excess": 4.0, "vol": 1.0, "quality": "TR"}}, "stock")
+    assert abs(floor - 4.0 / 8.0 * 10) < 0.01
+    crypto, _b, _q = risk_reward_score({"1y": {"excess": 4.0, "vol": 1.0, "quality": "TR"}}, "crypto")
+    assert abs(crypto - 4.0 / 20.0 * 10) < 0.01
+    assert vol_floor_pct("fx") == 3.0
 
-    # 결측이면 None
-    assert risk_reward_score(None, -10.0) == (None, None, None)
-    assert risk_reward_score(periods, None) == (None, None, None)
-    assert risk_reward_score({"5y": None, "3y": None, "1y": None}, -10.0) == (None, None, None)
+    # 고점 괴리와 무관 — 기간만 있으면 점수
+    assert risk_reward_score(periods)[0] is not None
+    assert risk_reward_score(None) == (None, None, None)
+    assert risk_reward_score({"5y": None, "3y": None, "1y": None}) == (None, None, None)
 
 
 def test_total_return_periods_dividend_mapping():
@@ -1100,8 +1099,9 @@ def test_total_return_periods_dividend_mapping():
     result = total_return_periods(price_rows, dividend_rows, [], "USD")
     one_year = result["1y"]
     assert one_year is not None and one_year["quality"] == "TR"
-    # 총누적 5% → 연율화(252/n) ≈ 5%대
-    assert 4.0 < one_year["cagr"] < 6.0
+    # 총누적 5% → 산술 연율 ≈ 5%대, 초과수익은 rf 3%를 뺀 값
+    assert 4.0 < one_year["mean"] < 6.0
+    assert abs(one_year["excess"] - (one_year["mean"] - 3.0)) < 0.01
     assert result["5y"] is None and result["3y"] is None  # 이력 부족
 
     # 분할 미조정 소스(polygon): 분할 후 이벤트 금액이 10으로 나뉜다
@@ -1111,7 +1111,7 @@ def test_total_return_periods_dividend_mapping():
         "declaration_date": None, "amount": 5.0, "currency": "USD", "source": "polygon",
     }]
     adj = total_return_periods(price_rows, div_unadjusted, splits, "USD")
-    assert adj["1y"]["cagr"] < 1.0  # 0.5/100 수준으로 축소
+    assert adj["1y"]["mean"] < 1.0  # 0.5/100 수준으로 축소
 
     # 마지막 가격일 이후 배당락 = 미래 이벤트 — 실패로 세지 않고 TR 유지
     # (미국 종목은 KST 기준 가격이 하루 늦어 당일 배당이 이 상태가 된다)
@@ -1121,10 +1121,10 @@ def test_total_return_periods_dividend_mapping():
         "amount": 5.0, "currency": "USD", "source": "yf-history",
     }]
     future = total_return_periods(price_rows, future_div, [], "USD")
-    assert future["1y"]["quality"] == "TR" and abs(future["1y"]["cagr"]) < 0.5
+    assert future["1y"]["quality"] == "TR" and abs(future["1y"]["mean"]) < 0.5
 
-    # 기간 내 매핑 실패(가격 공백 6일 초과)가 있으면 부분 총수익이 아니라
-    # 순수 가격수익률로 재계산 + P — 반영됐던 다른 배당도 제외된다
+    # 기간 내 매핑 실패(가격 공백 6일 초과)가 있으면 품질 P.
+    # 매핑된 배당은 남긴다(첫 5%는 1y 창에 포함).
     gap_days = [d for d in days if not (days[100] <= d <= days[104])]
     gap_rows = [{"date": day, "close": 100.0} for day in gap_days]
     mixed_divs = [
@@ -1136,7 +1136,7 @@ def test_total_return_periods_dividend_mapping():
     # days[101]~[104] 제거로 두 번째 배당은 다음 가격일까지 6일 초과 → 실패
     partial = total_return_periods(gap_rows, mixed_divs, [], "USD")
     assert partial["1y"]["quality"] == "P"
-    assert abs(partial["1y"]["cagr"]) < 0.5  # 첫 배당(반영됐던 것)도 빠진 순수 가격수익
+    assert 4.0 < partial["1y"]["mean"] < 6.0  # 첫 배당은 유지
 
     # 배당수익률이 있는데 이벤트가 없으면 가격 폴백 P
     no_div = total_return_periods(price_rows, [], [], "USD", None, 3.0)
@@ -1144,6 +1144,62 @@ def test_total_return_periods_dividend_mapping():
     # 무배당 종목(수익률 정보 없음)은 TR
     zero_div = total_return_periods(price_rows, [], [], "USD", None, None)
     assert zero_div["1y"]["quality"] == "TR"
+
+
+def _price_rows_from_returns(returns: list[float], start: date = date(2018, 1, 2), price: float = 100.0):
+    days = []
+    current = start
+    while len(days) < len(returns) + 1:
+        if current.weekday() < 5:
+            days.append(current.isoformat())
+        current += timedelta(days=1)
+    closes = [price]
+    for value in returns:
+        closes.append(closes[-1] * (1 + value))
+    return [{"date": day, "close": close} for day, close in zip(days, closes)]
+
+
+def test_total_return_periods_nonoverlap_sortino_krw():
+    from portfolio_core.technical_stats import total_return_periods
+
+    # 비겹침: 3~5년 전 +0.04%일, 1~3년 전 0, 최근 1년 +0.08%일
+    far = [0.0004] * 504
+    mid = [0.0] * 504
+    near = [0.0008] * 252
+    rows = _price_rows_from_returns(far + mid + near)
+    result = total_return_periods(rows, [], [], "KRW", risk_free_pct=3.0)
+    assert result["5y"] is not None and result["3y"] is not None and result["1y"] is not None
+    assert 9.0 < result["5y"]["mean"] < 11.5
+    assert abs(result["3y"]["mean"]) < 0.2
+    assert 19.0 < result["1y"]["mean"] < 21.5
+    # 창이 겹치지 않으므로 1y 평균이 5y에 섞이지 않는다
+    assert result["5y"]["mean"] < result["1y"]["mean"] - 5
+
+    # Sortino: 상승 스파이크는 하방 변동성을 거의 키우지 않는다
+    quiet = [0.0] * 251
+    spike = _price_rows_from_returns(quiet + [0.10])
+    spiked = total_return_periods(spike, [], [], "KRW", risk_free_pct=0.0)
+    assert spiked["1y"]["vol"] < 1.0
+    assert spiked["1y"]["mean"] > 8.0
+
+    # KRW 환산: 가격은 그대로인데 환율이 오르면 수익이 생긴다
+    fx_days = []
+    current = date(2024, 1, 2)
+    while len(fx_days) < 260:
+        if current.weekday() < 5:
+            fx_days.append(current)
+        current += timedelta(days=1)
+    fx_rows = [{"date": day.isoformat(), "close": 100.0} for day in fx_days]
+
+    def fx_lookup(from_ccy, to_ccy, on):
+        if from_ccy == "USD" and to_ccy == "KRW":
+            return 1100.0 if on >= fx_days[-1] else 1000.0
+        return None
+
+    fx_result = total_return_periods(fx_rows, [], [], "USD", fx_lookup, risk_free_pct=0.0)
+    assert fx_result["1y"]["mean"] > 8.0
+    flat_fx = total_return_periods(fx_rows, [], [], "USD", lambda *_a: 1000.0, risk_free_pct=0.0)
+    assert abs(flat_fx["1y"]["mean"]) < 0.5
 
 
 def test_dedupe_same_currency_duplicates():
