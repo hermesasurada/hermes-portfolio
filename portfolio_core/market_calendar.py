@@ -220,6 +220,9 @@ def korean_exchange_holidays(year: int) -> dict[date, str]:
         date(year, 5, 5): "어린이날",
         date(year, 6, 6): "현충일",
         date(year, 8, 15): "광복절",
+        # 제헌절은 2008년 공휴일에서 빠졌다가 2026년부터 다시 휴장
+        # (실측: 2023~2025-07-17은 정상 거래, 2026-07-17은 국내 시세 0건).
+        **({date(year, 7, 17): "제헌절"} if year >= 2026 else {}),
         date(year, 10, 3): "개천절",
         date(year, 10, 9): "한글날",
         date(year, 12, 25): "성탄절",
