@@ -70,6 +70,11 @@ def yahoo_quote_batch(symbols: list[str]) -> dict[str, dict]:
             "marketState",
             "regularMarketPrice",
             "regularMarketPreviousClose",
+            # 진행 중인 세션의 시·고·저 — 스냅샷 수집기가 당일 봉을 캔들로 저장하는 근거.
+            "regularMarketOpen",
+            "regularMarketDayHigh",
+            "regularMarketDayLow",
+            "regularMarketVolume",
             "preMarketPrice",
             "postMarketPrice",
             "regularMarketTime",

@@ -1776,6 +1776,29 @@ def test_square_logo_aspect_rejects_tall_and_wide_images():
     assert not _is_square_logo(png_header(220, 80), 1.5)
 
 
+def test_snapshot_candle_row_keeps_intraday_ohlc():
+    from portfolio_core.snapshot_collector import candle_row
+
+    # 시·고·저가 모두 오면 OHLC 행 — 그래야 장중에도 오늘 봉이 캔들로 그려진다.
+    row = candle_row("2026-08-20", 216.45, {
+        "open": 218.36, "high": 219.86, "low": 215.66, "volume": 36654373,
+    })
+    assert row == {
+        "date": "2026-08-20", "open": 218.36, "high": 219.86,
+        "low": 215.66, "close": 216.45, "volume": 36654373,
+    }
+    # 지수 폴링은 100배 정수 — 시·고·저만 배율을 되돌린다.
+    assert candle_row("2026-08-20", 6852.58, {
+        "open": 668034, "high": 690455, "low": 660009,
+    }, scale=0.01) == {
+        "date": "2026-08-20", "open": 6680.34, "high": 6904.55,
+        "low": 6600.09, "close": 6852.58,
+    }
+    # 하나라도 없거나 0이면 종가 행으로 물러난다(가짜 시·고·저 금지).
+    assert candle_row("2026-08-20", 42.8, {"open": None, "high": 43.0, "low": 42.0}) == ("2026-08-20", 42.8)
+    assert candle_row("2026-08-20", 42.8, {"open": 0, "high": 43.0, "low": 42.0}) == ("2026-08-20", 42.8)
+
+
 def test_date_helpers():
     assert parse_iso_date("2026-06-08T00:00:00") == date(2026, 6, 8)
     assert parse_iso_date("not-a-date") is None

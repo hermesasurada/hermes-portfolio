@@ -11,6 +11,7 @@ from urllib.parse import quote
 from .collectors import CollectedPrice, FX_SYMBOLS, fetch_crypto_krw
 from .constants import MARKET_INDEXES
 from .db import connect, ensure_live_quote_cache_table, ensure_quote_source_state_table
+from .market_calendar import korea_equity_calendar_day
 from .paths import KST
 from .price_store import load_watch
 from .tickers import kr_ticker_code, normalize_yfinance_symbol, ticker_currency
@@ -124,13 +125,53 @@ def quote_date(row: dict) -> str:
     return datetime.now(KST).strftime("%Y-%m-%d")
 
 
+def _positive_number(value) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number and number > 0 else None
+
+
+def candle_row(date_text: str, close: float, ohlc: dict, scale: float = 1.0) -> dict | tuple:
+    """진행 중인 세션도 캔들로 남기기 위한 일봉 행.
+
+    시세 응답(야후 quote·네이버 폴링)은 그날의 시·고·저를 함께 준다. 종가만
+    저장하면 장중 내내 그 종목의 오늘 봉이 캔들 차트에서 빠진다. 세 값이 다
+    있을 때만 OHLC 행을 만들고, 하나라도 없으면 종가 행으로 물러난다 —
+    가짜 시·고·저는 만들지 않는다(daily_prices upsert의 COALESCE 규약과 동일).
+    """
+    open_value = _positive_number(ohlc.get("open"))
+    high = _positive_number(ohlc.get("high"))
+    low = _positive_number(ohlc.get("low"))
+    if open_value is None or high is None or low is None:
+        return (date_text, close)
+    row = {
+        "date": date_text,
+        "open": open_value * scale,
+        "high": high * scale,
+        "low": low * scale,
+        "close": close,
+    }
+    volume = _positive_number(ohlc.get("volume"))
+    if volume is not None:
+        row["volume"] = volume
+    return row
+
+
 def kr_market_date(timestamp_ms: float | int | None) -> str:
+    """네이버 시세를 기록할 거래일.
+
+    휴장일에도 시세 API는 직전 종가를 그대로 돌려준다. 주말만 되감고 공휴일을
+    넘기면 그날짜로 '거래일 아닌 행'이 생겨(직전 종가 복사·시고저 없음) 캔들이
+    빠지고 지표 창까지 하루씩 밀린다(실측: 2026-08-17 광복절 대체휴일 96종목).
+    """
     observed = datetime.fromtimestamp(float(timestamp_ms or time.time() * 1000) / 1000, KST)
     market_date = observed.date()
     if observed.weekday() >= 5 or observed.hour < 9:
         market_date -= timedelta(days=1)
-        while market_date.weekday() >= 5:
-            market_date -= timedelta(days=1)
+    while korea_equity_calendar_day(market_date)["status"] != "open":
+        market_date -= timedelta(days=1)
     return market_date.isoformat()
 
 
@@ -192,7 +233,12 @@ def fetch_yahoo_snapshots(watch: dict[str, list[str]]) -> tuple[list[CollectedPr
                 currency=currency,
                 source="yf-batch",
                 price_date=date_text,
-                recent=[(date_text, float(price))],
+                recent=[candle_row(date_text, float(price), {
+                    "open": row.get("regularMarketOpen"),
+                    "high": row.get("regularMarketDayHigh"),
+                    "low": row.get("regularMarketDayLow"),
+                    "volume": row.get("regularMarketVolume"),
+                })],
             )
         )
     return fetched, missing
@@ -249,7 +295,12 @@ def fetch_naver_snapshots(watch: dict[str, list[str]]) -> tuple[list[CollectedPr
                             "KRW",
                             "naver-realtime",
                             date_text,
-                            [(date_text, float(price))],
+                            [candle_row(date_text, float(price), {
+                                "open": row.get("ov"),
+                                "high": row.get("hv"),
+                                "low": row.get("lv"),
+                                "volume": row.get("aq"),
+                            })],
                         )
                     )
         if wants_kospi:
@@ -263,7 +314,15 @@ def fetch_naver_snapshots(watch: dict[str, list[str]]) -> tuple[list[CollectedPr
                     price = float(row["nv"]) / 100
                     found.add("KOSPI")
                     fetched.append(
-                        CollectedPrice("KOSPI", price, "KRW", "naver-index", date_text, [(date_text, price)])
+                        CollectedPrice(
+                            "KOSPI", price, "KRW", "naver-index", date_text,
+                            # 지수는 폴링 응답이 100배 정수 — 시·고·저도 같은 배율.
+                            [candle_row(date_text, price, {
+                                "open": row.get("ov"),
+                                "high": row.get("hv"),
+                                "low": row.get("lv"),
+                            }, scale=0.01)],
+                        )
                     )
     except Exception as exc:
         try:
