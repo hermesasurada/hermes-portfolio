@@ -127,6 +127,8 @@ function sessionNoteTitle(note) {
 function changeMarkup(row) {
   const change = changePercentText(row.display_change_pct, true);
   const note = row?.change_session_note;
+  // 배지('휴'·'종')는 CSS에서 absolute로 띄워 레이아웃 폭을 차지하지 않는다.
+  // 폭을 차지하면 우측 정렬 셀에서 그 행의 등락 칩만 왼쪽으로 밀린다.
   if (!note?.label) return change;
   return `<span class="change-with-session">${change}<sup class="change-session-note" title="${esc(sessionNoteTitle(note))}">${esc(note.label)}</sup></span>`;
 }

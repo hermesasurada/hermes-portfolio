@@ -2169,7 +2169,18 @@ th.pc-frozen-edge {
   gap: 1px;
   white-space: nowrap;
 }
+.change-with-session {
+  position: relative;
+}
 .change-session-note {
+  /* 레이아웃 폭 0 — 칩 오른쪽 여백에 겹쳐 띄운다. 배지가 폭을 차지하면
+     우측 정렬 셀에서 배지 있는 행의 칩만 왼쪽으로 밀려 열이 어긋난다
+     (실측: 세부내역 276→269). 관심목록은 열 폭이 빠듯해 자리를 비워두는
+     방식으로는 오히려 정렬이 깨졌다. */
+  position: absolute;
+  left: 100%;
+  top: 0;
+  margin-left: 1px;
   color: var(--muted);
   font-size: 8px;
   font-weight: 750;
@@ -2177,6 +2188,11 @@ th.pc-frozen-edge {
   letter-spacing: -.02em;
   white-space: nowrap;
   transform: translateY(-.6em);
+}
+/* 차트 시세 표기는 흐름 배치 그대로 — 옆에 공간이 충분하다 */
+.chart-session-note {
+  position: static;
+  margin-left: 2px;
 }
 .chart-session-note {
   font-size: 8px;
