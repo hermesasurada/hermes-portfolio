@@ -165,7 +165,10 @@ def apply_kr_live_prices(
         return meta
     if not session["is_extended"]:
         # 세션 밖 — 마지막 연장가를 되살려 계속 보여준다(같은 거래일 한정).
-        meta["restored_count"] = restore_extended_quotes(prices, candidates)
+        # 단 정규장(main) 중에는 제외: 실시간 KRX 시세가 이미 직전 프리마켓 값을
+        # 대체했으므로 되살리면 지나간 값이 연장 열에 남는다.
+        if session["phase"] != "main":
+            meta["restored_count"] = restore_extended_quotes(prices, candidates)
         meta["applied_count"] = _apply_to_valuation(prices, candidates, include_extended)
         meta["include_extended"] = bool(include_extended and meta["applied_count"])
         return meta

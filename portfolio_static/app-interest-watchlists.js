@@ -516,7 +516,9 @@ function syncInterestVisibleColumns(rows) {
   const table = document.querySelector("#interestTableWrap .interest-detail-list");
   if (!table) return;
   const isIndexGroup = interestGroupIsIndex();
-  const hideExtendedByMarket = Boolean(data?.us_market?.is_regular || data?.us_market?.is_closed);
+  // 연장 컬럼은 값 유무로만 판단한다(세부내역과 동일 규칙). 예전엔 미국 장
+  // 상태로 가렸는데, 이제 한국 NXT 연장가가 따로 있어 미국 정규장 시간에
+  // 멀쩡한 한국 값까지 사라졌다. 정규장 중 값 정리는 서버가 담당한다.
   const headers = Array.from(table.querySelectorAll("thead th[data-interest-col]"))
     .sort((a, b) => Number(a.dataset.interestCol) - Number(b.dataset.interestCol));
   const cols = Array.from(table.querySelectorAll("colgroup col"));
@@ -525,7 +527,7 @@ function syncInterestVisibleColumns(rows) {
   let tableWidth = 40 + tickerNameWidth + 40;
   headers.forEach((header, index) => {
     const field = header.dataset.interestSortKey || "";
-    const hide = ((isIndexGroup || hideExtendedByMarket) && field === "extended_change_pct")
+    const hide = (isIndexGroup && field === "extended_change_pct")
       || (Boolean(field)
       && !interestAlwaysVisibleFields.has(field)
       && !rows.some(row => hasInterestColumnValue(row, field)));

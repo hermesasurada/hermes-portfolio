@@ -415,6 +415,8 @@ def apply_us_live_prices(
             }
         meta["live_count"] += 1
     save_extended_quotes(prices, us_tickers)
-    # 정규장 재개 등으로 이번엔 연장가가 없는 종목은 직전 세션 값을 유지한다.
-    meta["restored_count"] = restore_extended_quotes(prices, us_tickers)
+    # 정규장이 돌아가는 동안에는 되살리지 않는다 — 실시간 정규장 시세가 이미
+    # 직전 프리마켓 값을 대체했으므로, 되살리면 지나간 값이 연장 열에 남는다.
+    if not regular_hours:
+        meta["restored_count"] = restore_extended_quotes(prices, us_tickers)
     return meta
