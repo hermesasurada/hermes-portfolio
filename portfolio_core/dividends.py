@@ -29,6 +29,13 @@ TAX_FREE_ACCOUNT_TYPES = {"pension_kr", "retirement_kr"}
 FISCAL_END_MONTH_OVERRIDES = {
     "NVDA": 3,
 }
+# 배당년도가 시작하는 월. 자동 anchor(가장 이른 배당 회차의 월)는 오래된 종목일수록
+# 지금 스케줄과 무관해진다 — 명시가 필요한 종목만 여기 적는다.
+#   HSBC: 영국식 '중간배당 3회 + 결산배당 1회'. 사업연도 2025분은 5·8·11월 중간배당
+#   0.5씩과 이듬해 3월 결산배당이 한 묶음이라 5월이 배당년도의 시작이다.
+DIVIDEND_ANCHOR_MONTH_OVERRIDES = {
+    "HSBC": 5,
+}
 PAY_DATE_YEAR_TICKERS = {"DIS"}
 from .corporate_actions import UNADJUSTED_DIVIDEND_SOURCES  # 공용화(재수출)
 # 원천이 같은 날짜의 정기·특별배당 합계만 제공하는 경우 공식 구성금액으로 분리한다.
@@ -493,10 +500,13 @@ def _attributed_history_events(
     calendar_year: bool = False,
 ) -> tuple[list[dict], int]:
     """DB 행 → 귀속연도가 매겨진 이벤트 목록 + 결산배당 횟수."""
-    # 해외 역년결산/신규배당 종목의 anchor — 가장 이른 배당 회차의 월
+    # 해외 역년결산/신규배당 종목의 anchor — 오버라이드 우선, 없으면 가장 이른 배당 회차의 월
     anchor_month = None
     if not is_korean and not fiscal_end_month and not calendar_year:
+        anchor_month = DIVIDEND_ANCHOR_MONTH_OVERRIDES.get(str(ticker or "").upper())
         for event in event_rows:
+            if anchor_month:
+                break
             first_date = _entitlement_date(event)
             if first_date is not None:
                 anchor_month = first_date.month
@@ -549,6 +559,10 @@ def _attributed_history_events(
         and not calendar_year
         and str(ticker or "").upper() not in FISCAL_END_MONTH_OVERRIDES
         and str(ticker or "").upper() not in PAY_DATE_YEAR_TICKERS
+        # anchor를 명시한 종목은 그 라벨이 곧 사업연도다. 다수결 재라벨을 태우면
+        # 회차가 2회뿐인 해(HSBC 2021~2022)에서 동률→늦은 해로 밀려 이웃 사업연도와
+        # 한 행으로 합쳐진다.
+        and str(ticker or "").upper() not in DIVIDEND_ANCHOR_MONTH_OVERRIDES
     )
     # 특별배당은 사이클·연간 계산을 흔들지 않도록 먼저 표시하고 정기 회차만
     # 재라벨한다(COST 2023-12 $15가 $1.02 사이클을 끊던 회귀).

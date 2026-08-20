@@ -972,6 +972,34 @@ def test_nvda_march_dividend_closes_fiscal_year():
         assert final["date"].month == 3
 
 
+def test_hsbc_groups_three_interims_with_following_final():
+    """영국식 '중간배당 3회 + 이듬해 3월 결산배당 1회'를 한 사업연도로 묶는다."""
+    rows = [
+        {"record_date": None, "ex_date": ex, "pay_date": None, "declaration_date": None, "amount": amount, "source": "test"}
+        for ex, amount in [
+            ("2021-08-19", 0.35), ("2022-03-10", 0.90),
+            ("2022-08-18", 0.45), ("2023-03-02", 1.15),
+            ("2023-05-11", 0.50), ("2023-08-10", 0.50), ("2023-11-09", 0.50), ("2024-03-07", 1.55),
+            ("2024-05-09", 0.50), ("2024-08-16", 0.50), ("2024-11-08", 0.50), ("2025-03-07", 1.80),
+            ("2025-05-09", 0.50), ("2025-08-15", 0.50), ("2025-11-07", 0.50), ("2026-03-13", 2.25),
+        ]
+    ]
+
+    events, _ = _attributed_history_events(rows, "HSBC", False, None)
+    annual = _aggregate_annual_dividends(events)
+
+    # 결산배당은 지급이 이듬해라도 직전 사업연도에 붙는다.
+    assert annual[2025]["payments"] == 4
+    assert round(annual[2025]["amount"], 2) == 3.75
+    assert [event["date"].isoformat() for event in annual[2025]["events"]][-1] == "2026-03-13"
+    assert round(annual[2024]["amount"], 2) == 3.30
+    assert round(annual[2023]["amount"], 2) == 3.05
+    # 회차가 2회뿐인 해도 이웃 사업연도와 합쳐지지 않는다(다수결 재라벨 제외).
+    assert annual[2022]["payments"] == 2
+    assert round(annual[2022]["amount"], 2) == 1.60
+    assert round(annual[2021]["amount"], 2) == 1.25
+
+
 def test_dividend_raise_plateau_uses_start_year_for_us_fiscal_cycle():
     rows = [
         {"record_date": "2023-05-30", "ex_date": None, "pay_date": None, "declaration_date": None, "amount": 1.87, "source": "test"},
