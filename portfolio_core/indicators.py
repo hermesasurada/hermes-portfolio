@@ -107,7 +107,10 @@ def atr_percent(rows: list, period: int = 14) -> float | None:
     return (atr / last) * 100
 
 
-def bollinger_pband(values: list[float], period: int = 20, deviations: float = 2.0) -> float | None:
+def bollinger_bounds(
+    values: list[float], period: int = 20, deviations: float = 2.0
+) -> tuple[float, float, float] | None:
+    """최근 창의 (중심, 상단, 하단)."""
     if len(values) < period:
         return None
     window = [float(value) for value in values[-period:]]
@@ -116,7 +119,30 @@ def bollinger_pband(values: list[float], period: int = 20, deviations: float = 2
     width = (variance ** 0.5) * deviations
     if width == 0:
         return None
-    return (window[-1] - (average - width)) / (width * 2) * 100
+    return average, average + width, average - width
+
+
+def bollinger_pband(values: list[float], period: int = 20, deviations: float = 2.0) -> float | None:
+    bounds = bollinger_bounds(values, period, deviations)
+    if bounds is None:
+        return None
+    _mid, upper, lower = bounds
+    last = float(values[-1])
+    return (last - lower) / (upper - lower) * 100
+
+
+def bollinger_distance_pct(
+    values: list[float], period: int = 20, deviations: float = 2.0
+) -> tuple[float, float] | None:
+    """현재가 대비 상단까지 % · 하단까지 %. 상단 위면 상단%가 음수."""
+    bounds = bollinger_bounds(values, period, deviations)
+    if bounds is None:
+        return None
+    last = float(values[-1])
+    if last <= 0:
+        return None
+    _mid, upper, lower = bounds
+    return (upper / last - 1) * 100, (last - lower) / last * 100
 
 
 def resample_last(rows: list[sqlite3.Row], period: str) -> list[float]:

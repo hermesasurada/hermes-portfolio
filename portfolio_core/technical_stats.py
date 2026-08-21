@@ -14,12 +14,20 @@ from .corporate_actions import (
 )
 from .dates import parse_iso_date, positive_float
 from .db import connect, ensure_technical_stats_cache_table
-from .indicators import atr_percent, bollinger_pband, recent_performance, resample_last, rsi_series, rsi_value
+from .indicators import (
+    atr_percent,
+    bollinger_distance_pct,
+    bollinger_pband,
+    recent_performance,
+    resample_last,
+    rsi_series,
+    rsi_value,
+)
 from .paths import KST
 from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
 from .tickers import ticker_currency
 
-TECHNICAL_CACHE_VERSION = 8  # 8: 분모를 총변동성으로 (Sortino 하방 폐지)
+TECHNICAL_CACHE_VERSION = 9  # 9: 진입 손익비를 밴드 자리(전고점 제거)로
 TECHNICAL_LOOKBACK_DAYS = 11 * 366
 PRICE_ADJUSTED_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
@@ -31,6 +39,14 @@ BETA_WINDOW = 180
 TOTAL_RETURN_PERIODS = (("5y", 1260, 756), ("3y", 756, 252), ("1y", 252, 0))
 DIVIDEND_MAP_MAX_DAYS = 5   # 휴장일 이월 한도 — 초과 배당은 반영하지 않고 품질 P
 FX_LOOKUP_MAX_DAYS = 14
+
+
+def _entry_band_pct(daily: list[float]) -> dict[str, float | None]:
+    distances = bollinger_distance_pct(daily)
+    if distances is None:
+        return {"bb_upper_pct": None, "bb_lower_pct": None}
+    upper, lower = distances
+    return {"bb_upper_pct": round(upper, 4), "bb_lower_pct": round(lower, 4)}
 
 
 def placeholders(items: list[str]) -> str:
@@ -273,6 +289,7 @@ def calculate_technical_stats(
         "performance": recent_performance(rows),
         "drawdown_52w": high_52w_drawdown(daily),
         "atr_pct": None if (value := atr_percent(rows)) is None else round(value, 4),
+        **_entry_band_pct(daily),
         **beta_stats(rows, benchmark_rows or []),
     }
 
@@ -328,6 +345,7 @@ def calculate_price_adjusted_indicators(
             "month": bollinger_pband(monthly),
         },
         "drawdown_52w": high_52w_drawdown(daily),
+        **_entry_band_pct(daily),
     }
 
 

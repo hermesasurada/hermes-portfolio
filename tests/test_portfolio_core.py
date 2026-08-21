@@ -1109,36 +1109,41 @@ def test_risk_reward_score_formula():
 
 def test_entry_risk_reward_score_formula():
     from portfolio_core.entry_reward import entry_risk_reward_score
-    from portfolio_core.indicators import atr_percent
+    from portfolio_core.indicators import atr_percent, bollinger_distance_pct
 
-    # 고점: 업사이드 0
-    assert entry_risk_reward_score(0.0, 2.0, 50, 50, 10.0, 10.0) == 0.0
+    # 상단: 업사이드 0
+    assert entry_risk_reward_score(0.0, 4.0, 2.0, 50, 50, 10.0, 10.0) == 0.0
 
-    # 20% 낙폭 → 고점까지 +25%, ATR 2% → 손절 3% → 25/3
-    at_high = entry_risk_reward_score(-20.0, 2.0, 45, 30, 8.0, 12.0)
-    assert abs(at_high - 25.0 / 3.0) < 0.02
+    # 상단까지 +6%, 하단까지 2%, ATR 2% → 손절 max(3, 2, 1)=3 → 6/3=2
+    mid = entry_risk_reward_score(6.0, 2.0, 2.0, 45, 40, 8.0, 12.0)
+    assert abs(mid - 2.0) < 0.02
 
-    # 고점 근접이 고점보다 점수가 높다
-    near = entry_risk_reward_score(-5.0, 2.0, 45, 30, 8.0, 12.0)
-    far = entry_risk_reward_score(-20.0, 2.0, 45, 30, 8.0, 12.0)
-    assert far > near > 0
+    # 하단 근처가 상단 근처보다 높다
+    near_upper = entry_risk_reward_score(1.0, 5.0, 2.0, 45, 40, 8.0, 12.0)
+    near_lower = entry_risk_reward_score(8.0, 0.5, 2.0, 45, 40, 8.0, 12.0)
+    assert near_lower > near_upper > 0
 
     # 과열(RSI 85)은 0.5배
-    hot = entry_risk_reward_score(-20.0, 2.0, 85, 30, 8.0, 12.0)
-    assert abs(hot - at_high * 0.5) < 0.02
+    hot = entry_risk_reward_score(6.0, 2.0, 2.0, 85, 40, 8.0, 12.0)
+    assert abs(hot - mid * 0.5) < 0.02
 
     # 3·6개월 둘 다 음수면 0.25배
-    down = entry_risk_reward_score(-20.0, 2.0, 45, 30, -5.0, -8.0)
-    assert abs(down - at_high * 0.25) < 0.02
+    down = entry_risk_reward_score(6.0, 2.0, 2.0, 45, 40, -5.0, -8.0)
+    assert abs(down - mid * 0.25) < 0.02
 
-    # ATR 바닥 1% — 25/1=25는 상한 20에 걸린다
-    floor = entry_risk_reward_score(-20.0, 0.2, 45, 30, 8.0, 12.0)
-    assert abs(floor - 20.0) < 0.02
-    uncapped = entry_risk_reward_score(-8.0, 0.2, 45, 30, 8.0, 12.0)
-    assert abs(uncapped - (8.0 / 92.0 * 100)) < 0.05
+    # ATR·하단이 작으면 바닥 1%
+    floor = entry_risk_reward_score(4.0, 0.2, 0.2, 45, 40, 8.0, 12.0)
+    assert abs(floor - 4.0) < 0.02
 
-    assert entry_risk_reward_score(None, 2.0) is None
-    assert entry_risk_reward_score(-10.0, None) is None
+    assert entry_risk_reward_score(None, 2.0, 2.0) is None
+    assert entry_risk_reward_score(6.0, 2.0, None) is None
+
+    # 밴드 거리: 평탄하면 상·하단이 현재가에 가깝다
+    flat = [100.0] * 19 + [100.0]
+    assert bollinger_distance_pct(flat) is None  # width 0
+    series = [100.0 + (index % 5) for index in range(25)]
+    distances = bollinger_distance_pct(series)
+    assert distances is not None and distances[0] > 0 and distances[1] > 0
 
     # ATR: 종가만 있으면 |Δclose|, high/low가 있으면 True Range
     closes = [{"close": 100.0 + index} for index in range(20)]

@@ -1,14 +1,14 @@
-"""진입 손익비 — 지금 가격에서 52주 고점까지 여유 ÷ ATR 손절.
+"""진입 손익비 — 지금 자리의 밴드 상단까지 여유 ÷ ATR·하단 손절.
 
 산식:
-  업사이드 = 52주 고점 / 현재가 − 1  (고점이면 0)
-  손절폭   = max(1.5 × ATR(14)%, 1%)
+  업사이드 = max(일 볼린저 상단 / 현재가 − 1, 0)
+  손절폭   = max(1.5 × ATR(14)%, 하단까지 %, 1%)
   raw      = 업사이드 / 손절폭
   추세     = 3개월·6개월 성과가 둘 다 ≤0 이면 ×0.25
   과열     = 일 RSI>70 또는 일 BB>80 이면 0.25~1로 할인
   점수     = clamp(raw × 추세 × 과열, 0, 20)
 
-변동성 손익비(이력 총변동성 대비 초과수익)와 달리 고점에서 멀수록 점수가 높다.
+52주 고점은 쓰지 않는다. 최근 20일 변동 밴드 안의 현재 자리다.
 """
 
 from __future__ import annotations
@@ -52,25 +52,23 @@ def _trend_factor(perf_3m, perf_6m) -> float:
 
 
 def entry_risk_reward_score(
-    drawdown_52w,
+    upper_pct,
+    lower_pct,
     atr_pct,
     rsi_day=None,
     bb_day=None,
     perf_3m=None,
     perf_6m=None,
 ) -> float | None:
-    """52주 고점 대비 위치와 ATR로 현재 진입 R배수. 고점이면 0."""
-    drawdown = _finite(drawdown_52w)
+    """볼린저 상단까지 / max(1.5×ATR, 하단까지). 상단이면 0."""
+    upper = _finite(upper_pct)
+    lower = _finite(lower_pct)
     atr = _finite(atr_pct)
-    if drawdown is None or atr is None or atr < 0:
+    if upper is None or atr is None or atr < 0:
         return None
-    if drawdown >= 0:
-        upside = 0.0
-    elif drawdown <= -99.9:
-        return None
-    else:
-        upside = (-drawdown) / (100.0 + drawdown) * 100.0
-    stop = max(atr * STOP_ATR_MULT, ATR_FLOOR_PCT)
+    upside = max(upper, 0.0)
+    room_below = max(lower, 0.0) if lower is not None else 0.0
+    stop = max(atr * STOP_ATR_MULT, room_below, ATR_FLOOR_PCT)
     if stop <= 0:
         return None
     raw = upside / stop

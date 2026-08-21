@@ -113,7 +113,8 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
         bands = merged.get("bollinger_pband") or {}
         performance = merged.get("performance") or {}
         merged["entry_risk_reward"] = entry_risk_reward_score(
-            merged.get("drawdown_52w"),
+            merged.get("bb_upper_pct"),
+            merged.get("bb_lower_pct"),
             merged.get("atr_pct"),
             rsi.get("day"),
             bands.get("day"),
