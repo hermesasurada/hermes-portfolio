@@ -110,16 +110,12 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
         merged["risk_reward_basis"] = basis
         merged["risk_reward_quality"] = quality
         rsi = merged.get("rsi") or {}
-        bands = merged.get("bollinger_pband") or {}
-        performance = merged.get("performance") or {}
         merged["entry_risk_reward"] = entry_risk_reward_score(
             merged.get("bb_upper_pct"),
-            merged.get("bb_lower_pct"),
             merged.get("atr_pct"),
             rsi.get("day"),
-            bands.get("day"),
-            performance.get("three_month"),
-            performance.get("six_month"),
+            rsi.get("week"),
+            merged.get("ma20_pct"),
         )
         stats[ticker] = merged
 

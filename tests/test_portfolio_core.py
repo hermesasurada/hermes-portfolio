@@ -1109,34 +1109,45 @@ def test_risk_reward_score_formula():
 
 def test_entry_risk_reward_score_formula():
     from portfolio_core.entry_reward import entry_risk_reward_score
-    from portfolio_core.indicators import atr_percent, bollinger_distance_pct
+    from portfolio_core.indicators import atr_percent, bollinger_distance_pct, ma_pct
 
-    # 상단: 업사이드 0
-    assert entry_risk_reward_score(0.0, 4.0, 2.0, 50, 50, 10.0, 10.0) == 0.0
+    # 상단: 업사이드 0. 주 RSI 55·20일선 위 → 추세 1.0, RSI 중립 1.0
+    assert entry_risk_reward_score(0.0, 2.0, 50, 55, 1.0) == 0.0
 
-    # 상단까지 +6%, 하단까지 2%, ATR 2% → 손절 max(3, 2, 1)=3 → 6/3=2
-    mid = entry_risk_reward_score(6.0, 2.0, 2.0, 45, 40, 8.0, 12.0)
+    # 상단 +6%, ATR 2% → 손절 3% → 6/3=2. RSI 50/55 중립, 이평 위
+    mid = entry_risk_reward_score(6.0, 2.0, 50, 55, 1.0)
     assert abs(mid - 2.0) < 0.02
 
-    # 하단 근처가 상단 근처보다 높다
-    near_upper = entry_risk_reward_score(1.0, 5.0, 2.0, 45, 40, 8.0, 12.0)
-    near_lower = entry_risk_reward_score(8.0, 0.5, 2.0, 45, 40, 8.0, 12.0)
+    # 같은 ATR이면 상단 여유가 큰 쪽이 높다 (하단 거리는 분모에 안 넣음)
+    near_upper = entry_risk_reward_score(1.0, 2.0, 50, 55, 1.0)
+    near_lower = entry_risk_reward_score(8.0, 2.0, 50, 55, 1.0)
     assert near_lower > near_upper > 0
 
-    # 과열(RSI 85)은 0.5배
-    hot = entry_risk_reward_score(6.0, 2.0, 2.0, 85, 40, 8.0, 12.0)
-    assert abs(hot - mid * 0.5) < 0.02
+    # 일 RSI 85 → 0.5, 주 55 중립 → √(0.5×1)=√0.5
+    hot = entry_risk_reward_score(6.0, 2.0, 85, 55, 1.0)
+    assert abs(hot - 2.0 * (0.5 ** 0.5)) < 0.02
 
-    # 3·6개월 둘 다 음수면 0.25배
-    down = entry_risk_reward_score(6.0, 2.0, 2.0, 45, 40, -5.0, -8.0)
-    assert abs(down - mid * 0.25) < 0.02
+    # 일 RSI 40 가점 1.2, 주 55 중립·20일선 위 → √1.2
+    pullback = entry_risk_reward_score(6.0, 2.0, 40, 55, 1.0)
+    assert abs(pullback - 2.0 * (1.2 ** 0.5)) < 0.02
 
-    # ATR·하단이 작으면 바닥 1%
-    floor = entry_risk_reward_score(4.0, 0.2, 0.2, 45, 40, 8.0, 12.0)
+    # 주 RSI≤50·20일선 아래 → 추세 0.25
+    weak = entry_risk_reward_score(6.0, 2.0, 50, 48, -1.0)
+    assert abs(weak - 2.0 * 0.25) < 0.02
+
+    # 주 RSI>50만 → 혼합 0.6
+    mixed = entry_risk_reward_score(6.0, 2.0, 50, 55, -1.0)
+    assert abs(mixed - 2.0 * 0.6) < 0.02
+
+    # ATR 바닥 1%
+    floor = entry_risk_reward_score(4.0, 0.2, 50, 55, 1.0)
     assert abs(floor - 4.0) < 0.02
 
-    assert entry_risk_reward_score(None, 2.0, 2.0) is None
-    assert entry_risk_reward_score(6.0, 2.0, None) is None
+    assert entry_risk_reward_score(None, 2.0) is None
+    assert entry_risk_reward_score(6.0, None) is None
+
+    assert ma_pct([100.0] * 20) == 0.0
+    assert ma_pct([90.0] * 19 + [110.0]) > 0
 
     # 밴드 거리: 평탄하면 상·하단이 현재가에 가깝다
     flat = [100.0] * 19 + [100.0]

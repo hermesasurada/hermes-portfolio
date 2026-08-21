@@ -131,6 +131,18 @@ def bollinger_pband(values: list[float], period: int = 20, deviations: float = 2
     return (last - lower) / (upper - lower) * 100
 
 
+def ma_pct(values: list[float], period: int = 20) -> float | None:
+    """현재가의 N일 이평 대비 % (위면 +, 아래면 −)."""
+    if period <= 0 or len(values) < period:
+        return None
+    window = [float(value) for value in values[-period:]]
+    average = sum(window) / period
+    last = window[-1]
+    if last <= 0 or average <= 0:
+        return None
+    return (last / average - 1) * 100
+
+
 def bollinger_distance_pct(
     values: list[float], period: int = 20, deviations: float = 2.0
 ) -> tuple[float, float] | None:

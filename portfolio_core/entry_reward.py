@@ -1,24 +1,26 @@
-"""진입 손익비 — 지금 자리의 밴드 상단까지 여유 ÷ ATR·하단 손절.
+"""진입 손익비 — 볼린저 목표 / ATR 손절 × RSI × 추세.
 
-산식:
   업사이드 = max(일 볼린저 상단 / 현재가 − 1, 0)
-  손절폭   = max(1.5 × ATR(14)%, 하단까지 %, 1%)
-  raw      = 업사이드 / 손절폭
-  추세     = 3개월·6개월 성과가 둘 다 ≤0 이면 ×0.25
-  과열     = 일 RSI>70 또는 일 BB>80 이면 0.25~1로 할인
-  점수     = clamp(raw × 추세 × 과열, 0, 20)
-
-52주 고점은 쓰지 않는다. 최근 20일 변동 밴드 안의 현재 자리다.
+  손절폭   = max(1.5 × ATR(14)%, 1%)
+  RSI      = 일·주 기하평균. 30~45 가점(1.2), 70+ 감점(최소 0.25)
+  추세     = 주 RSI>50 그리고 20일선 위 → 1.0
+             둘 중 하나만 → 0.6
+             둘 다 아니면 → 0.25
+  점수     = clamp(업사이드/손절 × RSI × 추세, 0, 20)
 """
 
 from __future__ import annotations
 
 STOP_ATR_MULT = 1.5
 ATR_FLOOR_PCT = 1.0
-TREND_PENALTY = 0.25
-OVERBOUGHT_RSI = 70.0
-OVERBOUGHT_BB = 80.0
+RSI_PULLBACK_LOW = 30.0
+RSI_PULLBACK_HIGH = 45.0
+RSI_HOT = 70.0
+RSI_BONUS = 1.2
 MIN_HEAT = 0.25
+TREND_STRONG = 1.0
+TREND_MIXED = 0.6
+TREND_WEAK = 0.25
 SCORE_CAP = 20.0
 
 
@@ -30,49 +32,62 @@ def _finite(value) -> float | None:
     return number if number == number and abs(number) != float("inf") else None
 
 
-def _heat_factor(rsi_day, bb_day) -> float:
-    heat = 1.0
-    rsi = _finite(rsi_day)
-    if rsi is not None and rsi > OVERBOUGHT_RSI:
-        heat = min(heat, max(MIN_HEAT, 1.0 - (rsi - OVERBOUGHT_RSI) / 30.0))
-    band = _finite(bb_day)
-    if band is not None and band > OVERBOUGHT_BB:
-        heat = min(heat, max(MIN_HEAT, 1.0 - (band - OVERBOUGHT_BB) / 20.0))
-    return heat
+def _rsi_leg(rsi) -> float | None:
+    value = _finite(rsi)
+    if value is None:
+        return None
+    if RSI_PULLBACK_LOW <= value <= RSI_PULLBACK_HIGH:
+        return RSI_BONUS
+    if value > RSI_HOT:
+        return max(MIN_HEAT, 1.0 - (value - RSI_HOT) / 30.0)
+    return 1.0
 
 
-def _trend_factor(perf_3m, perf_6m) -> float:
-    three = _finite(perf_3m)
-    six = _finite(perf_6m)
-    if three is None and six is None:
+def _rsi_factor(rsi_day, rsi_week) -> float:
+    legs = [leg for leg in (_rsi_leg(rsi_day), _rsi_leg(rsi_week)) if leg is not None]
+    if not legs:
         return 1.0
-    if (three is not None and three > 0) or (six is not None and six > 0):
-        return 1.0
-    return TREND_PENALTY
+    product = 1.0
+    for leg in legs:
+        product *= leg
+    return product ** (1.0 / len(legs))
+
+
+def _trend_factor(rsi_week, ma20_pct) -> float:
+    week = _finite(rsi_week)
+    ma = _finite(ma20_pct)
+    weekly_up = week is not None and week > 50
+    above_ma = ma is not None and ma > 0
+    if week is None and ma is None:
+        return TREND_STRONG
+    if week is None:
+        return TREND_STRONG if above_ma else TREND_WEAK
+    if ma is None:
+        return TREND_STRONG if weekly_up else TREND_WEAK
+    if weekly_up and above_ma:
+        return TREND_STRONG
+    if weekly_up or above_ma:
+        return TREND_MIXED
+    return TREND_WEAK
 
 
 def entry_risk_reward_score(
     upper_pct,
-    lower_pct,
     atr_pct,
     rsi_day=None,
-    bb_day=None,
-    perf_3m=None,
-    perf_6m=None,
+    rsi_week=None,
+    ma20_pct=None,
 ) -> float | None:
-    """볼린저 상단까지 / max(1.5×ATR, 하단까지). 상단이면 0."""
+    """볼린저 상단까지 / 1.5×ATR, RSI·20일선 추세로 가감."""
     upper = _finite(upper_pct)
-    lower = _finite(lower_pct)
     atr = _finite(atr_pct)
     if upper is None or atr is None or atr < 0:
         return None
     upside = max(upper, 0.0)
-    room_below = max(lower, 0.0) if lower is not None else 0.0
-    stop = max(atr * STOP_ATR_MULT, room_below, ATR_FLOOR_PCT)
+    stop = max(atr * STOP_ATR_MULT, ATR_FLOOR_PCT)
     if stop <= 0:
         return None
-    raw = upside / stop
-    score = raw * _trend_factor(perf_3m, perf_6m) * _heat_factor(rsi_day, bb_day)
+    score = (upside / stop) * _rsi_factor(rsi_day, rsi_week) * _trend_factor(rsi_week, ma20_pct)
     if score < 0:
         score = 0.0
     return round(min(score, SCORE_CAP), 2)
