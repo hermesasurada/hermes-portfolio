@@ -1163,16 +1163,16 @@ def test_risk_reward_score_formula():
 
 def test_entry_risk_reward_score_formula():
     from portfolio_core.entry_reward import (
+        WEEK_UPSIDE_CAP,
         entry_risk_reward_score,
         _rsi_scale,
-        _vol_factor,
     )
     from portfolio_core.indicators import atr_percent, bollinger_distance_pct, ma_pct
 
     # 일·주 상단 0. 주 RSI 55·60일선 위 → 업사이드 0
     assert entry_risk_reward_score(0.0, 2.0, 50, 55, 1.0, 0.0) == 0.0
 
-    # 일·주 +6%, ATR 2% → 손절 3% → 6/3=2. 주 RSI 없음(추세=이평만)·RSI 50·ATR 기준값
+    # 일·주 +6%, ATR 2% → 손절 3% → 6/3=2. 주 RSI 없음(추세=이평만)·일 RSI 50
     mid = entry_risk_reward_score(6.0, 2.0, 50, None, 1.0, 6.0)
     assert abs(mid - 2.0) < 0.02
 
@@ -1183,12 +1183,19 @@ def test_entry_risk_reward_score_formula():
     assert abs(daily_only - 8.0 * 0.3 / 3.0) < 0.02
     assert weekly_room > daily_only
 
+    # 주봉 상단 거리는 30%에서 자른다. 급락 후 4σ 여유를 그대로 쓰지 않는다.
+    capped = entry_risk_reward_score(0.0, 2.0, 50, None, 1.0, 400.0)
+    assert abs(capped - WEEK_UPSIDE_CAP * 0.7 / 3.0) < 0.02
+    uncapped = entry_risk_reward_score(0.0, 2.0, 50, None, 1.0, 20.0)
+    assert abs(uncapped - 20.0 * 0.7 / 3.0) < 0.02
+    assert capped > uncapped
+
     # 같은 ATR이면 상단 여유가 큰 쪽이 높다
     near_upper = entry_risk_reward_score(1.0, 2.0, 50, None, 1.0, 1.0)
     near_lower = entry_risk_reward_score(8.0, 2.0, 50, None, 1.0, 8.0)
     assert near_lower > near_upper > 0
 
-    # RSI는 구간 버킷이 아니라 값 연속. 주 RSI는 업트렌드(55)로 고정하고 일 RSI만 움직인다.
+    # 타이밍 RSI는 일봉만. 주 RSI는 추세에만 쓰이므로 일 RSI만 바꿔도 점수가 갈린다.
     rsi_scores = [
         entry_risk_reward_score(6.0, 2.0, value, 55, 1.0, 6.0)
         for value in (30, 40, 50, 70, 85)
@@ -1197,27 +1204,27 @@ def test_entry_risk_reward_score_formula():
     assert abs(_rsi_scale(50) - 1.0) < 1e-9
     assert _rsi_scale(40) > _rsi_scale(45) > 1.0
     assert 0.25 <= _rsi_scale(90) < _rsi_scale(70) < 1.0
+    # 주 RSI가 낮아도 일 RSI 50이면 타이밍 계수는 1.0 (추세만 약해진다)
+    same_timing = entry_risk_reward_score(6.0, 2.0, 50, 30, 1.0, 6.0)
+    assert abs(same_timing - 2.0 * 0.6) < 0.02
 
-    # 주 RSI≤50·60일선 아래 → 추세 0.25. 일 RSI 50만 써서 RSI 계수는 거의 1
+    # 주 RSI≤50·60일선 아래 → 추세 0.25. 일 RSI 50 → 타이밍 1.0
     weak = entry_risk_reward_score(6.0, 2.0, 50, 48, -1.0, 6.0)
-    expected_weak = 2.0 * (1.0 ** 0.4 * _rsi_scale(48) ** 0.6) * 0.25
-    assert abs(weak - expected_weak) < 0.02
+    assert abs(weak - 2.0 * 0.25) < 0.02
 
     # 주 RSI>50만 → 혼합 0.6
     mixed = entry_risk_reward_score(6.0, 2.0, 50, 55, -1.0, 6.0)
-    expected_mixed = 2.0 * (1.0 ** 0.4 * _rsi_scale(55) ** 0.6) * 0.6
-    assert abs(mixed - expected_mixed) < 0.02
+    assert abs(mixed - 2.0 * 0.6) < 0.02
 
-    # ATR 바닥 1%. ATR 0.2%여도 손절은 1%, 변동성 바닥 0.7
+    # ATR 바닥 1%. ATR 0.2%여도 손절은 1%
     floor = entry_risk_reward_score(4.0, 0.2, 50, None, 1.0, 4.0)
-    assert abs(floor - 4.0 * _vol_factor(0.2)) < 0.02
-    assert abs(_vol_factor(0.2) - 0.7) < 1e-9
+    assert abs(floor - 4.0) < 0.02
 
-    # 같은 밴드·RSI라도 ATR이 크면 변동성 가점이 손절 확대의 일부를 상쇄한다
+    # ATR은 손절 폭으로만. 같은 밴드면 ATR이 큰 쪽이 점수가 낮다 (가점 없음)
     low_vol = entry_risk_reward_score(6.0, 2.0, 50, None, 1.0, 6.0)
     high_vol = entry_risk_reward_score(6.0, 4.0, 50, None, 1.0, 6.0)
     assert low_vol > high_vol > 0
-    assert abs(high_vol / low_vol - 0.5 * (2.0 ** 0.5)) < 0.02
+    assert abs(high_vol / low_vol - 0.5) < 0.02
 
     assert entry_risk_reward_score(None, 2.0) is None
     assert entry_risk_reward_score(6.0, None) is None
