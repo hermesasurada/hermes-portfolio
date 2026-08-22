@@ -14,6 +14,7 @@ from .db import (
     ensure_stock_split_tables,
     ensure_ticker_metadata_columns,
 )
+from .earnings_history import NEAR_EARNINGS_DAYS
 from .paths import KST
 from .tickers import ticker_currency
 
@@ -528,6 +529,18 @@ def update_earnings_dates(entries: Iterable[tuple[str, str | None]]) -> int:
             if parsed is not None:
                 event_entries.append((ticker, parsed.isoformat(), "collector", updated_at))
         if event_entries:
+            conn.executemany(
+                """
+                DELETE FROM earnings_events
+                WHERE ticker = ?
+                  AND earnings_date != ?
+                  AND abs(julianday(earnings_date) - julianday(?)) <= ?
+                """,
+                [
+                    (ticker, date_text, date_text, NEAR_EARNINGS_DAYS)
+                    for ticker, date_text, _source, _observed_at in event_entries
+                ],
+            )
             conn.executemany(
                 """
                 INSERT OR IGNORE INTO earnings_events

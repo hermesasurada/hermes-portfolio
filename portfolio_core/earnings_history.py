@@ -8,7 +8,12 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from .dates import parse_iso_date
 from .db import ensure_earnings_events_table, ensure_ticker_metadata_columns
+
+# Yahoo 실적일은 예상 윈도우 시작/끝·타임존으로 며칠씩 흔들린다.
+# 이 간격 안은 같은 분기 발표로 보고 하나만 남긴다.
+NEAR_EARNINGS_DAYS = 7
 
 
 _RUN_HEADER_RE = re.compile(
@@ -119,11 +124,66 @@ def cached_yfinance_candidates(
     return candidates
 
 
+def collapse_near_earnings_events(
+    events: list,
+    preferred_dates: dict[str, str] | None = None,
+    max_days: int = NEAR_EARNINGS_DAYS,
+) -> list[dict]:
+    """같은 종목에서 max_days 이내 실적일은 한 분기의 날짜 흔들림으로 보고 하나만 남긴다.
+
+    `tickers.next_earnings_date`가 클러스터 안에 있으면 그걸 우선하고,
+    아니면 가장 나중에 관측된 날짜를 남긴다.
+    """
+    preferred = {
+        str(ticker).upper(): str(value)[:10]
+        for ticker, value in (preferred_dates or {}).items()
+        if value
+    }
+    grouped: dict[str, list[dict]] = {}
+    for event in events:
+        payload = dict(event)
+        ticker = str(payload.get("ticker") or "").strip().upper()
+        event_date = parse_iso_date(payload.get("earnings_date"))
+        if not ticker or event_date is None:
+            continue
+        payload["ticker"] = ticker
+        payload["earnings_date"] = event_date.isoformat()
+        grouped.setdefault(ticker, []).append(payload)
+
+    collapsed: list[dict] = []
+    for ticker, items in grouped.items():
+        items.sort(key=lambda item: item["earnings_date"])
+        clusters: list[list[dict]] = []
+        for item in items:
+            item_date = parse_iso_date(item["earnings_date"])
+            if clusters:
+                last_date = parse_iso_date(clusters[-1][-1]["earnings_date"])
+                if (
+                    last_date is not None
+                    and item_date is not None
+                    and (item_date - last_date).days <= max_days
+                ):
+                    clusters[-1].append(item)
+                    continue
+            clusters.append([item])
+        preferred_date = preferred.get(ticker)
+        for cluster in clusters:
+            chosen = next((item for item in cluster if item["earnings_date"] == preferred_date), None)
+            if chosen is None:
+                chosen = max(
+                    cluster,
+                    key=lambda item: (str(item.get("observed_at") or ""), item["earnings_date"]),
+                )
+            collapsed.append(chosen)
+    collapsed.sort(key=lambda item: (item["earnings_date"], item["ticker"]))
+    return collapsed
+
+
 def backfill_earnings_month(
     conn: sqlite3.Connection,
     month: str,
     log_paths: list[Path],
-    duplicate_tolerance_days: int = 7,
+    duplicate_tolerance_days: int = NEAR_EARNINGS_DAYS,
 ) -> dict[str, int]:
     """한 달의 실적일을 캐시 우선, 수집 로그 보완 순서로 이력 테이블에 복원한다."""
     _month_prefix(month)

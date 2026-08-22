@@ -12,6 +12,7 @@ from .db import (
     ensure_ticker_metadata_columns,
 )
 from .dividend_schedule import add_months, consolidated_dividend_events, event_schedule_date
+from .earnings_history import collapse_near_earnings_events
 from .tickers import ticker_scope
 
 
@@ -72,7 +73,7 @@ def load_schedule(
         }
         earnings_rows = conn.execute(
             """
-            SELECT e.ticker, e.earnings_date, e.source
+            SELECT e.ticker, e.earnings_date, e.source, e.observed_at
             FROM earnings_events e
             JOIN tickers t ON t.ticker = e.ticker
             WHERE t.category IN ('kr', 'overseas')
@@ -117,6 +118,14 @@ def load_schedule(
         }
         for row in ticker_rows
     }
+    earnings_rows = collapse_near_earnings_events(
+        [dict(row) for row in earnings_rows],
+        {
+            ticker: meta["earnings_date"]
+            for ticker, meta in ticker_meta.items()
+            if meta.get("earnings_date")
+        },
+    )
     earnings = []
     for event in earnings_rows:
         ticker = str(event["ticker"]).upper()

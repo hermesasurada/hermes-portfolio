@@ -24,7 +24,7 @@ import portfolio_core.dividends as dividends_module
 import portfolio_core.schedule as schedule_module
 import portfolio_core.ticker_metadata as ticker_metadata_module
 import portfolio_core.price_store as price_store_module
-from portfolio_core.earnings_history import backfill_earnings_month
+from portfolio_core.earnings_history import backfill_earnings_month, collapse_near_earnings_events
 import collect_prices as collect_prices_module
 from portfolio_core.collect_common import parse_categories
 from portfolio_core.collectors import CollectedPrice
@@ -219,6 +219,61 @@ def test_earnings_history_backfill_prefers_cache_and_avoids_near_duplicates(tmp_
     assert result["inserted_yfinance_cache"] == 1
     assert result["skipped_duplicate"] == 1
     conn.close()
+
+
+def test_collapse_near_earnings_events_keeps_preferred_date():
+    events = [
+        {"ticker": "AVGO", "earnings_date": "2026-09-03", "source": "collector", "observed_at": "2026-08-04"},
+        {"ticker": "AVGO", "earnings_date": "2026-09-04", "source": "ticker-cache", "observed_at": "2026-08-01"},
+        {"ticker": "AVGO", "earnings_date": "2026-06-03", "source": "yfinance-info-cache", "observed_at": "2026-07-31"},
+        {"ticker": "PL", "earnings_date": "2026-09-04", "source": "collector", "observed_at": "2026-08-08"},
+        {"ticker": "PL", "earnings_date": "2026-09-10", "source": "ticker-cache", "observed_at": "2026-08-01"},
+    ]
+    collapsed = collapse_near_earnings_events(
+        events,
+        {"AVGO": "2026-09-03", "PL": "2026-09-04"},
+    )
+    assert [(row["ticker"], row["earnings_date"]) for row in collapsed] == [
+        ("AVGO", "2026-06-03"),
+        ("AVGO", "2026-09-03"),
+        ("PL", "2026-09-04"),
+    ]
+
+
+def test_update_earnings_dates_replaces_nearby_estimate():
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute(
+        """
+        CREATE TABLE tickers (
+            ticker TEXT PRIMARY KEY,
+            next_earnings_date TEXT,
+            earnings_updated_at TEXT,
+            display_name TEXT,
+            sector TEXT
+        )
+        """
+    )
+    conn.execute(
+        "INSERT INTO tickers (ticker, next_earnings_date, earnings_updated_at) VALUES (?, ?, ?)",
+        ("AVGO", "2026-09-04", "2026-08-01T00:00:00+09:00"),
+    )
+
+    @contextmanager
+    def fake_connect():
+        yield conn
+
+    original_connect = price_store_module.connect
+    try:
+        price_store_module.connect = fake_connect
+        price_store_module.update_earnings_dates([("AVGO", "2026-09-03")])
+        rows = conn.execute(
+            "SELECT earnings_date FROM earnings_events WHERE ticker = 'AVGO' ORDER BY earnings_date"
+        ).fetchall()
+        assert [row["earnings_date"] for row in rows] == ["2026-09-03"]
+    finally:
+        price_store_module.connect = original_connect
+        conn.close()
 
 
 # --- fundamentals.parse_number (the regression that started all this) -------
