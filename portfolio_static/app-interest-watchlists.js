@@ -703,9 +703,11 @@ function renderInterestMainTable() {
       <td>${dispersionText(r.dispersion_pct, quoteFor(r.ticker)?.dispersion_basis)}</td>
       <td>${buyStrengthMarkup(r.buy_strength)}</td>
       <td>${ratingChipMarkup(r.rating_label)}</td>
-      <td class="group-start">${group.fixed || isProtectedInterestItem(r, group)
+      <td class="group-start">${isProtectedInterestItem(r, group)
         ? ""
-        : `<button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button>`}</td>
+        : group.fixed
+          ? `<button class="interest-row-delete" type="button" data-interest-unregister="${esc(r.ticker)}" aria-label="${esc(r.name)} 수집 제외" title="수집 대상에서 제외">×</button>`
+          : `<button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button>`}</td>
     </tr>
   `).join("") : interestEmptyRow(nameFilterValue()
     ? "명칭 검색 결과가 없습니다."
@@ -937,6 +939,21 @@ function initInterestWatchlists() {
   document.getElementById("interestBulkApply")?.addEventListener("click", applyInterestBulkSelection);
 
   document.getElementById("interestRows")?.addEventListener("click", event => {
+    const unregister = event.target.closest("[data-interest-unregister]");
+    if (unregister) {
+      const group = activeInterestGroup();
+      const ticker = unregister.dataset.interestUnregister;
+      const item = group?.items.find(row => row.ticker === ticker);
+      if (!group?.fixed || !item) return;
+      if (!window.confirm(`'${item.name || item.ticker}' 종목을 수집 대상에서 제외할까요?\n시세·배당 이력이 삭제됩니다.`)) return;
+      mutateInterestWatchlist(async () => {
+        const payload = await apiUnregisterCollectedTicker(item.ticker);
+        if (data?.tickers) data.tickers = data.tickers.filter(row => row.ticker !== item.ticker);
+        if (typeof statsData === "object" && statsData) delete statsData[item.ticker];
+        return payload;
+      }, "수집 대상에서 제외하는 중...", true);
+      return;
+    }
     const remove = event.target.closest("[data-interest-main-remove]");
     if (!remove) return;
     const group = activeInterestGroup();

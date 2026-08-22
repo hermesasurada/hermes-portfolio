@@ -1866,6 +1866,66 @@ def test_update_ticker_display_name():
         conn.close()
 
 
+def test_unregister_collected_ticker_purges_prices_and_rejects_protected():
+    import portfolio_core.watchlist as watchlist_module
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE tickers (ticker TEXT PRIMARY KEY, name TEXT, category TEXT)")
+    conn.execute("CREATE TABLE holdings (ticker TEXT, qty REAL)")
+    conn.execute("CREATE TABLE transactions (ticker TEXT)")
+    for table in watchlist_module.TICKER_DATA_TABLES:
+        conn.execute(f"CREATE TABLE IF NOT EXISTS {table} (ticker TEXT)")
+    conn.execute("INSERT INTO tickers VALUES ('MRNA', 'Moderna', 'overseas')")
+    conn.execute("INSERT INTO tickers VALUES ('NVDA', 'NVIDIA', 'overseas')")
+    conn.execute("INSERT INTO daily_prices VALUES ('MRNA')")
+    conn.execute("INSERT INTO daily_prices VALUES ('NVDA')")
+    conn.execute("INSERT INTO dividend_events VALUES ('MRNA')")
+    conn.execute("INSERT INTO holdings VALUES ('NVDA', 1)")
+    conn.execute("INSERT INTO interest_watchlist_items VALUES ('NVDA')")
+    conn.execute("INSERT INTO daily_prices VALUES ('002620.KS')")  # orphan
+    conn.commit()
+
+    @contextmanager
+    def fake_connect():
+        yield conn
+
+    original_connect = watchlist_module.connect
+    original_logo = watchlist_module.delete_ticker_logo
+    original_load = watchlist_module.load_interest_watchlists
+    try:
+        watchlist_module.connect = fake_connect
+        watchlist_module.delete_ticker_logo = lambda ticker: None
+        watchlist_module.load_interest_watchlists = lambda: {"groups": []}
+
+        try:
+            watchlist_module.unregister_collected_ticker({"ticker": "USDKRW"})
+        except ValueError as exc:
+            assert "환율" in str(exc)
+        else:
+            raise AssertionError("FX ticker was unregistered")
+
+        try:
+            watchlist_module.unregister_collected_ticker({"ticker": "NVDA"})
+        except ValueError as exc:
+            assert "관심그룹" in str(exc)
+        else:
+            raise AssertionError("grouped ticker was unregistered")
+
+        result = watchlist_module.unregister_collected_ticker({"ticker": "mrna"})
+        assert result == {"groups": []}
+        assert conn.execute("SELECT 1 FROM tickers WHERE ticker = 'MRNA'").fetchone() is None
+        assert conn.execute("SELECT 1 FROM daily_prices WHERE ticker = 'MRNA'").fetchone() is None
+        assert conn.execute("SELECT 1 FROM dividend_events WHERE ticker = 'MRNA'").fetchone() is None
+        assert conn.execute("SELECT 1 FROM tickers WHERE ticker = 'NVDA'").fetchone() is not None
+        assert conn.execute("SELECT 1 FROM daily_prices WHERE ticker = '002620.KS'").fetchone() is None
+    finally:
+        watchlist_module.connect = original_connect
+        watchlist_module.delete_ticker_logo = original_logo
+        watchlist_module.load_interest_watchlists = original_load
+        conn.close()
+
+
 def test_clean_ticker_display_name_rejects_blank_and_long_values():
     for value in ("", "   ", None, "x" * 81):
         try:

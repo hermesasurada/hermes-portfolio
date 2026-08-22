@@ -119,6 +119,14 @@ function apiAddWatchlist(tickers) {
   });
 }
 
+function apiUnregisterCollectedTicker(ticker) {
+  return fetchJson("/api/watchlist/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ticker }),
+  });
+}
+
 function apiFetchInterestWatchlists() {
   return fetchJson("/api/interest-watchlists");
 }

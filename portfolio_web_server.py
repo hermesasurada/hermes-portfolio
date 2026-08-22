@@ -45,7 +45,7 @@ from portfolio_core.tickers import asset_class
 from portfolio_core.transactions import add_transaction, delete_transaction, load_transactions, update_transaction
 from portfolio_core.ticker_lookup import is_registered_ticker, lookup_ticker
 from portfolio_core.ticker_metadata import update_ticker_display_name
-from portfolio_core.watchlist import add_watchlist_async
+from portfolio_core.watchlist import add_watchlist_async, unregister_collected_ticker
 
 
 # 애널리스트 컨센서스는 별도 서비스(analyst-reports, 8767)가 담당한다. 같은
@@ -490,6 +490,9 @@ class Handler(BaseHTTPRequestHandler):
         payload = self.read_json()
         return add_watchlist_async(payload.get("tickers") or [])
 
+    def post_watchlist_delete(self) -> dict:
+        return unregister_collected_ticker(self.read_json())
+
     def post_interest_group(self) -> dict:
         return create_interest_group(self.read_json())
 
@@ -575,6 +578,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/transactions/update": self.post_transaction_update,
                 "/api/transactions/delete": self.post_transaction_delete,
                 "/api/watchlist": self.post_watchlist,
+                "/api/watchlist/delete": self.post_watchlist_delete,
                 "/api/interest-watchlists/groups": self.post_interest_group,
                 "/api/interest-watchlists/groups/rename": self.post_interest_group_rename,
                 "/api/interest-watchlists/groups/reorder": self.post_interest_group_reorder,
