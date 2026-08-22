@@ -106,6 +106,7 @@ SVG_PREFERRED_LOGOS = frozenset(
         "HWM",  # Howmet Aerospace
         "MEDP",  # Medpace Holdings
         "FSLR",  # First Solar
+        "688836.SS",  # Unitree — official square symbol SVG
         *FX_TICKERS,
         *MARKET_INDEXES,
         *KOREAN_ETF_BRANDS,
