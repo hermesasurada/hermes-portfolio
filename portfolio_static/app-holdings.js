@@ -130,10 +130,7 @@ function optionalNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 function listSortValue(row, key) {
-  if (key !== "extended_change_pct") return row?.[key];
-  // 장외시장이 없는 유럽 등 비미국 종목도 연장 정렬에서 빠지지 않도록
-  // 장외 등락이 없을 때는 화면의 정규장 등락률을 정렬값으로 사용한다.
-  return optionalNumber(row?.extended_change_pct) ?? optionalNumber(row?.display_change_pct);
+  return row?.[key];
 }
 function holdingChangeBasePrice(row) {
   const currentPrice = optionalNumber(row.current_price);

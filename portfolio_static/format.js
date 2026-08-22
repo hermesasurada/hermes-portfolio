@@ -143,11 +143,10 @@ function extendedChangeText(row) {
   return changePercentText(row.extended_change_pct);
 }
 function changeKrwText(v) {
-  if (!Number.isFinite(v)) return "-";
+  if (!Number.isFinite(v) || Math.abs(v) <= 10000) return "-";
   const cls = v > 0 ? "up" : v < 0 ? "down" : "flat";
   const arrow = v > 0 ? "▲" : v < 0 ? "▼" : "→";
-  const amount = Math.abs(v) < 0.5 ? "0원" : krwRoundedMan(Math.abs(v));
-  return `<span class="change-cell ${cls}"><span aria-hidden="true">${arrow}</span>${amount}</span>`;
+  return `<span class="change-cell ${cls}"><span aria-hidden="true">${arrow}</span>${krwRoundedMan(Math.abs(v))}</span>`;
 }
 function weightText(pct) {
   return Number.isFinite(pct) ? `${fmt2.format(pct)}%` : "-";
