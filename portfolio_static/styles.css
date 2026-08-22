@@ -5618,8 +5618,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .transaction-actions button {
   cursor: pointer;
 }
-.side-buy { color: var(--up); font-weight: 800; }
-.side-sell { color: var(--down); font-weight: 800; }
 .holdings-section .table-wrap {
   max-height: calc(100vh - 190px);
   overflow: auto;

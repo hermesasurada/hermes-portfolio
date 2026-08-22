@@ -245,19 +245,14 @@ function txEditRow(tx) {
 }
 
 function txViewRow(tx) {
-  const sideClass = tx.side === "BUY" ? "side-buy" : "side-sell";
-  const sideText = tx.side === "BUY" ? "매수" : "매도";
+  const buy = tx.side === "BUY";
+  const sideChip = `<span class="change-cell pct-chip ${buy ? "up" : "down"}">${buy ? "매수" : "매도"}</span>`;
   const amount = (tx.qty || 0) * (tx.price || 0);
   const account = `${tx.member || ""} · ${tx.account_name || tx.account_type || ""}`;
   const currentPrice = currentPriceForTicker(tx.ticker);
   const currentPriceText = currentPrice != null ? unitMoney(currentPrice, tx.currency, tx.ticker) : "-";
-  const diff = currentPrice != null && tx.price ? currentPrice - tx.price : null;
-  const pct = diff != null && tx.price ? diff / tx.price * 100 : null;
-  const compareClass = diff > 0 ? "up" : diff < 0 ? "down" : "flat";
-  const compareArrow = diff > 0 ? "▲" : diff < 0 ? "▼" : "→";
-  const compareText = diff != null
-    ? `<span class="change-cell ${compareClass}"><span aria-hidden="true">${compareArrow}</span>${fmt2.format(Math.abs(pct))}%</span>`
-    : "-";
+  const pct = currentPrice != null && tx.price ? (currentPrice - tx.price) / tx.price * 100 : null;
+  const compareText = changePercentText(pct, true);
   const hidden = transactionIsHidden(tx);
   const hideLabel = hidden ? "표시" : "숨기기";
   const hideIcon = hidden ? TX_SHOW_SVG : TX_HIDE_SVG;
@@ -267,7 +262,7 @@ function txViewRow(tx) {
       <td>${esc(account)}</td>
       <td>${txTickerCell(tx)}</td>
       <td class="tx-name-cell">${esc(tx.name || "")}</td>
-      <td><span class="${sideClass}">${sideText}</span></td>
+      <td>${sideChip}</td>
       <td>${tradeQtyText(tx.qty || 0, tx.ticker)}</td>
       <td>${unitMoney(tx.price, tx.currency, tx.ticker)}</td>
       <td>${money(amount, tx.currency)}</td>
