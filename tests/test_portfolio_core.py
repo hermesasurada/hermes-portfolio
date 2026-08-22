@@ -92,7 +92,12 @@ from portfolio_core.tickers import (
     ticker_currency,
     ticker_scope,
 )
-from portfolio_core.logos import _is_square_logo, candidate_symbols, logo_stem
+from portfolio_core.logos import (
+    _is_letter_placeholder,
+    _is_square_logo,
+    candidate_symbols,
+    logo_stem,
+)
 from portfolio_core.watchlist import estimate_hydration_minutes, normalize_lookup_ticker
 
 
@@ -1963,6 +1968,30 @@ def test_square_logo_aspect_rejects_tall_and_wide_images():
     assert _is_square_logo(png_header(100, 100), 1.3)
     assert not _is_square_logo(png_header(85, 128), 1.3)
     assert not _is_square_logo(png_header(220, 80), 1.5)
+
+
+def test_letter_placeholder_matches_gstatic_gray_tile_only():
+    import io
+
+    from PIL import Image
+
+    def png_bytes(size, color):
+        image = Image.new("RGBA", (size, size), color)
+        buf = io.BytesIO()
+        image.save(buf, format="PNG")
+        return buf.getvalue()
+
+    gray_letter = png_bytes(256, (226, 226, 226, 255))
+    assert 500 <= len(gray_letter) <= 3500
+    assert _is_letter_placeholder(gray_letter)
+
+    # ProShares SSO 같은 회색 타일+실로고는 크기가 커서 이니셜이 아니다.
+    assert not _is_letter_placeholder(gray_letter + b"\x00" * 4000)
+
+    # 흰 배경 워드마크·다른 해상도는 스킵.
+    assert not _is_letter_placeholder(png_bytes(256, (255, 255, 255, 255)))
+    assert not _is_letter_placeholder(png_bytes(150, (226, 226, 226, 255)))
+    assert not _is_letter_placeholder(b"not-a-png")
 
 
 def test_snapshot_candle_row_keeps_intraday_ohlc():

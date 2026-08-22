@@ -160,6 +160,39 @@ def _is_square_logo(body: bytes | None, max_aspect: float) -> bool:
     return width >= 48 and height >= 48 and len(body) > 400 and aspect <= max_aspect
 
 
+def _is_letter_placeholder(body: bytes | None) -> bool:
+    """Google/gstatic 회색 배경 + 이니셜 한 글자 파비콘. 기업 심볼이 아니다.
+
+    gstatic 이니셜은 보통 128/192/256 정방형에 1–3.5KB. 모서리 회색만 보면
+    ProShares처럼 회색 타일 위 실제 로고를 오탐하므로 크기 조건과 같이 본다.
+    """
+    if not body or not body.startswith(PNG_MAGIC):
+        return False
+    dims = _png_dimensions(body)
+    if not dims:
+        return False
+    width, height = dims
+    if width != height or width not in {128, 192, 256}:
+        return False
+    if not (500 <= len(body) <= 3500):
+        return False
+    try:
+        import io
+
+        from PIL import Image
+
+        image = Image.open(io.BytesIO(body)).convert("RGBA")
+        pixel = image.getpixel((max(1, width // 16), max(1, height // 16)))
+        red, green, blue, alpha = pixel
+        if alpha < 200:
+            return False
+        saturation = max(red, green, blue) - min(red, green, blue)
+        luminance = 0.299 * red + 0.587 * green + 0.114 * blue
+        return saturation <= 8 and 200 <= luminance <= 240
+    except Exception:
+        return True
+
+
 def _http_get(url: str, timeout: float = 10.0) -> bytes | None:
     try:
         with urllib.request.urlopen(urllib.request.Request(url, headers=FAVICON_HEADERS), timeout=timeout) as resp:
@@ -196,6 +229,8 @@ def fetch_square_symbol(domain: str | None, timeout: float = 10.0) -> tuple[byte
     for name, url, source_timeout in sources:
         body = _http_get(url, timeout=source_timeout)
         if not _is_square_logo(body, FAVICON_MAX_ASPECT):
+            continue
+        if _is_letter_placeholder(body):
             continue
         if name == "icon.horse" and hashlib.md5(body).hexdigest().startswith(ICONHORSE_GENERIC_MD5):
             continue
@@ -276,7 +311,9 @@ def cache_logo(ticker: str, name: str | None = None, domain: str | None = None, 
     LOGO_DIR.mkdir(parents=True, exist_ok=True)
     existing = existing_logo_path(ticker)
     if keep_existing and existing:
-        return {"saved": False, "path": existing.name, "source": "existing"}
+        existing_body = existing.read_bytes() if existing.suffix.lower() == ".png" else None
+        if existing_body is None or not _is_letter_placeholder(existing_body):
+            return {"saved": False, "path": existing.name, "source": "existing"}
 
     # 0) 한국 ETF → 운용사 브랜드 로고 우선(개별 로고 대신 KODEX·TIGER·ACE·SOL 등).
     brand_source = kr_etf_brand_source(ticker, name if name is not None else _lookup_ticker_name(ticker))
