@@ -580,12 +580,17 @@ def _attributed_history_events(
 
     if relabel and regular_events:
         if fiscal_end_month:
+            # 배당년도는 인상월에 시작한다. 같은 금액이 4회를 넘어 이어지면
+            # (수년 동결) 앞에서 4개씩 자르면 현재 인상월과 어긋나 잘린 해가
+            # 생긴다(WAB 2021). 인상월이 돌아오면 새 해를 연다.
+            raise_month = fiscal_end_month % 12 + 1
             cycle: list[dict] = []
             previous_amount: float | None = None
             for event in regular_events:
                 amount = float(event["amount"])
                 same_cycle = _same_dividend_cycle_amount(amount, previous_amount)
-                if cycle and (len(cycle) >= 4 or not same_cycle):
+                new_dividend_year = bool(cycle) and event["date"].month == raise_month
+                if cycle and (len(cycle) >= 4 or not same_cycle or new_dividend_year):
                     label_year = cycle[0]["date"].year
                     for item in cycle:
                         item["year"] = label_year

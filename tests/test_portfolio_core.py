@@ -1022,6 +1022,60 @@ def test_dividend_raise_plateau_uses_start_year_for_us_fiscal_cycle():
     assert round(annual[2024]["amount"], 6) == 8.24
 
 
+def test_long_dividend_plateau_aligns_to_current_raise_month():
+    """수년 동결 뒤 인상월이 바뀌어도 잘린 해를 만들지 않는다.
+
+    WAB: $0.12를 8월부터 이어 오다가 2022-02에 인상. 4회씩 앞에서 자르면
+    2021-02·05가 2020으로 넘어가고 2021은 2회($0.24)만 남아 5년 CAGR이 부풀었다.
+    """
+    rows = []
+    for record_date, amount in [
+        ("2019-08-09", 0.12), ("2019-11-15", 0.12),
+        ("2020-02-07", 0.12), ("2020-05-08", 0.12),
+        ("2020-08-14", 0.12), ("2020-11-13", 0.12),
+        ("2021-02-12", 0.12), ("2021-05-07", 0.12),
+        ("2021-08-13", 0.12), ("2021-11-15", 0.12),
+        ("2022-02-25", 0.15), ("2022-05-20", 0.15),
+        ("2022-08-15", 0.15), ("2022-11-14", 0.15),
+        ("2023-02-24", 0.17), ("2023-05-30", 0.17),
+        ("2023-08-14", 0.17), ("2023-11-15", 0.17),
+        ("2024-02-23", 0.20), ("2024-05-28", 0.20),
+        ("2024-08-14", 0.20), ("2024-11-13", 0.20),
+        ("2025-02-21", 0.25), ("2025-05-27", 0.25),
+        ("2025-08-14", 0.25), ("2025-11-12", 0.25),
+        ("2026-02-17", 0.31), ("2026-05-22", 0.31),
+        ("2026-08-18", 0.31),
+    ]:
+        rows.append({
+            "record_date": record_date,
+            "ex_date": None,
+            "pay_date": None,
+            "declaration_date": None,
+            "amount": amount,
+            "source": "test",
+        })
+
+    events, _ = _attributed_history_events(rows, "WAB", False, 1)
+    annual = _aggregate_annual_dividends(events)
+
+    assert annual[2020]["payments"] == 4
+    assert round(annual[2020]["amount"], 2) == 0.48
+    assert [event["date"].isoformat()[:7] for event in annual[2020]["events"]] == [
+        "2020-02", "2020-05", "2020-08", "2020-11",
+    ]
+    assert annual[2021]["payments"] == 4
+    assert round(annual[2021]["amount"], 2) == 0.48
+    assert [event["date"].isoformat()[:7] for event in annual[2021]["events"]] == [
+        "2021-02", "2021-05", "2021-08", "2021-11",
+    ]
+    assert annual[2025]["payments"] == 4
+    assert round(annual[2025]["amount"], 2) == 1.00
+    estimate = 1.24
+    totals = {year: row["amount"] for year, row in annual.items()}
+    cagr = _estimated_annual_cagr(totals, {2020, 2021, 2022, 2023, 2024, 2025}, 2026, estimate, 5)
+    assert abs(cagr - ((estimate / 0.48) ** (1 / 5) - 1) * 100) < 1e-9
+
+
 def test_quarterly_dividend_cycle_never_groups_more_than_four_payments():
     rows = []
     for record_date, amount in [
