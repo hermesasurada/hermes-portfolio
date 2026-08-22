@@ -28,7 +28,7 @@ from .paths import KST
 from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
 from .tickers import ticker_currency
 
-TECHNICAL_CACHE_VERSION = 10  # 10: 진입 손익비 4축 (BB 목표 / ATR 손절 / RSI / 20일선)
+TECHNICAL_CACHE_VERSION = 11  # 11: 진입 손익비 중기 (주 BB·60일선·RSI 연속·변동성)
 TECHNICAL_LOOKBACK_DAYS = 11 * 366
 PRICE_ADJUSTED_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
@@ -42,7 +42,7 @@ DIVIDEND_MAP_MAX_DAYS = 5   # 휴장일 이월 한도 — 초과 배당은 반�
 FX_LOOKUP_MAX_DAYS = 14
 
 
-def _entry_seat_pct(daily: list[float]) -> dict[str, float | None]:
+def _entry_seat_pct(daily: list[float], weekly: list[float] | None = None) -> dict[str, float | None]:
     distances = bollinger_distance_pct(daily)
     if distances is None:
         upper = lower = None
@@ -50,11 +50,15 @@ def _entry_seat_pct(daily: list[float]) -> dict[str, float | None]:
         upper, lower = distances
         upper = round(upper, 4)
         lower = round(lower, 4)
+    week_distances = bollinger_distance_pct(weekly) if weekly else None
     ma20 = ma_pct(daily, 20)
+    ma60 = ma_pct(daily, 60)
     return {
         "bb_upper_pct": upper,
         "bb_lower_pct": lower,
+        "bb_upper_week_pct": None if week_distances is None else round(week_distances[0], 4),
         "ma20_pct": None if ma20 is None else round(ma20, 4),
+        "ma60_pct": None if ma60 is None else round(ma60, 4),
     }
 
 
@@ -298,7 +302,7 @@ def calculate_technical_stats(
         "performance": recent_performance(rows),
         "drawdown_52w": high_52w_drawdown(daily),
         "atr_pct": None if (value := atr_percent(rows)) is None else round(value, 4),
-        **_entry_seat_pct(daily),
+        **_entry_seat_pct(daily, weekly),
         **beta_stats(rows, benchmark_rows or []),
     }
 
@@ -354,7 +358,7 @@ def calculate_price_adjusted_indicators(
             "month": bollinger_pband(monthly),
         },
         "drawdown_52w": high_52w_drawdown(daily),
-        **_entry_seat_pct(daily),
+        **_entry_seat_pct(daily, weekly),
     }
 
 

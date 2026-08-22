@@ -1162,46 +1162,70 @@ def test_risk_reward_score_formula():
 
 
 def test_entry_risk_reward_score_formula():
-    from portfolio_core.entry_reward import entry_risk_reward_score
+    from portfolio_core.entry_reward import (
+        entry_risk_reward_score,
+        _rsi_scale,
+        _vol_factor,
+    )
     from portfolio_core.indicators import atr_percent, bollinger_distance_pct, ma_pct
 
-    # 상단: 업사이드 0. 주 RSI 55·20일선 위 → 추세 1.0, RSI 중립 1.0
-    assert entry_risk_reward_score(0.0, 2.0, 50, 55, 1.0) == 0.0
+    # 일·주 상단 0. 주 RSI 55·60일선 위 → 업사이드 0
+    assert entry_risk_reward_score(0.0, 2.0, 50, 55, 1.0, 0.0) == 0.0
 
-    # 상단 +6%, ATR 2% → 손절 3% → 6/3=2. RSI 50/55 중립, 이평 위
-    mid = entry_risk_reward_score(6.0, 2.0, 50, 55, 1.0)
+    # 일·주 +6%, ATR 2% → 손절 3% → 6/3=2. 주 RSI 없음(추세=이평만)·RSI 50·ATR 기준값
+    mid = entry_risk_reward_score(6.0, 2.0, 50, None, 1.0, 6.0)
     assert abs(mid - 2.0) < 0.02
 
-    # 같은 ATR이면 상단 여유가 큰 쪽이 높다 (하단 거리는 분모에 안 넣음)
-    near_upper = entry_risk_reward_score(1.0, 2.0, 50, 55, 1.0)
-    near_lower = entry_risk_reward_score(8.0, 2.0, 50, 55, 1.0)
+    # 주 밴드가 일보다 무겁다: 일은 소진(0)이어도 주에 여유가 있으면 점수가 난다
+    weekly_room = entry_risk_reward_score(0.0, 2.0, 50, None, 1.0, 8.0)
+    daily_only = entry_risk_reward_score(8.0, 2.0, 50, None, 1.0, 0.0)
+    assert abs(weekly_room - 8.0 * 0.7 / 3.0) < 0.02
+    assert abs(daily_only - 8.0 * 0.3 / 3.0) < 0.02
+    assert weekly_room > daily_only
+
+    # 같은 ATR이면 상단 여유가 큰 쪽이 높다
+    near_upper = entry_risk_reward_score(1.0, 2.0, 50, None, 1.0, 1.0)
+    near_lower = entry_risk_reward_score(8.0, 2.0, 50, None, 1.0, 8.0)
     assert near_lower > near_upper > 0
 
-    # 일 RSI 85 → 0.5, 주 55 중립 → √(0.5×1)=√0.5
-    hot = entry_risk_reward_score(6.0, 2.0, 85, 55, 1.0)
-    assert abs(hot - 2.0 * (0.5 ** 0.5)) < 0.02
+    # RSI는 구간 버킷이 아니라 값 연속. 주 RSI는 업트렌드(55)로 고정하고 일 RSI만 움직인다.
+    rsi_scores = [
+        entry_risk_reward_score(6.0, 2.0, value, 55, 1.0, 6.0)
+        for value in (30, 40, 50, 70, 85)
+    ]
+    assert all(left > right for left, right in zip(rsi_scores, rsi_scores[1:]))
+    assert abs(_rsi_scale(50) - 1.0) < 1e-9
+    assert _rsi_scale(40) > _rsi_scale(45) > 1.0
+    assert 0.25 <= _rsi_scale(90) < _rsi_scale(70) < 1.0
 
-    # 일 RSI 40 가점 1.2, 주 55 중립·20일선 위 → √1.2
-    pullback = entry_risk_reward_score(6.0, 2.0, 40, 55, 1.0)
-    assert abs(pullback - 2.0 * (1.2 ** 0.5)) < 0.02
-
-    # 주 RSI≤50·20일선 아래 → 추세 0.25
-    weak = entry_risk_reward_score(6.0, 2.0, 50, 48, -1.0)
-    assert abs(weak - 2.0 * 0.25) < 0.02
+    # 주 RSI≤50·60일선 아래 → 추세 0.25. 일 RSI 50만 써서 RSI 계수는 거의 1
+    weak = entry_risk_reward_score(6.0, 2.0, 50, 48, -1.0, 6.0)
+    expected_weak = 2.0 * (1.0 ** 0.4 * _rsi_scale(48) ** 0.6) * 0.25
+    assert abs(weak - expected_weak) < 0.02
 
     # 주 RSI>50만 → 혼합 0.6
-    mixed = entry_risk_reward_score(6.0, 2.0, 50, 55, -1.0)
-    assert abs(mixed - 2.0 * 0.6) < 0.02
+    mixed = entry_risk_reward_score(6.0, 2.0, 50, 55, -1.0, 6.0)
+    expected_mixed = 2.0 * (1.0 ** 0.4 * _rsi_scale(55) ** 0.6) * 0.6
+    assert abs(mixed - expected_mixed) < 0.02
 
-    # ATR 바닥 1%
-    floor = entry_risk_reward_score(4.0, 0.2, 50, 55, 1.0)
-    assert abs(floor - 4.0) < 0.02
+    # ATR 바닥 1%. ATR 0.2%여도 손절은 1%, 변동성 바닥 0.7
+    floor = entry_risk_reward_score(4.0, 0.2, 50, None, 1.0, 4.0)
+    assert abs(floor - 4.0 * _vol_factor(0.2)) < 0.02
+    assert abs(_vol_factor(0.2) - 0.7) < 1e-9
+
+    # 같은 밴드·RSI라도 ATR이 크면 변동성 가점이 손절 확대의 일부를 상쇄한다
+    low_vol = entry_risk_reward_score(6.0, 2.0, 50, None, 1.0, 6.0)
+    high_vol = entry_risk_reward_score(6.0, 4.0, 50, None, 1.0, 6.0)
+    assert low_vol > high_vol > 0
+    assert abs(high_vol / low_vol - 0.5 * (2.0 ** 0.5)) < 0.02
 
     assert entry_risk_reward_score(None, 2.0) is None
     assert entry_risk_reward_score(6.0, None) is None
 
     assert ma_pct([100.0] * 20) == 0.0
     assert ma_pct([90.0] * 19 + [110.0]) > 0
+    assert ma_pct([100.0] * 60, 60) == 0.0
+    assert ma_pct([90.0] * 59 + [110.0], 60) > 0
 
     # 밴드 거리: 평탄하면 상·하단이 현재가에 가깝다
     flat = [100.0] * 19 + [100.0]
