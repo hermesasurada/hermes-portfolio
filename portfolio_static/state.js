@@ -26,6 +26,9 @@ const sidebarStorage = {
 const accountSelectionStorage = {
   state: "portfolio.accounts.selection"
 };
+const transactionStorage = {
+  showHidden: "portfolio.transactions.showHidden"
+};
 const heroSummaryStorage = {
   page: "portfolio.heroSummary.page"
 };

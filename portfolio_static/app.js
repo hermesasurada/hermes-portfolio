@@ -46,6 +46,7 @@ let watchPending = [];
 let transactionRows = [];
 let transactionPage = 1;
 let editingTxId = null;
+let showHiddenTransactions = false;
 const transactionPageSize = 10;
 
 const chartRanges = [
@@ -342,6 +343,11 @@ document.getElementById("accountCollapseToggle").addEventListener("click", () =>
 document.getElementById("transactionToggle").addEventListener("click", () => {
   setTransactionsExpanded(!transactionsExpanded, true);
 });
+document.getElementById("transactionHiddenToggle").addEventListener("click", () => {
+  setShowHiddenTransactions(!showHiddenTransactions);
+});
+showHiddenTransactions = storageGet(transactionStorage.showHidden) === "1";
+syncHiddenTransactionsToggle();
 document.querySelector(".transaction-panel > .toolbar").addEventListener("click", event => {
   if (event.target.closest("button, a, input, select, label")) return;
   setTransactionsExpanded(!transactionsExpanded, true);

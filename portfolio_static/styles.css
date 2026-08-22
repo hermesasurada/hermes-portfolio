@@ -2210,6 +2210,11 @@ th.pc-frozen-edge {
   font-size: 11.5px;
   font-weight: 700;
 }
+.ghost-btn.active {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-soft);
+}
 
 /* ── 차트 공통 (헤더·바로가기·기간 버튼·통계 보드) ───────────────────────────── */
 .chart-view {
@@ -5555,21 +5560,27 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   flex-wrap: wrap;
   justify-content: flex-end;
 }
-.transaction-panel.collapsed .tx-wrap {
+.transaction-panel.collapsed .tx-wrap,
+.transaction-panel.collapsed .tx-pager {
   display: none;
 }
-.tx-list { min-width: 760px; }
+.tx-list { min-width: 760px; width: 100%; }
 .tx-list th, .tx-list td {
   padding: 7px 8px;
   font-size: 12px;
   line-height: 1.25;
 }
+.tx-list th:first-child,
+.tx-list td:first-child { padding-left: 14px; }
+.tx-list th:last-child,
+.tx-list td:last-child { padding-right: 14px; }
 .tx-list th:nth-child(3),
 .tx-list th:nth-child(4),
 .tx-list td:nth-child(3),
 .tx-list td:nth-child(4) {
   text-align: left;
 }
+.tx-hidden-row td { color: var(--muted); opacity: .62; }
 .tx-ticker-cell {
   display: inline-flex;
   align-items: center;
@@ -5586,16 +5597,16 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   text-align: left;
 }
 .tx-wrap {
-  padding: 0 12px 12px;
+  padding: 0 0 12px;
 }
-.tx-wrap .tx-list { min-width: 900px; }
+.tx-wrap .tx-list { min-width: 100%; }
 .tx-pager {
   min-height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 0 12px 12px;
+  padding: 0 14px 12px;
 }
 .transaction-panel > .toolbar {
   cursor: pointer;

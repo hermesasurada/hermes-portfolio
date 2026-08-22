@@ -310,6 +310,8 @@ def ensure_transaction_columns(conn: sqlite3.Connection) -> None:
     columns = {row["name"] for row in conn.execute("PRAGMA table_info(transactions)").fetchall()}
     if "apply_to_holdings" not in columns:
         conn.execute("ALTER TABLE transactions ADD COLUMN apply_to_holdings INTEGER NOT NULL DEFAULT 1")
+    if "hidden" not in columns:
+        conn.execute("ALTER TABLE transactions ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0")
 
 
 def ensure_dividend_tables(conn: sqlite3.Connection) -> None:

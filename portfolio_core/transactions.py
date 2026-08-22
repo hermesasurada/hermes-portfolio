@@ -7,7 +7,7 @@ from datetime import datetime
 from .accounts import load_account, load_holding, load_ticker_info
 from .constants import CRYPTO_MARKETS, KOREAN_SUFFIXES
 from .dates import now_kst_text
-from .db import connect
+from .db import connect, ensure_transaction_columns
 from .portfolio import load_portfolio
 from .tickers import account_scope, display_name, ticker_currency, ticker_scope
 
@@ -97,6 +97,7 @@ def load_transactions(account_id: str | None = None, ticker: str | None = None, 
         params.append(ticker.upper())
     where = "WHERE " + " AND ".join(filters) if filters else ""
     with connect() as conn:
+        ensure_transaction_columns(conn)
         rows = conn.execute(
             f"""
             SELECT
@@ -111,10 +112,11 @@ def load_transactions(account_id: str | None = None, ticker: str | None = None, 
                 COALESCE(h.name, tk.name, t.ticker) AS name,
                 t.side,
                 t.qty,
-            t.price,
-            t.currency,
-            t.note,
-            t.apply_to_holdings
+                t.price,
+                t.currency,
+                t.note,
+                t.apply_to_holdings,
+                COALESCE(t.hidden, 0) AS hidden
             FROM transactions t
             LEFT JOIN accounts a ON t.account_id = a.id
             LEFT JOIN holdings h ON h.account_id = t.account_id AND h.ticker = t.ticker
@@ -231,6 +233,7 @@ def update_transaction(payload: dict) -> dict:
     if not tx_id:
         raise ValueError("거래 id가 필요합니다.")
     with connect() as conn:
+        ensure_transaction_columns(conn)
         row = conn.execute("SELECT * FROM transactions WHERE id = ?", (tx_id,)).fetchone()
         if not row:
             raise ValueError("존재하지 않는 거래입니다.")
@@ -241,9 +244,12 @@ def update_transaction(payload: dict) -> dict:
         qty = require_positive_float(payload["qty"], "수량") if payload.get("qty") not in (None, "") else float(row["qty"])
         price = require_positive_float(payload["price"], "단가") if payload.get("price") not in (None, "") else float(row["price"])
         note = str(payload["note"] if payload.get("note") is not None else (row["note"] or "")).strip()
+        hidden = int(row["hidden"] or 0) if "hidden" in row.keys() else 0
+        if "hidden" in payload:
+            hidden = 1 if parse_bool(payload.get("hidden"), False) else 0
         conn.execute(
-            "UPDATE transactions SET trade_date = ?, side = ?, qty = ?, price = ?, note = ? WHERE id = ?",
-            (trade_date, side, qty, price, note, tx_id),
+            "UPDATE transactions SET trade_date = ?, side = ?, qty = ?, price = ?, note = ?, hidden = ? WHERE id = ?",
+            (trade_date, side, qty, price, note, hidden, tx_id),
         )
         conn.commit()
     return {"ok": True, "id": tx_id}

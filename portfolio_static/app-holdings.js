@@ -293,9 +293,13 @@ function findTickerMeta(ticker) {
 }
 function currentPriceForTicker(ticker) {
   const key = String(ticker || "").trim().toUpperCase();
-  const holding = flattenHoldings().find(h => String(h.ticker || "").toUpperCase() === key && h.current_price != null);
-  if (holding) return holding.current_price;
-  return findTickerMeta(key)?.current_price ?? null;
+  const holding = flattenHoldings().find(h => String(h.ticker || "").toUpperCase() === key);
+  const meta = findTickerMeta(key);
+  const row = holding || meta || {};
+  const includeExtended = Boolean(data?.us_market?.include_extended || data?.kr_market?.include_extended);
+  if (includeExtended && row.extended_price != null) return Number(row.extended_price);
+  if (row.current_price != null) return Number(row.current_price);
+  return null;
 }
 
 function aggregateRows(rows) {

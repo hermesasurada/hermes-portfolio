@@ -164,7 +164,7 @@ function renderTransactionPager(totalRows) {
   `;
   pager.querySelectorAll("[data-tx-page]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const total = Math.max(1, Math.ceil(transactionRows.length / transactionPageSize));
+      const total = Math.max(1, Math.ceil(visibleTransactionRows().length / transactionPageSize));
       transactionPage += btn.dataset.txPage === "next" ? 1 : -1;
       transactionPage = Math.min(total, Math.max(1, transactionPage));
       renderTransactions(transactionRows, false);
@@ -173,6 +173,31 @@ function renderTransactionPager(totalRows) {
 }
 
 const TX_TRASH_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/></svg>`;
+const TX_HIDE_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9.3 3.1 11 7.5a12.3 12.3 0 0 1-1.7 2.8"/><path d="M6.7 6.7C4.1 8.3 2.2 10.7 1 12.5 2.7 16.9 7 20 12 20c1.8 0 3.5-.4 5-1.1"/></svg>`;
+const TX_SHOW_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12.5C2.7 8.1 7 5 12 5s9.3 3.1 11 7.5C21.3 16.9 17 20 12 20S2.7 16.9 1 12.5z"/><circle cx="12" cy="12.5" r="3"/></svg>`;
+
+function transactionIsHidden(tx) {
+  return Number(tx?.hidden) === 1;
+}
+
+function visibleTransactionRows() {
+  return showHiddenTransactions ? transactionRows : transactionRows.filter(tx => !transactionIsHidden(tx));
+}
+
+function syncHiddenTransactionsToggle() {
+  const toggle = document.getElementById("transactionHiddenToggle");
+  if (!toggle) return;
+  toggle.classList.toggle("active", showHiddenTransactions);
+  toggle.setAttribute("aria-pressed", String(showHiddenTransactions));
+  toggle.title = showHiddenTransactions ? "숨긴 거래 숨기기" : "숨긴 거래도 표시";
+}
+
+function setShowHiddenTransactions(on) {
+  showHiddenTransactions = Boolean(on);
+  storageSet(transactionStorage.showHidden, showHiddenTransactions ? "1" : "0");
+  syncHiddenTransactionsToggle();
+  renderTransactions(transactionRows, true);
+}
 
 function txTickerMeta(tx) {
   const ticker = String(tx.ticker || "").toUpperCase();
@@ -197,7 +222,7 @@ function txTickerCell(tx) {
 function txEditRow(tx) {
   const account = `${tx.member || ""} · ${tx.account_name || tx.account_type || ""}`;
   return `
-    <tr class="tx-editing" data-tx-row="${tx.id}">
+    <tr class="tx-editing${transactionIsHidden(tx) ? " tx-hidden-row" : ""}" data-tx-row="${tx.id}">
       <td><input type="date" class="tx-edit-input" data-tx-field="trade_date" value="${esc(tx.trade_date)}"></td>
       <td>${esc(account)}</td>
       <td>${txTickerCell(tx)}</td>
@@ -208,6 +233,7 @@ function txEditRow(tx) {
       </select></td>
       <td><input type="number" class="tx-edit-input" data-tx-field="qty" value="${tx.qty}" step="any" min="0"></td>
       <td><input type="number" class="tx-edit-input" data-tx-field="price" value="${tx.price}" step="any" min="0"></td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td class="tx-actions">
@@ -224,6 +250,7 @@ function txViewRow(tx) {
   const amount = (tx.qty || 0) * (tx.price || 0);
   const account = `${tx.member || ""} · ${tx.account_name || tx.account_type || ""}`;
   const currentPrice = currentPriceForTicker(tx.ticker);
+  const currentPriceText = currentPrice != null ? unitMoney(currentPrice, tx.currency, tx.ticker) : "-";
   const diff = currentPrice != null && tx.price ? currentPrice - tx.price : null;
   const pct = diff != null && tx.price ? diff / tx.price * 100 : null;
   const compareClass = diff > 0 ? "up" : diff < 0 ? "down" : "flat";
@@ -231,8 +258,11 @@ function txViewRow(tx) {
   const compareText = diff != null
     ? `<span class="change-cell ${compareClass}"><span aria-hidden="true">${compareArrow}</span>${fmt2.format(Math.abs(pct))}%</span>`
     : "-";
+  const hidden = transactionIsHidden(tx);
+  const hideLabel = hidden ? "표시" : "숨기기";
+  const hideIcon = hidden ? TX_SHOW_SVG : TX_HIDE_SVG;
   return `
-    <tr>
+    <tr class="${hidden ? "tx-hidden-row" : ""}">
       <td>${esc(tx.trade_date)}</td>
       <td>${esc(account)}</td>
       <td>${txTickerCell(tx)}</td>
@@ -241,9 +271,11 @@ function txViewRow(tx) {
       <td>${tradeQtyText(tx.qty || 0, tx.ticker)}</td>
       <td>${unitMoney(tx.price, tx.currency, tx.ticker)}</td>
       <td>${money(amount, tx.currency)}</td>
+      <td>${currentPriceText}</td>
       <td>${compareText}</td>
       <td class="tx-actions">
         <button class="tx-action-btn" type="button" data-tx-edit="${tx.id}" title="수정" aria-label="수정">✎</button>
+        <button class="tx-action-btn" type="button" data-tx-hide="${tx.id}" data-tx-hidden="${hidden ? "0" : "1"}" title="${hideLabel}" aria-label="${hideLabel}">${hideIcon}</button>
         <button class="tx-action-btn tx-del" type="button" data-tx-delete="${tx.id}" title="삭제" aria-label="삭제">${TX_TRASH_SVG}</button>
       </td>
     </tr>
@@ -260,7 +292,22 @@ function bindTransactionRowActions(tbody) {
     renderTransactions(transactionRows, false);
   }));
   tbody.querySelectorAll("[data-tx-save]").forEach(btn => btn.addEventListener("click", () => saveTransactionEdit(Number(btn.dataset.txSave))));
+  tbody.querySelectorAll("[data-tx-hide]").forEach(btn => btn.addEventListener("click", () => {
+    setTransactionHidden(Number(btn.dataset.txHide), btn.dataset.txHidden === "1");
+  }));
   tbody.querySelectorAll("[data-tx-delete]").forEach(btn => btn.addEventListener("click", () => deleteTransactionRow(Number(btn.dataset.txDelete))));
+}
+
+async function setTransactionHidden(id, hidden) {
+  try {
+    showTradeStatus(hidden ? "숨기는 중..." : "표시하는 중...");
+    await apiUpdateTransaction({ id, hidden: hidden ? 1 : 0 });
+    if (editingTxId === id) editingTxId = null;
+    await loadTransactions();
+    showTradeStatus(hidden ? "숨김" : "표시됨");
+  } catch (err) {
+    showTradeError(err);
+  }
 }
 
 async function saveTransactionEdit(id) {
@@ -295,21 +342,23 @@ async function deleteTransactionRow(id) {
 }
 
 function renderTransactions(rows, resetPage = true) {
-  transactionRows = rows || [];
+  if (Array.isArray(rows)) transactionRows = rows;
   if (resetPage) transactionPage = 1;
   const tbody = document.getElementById("transactions");
-  if (transactionRows.length === 0) {
+  const visible = visibleTransactionRows();
+  if (visible.length === 0) {
     editingTxId = null;
-    tbody.innerHTML = `<tr><td colspan="10" class="flat">거래내역 없음</td></tr>`;
+    const emptyText = transactionRows.some(transactionIsHidden) ? "숨긴 거래만 있습니다" : "거래내역 없음";
+    tbody.innerHTML = `<tr><td colspan="11" class="flat">${emptyText}</td></tr>`;
     renderTransactionPager(0);
     return;
   }
-  const totalPages = Math.max(1, Math.ceil(transactionRows.length / transactionPageSize));
+  const totalPages = Math.max(1, Math.ceil(visible.length / transactionPageSize));
   transactionPage = Math.min(totalPages, Math.max(1, transactionPage));
-  const pageRows = transactionRows.slice((transactionPage - 1) * transactionPageSize, transactionPage * transactionPageSize);
+  const pageRows = visible.slice((transactionPage - 1) * transactionPageSize, transactionPage * transactionPageSize);
   tbody.innerHTML = pageRows.map(tx => (Number(tx.id) === editingTxId ? txEditRow(tx) : txViewRow(tx))).join("");
   bindTransactionRowActions(tbody);
-  renderTransactionPager(transactionRows.length);
+  renderTransactionPager(visible.length);
 }
 
 function setTransactionsExpanded(expanded, shouldLoad = false) {

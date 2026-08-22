@@ -276,6 +276,68 @@ def test_update_earnings_dates_replaces_nearby_estimate():
         conn.close()
 
 
+def test_transaction_hidden_flag_persists_and_is_returned():
+    import portfolio_core.transactions as transactions_module
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript(
+        """
+        CREATE TABLE accounts (
+            id INTEGER PRIMARY KEY,
+            member TEXT,
+            account_type TEXT,
+            name TEXT
+        );
+        CREATE TABLE holdings (
+            account_id INTEGER,
+            ticker TEXT,
+            name TEXT
+        );
+        CREATE TABLE tickers (
+            ticker TEXT PRIMARY KEY,
+            name TEXT
+        );
+        CREATE TABLE transactions (
+            id INTEGER PRIMARY KEY,
+            trade_date TEXT,
+            created_at TEXT,
+            account_id INTEGER,
+            member TEXT,
+            ticker TEXT,
+            side TEXT,
+            qty REAL,
+            price REAL,
+            currency TEXT,
+            note TEXT,
+            apply_to_holdings INTEGER DEFAULT 1
+        );
+        INSERT INTO accounts VALUES (1, '나', 'overseas', '증권');
+        INSERT INTO transactions (
+            id, trade_date, created_at, account_id, member, ticker, side, qty, price, currency, note
+        ) VALUES (1, '2026-08-01', '2026-08-01', 1, '나', 'AVGO', 'BUY', 1, 100, 'USD', '');
+        """
+    )
+
+    @contextmanager
+    def fake_connect():
+        yield conn
+
+    original_connect = transactions_module.connect
+    try:
+        transactions_module.connect = fake_connect
+        transactions_module.update_transaction({"id": 1, "hidden": 1})
+        rows = transactions_module.load_transactions(account_ids=["1"])["transactions"]
+        assert len(rows) == 1
+        assert int(rows[0]["hidden"]) == 1
+        transactions_module.update_transaction({"id": 1, "hidden": 0})
+        rows = transactions_module.load_transactions(account_ids=["1"])["transactions"]
+        assert int(rows[0]["hidden"]) == 0
+    finally:
+        transactions_module.connect = original_connect
+        conn.close()
+
+
 # --- fundamentals.parse_number (the regression that started all this) -------
 def test_parse_number():
     assert parse_number("1,234.5") == 1234.5
