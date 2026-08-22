@@ -224,7 +224,11 @@ KR_ETF_BRAND_SOURCES = {
     "KODEX": "278530.KS",   # 삼성자산운용
     "TIGER": "241180.KS",   # 미래에셋자산운용
     "ACE": "457480.KS",     # 한국투자신탁운용
+    "KOACT": "457480.KS",   # 한투 액티브(ACE와 동일 운용사)
     "SOL": "473330.KS",     # 신한자산운용
+    "RISE": "RISE",         # KB — 브랜드 파일 RISE.png
+    "TIMEFOLIO": "TIME",
+    "TIME": "TIME",
 }
 
 
@@ -281,7 +285,12 @@ def cache_logo(ticker: str, name: str | None = None, domain: str | None = None, 
         if copied:
             return copied
 
-    # 1) FMP — 정방형이면 그대로(깔끔한 심볼). 가로 워드마크면 보류.
+    # 1) 수동 폴백(기초자산 심볼 등) — 워드마크·운용사 로고보다 심볼을 우선한다.
+    fallback = copy_fallback_logo(ticker)
+    if fallback:
+        return fallback
+
+    # 2) FMP — 정방형이면 그대로(깔끔한 심볼). 가로 워드마크면 보류.
     fmp_body = None
     last_status = "not tried"
     for symbol in candidate_symbols(ticker):
@@ -294,20 +303,15 @@ def cache_logo(ticker: str, name: str | None = None, domain: str | None = None, 
         out_path = _write_logo_png(ticker, fmp_body)
         return {"saved": True, "path": out_path.name, "source": "fmp"}
 
-    # 2) FMP가 없거나 워드마크 → 기업 도메인 파비콘에서 정방형 심볼.
+    # 3) FMP가 없거나 워드마크 → 기업 도메인 파비콘에서 정방형 심볼.
     domain = domain or resolve_company_domain(ticker)
     square_body, square_source = fetch_square_symbol(domain, timeout=timeout)
     if square_body is not None:
         out_path = _write_logo_png(ticker, square_body)
         return {"saved": True, "path": out_path.name, "source": square_source, "domain": domain}
 
-    # 3) 정방형을 못 구하면 FMP 워드마크라도 저장(초기자 플레이스홀더보다 낫다).
+    # 4) 정방형을 못 구하면 FMP 워드마크라도 저장(초기자 플레이스홀더보다 낫다).
     if fmp_body is not None:
         out_path = _write_logo_png(ticker, fmp_body)
         return {"saved": True, "path": out_path.name, "source": "fmp-wordmark"}
-
-    # 4) 수동 폴백 복사.
-    fallback = copy_fallback_logo(ticker)
-    if fallback:
-        return fallback
     return {"saved": False, "error": last_status}

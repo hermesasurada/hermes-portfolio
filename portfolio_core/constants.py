@@ -47,7 +47,7 @@ KOREAN_SUFFIXES = (".KS", ".KQ")
 LOCAL_MARKET_SUFFIXES = (".KS", ".KQ", ".T", ".TO", ".PA", ".DE", ".L", ".SW", ".AX", ".SI", ".HK")
 KOREAN_ETF_BRANDS = (
     "KODEX", "TIGER", "RISE", "ACE", "SOL", "PLUS", "HANARO", "KIWOOM",
-    "TIMEFOLIO", "KOACT", "WON", "1Q", "FOCUS", "BNK", "TRUSTON",
+    "TIMEFOLIO", "TIME", "KOACT", "WON", "1Q", "FOCUS", "BNK", "TRUSTON",
     # Rebranded products can remain registered under their legacy names.
     "KBSTAR", "KINDEX", "ARIRANG", "KOSEF",
 )
