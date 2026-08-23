@@ -117,8 +117,16 @@ def _protected_collection_reason(ticker: str, category: str | None) -> str | Non
     return None
 
 
-def purge_untracked_collected_data() -> int:
-    """tickers에 없고 보유·거래도 없는 종목의 시세·배당 잔여분을 지운다."""
+def purge_untracked_collected_data(tickers: Iterable[str]) -> int:
+    """주어진 종목 중 tickers·보유·거래 어디에도 없는 것의 시세·배당 잔여분을 지운다.
+
+    대상을 인자로 못 박는다. 전체를 훑으면 종목 하나를 제외하는 조작이 무관한
+    종목의 이력까지 지울 수 있다 — 어떤 종목이 일시적으로 tickers에서 빠져 있기만
+    해도(마이그레이션·티커 변경 중) 수년치 일봉이 통째로 날아간다.
+    """
+    scope = {str(ticker).strip().upper() for ticker in tickers if str(ticker or "").strip()}
+    if not scope:
+        return 0
     with connect() as conn:
         kept = {
             str(row["ticker"]).strip().upper()
@@ -132,11 +140,7 @@ def purge_untracked_collected_data() -> int:
         for table in ("holdings", "transactions"):
             for row in conn.execute(f"SELECT ticker FROM {table} WHERE ticker IS NOT NULL"):
                 kept.add(str(row["ticker"]).strip().upper())
-        found: set[str] = set()
-        for table in TICKER_DATA_TABLES:
-            for row in conn.execute(f"SELECT DISTINCT ticker FROM {table} WHERE ticker IS NOT NULL"):
-                found.add(str(row["ticker"]).strip().upper())
-        orphans = sorted(found - kept)
+        orphans = sorted(scope - kept)
         for ticker in orphans:
             purge_ticker_collected_data(conn, ticker)
         conn.commit()
@@ -181,5 +185,5 @@ def unregister_collected_ticker(payload: dict) -> dict:
         conn.execute("DELETE FROM tickers WHERE UPPER(ticker) = ?", (ticker,))
         conn.commit()
     delete_ticker_logo(ticker)
-    purge_untracked_collected_data()
+    purge_untracked_collected_data([ticker])
     return load_interest_watchlists()

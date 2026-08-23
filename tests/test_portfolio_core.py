@@ -2012,7 +2012,7 @@ def test_unregister_collected_ticker_purges_prices_and_rejects_protected():
     conn.execute("INSERT INTO dividend_events VALUES ('MRNA')")
     conn.execute("INSERT INTO holdings VALUES ('NVDA', 1)")
     conn.execute("INSERT INTO interest_watchlist_items VALUES ('NVDA')")
-    conn.execute("INSERT INTO daily_prices VALUES ('002620.KS')")  # orphan
+    conn.execute("INSERT INTO daily_prices VALUES ('002620.KS')")  # tickers에 없는 무관한 종목
     conn.commit()
 
     @contextmanager
@@ -2047,11 +2047,53 @@ def test_unregister_collected_ticker_purges_prices_and_rejects_protected():
         assert conn.execute("SELECT 1 FROM daily_prices WHERE ticker = 'MRNA'").fetchone() is None
         assert conn.execute("SELECT 1 FROM dividend_events WHERE ticker = 'MRNA'").fetchone() is None
         assert conn.execute("SELECT 1 FROM tickers WHERE ticker = 'NVDA'").fetchone() is not None
-        assert conn.execute("SELECT 1 FROM daily_prices WHERE ticker = '002620.KS'").fetchone() is None
+        # 제외 대상이 아닌 종목은 tickers에 없더라도 이력이 남는다 — purge 범위는
+        # 방금 제외한 티커 하나뿐이다(전체 훑기는 무관한 종목까지 지운 실사고 방지).
+        assert conn.execute("SELECT 1 FROM daily_prices WHERE ticker = '002620.KS'").fetchone() is not None
     finally:
         watchlist_module.connect = original_connect
         watchlist_module.delete_ticker_logo = original_logo
         watchlist_module.load_interest_watchlists = original_load
+        conn.close()
+
+
+def test_purge_untracked_collected_data_only_touches_given_tickers():
+    """추적 중인 종목은 지우지 않고, 대상 밖 종목은 미추적이어도 남긴다."""
+    import portfolio_core.watchlist as watchlist_module
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE tickers (ticker TEXT PRIMARY KEY, name TEXT, category TEXT)")
+    conn.execute("CREATE TABLE holdings (ticker TEXT, qty REAL)")
+    conn.execute("CREATE TABLE transactions (ticker TEXT)")
+    for table in watchlist_module.TICKER_DATA_TABLES:
+        conn.execute(f"CREATE TABLE IF NOT EXISTS {table} (ticker TEXT)")
+    conn.execute("INSERT INTO tickers VALUES ('NVDA', 'NVIDIA', 'overseas')")
+    for ticker in ("NVDA", "MRNA", "002620.KS"):
+        conn.execute("INSERT INTO daily_prices VALUES (?)", (ticker,))
+    conn.commit()
+
+    @contextmanager
+    def fake_connect():
+        yield conn
+
+    original_connect = watchlist_module.connect
+    try:
+        watchlist_module.connect = fake_connect
+
+        # 대상 밖 미추적 종목(002620.KS)은 건드리지 않는다.
+        assert watchlist_module.purge_untracked_collected_data(["mrna"]) == 1
+        assert conn.execute("SELECT 1 FROM daily_prices WHERE ticker = 'MRNA'").fetchone() is None
+        assert conn.execute("SELECT 1 FROM daily_prices WHERE ticker = '002620.KS'").fetchone() is not None
+
+        # 아직 추적 중인 종목은 대상으로 줘도 지우지 않는다.
+        assert watchlist_module.purge_untracked_collected_data(["NVDA"]) == 0
+        assert conn.execute("SELECT 1 FROM daily_prices WHERE ticker = 'NVDA'").fetchone() is not None
+
+        assert watchlist_module.purge_untracked_collected_data([]) == 0
+        assert watchlist_module.purge_untracked_collected_data(["", None]) == 0
+    finally:
+        watchlist_module.connect = original_connect
         conn.close()
 
 
