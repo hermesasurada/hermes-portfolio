@@ -172,10 +172,6 @@ function renderTransactionPager(totalRows) {
   });
 }
 
-const TX_TRASH_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/></svg>`;
-const TX_HIDE_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 5.1A9.8 9.8 0 0 1 12 5c5 0 9.3 3.1 11 7.5a12.3 12.3 0 0 1-1.7 2.8"/><path d="M6.7 6.7C4.1 8.3 2.2 10.7 1 12.5 2.7 16.9 7 20 12 20c1.8 0 3.5-.4 5-1.1"/></svg>`;
-const TX_SHOW_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12.5C2.7 8.1 7 5 12 5s9.3 3.1 11 7.5C21.3 16.9 17 20 12 20S2.7 16.9 1 12.5z"/><circle cx="12" cy="12.5" r="3"/></svg>`;
-
 function transactionIsHidden(tx) {
   return Number(tx?.hidden) === 1;
 }
@@ -219,8 +215,51 @@ function txTickerCell(tx) {
   `;
 }
 
-function txEditRow(tx) {
+function txApplyToHoldings(tx) {
+  if (tx == null || tx.apply_to_holdings == null) return true;
+  return Number(tx.apply_to_holdings) !== 0;
+}
+
+function currentHoldingQty(accountId, ticker) {
+  const holding = flattenHoldings().find(h =>
+    String(h.accountId) === String(accountId)
+    && String(h.ticker || "").toUpperCase() === String(ticker || "").toUpperCase()
+  );
+  const n = Number(holding?.qty);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// 현재 보유 수량에서 최신 거래부터 되감아, 각 거래가 끝난 뒤의 잔고를 구한다.
+function txEndingBalances(rows) {
+  const byKey = new Map();
+  for (const tx of rows || []) {
+    const key = `${tx.account_id}\0${String(tx.ticker || "").toUpperCase()}`;
+    if (!byKey.has(key)) byKey.set(key, []);
+    byKey.get(key).push(tx);
+  }
+  const out = new Map();
+  for (const [key, list] of byKey) {
+    const sep = key.indexOf("\0");
+    const accountId = key.slice(0, sep);
+    const ticker = key.slice(sep + 1);
+    list.sort((a, b) => {
+      const d = String(b.trade_date || "").localeCompare(String(a.trade_date || ""));
+      return d || Number(b.id) - Number(a.id);
+    });
+    let running = currentHoldingQty(accountId, ticker);
+    for (const tx of list) {
+      out.set(Number(tx.id), running);
+      if (!txApplyToHoldings(tx)) continue;
+      const qty = Number(tx.qty) || 0;
+      running += String(tx.side || "").toUpperCase() === "SELL" ? qty : -qty;
+    }
+  }
+  return out;
+}
+
+function txEditRow(tx, endingQty) {
   const account = `${tx.member || ""} · ${tx.account_name || tx.account_type || ""}`;
+  const balanceText = endingQty == null ? "-" : tradeQtyText(endingQty, tx.ticker);
   return `
     <tr class="tx-editing${transactionIsHidden(tx) ? " tx-hidden-row" : ""}" data-tx-row="${tx.id}">
       <td><input type="date" class="tx-edit-input" data-tx-field="trade_date" value="${esc(tx.trade_date)}"></td>
@@ -231,8 +270,9 @@ function txEditRow(tx) {
         <option value="BUY" ${tx.side === "BUY" ? "selected" : ""}>매수</option>
         <option value="SELL" ${tx.side === "SELL" ? "selected" : ""}>매도</option>
       </select></td>
-      <td><input type="number" class="tx-edit-input" data-tx-field="qty" value="${tx.qty}" step="any" min="0"></td>
       <td><input type="number" class="tx-edit-input" data-tx-field="price" value="${tx.price}" step="any" min="0"></td>
+      <td><input type="number" class="tx-edit-input" data-tx-field="qty" value="${tx.qty}" step="any" min="0"></td>
+      <td>${balanceText}</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -244,7 +284,7 @@ function txEditRow(tx) {
   `;
 }
 
-function txViewRow(tx) {
+function txViewRow(tx, endingQty) {
   const buy = tx.side === "BUY";
   const sideChip = `<span class="change-cell pct-chip ${buy ? "up" : "down"}">${buy ? "매수" : "매도"}</span>`;
   const amount = (tx.qty || 0) * (tx.price || 0);
@@ -254,8 +294,8 @@ function txViewRow(tx) {
   const pct = currentPrice != null && tx.price ? (currentPrice - tx.price) / tx.price * 100 : null;
   const compareText = changePercentText(pct, true);
   const hidden = transactionIsHidden(tx);
-  const hideLabel = hidden ? "표시" : "숨기기";
-  const hideIcon = hidden ? TX_SHOW_SVG : TX_HIDE_SVG;
+  const hideLabel = hidden ? "보임" : "숨김";
+  const balanceText = endingQty == null ? "-" : tradeQtyText(endingQty, tx.ticker);
   return `
     <tr class="${hidden ? "tx-hidden-row" : ""}">
       <td>${esc(tx.trade_date)}</td>
@@ -263,15 +303,16 @@ function txViewRow(tx) {
       <td>${txTickerCell(tx)}</td>
       <td class="tx-name-cell">${esc(tx.name || "")}</td>
       <td>${sideChip}</td>
-      <td>${tradeQtyText(tx.qty || 0, tx.ticker)}</td>
       <td>${unitMoney(tx.price, tx.currency, tx.ticker)}</td>
+      <td>${tradeQtyText(tx.qty || 0, tx.ticker)}</td>
+      <td>${balanceText}</td>
       <td>${money(amount, tx.currency)}</td>
       <td>${currentPriceText}</td>
       <td>${compareText}</td>
       <td class="tx-actions">
-        <button class="tx-action-btn" type="button" data-tx-edit="${tx.id}" title="수정" aria-label="수정">✎</button>
-        <button class="tx-action-btn" type="button" data-tx-hide="${tx.id}" data-tx-hidden="${hidden ? "0" : "1"}" title="${hideLabel}" aria-label="${hideLabel}">${hideIcon}</button>
-        <button class="tx-action-btn tx-del" type="button" data-tx-delete="${tx.id}" title="삭제" aria-label="삭제">${TX_TRASH_SVG}</button>
+        <button class="tx-action-btn" type="button" data-tx-edit="${tx.id}" title="편집">편집</button>
+        <button class="tx-action-btn" type="button" data-tx-hide="${tx.id}" data-tx-hidden="${hidden ? "0" : "1"}" title="${hideLabel}">${hideLabel}</button>
+        <button class="tx-action-btn tx-del" type="button" data-tx-delete="${tx.id}" title="삭제">삭제</button>
       </td>
     </tr>
   `;
@@ -344,14 +385,18 @@ function renderTransactions(rows, resetPage = true) {
   if (visible.length === 0) {
     editingTxId = null;
     const emptyText = transactionRows.some(transactionIsHidden) ? "숨긴 거래만 있습니다" : "거래내역 없음";
-    tbody.innerHTML = `<tr><td colspan="11" class="flat">${emptyText}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" class="flat">${emptyText}</td></tr>`;
     renderTransactionPager(0);
     return;
   }
   const totalPages = Math.max(1, Math.ceil(visible.length / transactionPageSize));
   transactionPage = Math.min(totalPages, Math.max(1, transactionPage));
   const pageRows = visible.slice((transactionPage - 1) * transactionPageSize, transactionPage * transactionPageSize);
-  tbody.innerHTML = pageRows.map(tx => (Number(tx.id) === editingTxId ? txEditRow(tx) : txViewRow(tx))).join("");
+  const balances = txEndingBalances(transactionRows);
+  tbody.innerHTML = pageRows.map(tx => {
+    const endingQty = balances.get(Number(tx.id));
+    return Number(tx.id) === editingTxId ? txEditRow(tx, endingQty) : txViewRow(tx, endingQty);
+  }).join("");
   bindTransactionRowActions(tbody);
   renderTransactionPager(visible.length);
 }
