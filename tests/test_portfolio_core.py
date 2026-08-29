@@ -548,6 +548,19 @@ def test_yearly_expected_payment_counts_preserves_historical_frequency():
     }
 
 
+def test_yearly_expected_payment_counts_handles_isolated_years():
+    """양옆 연도에 이력이 없는 고립 연도(배당 개시·재개)에서 죽지 않아야 한다.
+
+    ENR.DE 실사고: 이력이 2022·2026뿐이라 2022의 previous/following이 모두
+    None → None == None 이 참이 된 뒤 None > frequency 비교로 TypeError,
+    배당이력 팝업이 500으로 비었다(같은 증상 37종목).
+    """
+    expected = dividends_module._yearly_expected_payment_counts(
+        {2022: 1, 2026: 1}, 2026, 1,
+    )
+    assert expected == {2022: 1, 2026: 1}
+
+
 def test_normalize_pe():
     assert normalize_pe("12.3") == 12.3
     assert normalize_pe(0) is None

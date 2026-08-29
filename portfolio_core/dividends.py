@@ -319,7 +319,13 @@ def _yearly_expected_payment_counts(
             continue
         previous = normalized.get(year - 1)
         following = normalized.get(year + 1)
-        expected[year] = previous if previous == following and previous > frequency else frequency
+        # 양옆 다 이력이 없으면(None == None) 고립 연도 — 배당 개시 첫해·재개
+        # 연도가 여기 해당하며, previous > frequency 비교 전에 걸러야 한다.
+        expected[year] = (
+            previous
+            if previous is not None and previous == following and previous > frequency
+            else frequency
+        )
     return expected
 
 
