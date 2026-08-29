@@ -270,7 +270,7 @@
             <colgroup>
               <col style="width:40px"><col style="width:165px">
               <col style="width:85px"><col style="width:71px"><col style="width:109px">
-              <col style="width:76px"><col style="width:54px"><col style="width:78px"><col style="width:72px"><col style="width:58px"><col style="width:58px"><col style="width:42px"><col style="width:44px">
+              <col style="width:76px"><col style="width:54px"><col style="width:78px"><col style="width:54px"><col style="width:54px"><col style="width:72px"><col style="width:58px"><col style="width:58px"><col style="width:42px"><col style="width:44px">
               <col style="width:45px">
               <col style="width:48px"><col style="width:48px"><col style="width:48px"><col style="width:48px"><col style="width:48px"><col style="width:48px">
               <col style="width:62px"><col style="width:62px"><col style="width:44px">
@@ -293,23 +293,25 @@
                 <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="5" data-interest-sort-key="market_cap_usd">시총/AUM</th>
                 <th rowspan="2" class="interest-leaf-head" data-interest-col="6" data-interest-sort-key="dividend_yield">배당율</th>
                 <th rowspan="2" class="indicator-head interest-leaf-head" data-interest-col="7" data-interest-sort-key="dividend_growth_5y"><span>배당성장</span><span>(5년)</span></th>
-                <th rowspan="2" class="interest-leaf-head" data-interest-col="8" data-interest-sort-key="drawdown_52w">52주高 대비</th>
-                <th rowspan="2" class="indicator-head interest-leaf-head" data-interest-col="9" data-interest-sort-key="risk_reward_score" title="KRW 환산 일간 총수익의 산술 연율에서 무위험 3%를 뺀 값을 같은 기간 총변동성(상승·하락)으로 나눔. 비겹침 가중 5Y(3~5년 전) 60%·3Y(1~3년 전) 30%·1Y 10%(없는 기간은 비례 재분배). 변동성 바닥: 주식·ETF 8%·크립토 20%·FX 3%. 라벨: 3Y=이력 3년, P=배당 매핑 실패 또는 이력 미비"><span>변동성</span><span>손익비</span></th>
-                <th rowspan="2" class="indicator-head interest-leaf-head" data-interest-col="10" data-interest-sort-key="entry_risk_reward" title="주 볼린저 상단(70%, 30% 캡)+일 상단(30%) ÷ 1.5×ATR. 타이밍은 일 RSI 연속 정규화. 추세는 주 RSI>50과 60일선 위"><span>진입</span><span>손익비</span></th>
-                <th rowspan="2" class="interest-leaf-head" data-interest-col="11" data-interest-sort-key="beta">β</th>
-                <th rowspan="2" class="interest-leaf-head" data-interest-col="12" data-interest-sort-key="beta_adj">β″</th>
-                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="13" data-interest-sort-key="next_earnings_date">실적</th>
+                <th rowspan="2" class="indicator-head interest-leaf-head" data-interest-col="8" data-interest-sort-key="dividend_streak_years" title="상장 이래 배당을 거른 해 없이 지급한 연속 연수(완결 연도 기준, 미국 상장만). +는 이력 한계(1962)로 실제는 더 긺"><span>연속</span><span>지급</span></th>
+                <th rowspan="2" class="indicator-head interest-leaf-head" data-interest-col="9" data-interest-sort-key="dividend_growth_streak_years" title="연간 배당을 연속으로 늘린 연수(미국 상장만). 개별주는 StockAnalysis 공식 값, ETF는 자체 계산"><span>연속</span><span>증액</span></th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="10" data-interest-sort-key="drawdown_52w">52주高 대비</th>
+                <th rowspan="2" class="indicator-head interest-leaf-head" data-interest-col="11" data-interest-sort-key="risk_reward_score" title="KRW 환산 일간 총수익의 산술 연율에서 무위험 3%를 뺀 값을 같은 기간 총변동성(상승·하락)으로 나눔. 비겹침 가중 5Y(3~5년 전) 60%·3Y(1~3년 전) 30%·1Y 10%(없는 기간은 비례 재분배). 변동성 바닥: 주식·ETF 8%·크립토 20%·FX 3%. 라벨: 3Y=이력 3년, P=배당 매핑 실패 또는 이력 미비"><span>변동성</span><span>손익비</span></th>
+                <th rowspan="2" class="indicator-head interest-leaf-head" data-interest-col="12" data-interest-sort-key="entry_risk_reward" title="주 볼린저 상단(70%, 30% 캡)+일 상단(30%) ÷ 1.5×ATR. 타이밍은 일 RSI 연속 정규화. 추세는 주 RSI>50과 60일선 위"><span>진입</span><span>손익비</span></th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="13" data-interest-sort-key="beta">β</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="14" data-interest-sort-key="beta_adj">β″</th>
+                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="15" data-interest-sort-key="next_earnings_date">실적</th>
                 <th colspan="6" class="group-start" data-interest-group-head="momentum">모멘텀</th>
                 <th colspan="3" class="group-start" data-interest-group-head="value">밸류</th>
-                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="23" data-interest-sort-key="perf_1w">1주</th>
-                <th rowspan="2" class="interest-leaf-head" data-interest-col="24" data-interest-sort-key="perf_1m">1개월</th>
-                <th rowspan="2" class="interest-leaf-head" data-interest-col="25" data-interest-sort-key="perf_3m">3개월</th>
-                <th rowspan="2" class="interest-leaf-head" data-interest-col="26" data-interest-sort-key="perf_6m">6개월</th>
-                <th rowspan="2" class="interest-leaf-head" data-interest-col="27" data-interest-sort-key="perf_ytd">YTD</th>
-                <th rowspan="2" class="interest-leaf-head" data-interest-col="28" data-interest-sort-key="perf_1y">1년</th>
-                <th rowspan="2" class="interest-leaf-head" data-interest-col="29" data-interest-sort-key="perf_3y">3년</th>
-                <th rowspan="2" class="interest-leaf-head" data-interest-col="30" data-interest-sort-key="perf_5y">5년</th>
-                <th rowspan="2" class="interest-leaf-head" data-interest-col="31" data-interest-sort-key="perf_10y">10년</th>
+                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="25" data-interest-sort-key="perf_1w">1주</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="26" data-interest-sort-key="perf_1m">1개월</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="27" data-interest-sort-key="perf_3m">3개월</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="28" data-interest-sort-key="perf_6m">6개월</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="29" data-interest-sort-key="perf_ytd">YTD</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="30" data-interest-sort-key="perf_1y">1년</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="31" data-interest-sort-key="perf_3y">3년</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="32" data-interest-sort-key="perf_5y">5년</th>
+                <th rowspan="2" class="interest-leaf-head" data-interest-col="33" data-interest-sort-key="perf_10y">10년</th>
                 <th colspan="6" class="group-start" data-interest-group-head="profitability">수익성</th>
                 <th colspan="3" class="group-start" data-interest-group-head="growth">성장</th>
                 <th colspan="2" class="group-start" data-interest-group-head="finance">재무</th>
@@ -317,40 +319,40 @@
                 <th colspan="3" class="group-start" data-interest-group-head="short-interest">공매도</th>
                 <th colspan="2" class="group-start" data-interest-group-head="ownership">보유율</th>
                 <th colspan="5" class="group-start" data-interest-group-head="consensus">컨센서스</th>
-                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="54" aria-label="삭제"></th>
+                <th rowspan="2" class="group-start interest-leaf-head" data-interest-col="56" aria-label="삭제"></th>
               </tr>
               <tr class="interest-col-head">
-                <th class="indicator-head group-start interest-leaf-head" data-interest-col="14" data-interest-group="momentum" data-interest-sort-key="rsi_day"><span>RSI</span><span>(일)</span></th>
-                <th class="indicator-head interest-leaf-head" data-interest-col="15" data-interest-group="momentum" data-interest-sort-key="rsi_week"><span>RSI</span><span>(주)</span></th>
-                <th class="indicator-head interest-leaf-head" data-interest-col="16" data-interest-group="momentum" data-interest-sort-key="rsi_month"><span>RSI</span><span>(월)</span></th>
-                <th class="indicator-head interest-leaf-head" data-interest-col="17" data-interest-group="momentum" data-interest-sort-key="bb_day"><span>BB</span><span>(일)</span></th>
-                <th class="indicator-head interest-leaf-head" data-interest-col="18" data-interest-group="momentum" data-interest-sort-key="bb_week"><span>BB</span><span>(주)</span></th>
-                <th class="indicator-head interest-leaf-head" data-interest-col="19" data-interest-group="momentum" data-interest-sort-key="bb_month"><span>BB</span><span>(월)</span></th>
-                <th class="indicator-head group-start interest-leaf-head" data-interest-col="20" data-interest-group="value" data-interest-sort-key="trailing_pe"><span>P/E</span><span>(t)</span></th>
-                <th class="indicator-head interest-leaf-head" data-interest-col="21" data-interest-group="value" data-interest-sort-key="forward_pe"><span>P/E</span><span>(f)</span></th>
-                <th class="interest-leaf-head" data-interest-col="22" data-interest-group="value" data-interest-sort-key="price_to_book">P/B</th>
-                <th class="indicator-head group-start interest-leaf-head" data-interest-col="32" data-interest-group="profitability" data-interest-sort-key="gross_margin" aria-label="매출총이익률"><span>총이익률</span></th>
-                <th class="indicator-head interest-leaf-head" data-interest-col="33" data-interest-group="profitability" data-interest-sort-key="operating_margin" aria-label="영업이익률"><span>영업</span><span>이익률</span></th>
-                <th class="indicator-head interest-leaf-head" data-interest-col="34" data-interest-group="profitability" data-interest-sort-key="ebitda_margin"><span>EBITDA</span><span>마진</span></th>
-                <th class="indicator-head interest-leaf-head" data-interest-col="35" data-interest-group="profitability" data-interest-sort-key="profit_margin" aria-label="순이익률"><span>순이익률</span></th>
-                <th class="interest-leaf-head" data-interest-col="36" data-interest-group="profitability" data-interest-sort-key="return_on_assets">ROA</th>
-                <th class="interest-leaf-head" data-interest-col="37" data-interest-group="profitability" data-interest-sort-key="return_on_equity">ROE</th>
-                <th class="indicator-head group-start interest-leaf-head" data-interest-col="38" data-interest-group="growth" data-interest-sort-key="revenue_growth"><span>매출</span><span>(YoY)</span></th>
-                <th class="indicator-head interest-leaf-head" data-interest-col="39" data-interest-group="growth" data-interest-sort-key="earnings_growth"><span>이익</span><span>(YoY)</span></th>
-                <th class="indicator-head interest-leaf-head" data-interest-col="40" data-interest-group="growth" data-interest-sort-key="earnings_quarterly_growth"><span>분기이익</span><span>(YoY)</span></th>
-                <th class="indicator-head group-start interest-leaf-head" data-interest-col="41" data-interest-group="finance" data-interest-sort-key="debt_to_equity"><span>부채</span><span>비율</span></th>
-                <th class="interest-leaf-head" data-interest-col="42" data-interest-group="finance" data-interest-sort-key="free_cash_flow" aria-label="잉여현금흐름">FCF</th>
-                <th class="indicator-head group-start interest-leaf-head" data-interest-col="43" data-interest-group="dividend-policy" data-interest-sort-key="payout_ratio"><span>배당</span><span>성향</span></th>
-                <th class="indicator-head group-start interest-leaf-head" data-interest-col="44" data-interest-group="short-interest" data-interest-sort-key="short_percent_float" aria-label="유통주식 대비 공매도 비율"><span>유통</span><span>비율</span></th>
-                <th class="indicator-head interest-leaf-head" data-interest-col="45" data-interest-group="short-interest" data-interest-sort-key="short_percent_shares" aria-label="발행주식 대비 공매도 비율"><span>발행</span><span>비율</span></th>
-                <th class="indicator-head interest-leaf-head" data-interest-col="46" data-interest-group="short-interest" data-interest-sort-key="short_ratio" aria-label="공매도 상환 소요일"><span>커버</span><span>일</span></th>
-                <th class="indicator-head group-start interest-leaf-head" data-interest-col="47" data-interest-group="ownership" data-interest-sort-key="insider_ownership"><span>내부자</span></th>
-                <th class="indicator-head interest-leaf-head" data-interest-col="48" data-interest-group="ownership" data-interest-sort-key="institutional_ownership"><span>기관</span></th>
-                <th class="group-start interest-leaf-head" data-interest-col="49" data-interest-group="consensus" data-interest-sort-key="target_price">목표가</th>
-                <th class="interest-leaf-head" data-interest-col="50" data-interest-group="consensus" data-interest-sort-key="upside_pct">업사이드</th>
-                <th class="interest-leaf-head" data-interest-col="51" data-interest-group="consensus" data-interest-sort-key="dispersion_pct">편차</th>
-                <th class="interest-leaf-head" data-interest-col="52" data-interest-group="consensus" data-interest-sort-key="buy_strength">매수강도</th>
-                <th class="interest-leaf-head" data-interest-col="53" data-interest-group="consensus" data-interest-sort-key="rating_rank">투자의견</th>
+                <th class="indicator-head group-start interest-leaf-head" data-interest-col="16" data-interest-group="momentum" data-interest-sort-key="rsi_day"><span>RSI</span><span>(일)</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="17" data-interest-group="momentum" data-interest-sort-key="rsi_week"><span>RSI</span><span>(주)</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="18" data-interest-group="momentum" data-interest-sort-key="rsi_month"><span>RSI</span><span>(월)</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="19" data-interest-group="momentum" data-interest-sort-key="bb_day"><span>BB</span><span>(일)</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="20" data-interest-group="momentum" data-interest-sort-key="bb_week"><span>BB</span><span>(주)</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="21" data-interest-group="momentum" data-interest-sort-key="bb_month"><span>BB</span><span>(월)</span></th>
+                <th class="indicator-head group-start interest-leaf-head" data-interest-col="22" data-interest-group="value" data-interest-sort-key="trailing_pe"><span>P/E</span><span>(t)</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="23" data-interest-group="value" data-interest-sort-key="forward_pe"><span>P/E</span><span>(f)</span></th>
+                <th class="interest-leaf-head" data-interest-col="24" data-interest-group="value" data-interest-sort-key="price_to_book">P/B</th>
+                <th class="indicator-head group-start interest-leaf-head" data-interest-col="34" data-interest-group="profitability" data-interest-sort-key="gross_margin" aria-label="매출총이익률"><span>총이익률</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="35" data-interest-group="profitability" data-interest-sort-key="operating_margin" aria-label="영업이익률"><span>영업</span><span>이익률</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="36" data-interest-group="profitability" data-interest-sort-key="ebitda_margin"><span>EBITDA</span><span>마진</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="37" data-interest-group="profitability" data-interest-sort-key="profit_margin" aria-label="순이익률"><span>순이익률</span></th>
+                <th class="interest-leaf-head" data-interest-col="38" data-interest-group="profitability" data-interest-sort-key="return_on_assets">ROA</th>
+                <th class="interest-leaf-head" data-interest-col="39" data-interest-group="profitability" data-interest-sort-key="return_on_equity">ROE</th>
+                <th class="indicator-head group-start interest-leaf-head" data-interest-col="40" data-interest-group="growth" data-interest-sort-key="revenue_growth"><span>매출</span><span>(YoY)</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="41" data-interest-group="growth" data-interest-sort-key="earnings_growth"><span>이익</span><span>(YoY)</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="42" data-interest-group="growth" data-interest-sort-key="earnings_quarterly_growth"><span>분기이익</span><span>(YoY)</span></th>
+                <th class="indicator-head group-start interest-leaf-head" data-interest-col="43" data-interest-group="finance" data-interest-sort-key="debt_to_equity"><span>부채</span><span>비율</span></th>
+                <th class="interest-leaf-head" data-interest-col="44" data-interest-group="finance" data-interest-sort-key="free_cash_flow" aria-label="잉여현금흐름">FCF</th>
+                <th class="indicator-head group-start interest-leaf-head" data-interest-col="45" data-interest-group="dividend-policy" data-interest-sort-key="payout_ratio"><span>배당</span><span>성향</span></th>
+                <th class="indicator-head group-start interest-leaf-head" data-interest-col="46" data-interest-group="short-interest" data-interest-sort-key="short_percent_float" aria-label="유통주식 대비 공매도 비율"><span>유통</span><span>비율</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="47" data-interest-group="short-interest" data-interest-sort-key="short_percent_shares" aria-label="발행주식 대비 공매도 비율"><span>발행</span><span>비율</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="48" data-interest-group="short-interest" data-interest-sort-key="short_ratio" aria-label="공매도 상환 소요일"><span>커버</span><span>일</span></th>
+                <th class="indicator-head group-start interest-leaf-head" data-interest-col="49" data-interest-group="ownership" data-interest-sort-key="insider_ownership"><span>내부자</span></th>
+                <th class="indicator-head interest-leaf-head" data-interest-col="50" data-interest-group="ownership" data-interest-sort-key="institutional_ownership"><span>기관</span></th>
+                <th class="group-start interest-leaf-head" data-interest-col="51" data-interest-group="consensus" data-interest-sort-key="target_price">목표가</th>
+                <th class="interest-leaf-head" data-interest-col="52" data-interest-group="consensus" data-interest-sort-key="upside_pct">업사이드</th>
+                <th class="interest-leaf-head" data-interest-col="53" data-interest-group="consensus" data-interest-sort-key="dispersion_pct">편차</th>
+                <th class="interest-leaf-head" data-interest-col="54" data-interest-group="consensus" data-interest-sort-key="buy_strength">매수강도</th>
+                <th class="interest-leaf-head" data-interest-col="55" data-interest-group="consensus" data-interest-sort-key="rating_rank">투자의견</th>
               </tr>
             </thead>
             <tbody id="interestRows"></tbody>

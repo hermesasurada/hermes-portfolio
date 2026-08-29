@@ -447,6 +447,8 @@ const interestColumnWidths = {
   market_cap_usd: 76,
   dividend_yield: 54,
   dividend_growth_5y: 78,
+  dividend_streak_years: 54,
+  dividend_growth_streak_years: 54,
   drawdown_52w: 72,
   risk_reward_score: 58,
   entry_risk_reward: 58,
@@ -657,6 +659,8 @@ function renderInterestMainTable() {
         ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(r.ticker)}">${dividendYieldText(r.dividend_yield)}</button>`
         : dividendYieldText(r.dividend_yield)}</td>
       <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
+      <td>${dividendStreakText(r.dividend_streak_years, r.dividend_streak_floor)}</td>
+      <td>${dividendStreakText(r.dividend_growth_streak_years)}</td>
       <td>${signedPercentText(r.drawdown_52w, 1)}</td>
       <td>${riskRewardScoreText(r.risk_reward_score, r.risk_reward_basis, r.risk_reward_quality)}</td>
       <td>${entryRewardText(r.entry_risk_reward)}</td>

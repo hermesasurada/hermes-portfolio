@@ -22,6 +22,7 @@ from portfolio_core.collect_common import collector_lock, parse_categories
 from portfolio_core.corporate_actions import refresh_stock_splits
 from portfolio_core.db import connect, ensure_dividend_tables, initialize_schema
 from portfolio_core.dividends import refresh_dividend_events, refresh_dividend_growth_cache
+from portfolio_core.dividend_streaks import refresh_dividend_streaks
 from portfolio_core.fundamentals import fetch_fundamentals
 from portfolio_core.price_store import (
     earnings_update_due_tickers,
@@ -217,6 +218,8 @@ def collect_dividend_events(tickers: list[str] | None = None) -> int:
     refresh_dividend_events(dividend_tickers)
     growth_count = refresh_dividend_growth_cache(dividend_tickers)
     print(f"Updated {growth_count} five-year dividend growth rates")
+    streak_count = refresh_dividend_streaks()
+    print(f"Updated {streak_count} dividend streaks")
     return len(dividend_tickers)
 
 

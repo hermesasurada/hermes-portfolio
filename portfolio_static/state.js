@@ -59,6 +59,8 @@ const defaultSortDir = {
   market_cap_usd: -1,
   dividend_yield: -1,
   dividend_growth_5y: -1,
+  dividend_streak_years: -1,
+  dividend_growth_streak_years: -1,
   rsi_day: -1,
   rsi_week: -1,
   rsi_month: -1,

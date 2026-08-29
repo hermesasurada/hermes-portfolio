@@ -124,6 +124,14 @@ function sessionNoteTitle(note) {
   }
   return [dateText ? `${dateText} 기준 등락` : "직전 거래일 등락", note?.reason ? `${note.reason} 휴장` : "휴장"].join(" · ");
 }
+// 연속 배당 지급·증액 연수 — 미국 상장 전용, 값 없으면 컬럼 자동 숨김.
+// floor는 yfinance 이력 한계(1962)에 닿아 실제로는 더 길다는 표시.
+function dividendStreakText(years, floor) {
+  const n = Number(years);
+  if (years == null || !Number.isFinite(n)) return "-";
+  return `${Math.round(n)}년${floor ? "+" : ""}`;
+}
+
 function changeMarkup(row) {
   const change = changePercentText(row.display_change_pct, true);
   const note = row?.change_session_note;

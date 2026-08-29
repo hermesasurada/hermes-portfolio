@@ -2189,6 +2189,30 @@ def test_snapshot_candle_row_keeps_intraday_ohlc():
     assert candle_row("2026-08-20", 42.8, {"open": 0, "high": 43.0, "low": 42.0}) == ("2026-08-20", 42.8)
 
 
+def test_dividend_streaks_from_yearly():
+    from portfolio_core.dividend_streaks import streaks_from_yearly
+
+    # 연속 지급·증액 — 완결 연도(작년)까지, 병합지급(0.18=두 분기 몫)은 중앙값으로 무시
+    yearly = {
+        2021: [0.09] * 4, 2022: [0.09, 0.09, 0.18, 0.09, 0.09],
+        2023: [0.10] * 4, 2024: [0.11] * 4, 2025: [0.12] * 4, 2026: [0.13],
+    }
+    r = streaks_from_yearly(yearly, 2026)
+    assert r == {"pay_years": 5, "pay_floor": 0, "growth_years": 3}
+
+    # 이력이 yf 한계(1962)까지 닿으면 floor=1 → '64년+' 표기
+    deep = {y: [0.1] for y in range(1962, 2026)}
+    r = streaks_from_yearly(deep, 2026)
+    assert r["pay_years"] == 64 and r["pay_floor"] == 1
+
+    # 작년 지급이 없으면(배당 중단: INTC) 스트릭 0 — KeyError 회귀 방지
+    stopped = {2022: [0.3] * 4, 2023: [0.35] * 4, 2024: [0.12]}
+    r = streaks_from_yearly(stopped, 2026)
+    assert r == {"pay_years": None, "pay_floor": 0, "growth_years": 0}
+
+    assert streaks_from_yearly({}, 2026) == {"pay_years": None, "pay_floor": 0, "growth_years": None}
+
+
 def test_date_helpers():
     assert parse_iso_date("2026-06-08T00:00:00") == date(2026, 6, 8)
     assert parse_iso_date("not-a-date") is None

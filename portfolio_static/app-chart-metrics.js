@@ -42,6 +42,8 @@ function chartStatMetricRows(payload) {
     ["규모", "시총/AUM", mcap, scaleRaw, "high"],
     ["배당", "배당수익률", dividendYieldCell, Number.isFinite(dividendYield) ? dividendYield : null, "high"],
     ["배당", "5년 배당성장률", chartStatPercent(s.dividend_growth_5y), finiteMetric(s.dividend_growth_5y), "high"],
+    ["배당", "연속 지급", dividendStreakText(s.dividend_streak_years, s.dividend_streak_floor), finiteMetric(s.dividend_streak_years), "high"],
+    ["배당", "연속 증액", dividendStreakText(s.dividend_growth_streak_years), finiteMetric(s.dividend_growth_streak_years), "high"],
     ["배당", "배당성향", fractionPercentText(s.payout_ratio), finiteMetric(s.payout_ratio), null],
     ["밸류", "P/E (t)", peText(s.trailing_pe), positiveMetric(s.trailing_pe), "low"],
     ["밸류", "P/E (f)", peText(s.forward_pe), positiveMetric(s.forward_pe), "low"],

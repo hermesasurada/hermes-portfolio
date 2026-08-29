@@ -129,6 +129,16 @@ def ensure_stats_cache_table(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN aum REAL")
     if "dividend_growth_5y" not in columns:
         conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN dividend_growth_5y REAL")
+    # 연속 배당 지급·증액 연수(미국 상장 전용) — dividend_streaks 배치가 채우고,
+    # 일일 펀더멘털 upsert는 이 컬럼들을 건드리지 않아 보존된다.
+    if "dividend_streak_years" not in columns:
+        conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN dividend_streak_years REAL")
+    if "dividend_streak_floor" not in columns:
+        conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN dividend_streak_floor INTEGER")
+    if "dividend_growth_streak_years" not in columns:
+        conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN dividend_growth_streak_years REAL")
+    if "streaks_fetched_at" not in columns:
+        conn.execute("ALTER TABLE ticker_stats_cache ADD COLUMN streaks_fetched_at TEXT")
 
 
 def ensure_technical_stats_cache_table(conn: sqlite3.Connection) -> None:
