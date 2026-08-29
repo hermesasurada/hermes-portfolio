@@ -3916,9 +3916,18 @@ th.pc-frozen-edge {
 }
 .chart-interest-modal {
   width: min(420px, calc(100vw - 28px));
+  /* 카드가 넘칠 때 dialog 자체가 스크롤되면 리스트 스크롤과 이중이 된다 —
+     스크롤은 리스트 안에서만(배당이력 모달과 동일 패턴). hidden이 아니라
+     clip인 이유: hidden은 스크롤바만 숨기고 anchor/포커스 스크롤로는 여전히
+     밀려 헤더가 잘린다. clip은 스크롤 컨테이너 자체를 만들지 않는다. */
+  max-height: min(560px, calc(100vh - 28px));
+  overflow: clip;
 }
 .chart-interest-card {
   gap: 10px;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
 }
 .chart-interest-title {
   min-width: 0;
@@ -3934,9 +3943,14 @@ th.pc-frozen-edge {
 .chart-interest-list {
   display: grid;
   gap: 4px;
+  /* grid 아이템 기본 min-height:auto가 콘텐츠 최소치를 요구해 max-height
+     클립과 어긋난 채 dialog까지 밀어올리던 이중 스크롤의 원인. */
+  min-height: 0;
   max-height: min(420px, calc(100vh - 190px));
   overflow: auto;
 }
+/* 세로 스크롤바 숨김(휠 스크롤) — 테이블·배당이력과 동일 관례 */
+.chart-interest-list::-webkit-scrollbar { width: 0; height: 0; }
 .chart-interest-row {
   min-height: 38px;
   display: grid;
