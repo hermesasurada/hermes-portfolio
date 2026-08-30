@@ -259,6 +259,7 @@ function riskRewardScoreText(v, basis, quality) {
   return `<span class="${cls}">${sign}${n.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}${mark}</span>`;
 }
 function entryRewardText(v) {
+  if (v == null) return "-";   // Number(null)===0 — 값 없음이 0.0으로 보이면 안 된다
   const n = Number(v);
   if (!Number.isFinite(n)) return "-";
   const cls = n > 1 ? "up" : n > 0 ? "flat" : "flat";

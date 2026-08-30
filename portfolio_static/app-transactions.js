@@ -276,6 +276,7 @@ function txEditRow(tx, endingQty) {
       <td>-</td>
       <td>-</td>
       <td>-</td>
+      <td>${entryRewardText(tx.entry_score)}</td>
       <td class="tx-actions">
         <button class="tx-action-btn tx-save" type="button" data-tx-save="${tx.id}" title="저장">저장</button>
         <button class="tx-action-btn" type="button" data-tx-cancel title="취소">취소</button>
@@ -309,6 +310,7 @@ function txViewRow(tx, endingQty) {
       <td>${money(amount, tx.currency)}</td>
       <td>${currentPriceText}</td>
       <td>${compareText}</td>
+      <td>${entryRewardText(tx.entry_score)}</td>
       <td class="tx-actions">
         <button class="tx-action-btn" type="button" data-tx-edit="${tx.id}" title="편집">편집</button>
         <button class="tx-action-btn" type="button" data-tx-hide="${tx.id}" data-tx-hidden="${hidden ? "0" : "1"}" title="${hideLabel}">${hideLabel}</button>
@@ -385,7 +387,7 @@ function renderTransactions(rows, resetPage = true) {
   if (visible.length === 0) {
     editingTxId = null;
     const emptyText = transactionRows.some(transactionIsHidden) ? "숨긴 거래만 있습니다" : "거래내역 없음";
-    tbody.innerHTML = `<tr><td colspan="12" class="flat">${emptyText}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="13" class="flat">${emptyText}</td></tr>`;
     renderTransactionPager(0);
     return;
   }
