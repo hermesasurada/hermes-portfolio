@@ -2213,6 +2213,19 @@ def test_dividend_streaks_from_yearly():
     assert streaks_from_yearly({}, 2026) == {"pay_years": None, "pay_floor": 0, "growth_years": None}
 
 
+def test_dividend_streak_pay_never_below_growth():
+    from portfolio_core.dividend_streaks import reconcile_pay_with_growth
+
+    # 공식 증액 기록(스핀오프 승계)이 yf 지급 이력보다 길면 지급을 끌어올리고 '+' 표시
+    assert reconcile_pay_with_growth(13.0, 0, 54.0) == (54.0, 1)
+    # 이미 정합이면 그대로
+    assert reconcile_pay_with_growth(64.0, 1, 63.0) == (64.0, 1)
+    assert reconcile_pay_with_growth(32.0, 0, 22.0) == (32.0, 0)
+    # 한쪽이 없으면 건드리지 않는다
+    assert reconcile_pay_with_growth(None, 0, 10.0) == (None, 0)
+    assert reconcile_pay_with_growth(10.0, 0, None) == (10.0, 0)
+
+
 def test_date_helpers():
     assert parse_iso_date("2026-06-08T00:00:00") == date(2026, 6, 8)
     assert parse_iso_date("not-a-date") is None

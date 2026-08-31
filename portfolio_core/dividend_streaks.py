@@ -111,6 +111,21 @@ def fetch_sa_growth_years(ticker: str) -> float | None | str:
     return "missing"
 
 
+def reconcile_pay_with_growth(pay_years, pay_floor, growth_years):
+    """증액 연수가 지급 연수보다 길 수 없다 — 증액했다면 그 해에 지급도 한 것.
+
+    지급은 yfinance 이력(상장·데이터 한계에 잘림), 증액은 SA 공식 기록
+    (스핀오프 이전 승계 포함)이라 소스 기준이 달라 모순이 생긴다
+    (ABBV: yf 지급 13년 vs 공식 증액 54년). 증액 기록을 지급의 하한
+    증거로 삼아 끌어올리고, 실제로는 더 길 수 있으므로 '+'를 붙인다.
+    """
+    if pay_years is None or growth_years is None:
+        return pay_years, pay_floor
+    if growth_years > pay_years:
+        return float(growth_years), 1
+    return pay_years, pay_floor
+
+
 def refresh_dividend_streaks(max_age_days: int = REFRESH_DAYS, pause_seconds: float = 0.25) -> int:
     """미국 상장종목의 연속 지급·증액 연수를 갱신한다. 갱신한 종목 수 반환."""
     now = datetime.now(KST)
@@ -145,6 +160,9 @@ def refresh_dividend_streaks(max_age_days: int = REFRESH_DAYS, pause_seconds: fl
                 official = fetch_sa_growth_years(ticker)
                 if official != "missing" and official is not None:
                     growth = official
+            streaks["pay_years"], streaks["pay_floor"] = reconcile_pay_with_growth(
+                streaks["pay_years"], streaks["pay_floor"], growth
+            )
         except Exception as exc:  # noqa: BLE001 — 종목 하나가 전체를 막지 않게
             print(f"  x {ticker} streaks: {type(exc).__name__}: {exc}")
             continue
