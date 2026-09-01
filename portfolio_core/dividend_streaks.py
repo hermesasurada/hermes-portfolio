@@ -156,10 +156,16 @@ def refresh_dividend_streaks(max_age_days: int = REFRESH_DAYS, pause_seconds: fl
             growth = streaks["growth_years"]
             # SA 공식 값은 개별주만 — ETF 페이지는 years를 제공하지 않아(n/a)
             # '스트릭 없음'과 구분이 안 된다(SCHD 실측). ETF는 자체계산 유지.
+            # 두 값 중 큰 쪽을 쓴다: SA는 선언 기준이라 병합지급·지급시점 배치에
+            # 강하고 스핀오프 승계(ABBV 54)를 알지만, 지급 패턴이 특수한 종목은
+            # 자체 계산이 깨진 값을 준다(O 22 vs 실제 30, RSG 1 vs 21,
+            # CMCSA 6 vs 17 — 전수 대조로 확인). 자체계산(연도별 중앙값 비교)이
+            # 그 반대를 보완한다. 둘 다 과소로 깨지는 방향이라 max가 공식
+            # CCC 기록에 가장 가깝다.
             if yearly and not is_etf:
                 official = fetch_sa_growth_years(ticker)
                 if official != "missing" and official is not None:
-                    growth = official
+                    growth = max(official, growth or 0)
             streaks["pay_years"], streaks["pay_floor"] = reconcile_pay_with_growth(
                 streaks["pay_years"], streaks["pay_floor"], growth
             )
