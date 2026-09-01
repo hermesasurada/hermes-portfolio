@@ -5,9 +5,12 @@
   손절폭   = max(1.5 × ATR(14)%, 1%)
   RSI      = 일봉 값만 50 기준으로 연속 정규화. 낮을수록 가점
              factor = clamp(1 + (50−RSI)/40 × 0.5, 0.25, 1.4)
-  추세     = 주 RSI>50 그리고 60일선 위 → 1.0
-             둘 중 하나만 → 0.6
-             둘 다 아니면 → 0.25
+  추세     = 0.25 + 0.75 × (주 RSI 성분 + 60일선 성분) / 2
+             주 RSI 성분 = clamp((RSI − 45) / 10, 0, 1)   ← 45~55 사이 선형
+             60일선 성분 = clamp((이격% + 2) / 4, 0, 1)   ← −2%~+2% 사이 선형
+             둘 다 강하면 1.0, 둘 다 약하면 0.25 (옛 계단의 양 끝과 같다).
+             계단(1.0/0.6/0.25)이던 것을 연속으로 바꾼 이유: 문턱 바로 위
+             종목은 가격이 0.5%만 밀려도 점수가 40% 빠졌다(PH 2.95→1.87).
   점수     = clamp(업사이드/손절 × RSI × 추세, 0, 20)
 
   밴드 폭이 이미 변동성이라 ATR 가점은 넣지 않는다. ATR은 손절 폭으로만 쓴다.
@@ -23,8 +26,10 @@ RSI_AMPLITUDE = 0.5
 RSI_MIN = 0.25
 RSI_MAX = 1.4
 TREND_STRONG = 1.0
-TREND_MIXED = 0.6
 TREND_WEAK = 0.25
+TREND_RSI_PIVOT = 50.0
+TREND_RSI_BAND = 5.0     # 주 RSI 45→55 사이에서 0→1
+TREND_MA_BAND_PCT = 2.0  # 60일선 −2%→+2% 사이에서 0→1
 BB_DAY_WEIGHT = 0.3
 BB_WEEK_WEIGHT = 0.7
 WEEK_UPSIDE_CAP = 30.0
@@ -52,22 +57,28 @@ def _rsi_factor(rsi_day) -> float:
     return 1.0 if day is None else day
 
 
+def _unit_ramp(value: float, center: float, half_width: float) -> float:
+    """center−half_width에서 0, center+half_width에서 1로 선형 증가(그 밖은 클램프)."""
+    return max(0.0, min(1.0, (value - center + half_width) / (2 * half_width)))
+
+
 def _trend_factor(rsi_week, ma60_pct) -> float:
+    """추세 계수 — 두 성분의 평균을 [TREND_WEAK, TREND_STRONG]로 사상한다.
+
+    성분이 하나뿐이면 그 하나로, 둘 다 없으면(정보 없음) STRONG. 옛 계단은
+    조건을 넘는 순간 ×0.6, ×0.25가 한 번에 곱해져 문턱 근처 종목이 널뛰었다.
+    """
     week = _finite(rsi_week)
     ma = _finite(ma60_pct)
-    weekly_up = week is not None and week > 50
-    above_ma = ma is not None and ma > 0
-    if week is None and ma is None:
+    parts = []
+    if week is not None:
+        parts.append(_unit_ramp(week, TREND_RSI_PIVOT, TREND_RSI_BAND))
+    if ma is not None:
+        parts.append(_unit_ramp(ma, 0.0, TREND_MA_BAND_PCT))
+    if not parts:
         return TREND_STRONG
-    if week is None:
-        return TREND_STRONG if above_ma else TREND_WEAK
-    if ma is None:
-        return TREND_STRONG if weekly_up else TREND_WEAK
-    if weekly_up and above_ma:
-        return TREND_STRONG
-    if weekly_up or above_ma:
-        return TREND_MIXED
-    return TREND_WEAK
+    strength = sum(parts) / len(parts)
+    return TREND_WEAK + (TREND_STRONG - TREND_WEAK) * strength
 
 
 def _upside_pct(upper_pct, upper_week_pct) -> float | None:

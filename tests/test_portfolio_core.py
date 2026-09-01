@@ -1305,34 +1305,34 @@ def test_entry_risk_reward_score_formula():
     from portfolio_core.indicators import atr_percent, bollinger_distance_pct, ma_pct
 
     # 일·주 상단 0. 주 RSI 55·60일선 위 → 업사이드 0
-    assert entry_risk_reward_score(0.0, 2.0, 50, 55, 1.0, 0.0) == 0.0
+    assert entry_risk_reward_score(0.0, 2.0, 50, 55, 5.0, 0.0) == 0.0
 
-    # 일·주 +6%, ATR 2% → 손절 3% → 6/3=2. 주 RSI 없음(추세=이평만)·일 RSI 50
-    mid = entry_risk_reward_score(6.0, 2.0, 50, None, 1.0, 6.0)
+    # 일·주 +6%, ATR 2% → 손절 3% → 6/3=2. 주 RSI 없음(추세=이평만, +5%는 밴드 밖이라 1.0)·일 RSI 50
+    mid = entry_risk_reward_score(6.0, 2.0, 50, None, 5.0, 6.0)
     assert abs(mid - 2.0) < 0.02
 
     # 주 밴드가 일보다 무겁다: 일은 소진(0)이어도 주에 여유가 있으면 점수가 난다
-    weekly_room = entry_risk_reward_score(0.0, 2.0, 50, None, 1.0, 8.0)
-    daily_only = entry_risk_reward_score(8.0, 2.0, 50, None, 1.0, 0.0)
+    weekly_room = entry_risk_reward_score(0.0, 2.0, 50, None, 5.0, 8.0)
+    daily_only = entry_risk_reward_score(8.0, 2.0, 50, None, 5.0, 0.0)
     assert abs(weekly_room - 8.0 * 0.7 / 3.0) < 0.02
     assert abs(daily_only - 8.0 * 0.3 / 3.0) < 0.02
     assert weekly_room > daily_only
 
     # 주봉 상단 거리는 30%에서 자른다. 급락 후 4σ 여유를 그대로 쓰지 않는다.
-    capped = entry_risk_reward_score(0.0, 2.0, 50, None, 1.0, 400.0)
+    capped = entry_risk_reward_score(0.0, 2.0, 50, None, 5.0, 400.0)
     assert abs(capped - WEEK_UPSIDE_CAP * 0.7 / 3.0) < 0.02
-    uncapped = entry_risk_reward_score(0.0, 2.0, 50, None, 1.0, 20.0)
+    uncapped = entry_risk_reward_score(0.0, 2.0, 50, None, 5.0, 20.0)
     assert abs(uncapped - 20.0 * 0.7 / 3.0) < 0.02
     assert capped > uncapped
 
     # 같은 ATR이면 상단 여유가 큰 쪽이 높다
-    near_upper = entry_risk_reward_score(1.0, 2.0, 50, None, 1.0, 1.0)
-    near_lower = entry_risk_reward_score(8.0, 2.0, 50, None, 1.0, 8.0)
+    near_upper = entry_risk_reward_score(1.0, 2.0, 50, None, 5.0, 1.0)
+    near_lower = entry_risk_reward_score(8.0, 2.0, 50, None, 5.0, 8.0)
     assert near_lower > near_upper > 0
 
     # 타이밍 RSI는 일봉만. 주 RSI는 추세에만 쓰이므로 일 RSI만 바꿔도 점수가 갈린다.
     rsi_scores = [
-        entry_risk_reward_score(6.0, 2.0, value, 55, 1.0, 6.0)
+        entry_risk_reward_score(6.0, 2.0, value, 55, 5.0, 6.0)
         for value in (30, 40, 50, 70, 85)
     ]
     assert all(left > right for left, right in zip(rsi_scores, rsi_scores[1:]))
@@ -1340,24 +1340,27 @@ def test_entry_risk_reward_score_formula():
     assert _rsi_scale(40) > _rsi_scale(45) > 1.0
     assert 0.25 <= _rsi_scale(90) < _rsi_scale(70) < 1.0
     # 주 RSI가 낮아도 일 RSI 50이면 타이밍 계수는 1.0 (추세만 약해진다)
-    same_timing = entry_risk_reward_score(6.0, 2.0, 50, 30, 1.0, 6.0)
-    assert abs(same_timing - 2.0 * 0.6) < 0.02
+    # 주 RSI 30(성분 0)·60일선 +5%(성분 1) → 평균 0.5 → 추세 0.625
+    same_timing = entry_risk_reward_score(6.0, 2.0, 50, 30, 5.0, 6.0)
+    assert abs(same_timing - 2.0 * 0.625) < 0.02
 
-    # 주 RSI≤50·60일선 아래 → 추세 0.25. 일 RSI 50 → 타이밍 1.0
-    weak = entry_risk_reward_score(6.0, 2.0, 50, 48, -1.0, 6.0)
+    # 주 RSI 40·60일선 −5%(둘 다 밴드 밖 약세) → 추세 0.25. 일 RSI 50 → 타이밍 1.0
+    weak = entry_risk_reward_score(6.0, 2.0, 50, 40, -5.0, 6.0)
     assert abs(weak - 2.0 * 0.25) < 0.02
 
-    # 주 RSI>50만 → 혼합 0.6
-    mixed = entry_risk_reward_score(6.0, 2.0, 50, 55, -1.0, 6.0)
-    assert abs(mixed - 2.0 * 0.6) < 0.02
+    # 주 RSI 60(강)·60일선 −5%(약) → 혼합 0.625. 문턱 안쪽(−1%)은 그 사이 값
+    mixed = entry_risk_reward_score(6.0, 2.0, 50, 60, -5.0, 6.0)
+    assert abs(mixed - 2.0 * 0.625) < 0.02
+    between = entry_risk_reward_score(6.0, 2.0, 50, 60, -1.0, 6.0)
+    assert mixed < between < 2.0
 
     # ATR 바닥 1%. ATR 0.2%여도 손절은 1%
-    floor = entry_risk_reward_score(4.0, 0.2, 50, None, 1.0, 4.0)
+    floor = entry_risk_reward_score(4.0, 0.2, 50, None, 5.0, 4.0)
     assert abs(floor - 4.0) < 0.02
 
     # ATR은 손절 폭으로만. 같은 밴드면 ATR이 큰 쪽이 점수가 낮다 (가점 없음)
-    low_vol = entry_risk_reward_score(6.0, 2.0, 50, None, 1.0, 6.0)
-    high_vol = entry_risk_reward_score(6.0, 4.0, 50, None, 1.0, 6.0)
+    low_vol = entry_risk_reward_score(6.0, 2.0, 50, None, 5.0, 6.0)
+    high_vol = entry_risk_reward_score(6.0, 4.0, 50, None, 5.0, 6.0)
     assert low_vol > high_vol > 0
     assert abs(high_vol / low_vol - 0.5) < 0.02
 
@@ -2224,6 +2227,31 @@ def test_dividend_streak_pay_never_below_growth():
     # 한쪽이 없으면 건드리지 않는다
     assert reconcile_pay_with_growth(None, 0, 10.0) == (None, 0)
     assert reconcile_pay_with_growth(10.0, 0, None) == (10.0, 0)
+
+
+def test_entry_trend_factor_is_continuous():
+    from portfolio_core.entry_reward import (
+        TREND_STRONG, TREND_WEAK, _trend_factor, entry_risk_reward_score,
+    )
+
+    # 양 끝은 옛 계단과 같다
+    assert _trend_factor(60, 5.0) == TREND_STRONG
+    assert _trend_factor(40, -5.0) == TREND_WEAK
+    # 옛 '하나만 충족'(0.6)에 해당하는 자리는 그 근처 값
+    assert abs(_trend_factor(60, -5.0) - 0.625) < 1e-9
+    # 60일선 이격 −2%→+2%에서 단조 증가, 문턱(0)에서 도약이 없다
+    steps = [_trend_factor(50, pct) for pct in (-3, -2, -1, 0, 1, 2, 3)]
+    assert all(b >= a for a, b in zip(steps, steps[1:]))
+    assert abs(steps[3] - steps[2]) < 0.2 and abs(steps[4] - steps[3]) < 0.2
+    # 정보 없음 → 강함, 한 성분만 → 그 성분으로
+    assert _trend_factor(None, None) == TREND_STRONG
+    assert _trend_factor(None, 5.0) == TREND_STRONG
+    assert _trend_factor(None, -5.0) == TREND_WEAK
+
+    # PH 실사례: 60일선 +0.11%→−0.34%로 0.45% 밀렸을 때 점수가 40% 빠지던 것이 완만해진다
+    before = entry_risk_reward_score(9.5, 2.52, 45, 54.1, 0.11, 7.9)
+    after = entry_risk_reward_score(11.4, 2.52, 42, 53.5, -0.34, 9.5)
+    assert after > before * 0.85
 
 
 def test_date_helpers():
