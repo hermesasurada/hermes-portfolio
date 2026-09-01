@@ -263,7 +263,9 @@ function entryRewardText(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "-";
   const cls = n > 1 ? "up" : n > 0 ? "flat" : "flat";
-  return `<span class="${cls}">${n.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>`;
+  // 소수 둘째 자리 — 추세 문턱 근처에서 2.95↔1.87처럼 움직이는 값을 1자리로 뭉개면
+  // 매수 기록(entry_score)과 대시보드 표시가 달라 보인다.
+  return `<span class="${cls}">${n.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
 }
 function indicatorToneAttr(v, kind) {
   const n = Number(v);
