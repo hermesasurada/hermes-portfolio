@@ -2259,6 +2259,38 @@ def test_entry_trend_factor_is_continuous():
     assert after > before * 0.85
 
 
+def test_entry_score_series_matches_point_calculation():
+    """차트용 일별 점수 시계열은 같은 날짜의 단건 계산과 일치하고, 이력 부족 구간은 None."""
+    import sqlite3
+    from portfolio_core.entry_reward_history import entry_score_on, entry_score_series
+    from portfolio_core.entry_reward import entry_risk_reward_score
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE daily_prices (ticker TEXT, date TEXT, open REAL, high REAL, low REAL, close REAL)")
+    # 260거래일 합성 시계열 — 추세+파동
+    import math
+    from datetime import date, timedelta
+    day = date(2025, 1, 6)
+    rows = []
+    for i in range(260):
+        while day.weekday() >= 5:
+            day += timedelta(days=1)
+        px = 100 + i * 0.15 + 4 * math.sin(i / 7)
+        rows.append((day.isoformat(), px * 0.995, px * 1.01, px * 0.99, px))
+        day += timedelta(days=1)
+    conn.executemany("INSERT INTO daily_prices VALUES ('T', ?, ?, ?, ?, ?)", rows)
+    fetched = conn.execute("SELECT date, open, high, low, close FROM daily_prices ORDER BY date").fetchall()
+
+    series = entry_score_series(fetched)
+    assert len(series) == 260
+    assert series[50] is None                       # 주봉 20개 전
+    assert series[-1] is not None
+    assert abs(series[-1] - entry_score_on(conn, "T", rows[-1][0])) < 1e-9
+    assert abs(series[200] - entry_score_on(conn, "T", rows[200][0])) < 1e-9
+    assert entry_score_series(fetched[:50]) == [None] * 50
+
+
 def test_date_helpers():
     assert parse_iso_date("2026-06-08T00:00:00") == date(2026, 6, 8)
     assert parse_iso_date("not-a-date") is None

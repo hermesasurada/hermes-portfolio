@@ -62,6 +62,45 @@ def entry_score_on(conn: sqlite3.Connection, ticker: str, trade_date: str) -> fl
     )
 
 
+def entry_score_series(rows) -> list[float | None]:
+    """일봉 행마다 '그날 종가 기준' 진입 점수. 차트 RSI 패널용.
+
+    주봉 입력은 날마다 다시 리샘플하지 않고 완결된 주 종가를 누적해 두고
+    당일 종가만 마지막 주로 붙인다(라이브 계산과 같은 규약). 10년치도 0.2초.
+    """
+    from datetime import date as _date
+
+    closes = [float(row["close"]) for row in rows]
+    count = len(closes)
+    series: list[float | None] = [None] * count
+    if count < MIN_HISTORY_ROWS:
+        return series
+    rsi_day = rsi_series(closes)
+    week_keys = [_date.fromisoformat(str(row["date"])).isocalendar()[:2] for row in rows]
+    completed: list[float] = []
+    for index in range(count):
+        if index and week_keys[index] != week_keys[index - 1]:
+            completed.append(closes[index - 1])
+        if index < MIN_HISTORY_ROWS - 1:
+            continue
+        weekly = completed + [closes[index]]
+        if len(weekly) <= 20:
+            continue
+        distance = bollinger_distance_pct(closes[index - 19:index + 1])
+        weekly_distance = bollinger_distance_pct(weekly)
+        if not distance or not weekly_distance:
+            continue
+        series[index] = entry_risk_reward_score(
+            distance[0],
+            atr_percent(rows[max(0, index - 60):index + 1]),
+            rsi_day[index],
+            rsi_series(weekly)[-1],
+            ma_pct(closes[:index + 1], 60),
+            weekly_distance[0],
+        )
+    return series
+
+
 def backfill_transaction_entry_scores(force: bool = False) -> int:
     """entry_score가 빈 거래(force면 전체)를 채운다. 갱신 건수 반환."""
     with connect() as conn:

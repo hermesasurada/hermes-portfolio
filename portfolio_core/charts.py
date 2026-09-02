@@ -13,6 +13,7 @@ from .prices import build_market_snapshot, fx_rates, latest_prices, price_view
 from .queries import account_filter_clause, clean_account_ids, load_holding_rows
 from .technical_stats import price_adjusted_rows
 from .tickers import account_label, ticker_currency
+from .entry_reward_history import entry_score_series
 from .us_live_quotes import us_market_status
 
 
@@ -202,11 +203,14 @@ def load_price_chart(
     price_record = market_view["price_record"]
     overlays = _chart_overlay_series(rows)
     rsi_values = rsi_series([float(row["close"]) for row in rows])
+    entry_scores = entry_score_series(rows)
     points = []
-    for row, rsi in zip(rows, rsi_values):
+    for row, rsi, entry_score in zip(rows, rsi_values, entry_scores):
         if not row["date"] or row["close"] is None:
             continue
         point = {"date": row["date"], "close": float(row["close"])}
+        if entry_score is not None:
+            point["entry_score"] = entry_score
         for key in ("open", "high", "low", "volume"):
             if row[key] is not None:
                 point[key] = float(row[key])
@@ -312,6 +316,10 @@ def _append_market_chart_point(
         latest_rsi = next((item for item in reversed(adjusted_rsi) if item is not None), None)
         if latest_rsi is not None:
             point["rsi"] = latest_rsi
+        # 진입 점수도 RSI처럼 라이브 가격으로 당일 값을 다시 계산한다.
+        latest_entry = next((item for item in reversed(entry_score_series(adjusted_rows)) if item is not None), None)
+        if latest_entry is not None:
+            point["entry_score"] = latest_entry
         overlay = adjusted_overlays.get(today) or {}
         point.update(
             {

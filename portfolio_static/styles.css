@@ -57,6 +57,7 @@
   --chart-price: #2563eb;
   --chart-bb: #7c3aed;
   --chart-rsi: #0d9488;
+  --chart-entry: #d97706;
   --chart-ichi-tenkan: #db2777;
   --chart-ichi-kijun: #d97706;
   --chart-ichi-span-a: #16a34a;
@@ -151,6 +152,7 @@
     --chart-price: #60a5fa;
     --chart-bb: #c084fc;
     --chart-rsi: #2dd4bf;
+    --chart-entry: #fbbf24;
     --chart-ichi-tenkan: #f472b6;
     --chart-ichi-kijun: #fbbf24;
     --chart-ichi-span-a: #4ade80;
@@ -3335,6 +3337,27 @@ th.pc-frozen-edge {
 }
 .chart-rsi-title { fill: var(--chart-rsi); }
 .chart-rsi-axis { text-anchor: end; }
+/* 진입점수(종가 기준) — RSI 패널에 겹치는 두 번째 선. 축은 왼쪽 안쪽 */
+.chart-entry-line {
+  fill: none;
+  stroke: var(--chart-entry);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 3 2;
+  pointer-events: none;
+  opacity: .9;
+}
+.chart-entry-title,
+.chart-entry-axis {
+  fill: var(--chart-entry);
+  font-size: 9.5px;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: var(--chart-bg);
+  stroke-width: 2.5px;
+}
+.chart-entry-axis { text-anchor: start; }
 .chart-extreme {
   pointer-events: none;
 }

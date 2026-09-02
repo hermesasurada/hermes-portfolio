@@ -91,7 +91,7 @@ function aggregateChartPoints(points, interval = chartInterval) {
     const key = chartIntervalKey(point.date, interval);
     const previous = grouped.get(key);
     const carryKeys = [
-      "rsi",
+      "rsi", "entry_score",
       "bb_upper", "bb_mid", "bb_lower",
       "ichi_tenkan", "ichi_kijun", "ichi_span_a", "ichi_span_b",
     ];
