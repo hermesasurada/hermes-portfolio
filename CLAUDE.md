@@ -6,7 +6,7 @@
 ## 배포/반영
 - **프런트(js/css/html)**: 서버가 no-store로 서빙 → 브라우저 새로고침만으로 반영. `?v=` 캐시버전 금지(효과 0, 관리 부담만).
 - **백엔드(.py)**: 라이브 서버 재시작 필요 → `launchctl kickstart -k gui/$(id -u)/com.yhandhs.portfolio-web` (pkill+직접실행 금지 — KeepAlive가 재점유).
-- 라이브는 Tailscale `100.109.86.85:8765` (localhost 아님). 테스트: `python3 tests/test_portfolio_core.py` (pytest 불필요).
+- 라이브는 Tailscale `100.109.86.85:8765`(사용자 기기용). **브라우저 패널 검증은 `http://localhost:8765`로**(서버는 0.0.0.0 바인드라 동일 서비스) — Tailscale IP는 사이트 권한 프롬프트가 작업마다 떠서 자동화가 막힌다. 테스트: `python3 tests/test_portfolio_core.py` (pytest 불필요).
 
 ## 절대 불변 (UI)
 - **상승=빨강(`--up`), 하락=파랑(`--down`)** — 한국 관례. 변경 금지.
