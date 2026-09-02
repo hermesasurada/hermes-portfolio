@@ -1935,7 +1935,12 @@ tr.dividend-month-row:hover td {
 #detailTableWrap th:nth-child(24),
 #detailTableWrap td:nth-child(24),
 #detailTableWrap th:nth-child(27),
-#detailTableWrap td:nth-child(27) { padding-right: 8px; }
+/* 그룹 경계선 앞 셀 여백 — 번호(27=P/B)로만 주면 모멘텀 마지막 BB(월)이 빠져 값이 선에 붙는다.
+   :not(.hidden)은 숨긴 셀 제외 겸 모멘텀 1px 규칙(:nth-child 둘)보다 특이도를 높이는 용도. */
+#detailTableWrap th:not(.hidden):has(+ .group-start),
+#detailTableWrap td:not(.hidden):has(+ .group-start),
+#detailTableWrap th:not(.hidden):has(+ .hidden + .group-start),
+#detailTableWrap td:not(.hidden):has(+ .hidden + .group-start) { padding-right: 8px; }
 /* 행 처리 단일화: 지브라+보더+호버 3중첩에서 보더+호버만 남김 */
 tr:hover td { background: var(--surface-hover); }
 tbody tr.index-row td {
