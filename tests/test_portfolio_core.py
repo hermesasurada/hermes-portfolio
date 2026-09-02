@@ -1307,27 +1307,27 @@ def test_entry_risk_reward_score_formula():
     # 일·주 상단 0. 주 RSI 55·60일선 위 → 업사이드 0
     assert entry_risk_reward_score(0.0, 2.0, 50, 55, 5.0, 0.0) == 0.0
 
-    # 일·주 +6%, ATR 2% → 손절 3% → 6/3=2. 주 RSI 없음(추세=이평만, +5%는 밴드 밖이라 1.0)·일 RSI 50
-    mid = entry_risk_reward_score(6.0, 2.0, 50, None, 5.0, 6.0)
+    # 일·주 +6%, ATR 2% → 손절 3% → 6/3=2. 주 RSI 60·60일선 +5%(둘 다 밴드 밖) → 추세 1.0·일 RSI 50
+    mid = entry_risk_reward_score(6.0, 2.0, 50, 60, 5.0, 6.0)
     assert abs(mid - 2.0) < 0.02
 
     # 주 밴드가 일보다 무겁다: 일은 소진(0)이어도 주에 여유가 있으면 점수가 난다
-    weekly_room = entry_risk_reward_score(0.0, 2.0, 50, None, 5.0, 8.0)
-    daily_only = entry_risk_reward_score(8.0, 2.0, 50, None, 5.0, 0.0)
+    weekly_room = entry_risk_reward_score(0.0, 2.0, 50, 60, 5.0, 8.0)
+    daily_only = entry_risk_reward_score(8.0, 2.0, 50, 60, 5.0, 0.0)
     assert abs(weekly_room - 8.0 * 0.7 / 3.0) < 0.02
     assert abs(daily_only - 8.0 * 0.3 / 3.0) < 0.02
     assert weekly_room > daily_only
 
     # 주봉 상단 거리는 30%에서 자른다. 급락 후 4σ 여유를 그대로 쓰지 않는다.
-    capped = entry_risk_reward_score(0.0, 2.0, 50, None, 5.0, 400.0)
+    capped = entry_risk_reward_score(0.0, 2.0, 50, 60, 5.0, 400.0)
     assert abs(capped - WEEK_UPSIDE_CAP * 0.7 / 3.0) < 0.02
-    uncapped = entry_risk_reward_score(0.0, 2.0, 50, None, 5.0, 20.0)
+    uncapped = entry_risk_reward_score(0.0, 2.0, 50, 60, 5.0, 20.0)
     assert abs(uncapped - 20.0 * 0.7 / 3.0) < 0.02
     assert capped > uncapped
 
     # 같은 ATR이면 상단 여유가 큰 쪽이 높다
-    near_upper = entry_risk_reward_score(1.0, 2.0, 50, None, 5.0, 1.0)
-    near_lower = entry_risk_reward_score(8.0, 2.0, 50, None, 5.0, 8.0)
+    near_upper = entry_risk_reward_score(1.0, 2.0, 50, 60, 5.0, 1.0)
+    near_lower = entry_risk_reward_score(8.0, 2.0, 50, 60, 5.0, 8.0)
     assert near_lower > near_upper > 0
 
     # 타이밍 RSI는 일봉만. 주 RSI는 추세에만 쓰이므로 일 RSI만 바꿔도 점수가 갈린다.
@@ -1355,17 +1355,22 @@ def test_entry_risk_reward_score_formula():
     assert mixed < between < 2.0
 
     # ATR 바닥 1%. ATR 0.2%여도 손절은 1%
-    floor = entry_risk_reward_score(4.0, 0.2, 50, None, 5.0, 4.0)
+    floor = entry_risk_reward_score(4.0, 0.2, 50, 60, 5.0, 4.0)
     assert abs(floor - 4.0) < 0.02
 
     # ATR은 손절 폭으로만. 같은 밴드면 ATR이 큰 쪽이 점수가 낮다 (가점 없음)
-    low_vol = entry_risk_reward_score(6.0, 2.0, 50, None, 5.0, 6.0)
-    high_vol = entry_risk_reward_score(6.0, 4.0, 50, None, 5.0, 6.0)
+    low_vol = entry_risk_reward_score(6.0, 2.0, 50, 60, 5.0, 6.0)
+    high_vol = entry_risk_reward_score(6.0, 4.0, 50, 60, 5.0, 6.0)
     assert low_vol > high_vol > 0
     assert abs(high_vol / low_vol - 0.5) < 0.02
 
-    assert entry_risk_reward_score(None, 2.0) is None
-    assert entry_risk_reward_score(6.0, None) is None
+    assert entry_risk_reward_score(None, 2.0, 50, 60, 5.0, 6.0) is None
+    assert entry_risk_reward_score(6.0, None, 50, 60, 5.0, 6.0) is None
+    # 이력 부족 결측은 낙관 기본값 대신 점수 없음 — 주 RSI / 주 상단 / 60일선 / 일 RSI
+    assert entry_risk_reward_score(6.0, 2.0, 50, None, 5.0, 6.0) is None
+    assert entry_risk_reward_score(6.0, 2.0, 50, 60, 5.0, None) is None
+    assert entry_risk_reward_score(6.0, 2.0, 50, 60, None, 6.0) is None
+    assert entry_risk_reward_score(6.0, 2.0, None, 60, 5.0, 6.0) is None
 
     assert ma_pct([100.0] * 20) == 0.0
     assert ma_pct([90.0] * 19 + [110.0]) > 0

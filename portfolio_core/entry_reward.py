@@ -12,6 +12,8 @@
              계단(1.0/0.6/0.25)이던 것을 연속으로 바꾼 이유: 문턱 바로 위
              종목은 가격이 0.5%만 밀려도 점수가 40% 빠졌다(PH 2.95→1.87).
   점수     = clamp(업사이드/손절 × RSI × 추세, 0, 20)
+  결측     = 일 RSI·주 RSI·주 볼린저 상단·60일선 중 하나라도 없으면 None
+             (주봉 20개가 서기 전, 즉 상장 약 20주 미만이면 점수 없음)
 
   밴드 폭이 이미 변동성이라 ATR 가점은 넣지 않는다. ATR은 손절 폭으로만 쓴다.
 """
@@ -105,7 +107,15 @@ def entry_risk_reward_score(
     ma60_pct=None,
     upper_week_pct=None,
 ) -> float | None:
-    """주 볼린저(캡) 위주 업사이드 / 1.5×ATR, 일 RSI·60일선 추세로 가감."""
+    """주 볼린저(캡) 위주 업사이드 / 1.5×ATR, 일 RSI·60일선 추세로 가감.
+
+    입력이 하나라도 없으면 점수를 내지 않는다. 예전엔 없는 RSI를 1.0, 없는
+    추세를 '강함'으로 채워 이력이 짧은 신규 상장이 데이터가 없다는 이유로
+    상위권에 올랐다(HONA: 주RSI·주상단·60일선 전부 결측인데 전체 1위).
+    회피 게이지에서 '모르면 안전'은 방향이 반대다. 실질 기준은 상장 20주.
+    """
+    if any(_finite(value) is None for value in (upper_pct, upper_week_pct, rsi_day, rsi_week, ma60_pct)):
+        return None
     upside = _upside_pct(upper_pct, upper_week_pct)
     atr = _finite(atr_pct)
     if upside is None or atr is None or atr < 0:
