@@ -1185,16 +1185,13 @@ main {
 #interestTableWrap .interest-detail-list td.group-start {
   padding-left: 8px;
 }
-#interestTableWrap .interest-detail-list th[data-interest-col="4"],
-#interestTableWrap .interest-detail-list td:nth-child(5),
-#interestTableWrap .interest-detail-list th[data-interest-col="13"],
-#interestTableWrap .interest-detail-list td:nth-child(14),
-#interestTableWrap .interest-detail-list th[data-interest-col="19"],
-#interestTableWrap .interest-detail-list td:nth-child(20),
-#interestTableWrap .interest-detail-list th[data-interest-col="22"],
-#interestTableWrap .interest-detail-list td:nth-child(23),
-#interestTableWrap .interest-detail-list th[data-interest-col="31"],
-#interestTableWrap .interest-detail-list td:nth-child(32) {
+/* 그룹 경계선(.group-start의 border-left) 바로 앞 셀은 값이 선에 붙지 않게 여백을 더 준다.
+   컬럼 번호로 지목하면 컬럼을 끼워 넣을 때마다 어긋난다(연속지급·증액 삽입 뒤 BB(월)·P/B·10년이
+   전부 5px로 떨어진 실사고) — 구조로 지목한다. 숨긴 컬럼 하나를 건너뛴 경우까지 포함. */
+#interestTableWrap .interest-detail-list th:has(+ .group-start),
+#interestTableWrap .interest-detail-list td:has(+ .group-start),
+#interestTableWrap .interest-detail-list th:has(+ .hidden + .group-start),
+#interestTableWrap .interest-detail-list td:has(+ .hidden + .group-start) {
   padding-right: 9px;
 }
 .interest-detail-list th.logo-col {
@@ -1272,13 +1269,10 @@ main {
 .interest-detail-list td:nth-child(6) {
   width: 112px;
 }
-.interest-detail-list th[data-interest-col="14"],
-.interest-detail-list th[data-interest-col="15"],
-.interest-detail-list th[data-interest-col="16"],
-.interest-detail-list th[data-interest-col="17"],
-.interest-detail-list th[data-interest-col="18"],
-.interest-detail-list th[data-interest-col="19"],
-.interest-detail-list td:nth-child(n+15):nth-child(-n+20) {
+/* 모멘텀 6컬럼(RSI 일/주/월, BB 일/주/월) — th는 그룹 속성으로, td는 번호(현재 17~22)로.
+   컬럼을 끼워 넣으면 td 번호는 같이 옮겨야 한다(index.html data-interest-col 재부여와 한 쌍). */
+.interest-detail-list th[data-interest-group="momentum"],
+.interest-detail-list td:nth-child(n+17):nth-child(-n+22) {
   width: 48px;
   padding-left: 2px;
   padding-right: 2px;
