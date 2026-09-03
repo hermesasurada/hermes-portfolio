@@ -15,6 +15,7 @@ from .technical_stats import price_adjusted_rows
 from .tickers import account_label, ticker_currency
 from .entry_reward import is_leveraged_product
 from .entry_reward_history import entry_score_series
+from .performance_snapshots import twr_index
 from .us_live_quotes import us_market_status
 
 
@@ -367,6 +368,15 @@ def performance_date_bounds(
     return (shift_months(today, -months).isoformat(), None) if months else (None, None)
 
 
+def _rebase_twr(points: list[dict]) -> None:
+    """구간 첫 점의 twr을 1.0으로 맞춘다."""
+    if not points:
+        return
+    base = float(points[0].get("twr") or 1.0) or 1.0
+    for point in points:
+        point["twr"] = float(point.get("twr") or 1.0) / base
+
+
 def load_account_performance(
     account_ids: list[str] | None = None,
     *,
@@ -454,7 +464,12 @@ def load_account_performance(
             if day in series:
                 carried[aid] = series[day]
                 if detail:
-                    account_points[aid].append({"date": day, "value": series[day][0]})
+                    account_points[aid].append({
+                        "date": day,
+                        "value": series[day][0],
+                        "trade_cash": series[day][1],   # 시간가중 체인이 흐름을 알아야 매수가 수익으로 잡히지 않는다
+                        "flow": series[day][2],
+                    })
         if coverage_start and day < coverage_start:
             continue
         if start_date and day < start_date:
@@ -471,12 +486,25 @@ def load_account_performance(
                 "trade_cash": sum(item[1] for item in carried.values()),
                 "flow": sum(item[2] for item in carried.values()),
             })
+    # 시간가중 지수 — 선택 계좌 전부에 현금 입출금이 있으면 정식(외부 흐름만),
+    # 아니면 증권 기준(매수·매도를 외부 흐름으로). 체인은 전체 이력에서 잇고
+    # 표시 구간 첫 점을 1.0으로 다시 맞춘다(구간 밖 수익률이 안으로 새지 않게).
+    has_flows = {aid: any(abs(item[2]) > 1e-9 for item in series.values()) for aid, series in per_account.items()}
+    twr_basis = "full" if per_account and all(has_flows.values()) else "securities"
+    if points:
+        chained = twr_index(points, twr_basis)
+        for point, growth in zip(points, chained):
+            point["twr"] = growth
+        _rebase_twr(points)
     if detail:
         for aid, series in account_points.items():
+            for point, growth in zip(series, twr_index(series, "full" if has_flows.get(aid) else "securities")):
+                point["twr"] = growth
             account_points[aid] = [
                 p for p in series
                 if (not start_date or p["date"] >= start_date) and (not end_date or p["date"] <= end_date)
             ]
+            _rebase_twr(account_points[aid])
 
     account_names = {
         str(row["id"]): f"{row['member']} · {account_label(row['member'], row['account_type'], row['name'])}"
@@ -504,6 +532,7 @@ def load_account_performance(
         ],
         "holdings_count": sum(1 for row in holding_rows if row["ticker"] and float(row["qty"] or 0) > 0),
         "basis": "snapshot",
+        "twr_basis": twr_basis,
         "coverage_start": coverage_start,
         "points": points,
         "account_series": [

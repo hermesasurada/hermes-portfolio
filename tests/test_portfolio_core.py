@@ -2355,6 +2355,34 @@ def test_performance_snapshot_reconstructs_opening_and_applies_fx():
     conn.close()
 
 
+def test_twr_index_neutralizes_flows():
+    from portfolio_core.performance_snapshots import twr_index
+
+    # 증권 기준: 둘째 날 100 매수(ΔC=−100, 장 시작 유입) → 자본 200이 210 = +5%
+    pts = [
+        {"value": 100, "trade_cash": 0, "flow": 0},
+        {"value": 210, "trade_cash": -100, "flow": 0},
+        {"value": 231, "trade_cash": -100, "flow": 0},   # +10%
+    ]
+    idx = twr_index(pts, "securities")
+    assert abs(idx[1] - 1.05) < 1e-9 and abs(idx[2] - 1.155) < 1e-9
+    # 작은 기존 자본에 큰 매수: 장 마감 관례면 +255%, 장 시작 관례면 +5%
+    big = [{"value": 100, "trade_cash": 0, "flow": 0}, {"value": 105 + 5250, "trade_cash": -5000, "flow": 0}]
+    assert abs(twr_index(big, "securities")[1] - 1.05) < 1e-9
+    # 정식: 둘째 날 외부 입금 100(현금 보유) → 총자산 200, 시장 0% → 지수 1.0 유지.
+    # 셋째 날 그 현금으로 100 매수(외부 흐름 아님) → 총자산 그대로, 지수 1.0.
+    full = [
+        {"value": 100, "trade_cash": 0, "flow": 0},
+        {"value": 100, "trade_cash": 0, "flow": 100},
+        {"value": 200, "trade_cash": -100, "flow": 100},
+        {"value": 220, "trade_cash": -100, "flow": 100},  # 증권 +10% → 총자산 200→220
+    ]
+    idx = twr_index(full, "full")
+    assert abs(idx[1] - 1.0) < 1e-9 and abs(idx[2] - 1.0) < 1e-9 and abs(idx[3] - 1.10) < 1e-9
+    # 직전 값 0이면 그날은 0% 처리
+    assert twr_index([{"value": 0}, {"value": 50}], "securities") == [1.0, 1.0]
+
+
 def test_date_helpers():
     assert parse_iso_date("2026-06-08T00:00:00") == date(2026, 6, 8)
     assert parse_iso_date("not-a-date") is None

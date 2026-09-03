@@ -261,3 +261,40 @@ def load_account_snapshots(
         ],
         "computed_at": computed_at,
     }
+
+
+def twr_index(points: list[dict], basis: str) -> list[float]:
+    """시간가중 지수(첫 점 1.0). points는 날짜순 {value, trade_cash, flow}(누계).
+
+    basis="securities": 매수·매도를 전부 외부 흐름으로 간주 — 계좌 현금을 모를 때.
+        r_t = V_t / (V_{t-1} − ΔC_t) − 1,  ΔC = 그날 매도금 − 매수금 (매수면 분모가 커진다)
+    basis="full": 외부 입출금만 흐름으로 — 현금 입출금이 입력된 뒤.
+        T_t = V_t + (flow_t + trade_cash_t)   ← 기준일 현금은 0으로 두므로
+              기준일 보유 현금은 기준일자 입금으로 넣는다는 규약
+        r_t = T_t / (T_{t-1} + ΔF_t) − 1,  ΔF = 그날 외부 입출금
+
+    흐름은 **장 시작 시점**에 들어온 것으로 본다(분모). 장 마감 관례(분자에서 차감)는
+    기존 자본이 작을 때 큰 매수가 들어오면 그날 산 주식의 장중 등락이 작은 기존 자본
+    대비 수익률로 잡혀 폭발한다(신규 계좌 1년 +1120% 실측). 분모가 0 이하면 그날은 0%.
+    """
+    out: list[float] = []
+    growth = 1.0
+    previous = None
+    for point in points:
+        value = float(point.get("value") or 0.0)
+        trade_cash = float(point.get("trade_cash") or 0.0)
+        flow = float(point.get("flow") or 0.0)
+        total = value + flow + trade_cash if basis == "full" else value
+        if previous is not None:
+            prev_total, prev_trade, prev_flow = previous
+            if basis == "full":
+                denominator = prev_total + (flow - prev_flow)
+                numerator = total
+            else:
+                denominator = prev_total - (trade_cash - prev_trade)
+                numerator = value
+            if denominator > 0 and prev_total > 0:
+                growth *= numerator / denominator
+        out.append(growth)
+        previous = (total, trade_cash, flow)
+    return out

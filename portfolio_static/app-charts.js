@@ -8,10 +8,12 @@ function accountPerformanceTitle(payload) {
   return `${accounts.length}개 계좌`;
 }
 
-function normalizePerformancePoints(points, rangeKey, bounds = null) {
+// useTwr: 계좌 선은 평가액 변화율이 아니라 시간가중 지수(point.twr, 백엔드 체인)로 %를 그린다.
+// 평가액(point.value)은 호버 금액·끝 라벨용으로 그대로 들고 간다.
+function normalizePerformancePoints(points, rangeKey, bounds = null, useTwr = false) {
   const raw = (points || [])
     .filter(point => point.date && Number.isFinite(Number(point.value)))
-    .map(point => ({ date: point.date, value: Number(point.value) }));
+    .map(point => ({ date: point.date, value: Number(point.value), twr: Number.isFinite(Number(point.twr)) ? Number(point.twr) : null }));
   const startDate = bounds?.startDate || null;
   const endDate = bounds?.endDate || null;
   const filtered = startDate || endDate
@@ -19,17 +21,23 @@ function normalizePerformancePoints(points, rangeKey, bounds = null) {
         const date = new Date(`${point.date}T00:00:00`);
         return (!startDate || date >= startDate) && (!endDate || date <= endDate);
       })
-    : filterChartPoints(raw.map(point => ({ date: point.date, close: point.value })), rangeKey)
-        .map(point => ({ date: point.date, value: Number(point.close) }));
+    : filterChartPoints(raw.map(point => ({ date: point.date, close: point.value, twr: point.twr })), rangeKey)
+        .map(point => ({ date: point.date, value: Number(point.close), twr: point.twr }));
   if (filtered.length < 2) return [];
-  const base = filtered.find(point => point.value > 0)?.value;
+  const twrReady = useTwr && filtered.every(point => point.twr != null && point.twr > 0);
+  const base = twrReady ? filtered[0].twr : filtered.find(point => point.value > 0)?.value;
   if (!base) return [];
   return filtered.map(point => ({
     date: point.date,
-    close: (point.value / base - 1) * 100,
+    close: ((twrReady ? point.twr : point.value) / base - 1) * 100,
     value: point.value,
     time: new Date(`${point.date}T00:00:00`).getTime(),
   }));
+}
+
+function performanceTwrLabel(payload) {
+  if (!payload?.twr_basis) return "";
+  return payload.twr_basis === "full" ? " · 시간가중" : " · 시간가중(증권 기준)";
 }
 
 function performanceValueText(point) {
@@ -47,9 +55,9 @@ function performanceSeries(payload) {
   const series = [
     {
       key: "portfolio",
-      name: "선택 계좌",
+      name: `선택 계좌${performanceTwrLabel(payload)}`,
       color: "var(--brand)",
-      points: normalizePerformancePoints(portfolioRaw, chartRange, bounds),
+      points: normalizePerformancePoints(portfolioRaw, chartRange, bounds, true),
       primary: true,
       amount: true,
     },
@@ -60,7 +68,7 @@ function performanceSeries(payload) {
         key: `account-${account.id}`,
         name: account.name || `계좌 ${index + 1}`,
         color: chartCompareColors[(index + 1) % chartCompareColors.length],
-        points: normalizePerformancePoints(account.points || [], chartRange, bounds),
+        points: normalizePerformancePoints(account.points || [], chartRange, bounds, true),
         primary: false,
         detail: true,
         amount: true,
