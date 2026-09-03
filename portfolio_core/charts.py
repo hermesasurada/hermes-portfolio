@@ -9,7 +9,7 @@ from .db import connect
 from .indicators import rsi_series, shift_months
 from .market_calendar import holiday_change_session_note
 from .paths import US_EASTERN
-from .prices import build_market_snapshot, fx_rates, latest_prices, price_view
+from .prices import build_market_snapshot, latest_prices, price_view
 from .queries import account_filter_clause, clean_account_ids, load_holding_rows
 from .technical_stats import price_adjusted_rows
 from .tickers import account_label, ticker_currency
@@ -375,12 +375,19 @@ def load_account_performance(
     start: str | None = None,
     end: str | None = None,
 ) -> dict:
+    """성과차트 데이터 — account_value_snapshots(역산 포지션·거래 재생·일별 환율) 기준.
+
+    예전에는 현재 잔고를 과거에 그대로 고정하고 현재 환율을 곱했다. 이제는
+    계좌별 스냅샷을 그대로 읽어 합산한다(조회 시 재계산 없음). 계좌마다 거래
+    캘린더가 달라(한국·미국 휴장일) 날짜 합집합 위에서 각 계좌의 마지막 값을
+    이월해 더한다. 값은 보유 증권 평가액(KRW). 거래 현금·외부 입출금 누계는
+    points에 함께 실어 두어 나중에 현금 포함 성과·TWR을 프런트가 조합할 수 있다.
+    """
     cleaned_account_ids = clean_account_ids(account_ids)
     account_filter, params = account_filter_clause(cleaned_account_ids)
     start_date, end_date = performance_date_bounds(range_key, start, end)
 
     with connect() as conn:
-        prices = latest_prices(conn)
         account_rows = conn.execute(
             f"""
             SELECT a.id, a.member, a.account_type, a.name
@@ -391,55 +398,18 @@ def load_account_performance(
             params,
         ).fetchall()
         holding_rows = load_holding_rows(conn, cleaned_account_ids, positive_only=True)
-
-        holdings = [
-            {
-                "account_id": str(row["account_id"]),
-                "ticker": row["ticker"],
-                "name": row["name"] or row["ticker"],
-                "qty": float(row["qty"] or 0),
-                "currency": row["currency"] or ticker_currency(row["ticker"]),
-            }
-            for row in holding_rows
-            if row["ticker"] and float(row["qty"] or 0) > 0
-        ]
-        tickers = sorted({row["ticker"] for row in holdings})
-        price_rows = []
-        seed_rows = []
-        if tickers:
-            placeholders = ",".join("?" for _ in tickers)
-            date_conditions = []
-            date_params: list[object] = []
-            if start_date:
-                date_conditions.append("date >= ?")
-                date_params.append(start_date)
-                seed_rows = conn.execute(
-                    f"""
-                    SELECT p.ticker, p.close
-                    FROM daily_prices p
-                    JOIN (
-                        SELECT ticker, MAX(date) AS date
-                        FROM daily_prices
-                        WHERE ticker IN ({placeholders}) AND close IS NOT NULL AND date < ?
-                        GROUP BY ticker
-                    ) seed ON seed.ticker = p.ticker AND seed.date = p.date
-                    """,
-                    [*tickers, start_date],
-                ).fetchall()
-            if end_date:
-                date_conditions.append("date <= ?")
-                date_params.append(end_date)
-            date_sql = f"AND {' AND '.join(date_conditions)}" if date_conditions else ""
-            price_rows = conn.execute(
+        selected = [int(row["id"]) for row in account_rows]
+        snapshot_rows = []
+        if selected:
+            placeholders = ",".join("?" for _ in selected)
+            snapshot_rows = conn.execute(
                 f"""
-                SELECT date, ticker, close
-                FROM daily_prices
-                WHERE ticker IN ({placeholders})
-                  AND close IS NOT NULL
-                  {date_sql}
-                ORDER BY date, ticker
+                SELECT account_id, date, holdings_value_krw, trade_cash_krw, flow_krw
+                FROM account_value_snapshots
+                WHERE account_id IN ({placeholders})
+                ORDER BY account_id, date
                 """,
-                [*tickers, *date_params],
+                selected,
             ).fetchall()
 
         index_tickers = list(PERFORMANCE_INDEXES)
@@ -465,54 +435,53 @@ def load_account_performance(
             [*index_tickers, *index_params],
         ).fetchall()
 
-    rates = fx_rates(prices)   # FX_TICKERS 기반 전 통화 — 수동 dict는 CNY/TWD 누락 버그가 있었다
-    available_tickers = {row["ticker"] for row in price_rows} | {row["ticker"] for row in seed_rows}
-    holding_specs = [
-        {
-            **holding,
-            "rate": rates.get(holding["currency"], 1.0),
-        }
-        for holding in holdings
-        if holding["ticker"] in available_tickers
-    ]
-    tickers = sorted({holding["ticker"] for holding in holding_specs})
+    # 계좌별 날짜→값, 그리고 날짜 합집합 위에서 이월 합산
+    per_account: dict[str, dict[str, tuple[float, float, float]]] = {}
+    for row in snapshot_rows:
+        per_account.setdefault(str(row["account_id"]), {})[row["date"]] = (
+            float(row["holdings_value_krw"] or 0.0),
+            float(row["trade_cash_krw"] or 0.0),
+            float(row["flow_krw"] or 0.0),
+        )
+    all_dates = sorted({d for series in per_account.values() for d in series})
+    # 모든 선택 계좌에 값이 생긴 날부터 — 그 전엔 합계가 계좌 일부만 담아 왜곡된다
+    coverage_start = max((min(series) for series in per_account.values() if series), default=None)
+    carried: dict[str, tuple[float, float, float]] = {}
+    points: list[dict] = []
+    account_points: dict[str, list[dict]] = {aid: [] for aid in per_account} if detail else {}
+    for day in all_dates:
+        for aid, series in per_account.items():
+            if day in series:
+                carried[aid] = series[day]
+                if detail:
+                    account_points[aid].append({"date": day, "value": series[day][0]})
+        if coverage_start and day < coverage_start:
+            continue
+        if start_date and day < start_date:
+            continue
+        if end_date and day > end_date:
+            continue
+        if len(carried) < len(per_account):
+            continue
+        value = sum(item[0] for item in carried.values())
+        if value > 0:
+            points.append({
+                "date": day,
+                "value": value,
+                "trade_cash": sum(item[1] for item in carried.values()),
+                "flow": sum(item[2] for item in carried.values()),
+            })
+    if detail:
+        for aid, series in account_points.items():
+            account_points[aid] = [
+                p for p in series
+                if (not start_date or p["date"] >= start_date) and (not end_date or p["date"] <= end_date)
+            ]
+
     account_names = {
         str(row["id"]): f"{row['member']} · {account_label(row['member'], row['account_type'], row['name'])}"
         for row in account_rows
     }
-    account_specs: dict[str, list[dict]] = {}
-    for holding in holding_specs:
-        account_specs.setdefault(holding["account_id"], []).append(holding)
-
-    latest_by_ticker: dict[str, float] = {
-        row["ticker"]: float(row["close"])
-        for row in seed_rows
-    }
-    points = []
-    account_points: dict[str, list[dict]] = (
-        {account_id: [] for account_id in account_specs} if detail else {}
-    )
-    for date, rows_iter in groupby(price_rows, key=lambda row: row["date"]):
-        for row in rows_iter:
-            latest_by_ticker[row["ticker"]] = float(row["close"])
-        if tickers and all(ticker in latest_by_ticker for ticker in tickers):
-            value = sum(
-                holding["qty"] * latest_by_ticker[holding["ticker"]] * holding["rate"]
-                for holding in holding_specs
-            )
-            if value > 0:
-                points.append({"date": date, "value": value})
-        if detail:
-            for account_id, specs in account_specs.items():
-                account_tickers = {spec["ticker"] for spec in specs}
-                if account_tickers and all(ticker in latest_by_ticker for ticker in account_tickers):
-                    value = sum(
-                        spec["qty"] * latest_by_ticker[spec["ticker"]] * spec["rate"]
-                        for spec in specs
-                    )
-                    if value > 0:
-                        account_points[account_id].append({"date": date, "value": value})
-
     indexes: dict[str, dict] = {}
     for ticker, rows_iter in groupby(index_rows, key=lambda row: row["ticker"]):
         indexes[ticker] = {
@@ -533,7 +502,9 @@ def load_account_performance(
             }
             for row in account_rows
         ],
-        "holdings_count": len(holding_specs),
+        "holdings_count": sum(1 for row in holding_rows if row["ticker"] and float(row["qty"] or 0) > 0),
+        "basis": "snapshot",
+        "coverage_start": coverage_start,
         "points": points,
         "account_series": [
             {

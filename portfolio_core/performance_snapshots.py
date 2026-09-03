@@ -1,6 +1,6 @@
 """계좌별 일별 KRW 평가액 스냅샷 — 성과차트의 데이터 정본.
 
-기준일(accounts.history_start, 없으면 그 계좌의 최초 거래일)에서 **현재 잔고 −
+기준일(accounts.history_start, 없으면 전 계좌 공통 최초 거래일)에서 **현재 잔고 −
 기준일 이후 순거래**로 기초 포지션을 역산하고, 이후 거래를 하루씩 재생해
 보유수량 × 종가 × 환율(KRW)로 평가한다. 거래 이력이 부분적인 계좌(연금
 4계좌)도 이 방식이면 재생이 항상 현재 잔고에 도달한다.
@@ -52,14 +52,18 @@ class _Series:
 
 
 def account_anchor(conn: sqlite3.Connection, account_id: int) -> str | None:
-    """기준일 — 명시값이 있으면 그것, 없으면 그 계좌의 최초 거래일."""
+    """기준일 — 명시값(accounts.history_start)이 있으면 그것, 없으면 **전 계좌 최초 거래일**.
+
+    계좌마다 최초 거래일이 다르면(퇴직연금 2026-08, 해외 2021-10) 합산 차트가
+    가장 늦은 계좌부터만 그려진다. 기준일을 앞당겨도 역산은 그대로 성립한다 —
+    기준일 이후 거래가 없는 구간은 기초 포지션을 그대로 들고 있던 것으로 평가되며,
+    이는 예전 성과차트의 '현재 잔고 고정' 가정과 같다. 그래서 공통 기준일을 쓴다.
+    """
     row = conn.execute("SELECT history_start FROM accounts WHERE id = ?", (account_id,)).fetchone()
     explicit = (row["history_start"] or "").strip() if row else ""
     if explicit:
         return explicit
-    first = conn.execute(
-        "SELECT MIN(trade_date) AS d FROM transactions WHERE account_id = ?", (account_id,)
-    ).fetchone()
+    first = conn.execute("SELECT MIN(trade_date) AS d FROM transactions").fetchone()
     return first["d"] if first and first["d"] else None
 
 

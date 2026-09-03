@@ -40,7 +40,7 @@
 
 ## 성과 스냅샷 (API만, 화면 미노출 — 2026-09 진행 중)
 - `account_value_snapshots`(계좌·일자별 `holdings_value_krw`/`trade_cash_krw`/`flow_krw`)가 성과차트의 정본. 조회 시 재계산 금지 — 다시 만드는 건 **거래 입력·수정·삭제, 현금 입출금 변경, 일배치(당일 점)** 뿐(`performance_snapshots.rebuild_account_snapshots`).
-- 기준일 = `accounts.history_start`(없으면 최초 거래일). 기초 포지션 = **현재 잔고 − 기준일 이후 순거래**로 역산 → 이력이 부분적인 연금 계좌도 재생이 잔고에 도달한다. **거래 수량은 분할 후 기준으로 입력돼 있으므로 분할 환산 금지**(141쌍 대조 실측).
+- 기준일 = `accounts.history_start`(없으면 **전 계좌 공통 최초 거래일** — 계좌별로 다르면 합산 차트가 가장 늦은 계좌부터만 그려지므로). 기초 포지션 = **현재 잔고 − 기준일 이후 순거래**로 역산 → 이력이 부분적인 연금 계좌도 재생이 잔고에 도달한다. **거래 수량은 분할 후 기준으로 입력돼 있으므로 분할 환산 금지**(141쌍 대조 실측).
 - 현금 입출금은 `account_cash_flows`(입금 +, 출금 −, 계좌 통화 기본)에 넣고, 스냅샷이 그날 환율로 KRW 환산. 엔드포인트: `GET /api/performance/snapshots`, `GET/POST /api/cash-flows`, `POST /api/cash-flows/delete`, `POST /api/performance/rebuild`. 기존 `/api/account-performance`·성과차트 UI는 아직 그대로.
 
 ## 크론/운영
