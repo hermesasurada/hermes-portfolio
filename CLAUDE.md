@@ -38,6 +38,11 @@
 - fx/index/crypto는 컨센서스 없음 → 조회 스킵, 컬럼 자동 숨김. 매수=상승=빨강 관례 유지.
 - 상세화면 '리포트 상세' 버튼은 **8767 대시보드의 리포트 모달을 iframe으로 그대로 임베드**(`http://{location.hostname}:8767/?embed=1&ticker=X`). 포팅 아님 — analyst-reports repo `static/index.html`의 임베드 모드(크롬 숨김·해당 티커 모달 자동 오픈·`.ov` 딤 끔)에 의존하므로 그 파일을 지우거나 임베드 분기를 건드리면 깨진다. 닫기는 iframe→`postMessage({type:"ar-modal-close"})`(포트폴리오는 `:8767` origin만 신뢰) → `openReportModal`/`closeReportModal`(app-consensus.js). 8767 모달을 개선하면 여기도 자동 반영.
 
+## 성과 스냅샷 (API만, 화면 미노출 — 2026-09 진행 중)
+- `account_value_snapshots`(계좌·일자별 `holdings_value_krw`/`trade_cash_krw`/`flow_krw`)가 성과차트의 정본. 조회 시 재계산 금지 — 다시 만드는 건 **거래 입력·수정·삭제, 현금 입출금 변경, 일배치(당일 점)** 뿐(`performance_snapshots.rebuild_account_snapshots`).
+- 기준일 = `accounts.history_start`(없으면 최초 거래일). 기초 포지션 = **현재 잔고 − 기준일 이후 순거래**로 역산 → 이력이 부분적인 연금 계좌도 재생이 잔고에 도달한다. **거래 수량은 분할 후 기준으로 입력돼 있으므로 분할 환산 금지**(141쌍 대조 실측).
+- 현금 입출금은 `account_cash_flows`(입금 +, 출금 −, 계좌 통화 기본)에 넣고, 스냅샷이 그날 환율로 KRW 환산. 엔드포인트: `GET /api/performance/snapshots`, `GET/POST /api/cash-flows`, `POST /api/cash-flows/delete`, `POST /api/performance/rebuild`. 기존 `/api/account-performance`·성과차트 UI는 아직 그대로.
+
 ## 크론/운영
 - `collect_quotes.py`(분 단위 시세), `collect_prices.py`(일배치), `collect_prices.py --dividends-only`(배당 일배치), `portfolio_healthcheck.py`.
 - 로고: 신규 종목은 hydrate가 자동 수집. 일괄은 `download_portfolio_logos.py`(core cache_logo 위임, 기본 보존 모드). 다크 로고 분류는 `detect_dark_logos.py`(/usr/bin/python3, PIL) — json 갱신 시 mtime으로 자동 반영(재시작 불필요).

@@ -16,7 +16,9 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
 from urllib.request import Request, urlopen
 
+from portfolio_core.cash_flows import add_cash_flow, delete_cash_flow, list_cash_flows
 from portfolio_core.charts import load_account_performance, load_price_chart
+from portfolio_core.performance_snapshots import load_account_snapshots, rebuild_account_snapshots
 from portfolio_core.constants import (
     FX_TICKERS,
     KOREAN_ETF_BRANDS,
@@ -487,6 +489,33 @@ class Handler(BaseHTTPRequestHandler):
     def post_transaction_delete(self) -> dict:
         return delete_transaction(self.read_json())
 
+    # ── 성과 스냅샷·현금 입출금 (아직 화면 미노출 — API만) ──
+    def api_performance_snapshots(self, query: dict[str, list[str]]) -> dict:
+        account_ids = self.query_values(query, "account_ids") or []
+        single = (query.get("account_id") or [None])[0]
+        if single:
+            account_ids = [single]
+        return load_account_snapshots(
+            account_ids or None,
+            (query.get("start") or [None])[0],
+            (query.get("end") or [None])[0],
+        )
+
+    def api_cash_flows(self, query: dict[str, list[str]]) -> dict:
+        account_id = (query.get("account_id") or [None])[0]
+        return list_cash_flows(int(account_id) if account_id else None)
+
+    def post_cash_flow(self) -> dict:
+        return add_cash_flow(self.read_json())
+
+    def post_cash_flow_delete(self) -> dict:
+        return delete_cash_flow(self.read_json())
+
+    def post_performance_rebuild(self) -> dict:
+        payload = self.read_json()
+        ids = payload.get("account_ids") or None
+        return {"ok": True, "rows": rebuild_account_snapshots([int(x) for x in ids] if ids else None)}
+
     def post_watchlist(self) -> dict:
         payload = self.read_json()
         return add_watchlist_async(payload.get("tickers") or [])
@@ -552,6 +581,8 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/diagnostics": self.api_diagnostics,
                 "/api/chart": self.api_chart,
                 "/api/account-performance": self.api_account_performance,
+                "/api/performance/snapshots": self.api_performance_snapshots,
+                "/api/cash-flows": self.api_cash_flows,
                 "/api/dividends": self.api_dividends,
                 "/api/dividend-history": self.api_dividend_history,
                 "/api/schedule": self.api_schedule,
@@ -578,6 +609,9 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/transactions": self.post_transactions,
                 "/api/transactions/update": self.post_transaction_update,
                 "/api/transactions/delete": self.post_transaction_delete,
+                "/api/cash-flows": self.post_cash_flow,
+                "/api/cash-flows/delete": self.post_cash_flow_delete,
+                "/api/performance/rebuild": self.post_performance_rebuild,
                 "/api/watchlist": self.post_watchlist,
                 "/api/watchlist/delete": self.post_watchlist_delete,
                 "/api/interest-watchlists/groups": self.post_interest_group,

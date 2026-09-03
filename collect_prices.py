@@ -23,6 +23,7 @@ from portfolio_core.corporate_actions import refresh_stock_splits
 from portfolio_core.db import connect, ensure_dividend_tables, initialize_schema
 from portfolio_core.dividends import refresh_dividend_events, refresh_dividend_growth_cache
 from portfolio_core.dividend_streaks import refresh_dividend_streaks
+from portfolio_core.performance_snapshots import rebuild_account_snapshots
 from portfolio_core.fundamentals import fetch_fundamentals
 from portfolio_core.price_store import (
     earnings_update_due_tickers,
@@ -373,6 +374,12 @@ def _run(args: argparse.Namespace) -> int:
         except Exception as exc:
             stage_errors.append("dividends")
             print(f"Stage failed: dividends: {type(exc).__name__}: {exc}")
+    try:
+        snapshot_rows = rebuild_account_snapshots()
+        print(f"Rebuilt performance snapshots: {sum(snapshot_rows.values())} rows / {len(snapshot_rows)} accounts")
+    except Exception as exc:
+        stage_errors.append("performance-snapshots")
+        print(f"Stage failed: performance-snapshots: {type(exc).__name__}: {exc}")
     update_collector_run(
         "price-daily",
         saved_tickers,

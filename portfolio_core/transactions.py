@@ -9,6 +9,7 @@ from .constants import CRYPTO_MARKETS, KOREAN_SUFFIXES
 from .dates import now_kst_text
 from .db import connect, ensure_transaction_columns
 from .entry_reward_history import entry_score_on
+from .performance_snapshots import rebuild_account_snapshots
 from .portfolio import load_portfolio
 from .tickers import account_scope, display_name, ticker_currency, ticker_scope
 
@@ -221,6 +222,7 @@ def add_transaction(payload: dict, portfolio_loader: Callable[[], dict] | None =
             (trade_date, account["member"], account_id, ticker, side, qty, price, currency, note, now_kst_text(), 1 if apply_to_holdings else 0, entry_score),
         )
 
+    rebuild_account_snapshots([account_id])   # 거래가 바뀌면 그 계좌 성과 스냅샷을 다시 만든다
     return {
         "ok": True,
         "portfolio": (portfolio_loader or load_portfolio)(),
@@ -259,6 +261,8 @@ def update_transaction(payload: dict) -> dict:
             (trade_date, side, qty, price, note, hidden, entry_score, tx_id),
         )
         conn.commit()
+        account_id = int(row["account_id"])
+    rebuild_account_snapshots([account_id])
     return {"ok": True, "id": tx_id}
 
 
@@ -268,8 +272,11 @@ def delete_transaction(payload: dict) -> dict:
     if not tx_id:
         raise ValueError("거래 id가 필요합니다.")
     with connect() as conn:
+        owner = conn.execute("SELECT account_id FROM transactions WHERE id = ?", (tx_id,)).fetchone()
         cursor = conn.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
         conn.commit()
     if cursor.rowcount == 0:
         raise ValueError("존재하지 않는 거래입니다.")
+    if owner:
+        rebuild_account_snapshots([int(owner["account_id"])])
     return {"ok": True, "id": tx_id}

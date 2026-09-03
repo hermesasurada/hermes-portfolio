@@ -2308,6 +2308,53 @@ def test_leveraged_product_detection():
         assert not is_leveraged_product(name), name
 
 
+def test_performance_snapshot_reconstructs_opening_and_applies_fx():
+    """기초 포지션 = 현재 잔고 − 기준일 이후 순거래. 일별 평가는 종가×환율(KRW).
+    현금 입출금은 flow_krw에, 거래 현금은 trade_cash_krw에 누적된다."""
+    import sqlite3
+    from portfolio_core.performance_snapshots import build_account_series
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript("""
+        CREATE TABLE accounts (id INTEGER PRIMARY KEY, member TEXT, name TEXT, account_type TEXT, currency TEXT, region TEXT, history_start TEXT);
+        CREATE TABLE holdings (id INTEGER PRIMARY KEY, account_id INTEGER, ticker TEXT, qty REAL, currency TEXT);
+        CREATE TABLE transactions (id INTEGER PRIMARY KEY, account_id INTEGER, trade_date TEXT, ticker TEXT, side TEXT, qty REAL, price REAL, currency TEXT);
+        CREATE TABLE account_cash_flows (id INTEGER PRIMARY KEY, account_id INTEGER, flow_date TEXT, amount REAL, currency TEXT);
+        CREATE TABLE daily_prices (date TEXT, ticker TEXT, close REAL);
+        INSERT INTO accounts VALUES (1, 'A', '해외', 'overseas', 'USD', 'US', NULL);
+        -- 현재 잔고 10주. 기준일(최초 거래 03-02) 이후 순거래 = +4 → 기초 6주
+        INSERT INTO holdings VALUES (1, 1, 'XYZ', 10, 'USD');
+        INSERT INTO transactions VALUES (1, 1, '2026-03-02', 'XYZ', 'BUY', 5, 100, 'USD');
+        INSERT INTO transactions VALUES (2, 1, '2026-03-04', 'XYZ', 'SELL', 1, 120, 'USD');
+        INSERT INTO account_cash_flows VALUES (1, 1, '2026-03-03', 500, 'USD');
+    """)
+    for day, px, fx in (("2026-03-01", 90, 1300), ("2026-03-02", 100, 1300), ("2026-03-03", 110, 1350), ("2026-03-04", 120, 1400)):
+        conn.execute("INSERT INTO daily_prices VALUES (?, 'XYZ', ?)", (day, px))
+        conn.execute("INSERT INTO daily_prices VALUES (?, 'USDKRW', ?)", (day, fx))
+
+    import portfolio_core.performance_snapshots as ps
+    original_today = ps.today_kst
+    ps.today_kst = lambda: date(2026, 3, 4)
+    try:
+        series = build_account_series(conn, 1)
+    finally:
+        ps.today_kst = original_today
+
+    assert [r["date"] for r in series] == ["2026-03-02", "2026-03-03", "2026-03-04"]
+    # 03-02: 기초 6 + 매수 5 = 11주 × $100 × 1300
+    assert series[0]["holdings_value_krw"] == 11 * 100 * 1300
+    assert series[0]["trade_cash_krw"] == -5 * 100 * 1300
+    assert series[0]["flow_krw"] == 0
+    # 03-03: 11주 × $110 × 1350, 입금 $500 × 1350
+    assert series[1]["holdings_value_krw"] == 11 * 110 * 1350
+    assert series[1]["flow_krw"] == 500 * 1350
+    # 03-04: 매도 1 → 10주(현재 잔고와 일치) × $120 × 1400, 매도 현금 +$120×1400
+    assert series[2]["holdings_value_krw"] == 10 * 120 * 1400
+    assert series[2]["trade_cash_krw"] == -5 * 100 * 1300 + 120 * 1400
+    conn.close()
+
+
 def test_date_helpers():
     assert parse_iso_date("2026-06-08T00:00:00") == date(2026, 6, 8)
     assert parse_iso_date("not-a-date") is None

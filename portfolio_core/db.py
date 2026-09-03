@@ -447,3 +447,43 @@ def initialize_schema() -> None:
         backfill_ticker_display_names(conn)
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         conn.commit()
+
+
+def ensure_account_history_columns(conn: sqlite3.Connection) -> None:
+    """성과 스냅샷 기준일 — NULL이면 그 계좌의 최초 거래일을 쓴다."""
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(accounts)").fetchall()}
+    if "history_start" not in columns:
+        conn.execute("ALTER TABLE accounts ADD COLUMN history_start TEXT")
+
+
+def ensure_cash_flow_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS account_cash_flows (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id INTEGER NOT NULL,
+            flow_date TEXT NOT NULL,
+            amount REAL NOT NULL,
+            currency TEXT NOT NULL,
+            note TEXT,
+            created_at TEXT
+        )
+        """
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_cash_flows_account_date ON account_cash_flows(account_id, flow_date)")
+
+
+def ensure_value_snapshot_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS account_value_snapshots (
+            account_id INTEGER NOT NULL,
+            date TEXT NOT NULL,
+            holdings_value_krw REAL,
+            trade_cash_krw REAL,
+            flow_krw REAL,
+            computed_at TEXT,
+            PRIMARY KEY (account_id, date)
+        )
+        """
+    )
