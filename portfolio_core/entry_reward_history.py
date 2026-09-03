@@ -14,7 +14,7 @@ from __future__ import annotations
 import sqlite3
 
 from .db import connect, ensure_transaction_columns
-from .entry_reward import entry_risk_reward_score
+from .entry_reward import entry_risk_reward_score, is_leveraged_product
 from .indicators import (
     atr_percent,
     bollinger_distance_pct,
@@ -31,6 +31,12 @@ def entry_score_on(conn: sqlite3.Connection, ticker: str, trade_date: str) -> fl
     clean = (ticker or "").strip().upper()
     if not clean or not trade_date:
         return None
+    try:
+        named = conn.execute("SELECT name FROM tickers WHERE ticker = ?", (clean,)).fetchone()
+    except sqlite3.OperationalError:
+        named = None  # tickers 테이블이 없는 픽스처 — 레버리지 판정만 건너뛴다
+    if named and is_leveraged_product(named["name"]):
+        return None  # 레버리지·인버스는 점수 대상이 아니다
     try:
         rows = conn.execute(
             """

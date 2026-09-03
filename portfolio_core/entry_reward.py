@@ -20,6 +20,8 @@
 
 from __future__ import annotations
 
+import re
+
 STOP_ATR_MULT = 1.5
 ATR_FLOOR_PCT = 1.0
 RSI_PIVOT = 50.0
@@ -36,6 +38,20 @@ BB_DAY_WEIGHT = 0.3
 BB_WEEK_WEIGHT = 0.7
 WEEK_UPSIDE_CAP = 30.0
 SCORE_CAP = 20.0
+
+
+# 레버리지·인버스 상품 — 종목명으로 판정 (Direxion Bull 2X / GraniteShares 2x Long /
+# T-REX 2X / ProShares Ultra / Tradr 1.5X Short / KODEX 레버리지·인버스 …).
+# 급락한 레버리지 ETF는 주봉 밴드가 너무 넓어 업사이드가 늘 30% 캡에 붙고, 점수가
+# 추세 계수 하나에 좌우된다(TSLL 실측). 이 산식은 그런 상품에 맞지 않으므로 점수를 내지 않는다.
+LEVERAGED_NAME_PATTERN = re.compile(
+    r"(\b[1-3](?:\.\d)?\s?x\b|레버리지|leverag|인버스|inverse|\bbull\b|\bbear\b|\bultra(?:pro|short)?\b|롱\s?\d|숏\s?\d|\blong\s\d|\bshort\s\d)",
+    re.IGNORECASE,
+)
+
+
+def is_leveraged_product(name: str | None) -> bool:
+    return bool(name) and LEVERAGED_NAME_PATTERN.search(str(name)) is not None
 
 
 def _finite(value) -> float | None:

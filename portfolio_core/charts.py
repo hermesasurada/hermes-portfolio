@@ -13,6 +13,7 @@ from .prices import build_market_snapshot, fx_rates, latest_prices, price_view
 from .queries import account_filter_clause, clean_account_ids, load_holding_rows
 from .technical_stats import price_adjusted_rows
 from .tickers import account_label, ticker_currency
+from .entry_reward import is_leveraged_product
 from .entry_reward_history import entry_score_series
 from .us_live_quotes import us_market_status
 
@@ -203,7 +204,9 @@ def load_price_chart(
     price_record = market_view["price_record"]
     overlays = _chart_overlay_series(rows)
     rsi_values = rsi_series([float(row["close"]) for row in rows])
-    entry_scores = entry_score_series(rows)
+    # 레버리지·인버스 ETF는 점수를 내지 않는다(entry_reward.is_leveraged_product 참조).
+    entry_scoring = not is_leveraged_product(meta["name"] if meta else None)
+    entry_scores = entry_score_series(rows) if entry_scoring else [None] * len(rows)
     points = []
     for row, rsi, entry_score in zip(rows, rsi_values, entry_scores):
         if not row["date"] or row["close"] is None:
@@ -220,7 +223,7 @@ def load_price_chart(
         if any(value is not None for value in overlay.values()):
             point.update({key: value for key, value in overlay.items() if value is not None})
         points.append(point)
-    _append_market_chart_point(price_record, snapshot["market_status"], points, rows)
+    _append_market_chart_point(price_record, snapshot["market_status"], points, rows, entry_scoring)
     history_start = points[0]["date"] if points else None
     history_end = points[-1]["date"] if points else None
     points, window_start, window_end = price_chart_points_for_range(points, range_key, start, end)
@@ -275,6 +278,7 @@ def _append_market_chart_point(
     market_status: dict,
     points: list[dict],
     rows,
+    entry_scoring: bool = True,
 ) -> None:
     """공용 시장 스냅샷이 선택한 라이브 가격을 차트 마지막 점으로 추가한다."""
     if not market_status.get("use_live"):
@@ -317,7 +321,10 @@ def _append_market_chart_point(
         if latest_rsi is not None:
             point["rsi"] = latest_rsi
         # 진입 점수도 RSI처럼 라이브 가격으로 당일 값을 다시 계산한다.
-        latest_entry = next((item for item in reversed(entry_score_series(adjusted_rows)) if item is not None), None)
+        latest_entry = (
+            next((item for item in reversed(entry_score_series(adjusted_rows)) if item is not None), None)
+            if entry_scoring else None
+        )
         if latest_entry is not None:
             point["entry_score"] = latest_entry
         overlay = adjusted_overlays.get(today) or {}

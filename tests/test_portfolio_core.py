@@ -2291,6 +2291,23 @@ def test_entry_score_series_matches_point_calculation():
     assert entry_score_series(fetched[:50]) == [None] * 50
 
 
+def test_leveraged_product_detection():
+    from portfolio_core.entry_reward import is_leveraged_product
+
+    for name in (
+        "Direxion TSLA 롱 2x", "Direxion Daily AAPL Bear 1X ETF", "GraniteShares 2x Long NVDA Daily ETF",
+        "T-REX 2X Long SpaceX Daily Target ETF", "ProShares Ultra QQQ", "ProShares UltraPro QQQ",
+        "ProShares UltraShort S&P500", "Tradr 1.5X Short NVDA Daily ETF",
+        "KODEX 레버리지", "KODEX 200선물인버스2X", "Direxion Daily Semiconductor Bull 3X Shares",
+    ):
+        assert is_leveraged_product(name), name
+    for name in (
+        "Coca-Cola", "Schwab US Dividend Equity ETF", "KODEX 200TR", "SpaceX", "3M", "Texas Instruments",
+        "Ultragenyx Pharmaceutical", "Longboard Pharmaceuticals", None, "",
+    ):
+        assert not is_leveraged_product(name), name
+
+
 def test_date_helpers():
     assert parse_iso_date("2026-06-08T00:00:00") == date(2026, 6, 8)
     assert parse_iso_date("not-a-date") is None

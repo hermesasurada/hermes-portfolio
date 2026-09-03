@@ -6,7 +6,7 @@ from .db import connect
 from .fundamentals import fetch_fundamentals
 from .paths import KST
 from .prices import build_market_snapshot, latest_prices
-from .entry_reward import entry_risk_reward_score
+from .entry_reward import entry_risk_reward_score, is_leveraged_product
 from .risk_reward import risk_reward_score
 from .technical_stats import (
     PRICE_ADJUSTED_LOOKBACK_DAYS,
@@ -35,6 +35,14 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
     price_rows: dict[str, list] = {ticker: [] for ticker in clean_tickers}
     with connect() as conn:
         technical = load_technical_stats_cache(conn, clean_tickers)
+        placeholders_names = ",".join("?" for _ in clean_tickers)
+        ticker_names = {
+            row["ticker"]: row["name"]
+            for row in conn.execute(
+                f"SELECT ticker, name FROM tickers WHERE ticker IN ({placeholders_names})",
+                clean_tickers,
+            )
+        }
         # The stats tab must stay read-only/low-latency. Fundamental refreshes
         # and RSI/BB/performance refreshes are handled by price/watchlist jobs.
         fundamentals = fetch_fundamentals(conn, clean_tickers, refresh_stale=False)
@@ -110,7 +118,8 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
         merged["risk_reward_basis"] = basis
         merged["risk_reward_quality"] = quality
         rsi = merged.get("rsi") or {}
-        merged["entry_risk_reward"] = entry_risk_reward_score(
+        # 레버리지·인버스 ETF는 점수를 내지 않는다(entry_reward.is_leveraged_product 참조).
+        merged["entry_risk_reward"] = None if is_leveraged_product(ticker_names.get(ticker)) else entry_risk_reward_score(
             merged.get("bb_upper_pct"),
             merged.get("atr_pct"),
             rsi.get("day"),
