@@ -38,12 +38,12 @@
 - fx/index/crypto는 컨센서스 없음 → 조회 스킵, 컬럼 자동 숨김. 매수=상승=빨강 관례 유지.
 - 상세화면 '리포트 상세' 버튼은 **8767 대시보드의 리포트 모달을 iframe으로 그대로 임베드**(`http://{location.hostname}:8767/?embed=1&ticker=X`). 포팅 아님 — analyst-reports repo `static/index.html`의 임베드 모드(크롬 숨김·해당 티커 모달 자동 오픈·`.ov` 딤 끔)에 의존하므로 그 파일을 지우거나 임베드 분기를 건드리면 깨진다. 닫기는 iframe→`postMessage({type:"ar-modal-close"})`(포트폴리오는 `:8767` origin만 신뢰) → `openReportModal`/`closeReportModal`(app-consensus.js). 8767 모달을 개선하면 여기도 자동 반영.
 
-## 성과 스냅샷 (API만, 화면 미노출 — 2026-09 진행 중)
+## 성과 스냅샷
 - `account_value_snapshots`(계좌·일자별 `holdings_value_krw`/`trade_cash_krw`/`flow_krw`)가 성과차트의 정본. 조회 시 재계산 금지 — 다시 만드는 건 **거래 입력·수정·삭제, 현금 입출금 변경, 일배치(당일 점)** 뿐(`performance_snapshots.rebuild_account_snapshots`).
 - 기준일 = `accounts.history_start`(없으면 **전 계좌 공통 최초 거래일** — 계좌별로 다르면 합산 차트가 가장 늦은 계좌부터만 그려지므로). 기초 포지션 = **현재 잔고 − 기준일 이후 순거래**로 역산 → 이력이 부분적인 연금 계좌도 재생이 잔고에 도달한다. **거래 수량은 분할 후 기준으로 입력돼 있으므로 분할 환산 금지**(141쌍 대조 실측).
 - 성과차트 계좌 선은 **시간가중(TWR)** — `twr_index()`가 일별 수익률을 체인(흐름은 장 시작 유입=분모). 선택 계좌 전부에 현금 입출금이 있으면 정식(외부 흐름만, 총자산=증권+현금, 기준일 현금 0 규약 → 기준일 보유 현금은 기준일자 입금으로 입력), 아니면 증권 기준(매수·매도를 외부 흐름으로). 범례에 기준 표기. **계좌별 시리즈 포인트에도 trade_cash·flow를 실어야 한다**(빠지면 매수가 수익으로 잡혀 +1120% 실사고).
-- 현금 입출금은 `account_cash_flows`(입금 +, 출금 −, 계좌 통화 기본)에 넣고, 스냅샷이 그날 환율로 KRW 환산.
-- **Raymond 해외주식계좌(id 1)**: 과거 입출금 194건(2021-06-28~2026-05-22)이 들어가 있다. 사용자 원문은 **만원 단위 원화**라 ×10,000 KRW로 저장(계좌 통화는 USD지만 입금은 원화 → currency='KRW'로 넣어야 이중 환산이 안 난다). `history_start='2021-06-28'`(첫 입금일)로 고정 — 이 계좌는 거래이력이 완전(33쌍 전부 일치)해서 그 시점 역산 포지션이 0이 되고, 기준일 현금 0 규약이 정확히 성립한다. 현재 flow가 있는 유일한 계좌라 단독 조회는 full, 합산은 securities 기준. 엔드포인트: `GET /api/performance/snapshots`, `GET/POST /api/cash-flows`, `POST /api/cash-flows/delete`, `POST /api/performance/rebuild`. 기존 `/api/account-performance`·성과차트 UI는 아직 그대로.
+- 현금 입출금은 `account_cash_flows`(입금 +, 출금 −, 계좌 통화 기본)에 넣고, 스냅샷이 그날 환율로 KRW 환산. 엔드포인트: `GET /api/performance/snapshots`, `GET/POST /api/cash-flows`, `POST /api/cash-flows/delete`, `POST /api/performance/rebuild`.
+- **Raymond 해외주식계좌(id 1)**: 과거 입출금 194건(2021-06-28~2026-05-22)이 들어가 있다. 사용자 원문은 **만원 단위 원화**라 ×10,000 KRW로 저장(계좌 통화는 USD지만 입금은 원화 → currency='KRW'로 넣어야 이중 환산이 안 난다). `history_start='2021-06-28'`(첫 입금일)로 고정 — 이 계좌는 거래이력이 완전(33쌍 전부 일치)해서 그 시점 역산 포지션이 0이 되고, 기준일 현금 0 규약이 정확히 성립한다. 현재 flow가 있는 유일한 계좌라 단독 조회는 full, 합산은 securities 기준.
 
 ## 크론/운영
 - `collect_quotes.py`(분 단위 시세), `collect_prices.py`(일배치), `collect_prices.py --dividends-only`(배당 일배치), `portfolio_healthcheck.py`.
