@@ -3063,8 +3063,9 @@ th.pc-frozen-edge {
 }
 .chart-canvas > svg,
 .chart-canvas > .chart-empty { order: 0; }
-.chart-canvas > .chart-compare-panel,
-.chart-canvas > .perf-controls { order: 1; }
+.chart-canvas > .chart-compare-panel { order: 1; }
+/* 빈 상태에서도 범례(=지수 on/off)는 그래프 아래에 둔다 */
+.chart-canvas > .chart-empty + .perf-chart-top { order: 1; }
 .chart-bottom-controls {
   position: absolute;
   top: 8px;
@@ -3584,8 +3585,7 @@ th.pc-frozen-edge {
   gap: 10px;
   padding: 4px 6px 0;
 }
-.perf-legend,
-.perf-controls {
+.perf-legend {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -3635,20 +3635,32 @@ th.pc-frozen-edge {
 }
 .perf-legend-item.removable:hover .legend-remove { opacity: 1; pointer-events: auto; }
 .perf-legend-item .legend-remove:hover { background: var(--line); }
+/* 지수 칩은 범례이자 on/off 토글 — 켜짐은 선 색, 꺼짐은 흐리게 */
 .perf-index-toggle {
-  height: 26px;
-  padding: 0 9px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
+  cursor: pointer;
+  font-family: inherit;
+  opacity: .45;
 }
+.perf-index-toggle:hover {
+  opacity: .75;
+  border-color: var(--muted);
+}
+/* 전역 button.active(파랑 채움)를 이 칩에서만 되돌린다 — 켜짐은 색이 아니라
+   선 색 점 + 또렷한 잉크로 보인다. 특이도 (0,2,0) > button.active (0,1,1). */
 .perf-index-toggle.active {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: #fff;
+  opacity: 1;
+  background: var(--surface-2);
+  border-color: var(--line);
+  color: var(--ink);
+}
+.perf-index-toggle.active:hover {
+  border-color: var(--muted);
+}
+.perf-account-title {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 .perf-line {
   fill: none;
@@ -6292,7 +6304,6 @@ button {
   .sidebar-tab:not(.active),
   .seg-btn:not(.active),
   .interest-icon-btn,
-  .perf-index-toggle:not(.active),
   .tx-action-btn:not(.tx-save),
   .mobile-collapse-toggle,
   .interest-bulk-open,
@@ -6319,7 +6330,6 @@ button {
   .segmented:not(.trade-side-toggle) .seg-btn.active,
   .chart-range-btn.active:not(.marker-toggle),
   .chart-head-toggle[aria-pressed="true"],
-  .perf-index-toggle.active,
   .auto-refresh-control.enabled .cycle-toggle-btn,
   .apply-toggle:has(input:checked)
 ) {

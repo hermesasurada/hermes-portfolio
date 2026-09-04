@@ -4,9 +4,25 @@
 function accountPerformanceTitle(payload) {
   const accounts = payload?.accounts || [];
   if (!accounts.length) return "선택 계좌 성과";
-  if (accounts.length === 1) return `${accounts[0].member} · ${accounts[0].name}`;
-  return `${accounts.length}개 계좌`;
+  if (accounts.length === 1) return `${accounts[0].member} · ${accounts[0].name} 성과`;
+  return `${accounts.length}개 계좌 성과`;
 }
+
+// 성과 타이틀은 차트 헤드가 아니라 툴바(목록·상세 버튼 우측)에 띄운다.
+function syncPerformanceTitle(text) {
+  const host = document.getElementById("performanceTitle");
+  if (!host) return;
+  host.textContent = text || "";
+  host.classList.toggle("hidden", !text);
+}
+
+// 비교 지수 메타 — 범례와 시리즈 구성이 같은 정의를 공유한다.
+// 빨강=상승/파랑=하락 시맨틱과 충돌하지 않도록 중립 비교색(보라·청록·앰버)
+const PERF_INDEX_META = [
+  ["SP500", "S&P 500", "#7c3aed"],
+  ["NASDAQ", "나스닥", "#0d9488"],
+  ["KOSPI", "코스피", "#d97706"],
+];
 
 // useTwr: 계좌 선은 평가액 변화율이 아니라 시간가중 지수(point.twr, 백엔드 체인)로 %를 그린다.
 // 평가액(point.value)은 호버 금액·끝 라벨용으로 그대로 들고 간다.
@@ -75,13 +91,7 @@ function performanceSeries(payload) {
       });
     });
   }
-  // 빨강=상승/파랑=하락 시맨틱과 충돌하지 않도록 중립 비교색(보라·청록·앰버)
-  const indexMeta = [
-    ["SP500", "S&P 500", "#7c3aed"],
-    ["NASDAQ", "나스닥", "#0d9488"],
-    ["KOSPI", "코스피", "#d97706"],
-  ];
-  indexMeta.forEach(([key, label, color]) => {
+  PERF_INDEX_META.forEach(([key, label, color]) => {
     if (!performanceIndexes[key]) return;
     const index = payload?.indexes?.[key];
     series.push({
@@ -95,19 +105,21 @@ function performanceSeries(payload) {
   return series.filter(item => item.points.length >= 2);
 }
 
-function renderPerformanceControls() {
-  const items = [
-    ["SP500", "S&P 500"],
-    ["NASDAQ", "나스닥"],
-    ["KOSPI", "코스피"],
-  ];
-  return `
-    <div class="perf-controls" role="group" aria-label="비교 지수">
-      ${items.map(([key, label]) => `
-        <button class="perf-index-toggle ${performanceIndexes[key] ? "active" : ""}" type="button" data-index="${key}" aria-pressed="${performanceIndexes[key] ? "true" : "false"}">${label}</button>
-      `).join("")}
-    </div>
-  `;
+// 범례 = 색 표시 + 지수 on/off 한 줄. 계좌 선은 정보 칩(고정), 비교 지수는
+// 끄든 켜든 항상 자리에 있고 클릭으로 토글된다(꺼진 것도 보여야 다시 켤 수 있다).
+function renderPerformanceLegend(series = []) {
+  const indexKeys = new Set(PERF_INDEX_META.map(([key]) => key));
+  const accountChips = series
+    .filter(item => !indexKeys.has(item.key))
+    .map(item => `<span class="perf-legend-item"><i style="background:${item.color}"></i>${esc(item.name)}</span>`)
+    .join("");
+  const indexChips = PERF_INDEX_META
+    .map(([key, label, color]) => {
+      const on = !!performanceIndexes[key];
+      return `<button class="perf-legend-item perf-index-toggle${on ? " active" : ""}" type="button" data-index="${key}" aria-pressed="${on ? "true" : "false"}" title="${esc(label)} ${on ? "숨기기" : "표시"}"><i style="background:${on ? color : "currentColor"}"></i>${esc(label)}</button>`;
+    })
+    .join("");
+  return `<div class="perf-legend" role="group" aria-label="차트 선 표시">${accountChips}${indexChips}</div>`;
 }
 
 function bindPerformanceHover(series, geometry) {
@@ -170,14 +182,15 @@ function renderPerformanceChart(payload) {
   if (statsEl) statsEl.innerHTML = "";   // 성과 차트엔 종목별 지표 패널 숨김
   document.getElementById("chartIcon").innerHTML = `<span class="asset-icon">%</span>`;
   document.getElementById("chartTicker").textContent = "성과";
-  document.getElementById("chartName").textContent = accountPerformanceTitle(payload);
+  document.getElementById("chartName").textContent = "";
+  syncPerformanceTitle(accountPerformanceTitle(payload));
   const priceSummary = document.getElementById("chartPriceSummary");
   if (priceSummary) priceSummary.innerHTML = "";
   if (typeof clearChartExternalLinks === "function") clearChartExternalLinks();
 
   if (!series.length || !series[0]?.points.length) {
     document.getElementById("chartMeta").textContent = `${payload?.holdings_count || 0}개 종목`;
-    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">성과 차트 데이터 없음</div>${renderPerformanceControls()}`;
+    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">성과 차트 데이터 없음</div><div class="perf-chart-top">${renderPerformanceLegend()}</div>`;
     renderChartRangeControls();
     bindPerformanceChartControls();
     return;
@@ -222,15 +235,10 @@ function renderPerformanceChart(payload) {
       };
     })
     , 13);
-  // (#3) top legend keeps only colour + name; the % moved to the line ends
-  const legend = series
-    .map(item => `<span class="perf-legend-item"><i style="background:${item.color}"></i>${esc(item.name)}</span>`)
-    .join("");
-
+  // (#3) 범례에 색·이름만 두고 %는 선 끝으로. 지수 on/off도 이 범례가 겸한다.
   document.getElementById("chartCanvas").innerHTML = `
     <div class="perf-chart-top">
-      <div class="perf-legend">${legend}</div>
-      ${renderPerformanceControls()}
+      ${renderPerformanceLegend(series)}
     </div>
     <svg class="line-chart perf-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="계좌 기간 성과 차트">
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
@@ -334,7 +342,8 @@ async function openPerformanceChart() {
   syncDetailTabs();
   document.getElementById("chartIcon").innerHTML = `<span class="asset-icon">%</span>`;
   document.getElementById("chartTicker").textContent = "성과";
-  document.getElementById("chartName").textContent = "계좌 퍼포먼스";
+  document.getElementById("chartName").textContent = "";
+  syncPerformanceTitle("계좌 성과");
   if (typeof clearChartExternalLinks === "function") clearChartExternalLinks();
   const perfPriceSummary = document.getElementById("chartPriceSummary");
   if (perfPriceSummary) perfPriceSummary.innerHTML = "";
@@ -433,6 +442,7 @@ function closeChart(updateHash = true) {
   performanceChartOpen = false;
   performanceLoadInFlight = null;
   performancePayload = null;
+  syncPerformanceTitle("");
   if (updateHash && (location.hash.startsWith("#chart=") || location.hash === "#performance")) {
     history.pushState(null, "", location.pathname + location.search);
   }
