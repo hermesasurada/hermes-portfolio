@@ -5,6 +5,9 @@
 
 :root {
   color-scheme: light dark;
+  /* 차트 영역 숫자(축·끝라벨·현재가) 공통 — 고정폭이라 자릿수가 흔들리지 않는다 */
+  --chart-num-size: 9.5px;
+  --chart-num-font: ui-monospace, SFMono-Regular, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   /* surfaces & text */
   --bg: #f4f8ff;
   --panel: #ffffff;
@@ -3239,7 +3242,8 @@ th.pc-frozen-edge {
 }
 .chart-current-price-label {
   fill: var(--chart-price);
-  font-size: 10.5px;
+  font-size: var(--chart-num-size);
+  font-family: var(--chart-num-font);
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   text-anchor: end;
@@ -3252,7 +3256,8 @@ th.pc-frozen-edge {
 .chart-y-label,
 .chart-x-label {
   fill: var(--chart-axis);
-  font-size: 10px;
+  font-size: var(--chart-num-size);
+  font-family: var(--chart-num-font);
   font-weight: 600;
   /* 그리드선 위에서도 또렷하게 — 배경색 외곽선(헤일로) */
   paint-order: stroke;
@@ -3315,7 +3320,8 @@ th.pc-frozen-edge {
 }
 .chart-rsi-current-label {
   fill: var(--chart-rsi);
-  font-size: 10px;
+  font-size: var(--chart-num-size);
+  font-family: var(--chart-num-font);
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   text-anchor: end;
@@ -3336,7 +3342,11 @@ th.pc-frozen-edge {
   pointer-events: none;
 }
 .chart-rsi-title { fill: var(--chart-rsi); }
-.chart-rsi-axis { text-anchor: end; }
+.chart-rsi-axis {
+  text-anchor: end;
+  font-size: var(--chart-num-size);
+  font-family: var(--chart-num-font);
+}
 /* 진입점수(종가 기준) — RSI 패널에 겹치는 두 번째 선. 축은 왼쪽 안쪽 */
 .chart-entry-line {
   fill: none;
@@ -3357,7 +3367,11 @@ th.pc-frozen-edge {
   stroke: var(--chart-bg);
   stroke-width: 2.5px;
 }
-.chart-entry-axis { text-anchor: start; }
+.chart-entry-axis {
+  text-anchor: start;
+  font-size: var(--chart-num-size);
+  font-family: var(--chart-num-font);
+}
 .chart-extreme {
   pointer-events: none;
 }
@@ -3366,7 +3380,8 @@ th.pc-frozen-edge {
   stroke-width: 2;
 }
 .chart-extreme text {
-  font-size: 10.5px;
+  font-size: var(--chart-num-size);
+  font-family: var(--chart-num-font);
   font-weight: 800;
   paint-order: stroke;
   stroke: var(--chart-label-halo);
@@ -3605,9 +3620,9 @@ th.pc-frozen-edge {
   border: 1px solid var(--line);
 }
 .perf-legend-item i {
-  width: 16px;
-  height: 4px;
-  border-radius: var(--radius-sm);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
   display: inline-block;
   flex: 0 0 auto;
 }
@@ -3640,6 +3655,8 @@ th.pc-frozen-edge {
 .perf-index-toggle {
   cursor: pointer;
   font-family: inherit;
+  /* 전역 button{height:36px}을 끄고 왼쪽 정보 칩(span)과 같은 자연 높이로 */
+  height: auto;
   color: color-mix(in srgb, var(--muted) 55%, transparent);
 }
 .perf-index-toggle:hover {
@@ -3681,7 +3698,8 @@ th.pc-frozen-edge {
   opacity: .45;
 }
 .perf-end-label {
-  font-size: 10.5px;
+  font-size: var(--chart-num-size);
+  font-family: var(--chart-num-font);
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
@@ -3709,7 +3727,8 @@ th.pc-frozen-edge {
   opacity: 1;
 }
 .compare-rsi-end-label {
-  font-size: 10px;
+  font-size: var(--chart-num-size);
+  font-family: var(--chart-num-font);
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   paint-order: stroke;
@@ -3828,7 +3847,8 @@ th.pc-frozen-edge {
 }
 .trade-marker text {
   fill: #fff;
-  font-size: 8px;
+  font-size: var(--chart-num-size);
+  font-family: var(--chart-num-font);
   font-weight: 900;
   paint-order: stroke;
   stroke: rgba(0, 0, 0, .18);
@@ -6024,18 +6044,17 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .line-chart {
     min-height: 0;
   }
+  /* 차트 숫자는 변수 한 곳에서만 키운다(고정폭·공통 크기 유지) */
+  :root { --chart-num-size: 11.5px; }
   .chart-y-label,
   .chart-x-label {
-    font-size: 14px;
     font-weight: 700;
     stroke-width: 3.5px;
   }
   .chart-current-price-label {
-    font-size: 14px;
     stroke-width: 4px;
   }
   .chart-extreme text {
-    font-size: 15px;
     stroke-width: 5px;
   }
   .chart-metric-title {
@@ -6051,20 +6070,19 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     stroke-width: 3px;
   }
   .trade-marker text {
-    font-size: 13px;
     stroke-width: 1.5px;
+  }
+  .chart-rsi-title {
+    font-size: 13px;
   }
   .chart-rsi-title,
   .chart-rsi-axis {
-    font-size: 13px;
     stroke-width: 3.5px;
   }
   .perf-end-label {
-    font-size: 14px;
     stroke-width: 4px;
   }
   .compare-rsi-end-label {
-    font-size: 13px;
     stroke-width: 4px;
   }
   .mobile-collapse-toggle {
