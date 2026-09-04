@@ -340,7 +340,7 @@ def _append_market_chart_point(
             points.append(point)
 
 
-PERFORMANCE_INDEXES = ("SP500", "NASDAQ", "KOSPI")
+PERFORMANCE_INDEXES = ("SP500", "NASDAQ", "KOSPI", "NIKKEI225")
 PERFORMANCE_RANGE_MONTHS = {
     "1m": 1,
     "6m": 6,

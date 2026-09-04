@@ -30,9 +30,10 @@ function syncPerformanceTitle(text) {
 // 예전 보라(#7c3aed, 273°)는 블루와 붙어 얇은 선에서 구분이 안 됐다.
 // 상승=빨강 관례와 겹치지 않게 순수 red 계열은 피한다.
 const PERF_INDEX_META = [
-  ["SP500", "S&P 500", "#c026d3"],   // 292° 푸시아
-  ["NASDAQ", "나스닥", "#16a34a"],    // 142° 그린
-  ["KOSPI", "코스피", "#d97706"],     // 32° 앰버
+  ["SP500", "S&P 500", "#c026d3"],      // 292° 푸시아
+  ["NIKKEI225", "니케이", "#0891b2"],    // 192° 시안
+  ["NASDAQ", "나스닥", "#16a34a"],       // 142° 그린
+  ["KOSPI", "코스피", "#d97706"],        // 32° 앰버
 ];
 
 // useTwr: 계좌 선은 평가액 변화율이 아니라 시간가중 지수(point.twr, 백엔드 체인)로 %를 그린다.
@@ -82,7 +83,7 @@ function performanceSeries(payload) {
   const series = [
     {
       key: "portfolio",
-      name: `선택 계좌${performanceTwrLabel(payload)}`,
+      name: "선택 계좌",
       color: "var(--brand)",
       points: normalizePerformancePoints(portfolioRaw, chartRange, bounds, true),
       primary: true,
@@ -223,7 +224,7 @@ function renderPerformanceChart(payload) {
   const isMobileChart = Boolean(window.matchMedia?.("(max-width: 980px)")?.matches);
   const height = isMobileChart ? 864 : 432;
   // 우측은 % 끝라벨만 — 금액은 호버 툴팁에서 본다(여백을 넓게 먹던 원인)
-  const pad = { top: 40, right: 74, bottom: 22, left: 56 };
+  const pad = { top: 22, right: 74, bottom: 22, left: 56 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const range = max - min || 1;
@@ -251,6 +252,8 @@ function renderPerformanceChart(payload) {
       };
     })
     , 13);
+  // 끝라벨은 소수 첫째 자리까지 — 축·툴팁과 달리 선 옆에 붙어 자리가 좁다
+  const endPct = value => `${value > 0 ? "+" : value < 0 ? "-" : ""}${fmt1.format(Math.abs(value))}%`;
   // (#3) 범례에 색·이름만 두고 %는 선 끝으로. 지수 on/off도 이 범례가 겸한다.
   syncPerformanceLegendHost(renderPerformanceLegend(series));
   document.getElementById("chartCanvas").innerHTML = `
@@ -275,7 +278,7 @@ function renderPerformanceChart(payload) {
         <path class="perf-line ${item.primary ? "primary" : "index"}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>
       `).join("")}
       ${endLabels.map(label => `
-        <text class="perf-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(label.value ? `${pctChartLabel(label.close)} · ${label.value}` : pctChartLabel(label.close))}</text>
+        <text class="perf-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(endPct(label.close))}</text>
       `).join("")}
       <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
       <g id="chartHoverGroup" class="chart-hover hidden">

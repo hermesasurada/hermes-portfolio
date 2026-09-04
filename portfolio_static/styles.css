@@ -3604,9 +3604,15 @@ th.pc-frozen-edge {
 }
 
 /* ── 성과·비교 차트 (범례·지수 토글) ───────────────────────────────────── */
-/* 범례는 차트(플롯) 영역 밖 — 캔버스 위 별도 줄 */
+/* 범례는 차트(플롯) 영역 밖 — 캔버스 위 별도 줄. 위아래 여백을 같게 둔다
+   (성과모드에선 빈 .chart-head를 숨겨 위쪽 margin이 더 붙지 않는다). */
 .perf-legend-host {
-  padding: 0 2px 8px;
+  padding: 0 2px 12px;
+}
+/* 성과모드(범례가 보일 때)는 차트뷰 상단 패딩을 줄인다 — 툴바와의 기본 간격 10px에
+   패딩 12px가 더해져 칩 위 22 / 아래 12로 어긋났다. */
+.chart-view:has(> #perfLegendHost:not(.hidden)) {
+  padding-top: 2px;
 }
 .perf-chart-top {
   display: flex;
@@ -3705,13 +3711,15 @@ th.pc-frozen-edge {
 }
 .perf-line {
   fill: none;
-  stroke-width: 1.5;
+  /* viewBox 980을 실폭(PC ~810px)으로 줄여 그리므로 지정값보다 가늘게 보인다.
+     좁은 화면은 축소율이 커져 같은 값이 실 0.9px까지 얇아진다 → 미디어에서 키운다. */
+  stroke-width: 1.2;
   stroke-linecap: round;
   stroke-linejoin: round;
   pointer-events: none;
 }
 .perf-line.primary {
-  stroke-width: 2.3;
+  stroke-width: 1.8;
 }
 .perf-line.index {
   opacity: .82;
@@ -6017,6 +6025,24 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     padding-left: 3px;
     font-size: 10px;
     text-align: center;
+  }
+  /* 성과차트는 버튼이 둘뿐이라 1 1 0으로 늘리면 한 줄을 반씩 차지한다 */
+  .chart-bottom-controls.perf-mode {
+    justify-content: flex-end;
+    gap: 5px;
+  }
+  .chart-bottom-controls.perf-mode .chart-head-toggle,
+  .chart-bottom-controls.perf-mode .chart-range-btn {
+    flex: 0 0 auto;
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+  /* viewBox 축소율이 커지는 좁은 화면에서 선이 실 1px 아래로 얇아지는 것 보정 */
+  .perf-line {
+    stroke-width: 3;
+  }
+  .perf-line.primary {
+    stroke-width: 4.4;
   }
   .chart-bottom-controls #chartTypeToggle,
   .chart-bottom-controls #chartIntervalToggle,
