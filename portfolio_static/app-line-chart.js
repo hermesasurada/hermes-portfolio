@@ -770,23 +770,26 @@ function chartCandleExtremes(points) {
   ].filter((item, index, items) => index === 0 || item.index !== items[0].index);
 }
 
+// 툴팁 한 줄은 문자열(매매 마커) 또는 [라벨, 값] 쌍의 배열이다. 쌍으로 주면
+// 라벨은 흐리게, 값은 고정폭으로 그려 항목 경계가 눈에 들어온다.
 function chartPointTooltipLines(point, payload) {
+  const money = value => chartMoney(value, payload.currency, payload.ticker);
   const lines = [chartFullDateLabel(point.date)];
   const candle = chartType === "candle" ? chartCandleValues(point) : null;
   if (candle) {
-    lines.push(`시 ${chartMoney(candle.open, payload.currency, payload.ticker)}   고 ${chartMoney(candle.high, payload.currency, payload.ticker)}`);
-    lines.push(`저 ${chartMoney(candle.low, payload.currency, payload.ticker)}   종 ${chartMoney(candle.close, payload.currency, payload.ticker)}`);
+    lines.push([["시", money(candle.open)], ["고", money(candle.high)]]);
+    lines.push([["저", money(candle.low)], ["종", money(candle.close)]]);
     const current = Number(point.close);
     if (point.live && Number.isFinite(current) && Math.abs(current - candle.close) > 1e-9) {
-      lines.push(`${point.extended ? "장외" : "현재"} ${chartMoney(current, payload.currency, payload.ticker)}`);
+      lines.push([[point.extended ? "장외" : "현재", money(current)]]);
     }
   } else {
-    lines.push(`가격 ${chartMoney(Number(point.close), payload.currency, payload.ticker)}`);
+    lines.push([["가격", money(Number(point.close))]]);
   }
   const rsiValue = Number(point.rsi);
-  if (Number.isFinite(rsiValue)) lines.push(`RSI ${rsiValue.toFixed(1)}`);
+  if (Number.isFinite(rsiValue)) lines.push([["RSI", rsiValue.toFixed(1)]]);
   const entryValue = point.entry_score == null ? NaN : Number(point.entry_score);
-  if (Number.isFinite(entryValue)) lines.push(`진입점수 ${entryValue.toFixed(2)}`);
+  if (Number.isFinite(entryValue)) lines.push([["진입점수", entryValue.toFixed(2)]]);
   return lines;
 }
 
@@ -924,10 +927,28 @@ function bindChartInteractions(points, payload, geometry) {
   let touchPinned = false;
   if (!svg || !hoverLayer || !hoverGroup || !hoverLine || !hoverDot || !tooltip) return;
 
+  // 줄바꿈은 직계 tspan만 담당한다 — 줄 안의 라벨·값 tspan에 x를 다시 박으면 겹친다
   const setTooltipX = value => {
     const formatted = Number(value).toFixed(2);
     tooltip.setAttribute("x", formatted);
-    tooltip.querySelectorAll("tspan").forEach(line => line.setAttribute("x", formatted));
+    tooltip.querySelectorAll(":scope > tspan").forEach(line => line.setAttribute("x", formatted));
+  };
+
+  const tooltipSpan = (cls, text, dx) => {
+    const span = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+    span.setAttribute("class", cls);
+    if (dx) span.setAttribute("dx", String(dx));
+    span.textContent = text;
+    return span;
+  };
+
+  // 문자열 줄(매매 마커)은 숫자 토큰만 골라 고정폭으로 감싼다
+  const appendPlainTooltipLine = (parent, text) => {
+    String(text).split(/([0-9][0-9.,]*)/).forEach(part => {
+      if (!part) return;
+      if (/^[0-9]/.test(part)) parent.appendChild(tooltipSpan("chart-tooltip-num", part));
+      else parent.appendChild(document.createTextNode(part));
+    });
   };
 
   const setTooltipLines = (lines, x, y) => {
@@ -935,9 +956,17 @@ function bindChartInteractions(points, payload, geometry) {
     tooltip.setAttribute("y", Number(y).toFixed(2));
     lines.filter(Boolean).forEach((line, index) => {
       const span = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-      span.textContent = line;
-      span.setAttribute("dy", index === 0 ? "0" : "1.35em");
+      // 날짜(첫 줄)와 본문 사이는 한 번 더 벌려 머리글처럼 보이게 한다
+      span.setAttribute("dy", index === 0 ? "0" : index === 1 ? "1.6em" : "1.4em");
       if (index === 0) span.classList.add("chart-tooltip-date");
+      if (Array.isArray(line)) {
+        line.forEach(([label, value], segment) => {
+          span.appendChild(tooltipSpan("chart-tooltip-label", label, segment ? 12 : 0));
+          if (value != null) span.appendChild(tooltipSpan("chart-tooltip-num", String(value), 4));
+        });
+      } else {
+        appendPlainTooltipLine(span, line);
+      }
       tooltip.appendChild(span);
     });
     setTooltipX(x);

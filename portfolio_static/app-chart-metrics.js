@@ -245,13 +245,14 @@ function renderCompareChartStats(payload) {
   // 배당이력 버튼 클릭은 app.js의 문서 위임이 처리
 }
 
-function chartPctMetric(value, neutral = "0.00%", neutralCls = "flat") {
+function chartPctMetric(value, neutral = "0.0%", neutralCls = "flat") {
   const number = Number(value);
   if (!Number.isFinite(number)) return { text: "-", cls: "flat" };
-  if (Math.abs(number) < 0.005) return { text: neutral, cls: neutralCls };
+  // 소수 한 자리로 보여주므로 0.05% 미만은 사실상 0 — 중립 라벨(ATH/ATL)로 흡수한다
+  if (Math.abs(number) < 0.05) return { text: neutral, cls: neutralCls };
   const cls = number > 0 ? "up" : "down";
   const arrow = number > 0 ? "▲" : "▼";
-  return { text: `${arrow} ${fmt2.format(Math.abs(number))}%`, cls };
+  return { text: `${arrow} ${fmt1.format(Math.abs(number))}%`, cls };
 }
 
 function chartMaxDrawdown(values) {
@@ -299,13 +300,14 @@ function chartOverlayMetrics(values) {
 }
 
 function renderChartMetricsOverlay(metrics, x, y, compact = false) {
-  const width = compact ? 178 : 148;
-  const height = compact ? 100 : 78;
-  const titleY = y + (compact ? 19 : 15);
-  const rowStartY = y + (compact ? 39 : 31);
-  const rowGap = compact ? 18 : 13.5;
-  const labelX = x + (compact ? 13 : 10);
-  const valueX = x + width - (compact ? 11 : 9);
+  // 고정폭 숫자 + 소수 한 자리라 값 폭이 일정하다 — 라벨과 값 사이 빈 공간을 좁힌다
+  const width = compact ? 146 : 120;
+  const height = compact ? 96 : 76;
+  const titleY = y + (compact ? 18 : 15);
+  const rowStartY = y + (compact ? 38 : 31);
+  const rowGap = compact ? 17 : 13.5;
+  const labelX = x + (compact ? 11 : 9);
+  const valueX = x + width - (compact ? 10 : 8);
   const rows = metrics.map(([label, metric], index) => {
     const rowY = rowStartY + index * rowGap;
     return `

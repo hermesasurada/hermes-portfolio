@@ -3428,13 +3428,15 @@ th.pc-frozen-edge {
 }
 .chart-metric-label {
   fill: var(--muted);
-  font-size: 9px;
+  font-size: var(--chart-num-size);
   font-weight: 700;
 }
+/* 값은 다른 차트 숫자와 같은 고정폭·같은 크기 — 자리수가 흔들려도 폭이 일정하다 */
 .chart-metric-value {
   fill: var(--chart-ink);
-  font-size: 10px;
-  font-weight: 850;
+  font-size: var(--chart-num-size);
+  font-family: var(--chart-num-font);
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 .chart-metric-value.up { fill: var(--up); }
@@ -3595,7 +3597,7 @@ th.pc-frozen-edge {
 }
 .chart-tooltip {
   fill: var(--chart-ink);
-  font-size: 10px;
+  font-size: var(--chart-num-size);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -3603,6 +3605,18 @@ th.pc-frozen-edge {
   fill: var(--muted);
   font-weight: 850;
 }
+/* 항목 라벨은 흐리게, 값은 고정폭·진하게 — 한 줄에 두 항목이 와도 경계가 보인다 */
+.chart-tooltip-label {
+  fill: var(--muted);
+  font-weight: 700;
+}
+.chart-tooltip-num {
+  fill: var(--chart-ink);
+  font-family: var(--chart-num-font);
+  font-weight: 800;
+}
+/* 첫 줄(날짜)은 머리글이라 흐린 색을 유지한다 — 고정폭만 물려받는다 */
+.chart-tooltip-date .chart-tooltip-num { fill: var(--muted); }
 
 /* ── 성과·비교 차트 (범례·지수 토글) ───────────────────────────────────── */
 /* 범례는 차트(플롯) 영역 밖 — 캔버스 위 별도 줄. 위아래 여백을 같게 둔다
@@ -6109,13 +6123,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     stroke-width: 5px;
   }
   .chart-metric-title {
-    font-size: 11px;
-  }
-  .chart-metric-label {
-    font-size: 12px;
-  }
-  .chart-metric-value {
-    font-size: 13px;
+    font-size: 10.5px;
   }
   .trade-marker circle {
     stroke-width: 3px;
