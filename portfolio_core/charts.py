@@ -500,9 +500,14 @@ def load_account_performance(
         for aid, series in account_points.items():
             for point, growth in zip(series, twr_index(series, "full" if has_flows.get(aid) else "securities")):
                 point["twr"] = growth
+            # 보유가 생기기 전(입금만 있고 종목은 없던 구간)은 선으로 그리지 않는다 —
+            # 합산 points가 value>0부터 시작하는 것과 같은 기준
+            held_start = next((p["date"] for p in series if p["value"] > 0), None)
             account_points[aid] = [
                 p for p in series
-                if (not start_date or p["date"] >= start_date) and (not end_date or p["date"] <= end_date)
+                if (not held_start or p["date"] >= held_start)
+                and (not start_date or p["date"] >= start_date)
+                and (not end_date or p["date"] <= end_date)
             ]
             _rebase_twr(account_points[aid])
 
@@ -510,6 +515,13 @@ def load_account_performance(
         str(row["id"]): f"{row['member']} · {account_label(row['member'], row['account_type'], row['name'])}"
         for row in account_rows
     }
+    # 비교지수는 계좌 선이 그려지는 구간으로 자른다. 지수는 daily_prices 전체를
+    # 들고 있어서(2016~) 기간 '전체'에선 X축이 계좌 이력보다 훨씬 앞에서 시작하고,
+    # 프런트가 첫 점 기준으로 리베이스하므로 지수만 다른 출발선에서 그려진다.
+    series_starts = [points[0]["date"]] if points else []
+    if detail:
+        series_starts += [pts[0]["date"] for pts in account_points.values() if pts]
+    chart_start = min(series_starts) if series_starts else None
     indexes: dict[str, dict] = {}
     for ticker, rows_iter in groupby(index_rows, key=lambda row: row["ticker"]):
         indexes[ticker] = {
@@ -518,6 +530,7 @@ def load_account_performance(
             "points": [
                 {"date": row["date"], "value": float(row["close"])}
                 for row in rows_iter
+                if not chart_start or row["date"] >= chart_start
             ],
         }
 
