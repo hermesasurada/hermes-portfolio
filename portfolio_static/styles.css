@@ -3635,20 +3635,20 @@ th.pc-frozen-edge {
 }
 .perf-legend-item.removable:hover .legend-remove { opacity: 1; pointer-events: auto; }
 .perf-legend-item .legend-remove:hover { background: var(--line); }
-/* 지수 칩은 범례이자 on/off 토글 — 켜짐은 선 색, 꺼짐은 흐리게 */
+/* 지수 칩은 범례이자 on/off 토글. 칩 형태(표면·보더·선 색 점)는 그대로 두고
+   꺼짐은 글자만 흐리게 — opacity로 칩 전체를 죽이면 얇은 칩 느낌이 사라진다. */
 .perf-index-toggle {
   cursor: pointer;
   font-family: inherit;
-  opacity: .45;
+  color: color-mix(in srgb, var(--muted) 55%, transparent);
 }
 .perf-index-toggle:hover {
-  opacity: .75;
+  color: var(--muted);
   border-color: var(--muted);
 }
 /* 전역 button.active(파랑 채움)를 이 칩에서만 되돌린다 — 켜짐은 색이 아니라
    선 색 점 + 또렷한 잉크로 보인다. 특이도 (0,2,0) > button.active (0,1,1). */
 .perf-index-toggle.active {
-  opacity: 1;
   background: var(--surface-2);
   border-color: var(--line);
   color: var(--ink);

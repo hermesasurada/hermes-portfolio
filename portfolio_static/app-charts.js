@@ -116,7 +116,7 @@ function renderPerformanceLegend(series = []) {
   const indexChips = PERF_INDEX_META
     .map(([key, label, color]) => {
       const on = !!performanceIndexes[key];
-      return `<button class="perf-legend-item perf-index-toggle${on ? " active" : ""}" type="button" data-index="${key}" aria-pressed="${on ? "true" : "false"}" title="${esc(label)} ${on ? "숨기기" : "표시"}"><i style="background:${on ? color : "currentColor"}"></i>${esc(label)}</button>`;
+      return `<button class="perf-legend-item perf-index-toggle${on ? " active" : ""}" type="button" data-index="${key}" aria-pressed="${on ? "true" : "false"}" title="${esc(label)} ${on ? "숨기기" : "표시"}"><i style="background:${color}"></i>${esc(label)}</button>`;
     })
     .join("");
   return `<div class="perf-legend" role="group" aria-label="차트 선 표시">${accountChips}${indexChips}</div>`;
@@ -376,6 +376,7 @@ async function openChart(ticker) {
   if (chartTicker === cleanTicker && chartLoadInFlight) return;
   performanceChartOpen = false;
   performanceLoadToken += 1;
+  syncPerformanceTitle("");   // 성과 → 종목 차트로 넘어갈 때 툴바 타이틀도 함께 내린다
   if (chartTicker !== cleanTicker) chartComparePayloads = [];
   chartTicker = cleanTicker;
   discardHiddenListRowsForChart();

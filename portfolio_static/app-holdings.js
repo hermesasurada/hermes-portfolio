@@ -884,6 +884,8 @@ function syncDetailTabs() {
   document.getElementById("interestTableWrap").classList.toggle("hidden", showingChart || !showingInterest);
   document.getElementById("chartView").classList.toggle("hidden", !showingChart);
   document.getElementById("chartBack").classList.toggle("hidden", !showingChart);
+  // 성과 차트는 아이콘·이름('% 성과')이 툴바 타이틀과 겹쳐 아이덴티티 행을 숨긴다
+  document.querySelector("#chartView .chart-identity")?.classList.toggle("hidden", performanceChartOpen);
   document.getElementById("chartInterestOpen")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
   document.getElementById("chartBottomControls")?.classList.toggle("hidden", !showingChart);
   document.getElementById("chartIntervalControl")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
