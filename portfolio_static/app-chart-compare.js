@@ -251,7 +251,7 @@ function bindCompareHover(series, geometry) {
       return `<div class="ct-row">
         ${logoHtml}
         <span class="ct-name" style="color:${item.color}">${esc(item.ticker || item.name)}</span>
-        <span class="ct-pct ${pctCls}">${esc(pctChartLabel(point.close))}</span>
+        <span class="ct-pct ${pctCls}">${esc(pctChartLabel1(point.close))}</span>
         <span class="ct-price">${chartMoney(point.value, item.currency, item.ticker)}</span>
         <span class="ct-rsi">${Number.isFinite(point.rsi) ? `RSI ${point.rsi.toFixed(1)}` : "RSI -"}</span>
       </div>`;
@@ -375,7 +375,7 @@ function renderCompareLineChart(payload) {
         return path ? `<path class="compare-rsi-line ${item.primary ? "primary" : ""}" d="${path}" style="stroke:${item.color}"></path>` : "";
       }).join("")}
       ${endLabels.map(label => `
-        <text class="perf-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(pctChartLabel(label.close))}</text>
+        <text class="perf-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(pctChartLabel1(label.close))}</text>
       `).join("")}
       ${rsiEndLabels.map(label => `
         <text class="compare-rsi-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampRsiY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${Math.round(label.value)}</text>

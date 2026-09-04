@@ -87,8 +87,9 @@
   --sp-3: 12px;
   --sp-4: 16px;
   --radius: 14px;
-  --radius-sm: 9px;
-  --button-radius: 9px;
+  /* 버튼·칩 모서리 — 9px는 작은 버튼에서 알약처럼 보여 6px로 낮춘다 */
+  --radius-sm: 6px;
+  --button-radius: 6px;
   --button-height: 28px;
   --button-surface: #f6f9fe;
   --button-active: #2563eb;
@@ -3609,10 +3610,10 @@ th.pc-frozen-edge {
 .perf-legend-host {
   padding: 0 2px 12px;
 }
-/* 성과모드(범례가 보일 때)는 차트뷰 상단 패딩을 줄인다 — 툴바와의 기본 간격 10px에
-   패딩 12px가 더해져 칩 위 22 / 아래 12로 어긋났다. */
+/* 성과모드(범례가 보일 때) 차트뷰 상단 패딩 — 구분선(툴바 border-bottom)에서 칩까지가
+   위 여백이다. 12px로 두어 칩 아래(호스트 padding-bottom 12px)와 같게 맞춘다. */
 .chart-view:has(> #perfLegendHost:not(.hidden)) {
-  padding-top: 2px;
+  padding-top: 12px;
 }
 .perf-chart-top {
   display: flex;

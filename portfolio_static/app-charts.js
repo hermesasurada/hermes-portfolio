@@ -173,7 +173,7 @@ function bindPerformanceHover(series, geometry) {
       if (!point) return "";
       const cls = point.close > 0 ? "up" : point.close < 0 ? "down" : "flat";
       const value = item.amount ? performanceValueText(point) : "";
-      return `<div class="ct-row simple perf-tooltip-row${item.amount ? " with-value" : ""}"><span class="ct-name" style="color:${item.color}">${esc(item.name)}</span><span class="ct-pct ${cls}">${esc(pctChartLabel(point.close))}</span><span class="ct-value">${esc(value)}</span></div>`;
+      return `<div class="ct-row simple perf-tooltip-row${item.amount ? " with-value" : ""}"><span class="ct-name" style="color:${item.color}">${esc(item.name)}</span><span class="ct-pct ${cls}">${esc(pctChartLabel1(point.close))}</span><span class="ct-value">${esc(value)}</span></div>`;
     }).join("");
     tooltip.innerHTML = `<div class="ct-date">${esc(chartFullDateLabel(dateText))}</div>${rows}`;
     tooltip.classList.remove("hidden");
@@ -252,8 +252,6 @@ function renderPerformanceChart(payload) {
       };
     })
     , 13);
-  // 끝라벨은 소수 첫째 자리까지 — 축·툴팁과 달리 선 옆에 붙어 자리가 좁다
-  const endPct = value => `${value > 0 ? "+" : value < 0 ? "-" : ""}${fmt1.format(Math.abs(value))}%`;
   // (#3) 범례에 색·이름만 두고 %는 선 끝으로. 지수 on/off도 이 범례가 겸한다.
   syncPerformanceLegendHost(renderPerformanceLegend(series));
   document.getElementById("chartCanvas").innerHTML = `
@@ -278,7 +276,7 @@ function renderPerformanceChart(payload) {
         <path class="perf-line ${item.primary ? "primary" : "index"}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>
       `).join("")}
       ${endLabels.map(label => `
-        <text class="perf-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(endPct(label.close))}</text>
+        <text class="perf-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(pctChartLabel1(label.close))}</text>
       `).join("")}
       <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
       <g id="chartHoverGroup" class="chart-hover hidden">

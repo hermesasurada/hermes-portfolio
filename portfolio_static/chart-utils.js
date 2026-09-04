@@ -4,6 +4,13 @@ function pctChartLabel(value) {
   return `${sign}${fmt2.format(Math.abs(value))}%`;
 }
 
+// 차트 안에 붙는 % — 선 옆 끝라벨·호버 툴팁처럼 자리가 좁은 곳은 소수 첫째 자리까지.
+function pctChartLabel1(value) {
+  if (!Number.isFinite(value)) return "-";
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
+  return `${sign}${fmt1.format(Math.abs(value))}%`;
+}
+
 function chartGridUnit(rangeKey) {
   if (rangeKey === "1m") return "week";
   if (rangeKey === "3y" || rangeKey === "5y") return "quarter";
