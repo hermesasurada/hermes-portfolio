@@ -139,6 +139,35 @@ function niceChartStep(rawStep) {
   return nice * power;
 }
 
+// 데이터에 밀착하는 축 — 도메인을 눈금 배수까지 늘리지 않는다.
+// niceChartScale은 min/max를 step 배수로 floor/ceil하므로, 데이터가 -8.8~78.9인데
+// step이 50으로 잡히면 축이 -50~100까지 벌어져 위아래로 빈 공간이 남는다(성과차트 실측).
+function tightChartScale(values, desiredTicks = 5) {
+  const clean = values.filter(value => Number.isFinite(value));
+  if (!clean.length) return { min: 0, max: 1, ticks: [0, 0.5, 1] };
+  const rawMin = Math.min(...clean);
+  const rawMax = Math.max(...clean);
+  const span = rawMax - rawMin || Math.max(1, Math.abs(rawMax));
+  const min = rawMin - span * 0.06;
+  const max = rawMax + span * 0.10;
+  // niceChartStep은 2.5 배수를 넘어서면 바로 5로 올라가 눈금이 절반으로 준다
+  // (도메인 101.8 → step 50 → 눈금 0·50 둘뿐). 눈금이 3개 미만이면 한 단계 낮춘다.
+  let step = niceChartStep((max - min) / Math.max(1, desiredTicks - 1));
+  const ticksFor = value => {
+    const list = [];
+    for (let tick = Math.ceil(min / value) * value; tick <= max + value / 1e6; tick += value) {
+      list.push(Math.abs(tick) < value / 1e6 ? 0 : tick);
+    }
+    return list;
+  };
+  let ticks = ticksFor(step);
+  for (let guard = 0; ticks.length < 3 && guard < 3; guard += 1) {
+    step = niceChartStep(step / 2.5);
+    ticks = ticksFor(step);
+  }
+  return { min, max, ticks };
+}
+
 function niceChartScale(values, desiredTicks = 5) {
   const cleanValues = values.filter(value => Number.isFinite(value));
   if (!cleanValues.length) return { min: 0, max: 1, ticks: [0, .25, .5, .75, 1] };

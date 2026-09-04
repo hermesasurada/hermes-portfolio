@@ -3067,8 +3067,6 @@ th.pc-frozen-edge {
 .chart-canvas > svg,
 .chart-canvas > .chart-empty { order: 0; }
 .chart-canvas > .chart-compare-panel { order: 1; }
-/* 빈 상태에서도 범례(=지수 on/off)는 그래프 아래에 둔다 */
-.chart-canvas > .chart-empty + .perf-chart-top { order: 1; }
 .chart-bottom-controls {
   position: absolute;
   top: 8px;
@@ -3094,6 +3092,19 @@ th.pc-frozen-edge {
   white-space: nowrap;
 }
 .chart-bottom-controls::-webkit-scrollbar { display: none; }
+/* 성과차트: 컨트롤이 둘뿐이라 감싸는 박스·구분선을 없애고 버튼만 남긴다 */
+.chart-bottom-controls.perf-mode {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  gap: 6px;
+}
+.chart-bottom-controls.perf-mode > * + * {
+  border-left: 0;
+  padding-left: 0;
+  margin-left: 0;
+}
 /* 기능그룹(표시 토글 | 일·주·월 | 기간 | 매수·매도) 사이 세로 구분선 */
 .chart-bottom-controls > * + * {
   border-left: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
@@ -3593,6 +3604,10 @@ th.pc-frozen-edge {
 }
 
 /* ── 성과·비교 차트 (범례·지수 토글) ───────────────────────────────────── */
+/* 범례는 차트(플롯) 영역 밖 — 캔버스 위 별도 줄 */
+.perf-legend-host {
+  padding: 0 2px 8px;
+}
 .perf-chart-top {
   display: flex;
   align-items: center;
@@ -3657,11 +3672,20 @@ th.pc-frozen-edge {
   font-family: inherit;
   /* 전역 button{height:36px}을 끄고 왼쪽 정보 칩(span)과 같은 자연 높이로 */
   height: auto;
-  color: color-mix(in srgb, var(--muted) 55%, transparent);
+  /* 꺼짐 — 글자를 크게 낮추고 표면도 한 톤 죽여 상태가 분명히 보이게 */
+  color: color-mix(in srgb, var(--muted) 38%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 55%, transparent);
+  border-color: color-mix(in srgb, var(--line) 55%, transparent);
+}
+.perf-index-toggle i {
+  opacity: .5;
 }
 .perf-index-toggle:hover {
   color: var(--muted);
   border-color: var(--muted);
+}
+.perf-index-toggle.active i {
+  opacity: 1;
 }
 /* 전역 button.active(파랑 채움)를 이 칩에서만 되돌린다 — 켜짐은 색이 아니라
    선 색 점 + 또렷한 잉크로 보인다. 특이도 (0,2,0) > button.active (0,1,1). */

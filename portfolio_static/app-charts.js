@@ -8,6 +8,14 @@ function accountPerformanceTitle(payload) {
   return `${accounts.length}개 계좌 성과`;
 }
 
+// 범례는 차트(플롯) 영역 밖 — 캔버스 위 별도 호스트에 둔다.
+function syncPerformanceLegendHost(html) {
+  const host = document.getElementById("perfLegendHost");
+  if (!host) return;
+  host.innerHTML = html || "";
+  host.classList.toggle("hidden", !html);
+}
+
 // 성과 타이틀은 차트 헤드가 아니라 툴바(목록·상세 버튼 우측)에 띄운다.
 function syncPerformanceTitle(text) {
   const host = document.getElementById("performanceTitle");
@@ -119,7 +127,8 @@ function renderPerformanceLegend(series = []) {
   const indexChips = PERF_INDEX_META
     .map(([key, label, color]) => {
       const on = !!performanceIndexes[key];
-      return `<button class="perf-legend-item perf-index-toggle${on ? " active" : ""}" type="button" data-index="${key}" aria-pressed="${on ? "true" : "false"}" title="${esc(label)} ${on ? "숨기기" : "표시"}"><i style="background:${color}"></i>${esc(label)}</button>`;
+      // 꺼짐은 점까지 회색 — 색이 남아 있으면 켜진 것처럼 보인다
+      return `<button class="perf-legend-item perf-index-toggle${on ? " active" : ""}" type="button" data-index="${key}" aria-pressed="${on ? "true" : "false"}" title="${esc(label)} ${on ? "숨기기" : "표시"}"><i style="background:${on ? color : "var(--chart-axis)"}"></i>${esc(label)}</button>`;
     })
     .join("");
   return `<div class="perf-legend" role="group" aria-label="차트 선 표시">${accountChips}${indexChips}</div>`;
@@ -180,7 +189,10 @@ function renderPerformanceChart(payload) {
   performancePayload = payload;
   const series = performanceSeries(payload);
   if (typeof syncChartBottomControls === "function") syncChartBottomControls(true);
-  if (typeof syncChartLogToggle === "function") syncChartLogToggle(false);   // 성과 차트는 로그 미적용
+  // syncChartLogToggle은 곧 syncChartDisplayControls라 인자가 그대로 표시 여부가 된다.
+  // 예전엔 false를 넘겨 컨트롤 묶음을 통째로 숨겼지만, 이제 성과차트도 '부드럽게'를
+  // 쓰므로 켜 둔다(로그·BB·일목 등 개별 버튼은 sync 안에서 성과일 때 숨긴다).
+  if (typeof syncChartDisplayControls === "function") syncChartDisplayControls(true);
   const statsEl = document.getElementById("chartStats");
   if (statsEl) statsEl.innerHTML = "";   // 성과 차트엔 종목별 지표 패널 숨김
   document.getElementById("chartIcon").innerHTML = `<span class="asset-icon">%</span>`;
@@ -193,7 +205,8 @@ function renderPerformanceChart(payload) {
 
   if (!series.length || !series[0]?.points.length) {
     document.getElementById("chartMeta").textContent = `${payload?.holdings_count || 0}개 종목`;
-    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">성과 차트 데이터 없음</div><div class="perf-chart-top">${renderPerformanceLegend()}</div>`;
+    syncPerformanceLegendHost(renderPerformanceLegend());
+    document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">성과 차트 데이터 없음</div>`;
     renderChartRangeControls();
     bindPerformanceChartControls();
     return;
@@ -203,21 +216,21 @@ function renderPerformanceChart(payload) {
   const minTime = Math.min(...allPoints.map(point => point.time));
   const maxTime = Math.max(...allPoints.map(point => point.time));
   const values = allPoints.map(point => point.close);
-  const scale = niceChartScale([...values, 0]);
+  const scale = tightChartScale(values);
   const min = scale.min;
   const max = scale.max;
   const width = 980;
   const isMobileChart = Boolean(window.matchMedia?.("(max-width: 980px)")?.matches);
   const height = isMobileChart ? 864 : 432;
-  const hasAmountLabels = series.some(item => item.amount);
-  const pad = { top: 40, right: hasAmountLabels ? 146 : 104, bottom: 22, left: 56 };
+  // 우측은 % 끝라벨만 — 금액은 호버 툴팁에서 본다(여백을 넓게 먹던 원인)
+  const pad = { top: 40, right: 74, bottom: 22, left: 56 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const range = max - min || 1;
   const xForTime = time => pad.left + (maxTime === minTime ? 0 : (time - minTime) / (maxTime - minTime) * plotW);
   const yFor = value => pad.top + (max - value) / range * plotH;
   const clampY = value => Math.max(pad.top + 4, Math.min(pad.top + plotH - 2, value));
-  const pathFor = points => points.map((point, index) => `${index === 0 ? "M" : "L"}${xForTime(point.time).toFixed(2)},${yFor(point.close).toFixed(2)}`).join(" ");
+  const pathFor = points => chartLinePath(points.map(point => ({ x: xForTime(point.time), y: yFor(point.close) })));
   const portfolio = series[0];
   const lastPoint = portfolio.points[portfolio.points.length - 1];
   document.getElementById("chartMeta").textContent = "";
@@ -233,16 +246,14 @@ function renderPerformanceChart(payload) {
       return {
         color: item.color,
         close: last,
-        value: item.amount ? performanceValueText(lastPoint) : "",
+        value: "",
         y: yFor(last),
       };
     })
     , 13);
   // (#3) 범례에 색·이름만 두고 %는 선 끝으로. 지수 on/off도 이 범례가 겸한다.
+  syncPerformanceLegendHost(renderPerformanceLegend(series));
   document.getElementById("chartCanvas").innerHTML = `
-    <div class="perf-chart-top">
-      ${renderPerformanceLegend(series)}
-    </div>
     <svg class="line-chart perf-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="계좌 기간 성과 차트">
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
       <rect class="chart-plot-border" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
@@ -380,6 +391,7 @@ async function openChart(ticker) {
   performanceChartOpen = false;
   performanceLoadToken += 1;
   syncPerformanceTitle("");   // 성과 → 종목 차트로 넘어갈 때 툴바 타이틀도 함께 내린다
+  syncPerformanceLegendHost("");
   if (chartTicker !== cleanTicker) chartComparePayloads = [];
   chartTicker = cleanTicker;
   discardHiddenListRowsForChart();
@@ -447,6 +459,7 @@ function closeChart(updateHash = true) {
   performanceLoadInFlight = null;
   performancePayload = null;
   syncPerformanceTitle("");
+  syncPerformanceLegendHost("");
   if (updateHash && (location.hash.startsWith("#chart=") || location.hash === "#performance")) {
     history.pushState(null, "", location.pathname + location.search);
   }

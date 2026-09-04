@@ -149,7 +149,8 @@ function initChartIntervalControl() {
   });
 }
 
-function syncChartDisplayControls(visible = Boolean(chartTicker) && !performanceChartOpen) {
+// 성과차트에도 '부드럽게'만 남겨 노출한다(선 종류·log·BB·일목은 종목차트 전용).
+function syncChartDisplayControls(visible = Boolean(chartTicker || performanceChartOpen)) {
   const control = document.getElementById("chartDisplayControls");
   if (!control) return;
   control.classList.toggle("hidden", !visible);
@@ -167,15 +168,17 @@ function syncChartDisplayControls(visible = Boolean(chartTicker) && !performance
   }
   smoothToggle?.classList.toggle("active", chartSmoothLines);
   smoothToggle?.setAttribute("aria-pressed", String(chartSmoothLines));
-  smoothToggle?.classList.toggle("hidden", chartType === "candle");
+  smoothToggle?.classList.toggle("hidden", chartType === "candle" && !performanceChartOpen);
+  typeToggle?.classList.toggle("hidden", performanceChartOpen);
   logToggle?.classList.toggle("active", chartLogScale);
   logToggle?.setAttribute("aria-pressed", String(chartLogScale));
+  logToggle?.classList.toggle("hidden", performanceChartOpen);
   bollingerToggle?.classList.toggle("active", chartShowBollinger);
   bollingerToggle?.setAttribute("aria-pressed", String(chartShowBollinger));
   ichimokuToggle?.classList.toggle("active", chartShowIchimoku);
   ichimokuToggle?.setAttribute("aria-pressed", String(chartShowIchimoku));
-  bollingerToggle?.classList.toggle("hidden", chartComparePayloads.length > 0);
-  ichimokuToggle?.classList.toggle("hidden", chartComparePayloads.length > 0);
+  bollingerToggle?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
+  ichimokuToggle?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
 }
 
 function initChartDisplayControls() {
@@ -193,7 +196,8 @@ function initChartDisplayControls() {
     chartSmoothLines = !chartSmoothLines;
     storageSet(detailStorage.chartSmoothLines, String(chartSmoothLines));
     syncChartDisplayControls();
-    if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
+    if (performanceChartOpen && performancePayload) renderPerformanceChart(performancePayload);
+    else if (chartPayload) renderLineChart(chartPayload);
   });
   logToggle?.addEventListener("click", () => {
     chartLogScale = !chartLogScale;
