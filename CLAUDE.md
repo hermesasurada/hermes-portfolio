@@ -41,7 +41,8 @@
 ## 성과 스냅샷
 - 거래·현금 입출금 변경은 `BEGIN IMMEDIATE` 후 원장/잔고를 읽고, **같은 연결**로 `rebuild_account_snapshots_in_transaction(conn, ids)`를 호출한 뒤 함께 커밋한다. 중간 커밋·별도 스냅샷 연결 금지(재계산 실패 시 부분 저장·동시 매매 갱신 유실 방지). 일배치·수동 재계산은 자체 트랜잭션을 여는 `rebuild_account_snapshots(ids)` 사용.
 - `account_value_snapshots`(계좌·일자별 `holdings_value_krw`/`trade_cash_krw`/`flow_krw`)가 성과차트의 정본. 조회 시 재계산 금지 — 다시 만드는 건 **거래 입력·수정·삭제, 현금 입출금 변경, 일배치(당일 점)** 뿐(`performance_snapshots.rebuild_account_snapshots`).
-- 기준일 = `accounts.history_start`(없으면 **전 계좌 공통 최초 거래일** — 계좌별로 다르면 합산 차트가 가장 늦은 계좌부터만 그려지므로). 기초 포지션 = **현재 잔고 − 기준일 이후 순거래**로 역산 → 이력이 부분적인 연금 계좌도 재생이 잔고에 도달한다. **거래 수량은 분할 후 기준으로 입력돼 있으므로 분할 환산 금지**(141쌍 대조 실측).
+- 기준일 = `accounts.history_start`(없으면 **전 계좌 공통 최초 거래일** — 계좌별로 다르면 합산 차트가 가장 늦은 계좌부터만 그려지므로). 기초 포지션 = **현재 잔고 − 기준일 이후 순거래**로 역산 → 현재 잔고에는 도달하지만, 거래 이력이 불완전하면 과거 실적의 정확성은 보장하지 않는다. **저장 원장의 수량·단가는 일봉과 같은 분할/병합 보정 단위로 관리하며 스냅샷 계산에서 재차 환산하지 않는다.**
+- 2026-09-05 사용자 승인으로 원단위가 남았던 LCID 21건(수량 ÷10), ETHU 24건(÷20), SSO 13건·USD 6건·Raymond TQQQ 2건(×2)을 보정했다. 단가는 역비율로 조정해 거래대금 보존, 보유·입출금·일봉 불변. Claire TQQQ 50건은 이미 정규화돼 유지. `scripts/repair_transaction_split_units.py`는 이 5종목의 청산 완료 거래만 점검하는 수동 도구(기본 dry-run, 모호한 단위/불균형 거절); 자동 수집 규칙으로 쓰지 말 것. 원본 DB·변경 원장은 `~/.hermes/data/backups/transaction-split-repair-*/`에 보관.
 - 성과차트 계좌 선은 **시간가중(TWR)** — `twr_index()`가 일별 수익률을 체인(흐름은 장 시작 유입=분모). 선택 계좌 전부에 현금 입출금이 있으면 정식(외부 흐름만, 총자산=증권+현금, 기준일 현금 0 규약 → 기준일 보유 현금은 기준일자 입금으로 입력), 아니면 증권 기준(매수·매도를 외부 흐름으로). 범례에 기준 표기. **계좌별 시리즈 포인트에도 trade_cash·flow를 실어야 한다**(빠지면 매수가 수익으로 잡혀 +1120% 실사고).
 - 현금 입출금은 `account_cash_flows`(입금 +, 출금 −, 계좌 통화 기본)에 넣고, 스냅샷이 그날 환율로 KRW 환산. 엔드포인트: `GET /api/performance/snapshots`, `GET/POST /api/cash-flows`, `POST /api/cash-flows/delete`, `POST /api/performance/rebuild`.
 - **입출금이 들어간 계좌는 id 1·4·6·9**(나머지는 미입력 → 합산은 securities, 단독 조회만 full).

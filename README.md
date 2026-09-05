@@ -56,5 +56,14 @@ python3 collect_prices.py --category kr
 python3 tests/test_portfolio_core.py
 python3 tests/test_refactor_performance.py
 python3 tests/test_atomic_writes.py
+python3 tests/test_transaction_split_repair.py
 node tests/test_interest_columns.js
 ```
+
+## 과거 거래 단위 보정
+
+`python3 scripts/repair_transaction_split_units.py`는 검토된 LCID·ETHU·SSO·USD·TQQQ의
+거래 수량/단가와 분할 보정 일봉의 단위를 점검합니다. 기본은 조회만 수행합니다.
+`--apply`는 원본 DB·변경 전 원장을 데이터 폴더의 `backups/`에 보관한 뒤,
+거래대금을 보존하며 원장과 해당 계좌 스냅샷을 함께 갱신합니다. 이미 보정된 거래는
+유지하며, 모호한 단위나 미청산/불균형 포지션은 거절합니다. 자동 수집용이 아닙니다.
