@@ -126,7 +126,6 @@ def load_transactions(account_id: str | None = None, ticker: str | None = None, 
             LEFT JOIN tickers tk ON tk.ticker = t.ticker
             {where}
             ORDER BY t.trade_date DESC, t.id DESC
-            LIMIT 200
             """,
             params,
         ).fetchall()

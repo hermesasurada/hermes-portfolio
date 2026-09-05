@@ -20,6 +20,7 @@
 - 티커 링크·배당이력 버튼 클릭은 **app.js의 문서 위임 한 곳**에서만 처리. 렌더 후 개별 addEventListener 재바인딩 금지(리스너 누적 사고 이력).
 - 정렬 상태의 단일 진실은 `sortState`. 전역 sortKey/sortDir 부활 금지. 정렬은 `sortRows` 한 곳.
 - 주기 갱신은 `scheduleAutoRefresh` 한 곳(OFF/1분/5분). 시장상태 렌더에서 별도 타이머를 만들지 않는다. OFF/주기 전환 전 자동 요청의 늦은 응답도 버리며, 사용자 조작에 따른 명시적 재조회는 유지한다. 테스트: `node tests/test_auto_refresh.js`.
+- 거래내역 API는 선택 계좌의 전체 이력을 반환한다(최근 200건 제한 금지). 프런트에서 티커/종목명·숨김 조건으로 필터링한 뒤 **20건씩** 페이지를 나누며, 잔고 역산에는 필터 전 전체 원장을 사용한다. 테스트: `node tests/test_transaction_filter.js`.
 - 관심목록 테이블 고정컬럼은 **CSS sticky만**(detail/dividend는 JS pc-frozen) — 이중 시스템 금지.
 - 관심목록 컬럼 폭의 권위는 `<colgroup>`.
 - 각 JS 파일 끝의 로드 마커(`window.__loaded`)와 index.html의 부트 검사·에러 배너를 유지할 것. **인라인 스크립트 주석에도 닫는 script 태그 문자열을 절대 쓰지 말 것**(HTML 파서가 태그로 해석해 그 지점에서 잘림).

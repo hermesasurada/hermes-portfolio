@@ -46,7 +46,7 @@ let transactionRows = [];
 let transactionPage = 1;
 let editingTxId = null;
 let showHiddenTransactions = false;
-const transactionPageSize = 10;
+const transactionPageSize = 20;
 
 const chartRanges = [
   { key: "1m", label: "1M", months: 1 },

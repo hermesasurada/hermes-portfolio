@@ -7,7 +7,7 @@ let query = '';
 const body = { innerHTML: '' };
 const context = vm.createContext({
   window: {}, transactionRows: [], showHiddenTransactions: false,
-  transactionPage: 3, transactionPageSize: 10, editingTxId: null,
+  transactionPage: 3, transactionPageSize: 20, editingTxId: null,
   document: { getElementById: id => id === 'transactionNameFilter' ? {value: query} : body },
 });
 const holdings = read('app-holdings.js');
@@ -58,4 +58,10 @@ query = '';
 run('renderTransactions(transactionRows, true)');
 assert.equal(run('pagerCount'), 4);
 assert.equal(run('transactionRows.length'), 5);
+run("transactionRows = Array.from({length: 45}, (_, i) => ({id: i+1, ticker: 'AAA', hidden: 0})); renderTransactions(transactionRows, true)");
+assert.equal((body.innerHTML.match(/<tr>/g) || []).length, 20);
+assert.equal(run('pagerCount'), 45);
+run('transactionPage = 3; renderTransactions(transactionRows, false)');
+assert.equal((body.innerHTML.match(/<tr>/g) || []).length, 5);
+assert.match(read('app.js'), /const transactionPageSize = 20;/);
 console.log('transaction filter: ticker/name, case/spacing, hidden rows, empty results, paging and full-ledger balances passed');

@@ -343,6 +343,53 @@ def test_transaction_hidden_flag_persists_and_is_returned():
         conn.close()
 
 
+def test_transaction_history_is_not_truncated_and_preserves_scope():
+    import portfolio_core.transactions as transactions_module
+    from unittest.mock import patch
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript("""
+        CREATE TABLE accounts (id INTEGER PRIMARY KEY, member TEXT, account_type TEXT, name TEXT);
+        CREATE TABLE holdings (account_id INTEGER, ticker TEXT, name TEXT);
+        CREATE TABLE tickers (ticker TEXT PRIMARY KEY, name TEXT);
+        CREATE TABLE transactions (
+            id INTEGER PRIMARY KEY, trade_date TEXT, created_at TEXT,
+            account_id INTEGER, member TEXT, ticker TEXT, side TEXT,
+            qty REAL, price REAL, currency TEXT, note TEXT,
+            apply_to_holdings INTEGER, hidden INTEGER, entry_score REAL
+        );
+        INSERT INTO accounts VALUES (1, 'Test', 'pension_kr', 'Pension');
+        INSERT INTO accounts VALUES (2, 'Test', 'retirement_kr', 'Retirement');
+    """)
+    conn.executemany(
+        "INSERT INTO transactions (id, trade_date, account_id, ticker, side, qty, price, hidden) VALUES (?, ?, ?, ?, 'BUY', 1, 100, ?)",
+        [(i, (date(2021, 1, 1) + timedelta(days=i // 2)).isoformat(),
+          1 if i <= 405 else 2, 'AAA' if i % 2 else 'BBB', i % 3 == 0)
+         for i in range(1, 421)],
+    )
+
+    @contextmanager
+    def fake_connect():
+        yield conn
+
+    try:
+        with patch.object(transactions_module, 'connect', fake_connect):
+            all_rows = transactions_module.load_transactions()['transactions']
+            assert len(all_rows) == 420
+            rows = transactions_module.load_transactions(account_ids=['1'])['transactions']
+            assert len(rows) == 405
+            assert rows[0]['id'] == 405 and rows[-1]['id'] == 1
+            assert any(row['hidden'] for row in rows)  # frontend hidden toggle needs full data
+            assert rows == sorted(rows, key=lambda r: (r['trade_date'], r['id']), reverse=True)
+            ticker_rows = transactions_module.load_transactions(account_id='1', ticker='aaa')['transactions']
+            assert len(ticker_rows) == 203
+            assert all(r['account_id'] == 1 and r['ticker'] == 'AAA' for r in ticker_rows)
+            assert len(transactions_module.load_transactions(account_ids=['1', '2'])['transactions']) == 420
+    finally:
+        conn.close()
+
+
 # --- fundamentals.parse_number (the regression that started all this) -------
 def test_parse_number():
     assert parse_number("1,234.5") == 1234.5
