@@ -176,8 +176,14 @@ function transactionIsHidden(tx) {
   return Number(tx?.hidden) === 1;
 }
 
+function transactionNameFilterValue() {
+  return String(document.getElementById("transactionNameFilter")?.value || "").trim();
+}
+
 function visibleTransactionRows() {
-  return showHiddenTransactions ? transactionRows : transactionRows.filter(tx => !transactionIsHidden(tx));
+  const query = transactionNameFilterValue();
+  return transactionRows.filter(tx => (showHiddenTransactions || !transactionIsHidden(tx))
+    && matchesNameFilter(tx, query));
 }
 
 function syncHiddenTransactionsToggle() {
@@ -386,7 +392,8 @@ function renderTransactions(rows, resetPage = true) {
   const visible = visibleTransactionRows();
   if (visible.length === 0) {
     editingTxId = null;
-    const emptyText = transactionRows.some(transactionIsHidden) ? "숨긴 거래만 있습니다" : "거래내역 없음";
+    const emptyText = transactionNameFilterValue() ? "검색 조건에 맞는 거래내역이 없습니다"
+      : transactionRows.some(transactionIsHidden) ? "숨긴 거래만 있습니다" : "거래내역 없음";
     tbody.innerHTML = `<tr><td colspan="13" class="flat">${emptyText}</td></tr>`;
     renderTransactionPager(0);
     return;

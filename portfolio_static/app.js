@@ -354,6 +354,9 @@ document.getElementById("transactionToggle").addEventListener("click", () => {
 document.getElementById("transactionHiddenToggle").addEventListener("click", () => {
   setShowHiddenTransactions(!showHiddenTransactions);
 });
+document.getElementById("transactionNameFilter").addEventListener("input", () => {
+  renderTransactions(transactionRows, true);
+});
 showHiddenTransactions = storageGet(transactionStorage.showHidden) === "1";
 syncHiddenTransactionsToggle();
 document.querySelector(".transaction-panel > .toolbar").addEventListener("click", event => {

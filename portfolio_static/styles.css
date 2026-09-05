@@ -5742,9 +5742,13 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   justify-content: flex-end;
 }
 .transaction-panel.collapsed .tx-wrap,
+.transaction-panel.collapsed .transaction-name-filter,
 .transaction-panel.collapsed .tx-pager {
   display: none;
 }
+.transaction-name-filter { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; cursor: text; }
+.transaction-name-filter input { width: 160px; min-width: 0; height: 30px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); font: inherit; }
+.transaction-name-filter input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .tx-list { min-width: 760px; width: 100%; }
 .tx-list th, .tx-list td {
   padding: 7px 8px;
