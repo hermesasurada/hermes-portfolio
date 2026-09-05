@@ -65,8 +65,13 @@ function cashFlowsTableMarkup(matrix) {
   const { accounts, rows, totals } = matrix;
   const cells = (values, date = "") => accounts.map(a => {
     const entries = values.get(String(a.id));
-    const title = date ? (entries || []).map(e => `${Number(e.amount).toLocaleString("ko-KR", { maximumFractionDigits: 8 })} ${e.currency || "KRW"}${e.note ? ` · ${e.note}` : ""}`).join("\n") : `${entries?.length || 0}건의 순입출금 합계`;
-    return `<td data-account-id="${esc(a.id)}" data-flow-date="${esc(date)}" title="${esc(title)}">${cashFlowsAmountMarkup(entries)}</td>`;
+    // Routine import notes and total counts add noise; retain explanations only
+    // for estimated/corrective funding and exceptional non-cash settlements.
+    const title = date ? (entries || [])
+      .filter(e => /보정|추정|증여|현물|상장폐지|정산|매수일 기준/.test(e.note || ""))
+      .map(e => `${Number(e.amount).toLocaleString("ko-KR", { maximumFractionDigits: 8 })} ${e.currency || "KRW"} · ${e.note}`)
+      .join("\n") : "";
+    return `<td data-account-id="${esc(a.id)}" data-flow-date="${esc(date)}"${title ? ` title="${esc(title)}"` : ""}>${cashFlowsAmountMarkup(entries)}</td>`;
   }).join("");
   return `<table class="cash-flows-table" style="min-width:${86 + accounts.length * 96}px">
     <caption class="sr-only">계좌별 일자별 순입출금, 최신 날짜순</caption>

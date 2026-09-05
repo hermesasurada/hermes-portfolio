@@ -35,7 +35,17 @@ assert.match(run("cashFlowsAmountMarkup(matrix.totals.get('3'))"), /down\">−10
 assert.match(run("cashFlowsAmountMarkup(undefined)"), /—/);
 const html = run("cashFlowsTableMarkup(matrix)");
 assert.match(html, /&lt;Account>/);
-assert.match(html, /&lt;note>/);
+assert.doesNotMatch(html, /title=|&lt;note>/);
+const special = run(`cashFlowsTableMarkup(buildCashFlowsMatrix(accounts, [
+  {account_id: 1, flow_date: '2024-01-01', amount: 10000, currency: 'KRW', note: '일반 입금'},
+  {account_id: 1, flow_date: '2024-01-01', amount: 20000, currency: 'KRW', note: '사용자 승인 추정 보정 <메모>'},
+]))`);
+assert.equal((special.match(/title=/g) || []).length, 1); // detail only, never annual total
+assert.match(special, /title="20,000 KRW · 사용자 승인 추정 보정 &lt;메모>"/);
+assert.doesNotMatch(special, /일반 입금/);
+for (const note of ['현물 증여', '상장폐지 현금정산', '매수일 기준 추정 입금']) {
+  assert.match(run(`cashFlowsTableMarkup(buildCashFlowsMatrix(accounts, [{account_id: 1, flow_date: '2024-01-01', amount: 10000, currency: 'KRW', note: ${JSON.stringify(note)}}]))`), /title=/);
+}
 assert.equal((html.match(/scope="col"/g) || []).length, 4);
 assert.equal((html.match(/<td /g) || []).length, 12);
 assert.match(html, /data-account-id="1" data-flow-date="2024-02-01"/);
