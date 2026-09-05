@@ -140,7 +140,10 @@ const INTEREST_COLUMNS = [
         : group.fixed
           ? `<button class="interest-row-delete" type="button" data-interest-unregister="${esc(r.ticker)}" aria-label="${esc(r.name)} 수집 제외" title="수집 대상에서 제외">×</button>`
           : `<button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button>`}` },
-].map((column, index) => ({ ...column, index }));
+].map((column, index) => ({
+  ...column, index,
+  numeric: !["logo", "name", "rating_rank", "delete"].includes(column.key),
+}));
 const INTEREST_TABLE_COLUMN_COUNT = INTEREST_COLUMNS.length;
 
 let interestRenderedColumns = INTEREST_COLUMNS;
@@ -197,7 +200,7 @@ function renderInterestFrame(table, columns) {
 }
 
 function interestRowCells(row, group, columns = interestRenderedColumns) {
-  return columns.map(column => `<td class="${column.cellClass || ""}" ${interestColumnAttributes(column)}>${column.cell(row, group)}</td>`).join("");
+  return columns.map(column => `<td class="${column.cellClass || ""}${column.numeric ? " numeric-cell" : ""}" ${interestColumnAttributes(column)}>${column.cell(row, group)}</td>`).join("");
 }
 
 function interestEmptyRow(message, columns = interestRenderedColumns) {
