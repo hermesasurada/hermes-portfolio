@@ -654,9 +654,22 @@ main {
   min-width: 0;
 }
 .hero-page-shell {
+  display: grid;
+  align-items: center;
   cursor: grab;
   touch-action: pan-y;
   user-select: none;
+}
+/* Both pages size the same grid cell, even when inactive. Switching pages
+   cannot resize the strip; content/zoom can still grow without clipping. */
+.hero-page-shell > .hero-summary-page {
+  grid-area: 1 / 1;
+  width: 100%;
+}
+.hero-page-shell > .hero-summary-page.hidden {
+  display: block !important;
+  visibility: hidden;
+  pointer-events: none;
 }
 .hero-page-shell:active { cursor: grabbing; }
 .hero-summary-nav {
@@ -5937,9 +5950,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   .hero-summary-nav span { font-size: 24px; }
   .hero-page-shell {
-    display: grid;
-    align-items: center;
-    height: 64px;
+    min-height: 64px;
   }
   .hero-summary-page { width: 100%; }
   .hero-value-row {

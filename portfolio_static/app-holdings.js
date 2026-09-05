@@ -557,6 +557,8 @@ function renderHeroSummaryPage() {
   indexPage.classList.toggle("hidden", !showIndexes);
   portfolioPage.setAttribute("aria-hidden", String(showIndexes));
   indexPage.setAttribute("aria-hidden", String(!showIndexes));
+  portfolioPage.inert = showIndexes;
+  indexPage.inert = !showIndexes;
 
   const nextLabel = showIndexes ? "계좌 요약 보기" : "주요 지수 보기";
   [document.getElementById("heroPrev"), document.getElementById("heroNext")].forEach(button => {
@@ -566,7 +568,8 @@ function renderHeroSummaryPage() {
     button.setAttribute("aria-label", `${direction} 요약 · ${nextLabel}`);
   });
 
-  if (!showIndexes) return;
+  // Keep the inactive page populated too: its real height reserves space
+  // before the user switches, including timestamp wrapping and font changes.
   const asOfEl = document.getElementById("heroIndexAsOf");
   if (asOfEl) {
     const updated = String(data?.price_updated_at || "").trim();
