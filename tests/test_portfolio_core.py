@@ -2446,6 +2446,36 @@ def test_date_helpers():
     assert to_iso_text("short") is None
 
 
+def test_beta_uses_252_common_trading_returns():
+    import math
+    from portfolio_core.technical_stats import BETA_WINDOW, beta_stats
+    assert BETA_WINDOW == 252
+    stock, market = [], []
+    s = m = 100.0
+    for i in range(301):
+        if i:
+            change = .01 if i % 2 else -.01
+            m *= 1 + change
+            s *= 1 + change * (4 if i <= 120 else 1)
+        day = (date(2020, 1, 1) + timedelta(days=i)).isoformat()
+        stock.append({'date': day, 'close': s})
+        market.append({'date': day, 'close': m})
+    def returns(rows):
+        return [b['close'] / a['close'] - 1 for a, b in zip(rows, rows[1:])]
+    sr, mr = returns(stock[-253:]), returns(market[-253:])
+    sm, mm = sum(sr) / 252, sum(mr) / 252
+    sv = sum((r-sm)**2 for r in sr) / 252
+    mv = sum((r-mm)**2 for r in mr) / 252
+    cov = sum((s-sm)*(m-mm) for s,m in zip(sr,mr)) / 252
+    expected = {'beta': round(cov/mv, 2), 'beta_adj': round(math.sqrt(sv/mv), 2)}
+    assert beta_stats(stock, market) == expected
+    assert expected != beta_stats(stock[-181:], market[-181:])
+    # Prices older than the 253 common closing dates do not affect the window.
+    altered = [dict(r, close=r['close']*10) if i < 48 else r for i,r in enumerate(stock)]
+    assert beta_stats(altered, market) == expected
+    assert beta_stats(stock[:39], market[:39]) == {'beta': None, 'beta_adj': None}
+
+
 # --- runner -----------------------------------------------------------------
 def _run() -> int:
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]

@@ -28,11 +28,11 @@ from .paths import KST
 from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
 from .tickers import ticker_currency
 
-TECHNICAL_CACHE_VERSION = 11  # 11: 진입 손익비 중기 (주 BB·60일선·RSI 연속·변동성)
+TECHNICAL_CACHE_VERSION = 12  # 12: β·β″ 계산 창을 252 공통 거래일 수익률로 확대
 TECHNICAL_LOOKBACK_DAYS = 11 * 366
 PRICE_ADJUSTED_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
-BETA_WINDOW = 180
+BETA_WINDOW = 252
 
 # 손익비 점수용 비겹침 창. (key, 필요 이력 거래일, 슬라이스 끝 오프셋)
 # 5y = 3~5년 전(returns[-1260:-756]), 3y = 1~3년 전, 1y = 최근 1년.
