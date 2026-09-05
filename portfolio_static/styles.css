@@ -642,7 +642,7 @@ main {
   grid-template-columns: minmax(0, 1fr) 34px;
   align-items: center;
   gap: 12px;
-  padding: 6px 14px;
+  padding: 6px 14px 6px 24px;
   margin-bottom: var(--sp-4);
   background:
     linear-gradient(120deg, var(--panel) 0%, color-mix(in srgb, var(--brand-soft) 48%, var(--panel)) 100%);
@@ -5941,7 +5941,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .hero-strip {
     grid-template-columns: minmax(0, 1fr) 28px;
     gap: 8px;
-    padding: 6px 10px;
+    padding: 6px 10px 6px 18px;
   }
   .hero-summary-nav {
     width: 28px;
