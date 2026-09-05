@@ -1250,33 +1250,32 @@ main {
   background: var(--surface-hover);
 }
 .interest-detail-list th[data-interest-col="2"],
-.interest-detail-list td:nth-child(3) {
+.interest-detail-list td[data-interest-col="2"] {
   width: 86px;
 }
 .interest-detail-list th[data-interest-col="3"],
-.interest-detail-list td:nth-child(4) {
+.interest-detail-list td[data-interest-col="3"] {
   width: 78px;
 }
-.interest-detail-list td:nth-child(3) .pct-chip {
+.interest-detail-list td[data-interest-col="2"] .pct-chip {
   max-width: 100%;
   padding-left: 7px;
   padding-right: 7px;
 }
-.interest-detail-list td:nth-child(3) .change-cell,
-.interest-detail-list td:nth-child(4) .change-cell {
+.interest-detail-list td[data-interest-col="2"] .change-cell,
+.interest-detail-list td[data-interest-col="3"] .change-cell {
   gap: 3px;
   white-space: nowrap;
 }
 .interest-detail-list th[data-interest-col="4"],
-.interest-detail-list td:nth-child(5),
+.interest-detail-list td[data-interest-col="4"],
 .interest-detail-list th[data-interest-col="5"],
-.interest-detail-list td:nth-child(6) {
+.interest-detail-list td[data-interest-col="5"] {
   width: 112px;
 }
-/* 모멘텀 6컬럼(RSI 일/주/월, BB 일/주/월) — th는 그룹 속성으로, td는 번호(현재 17~22)로.
-   컬럼을 끼워 넣으면 td 번호는 같이 옮겨야 한다(index.html data-interest-col 재부여와 한 쌍). */
+/* 표시 열이 줄어도 모멘텀 스타일은 해당 지표에만 적용한다. */
 .interest-detail-list th[data-interest-group="momentum"],
-.interest-detail-list td:nth-child(n+17):nth-child(-n+22) {
+.interest-detail-list td[data-interest-group="momentum"] {
   width: 48px;
   padding-left: 2px;
   padding-right: 2px;

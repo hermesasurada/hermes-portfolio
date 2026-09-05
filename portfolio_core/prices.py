@@ -12,26 +12,32 @@ from .us_live_quotes import apply_us_live_prices, us_market_status
 
 def latest_prices(conn: sqlite3.Connection, tickers: list[str] | None = None) -> dict[str, dict]:
     clean_tickers = sorted({ticker.strip().upper() for ticker in tickers or [] if ticker and ticker.strip()})
-    ticker_filter = ""
-    params: list[object] = []
+    # Seek one row per ticker, not MAX(date) over every historical price. The
+    # unfiltered path also walks distinct index keys (including orphan tickers),
+    # so callers do not need metadata or a cache to keep the result complete.
+    params: list[object] = list(clean_tickers)
     if clean_tickers:
-        ticker_filter = f"AND ticker IN ({','.join('?' for _ in clean_tickers)})"
-        params.extend(clean_tickers)
+        wanted_sql = "VALUES " + ",".join("(?)" for _ in clean_tickers)
+    else:
+        wanted_sql = """
+            SELECT MIN(ticker) FROM daily_prices INDEXED BY idx_daily_prices_ticker_date_desc
+            UNION ALL
+            SELECT (
+                SELECT MIN(ticker) FROM daily_prices INDEXED BY idx_daily_prices_ticker_date_desc
+                WHERE ticker > wanted.ticker
+            )
+            FROM wanted WHERE wanted.ticker IS NOT NULL
+        """
     rows = conn.execute(
         f"""
-        WITH latest AS (
+        WITH RECURSIVE wanted(ticker) AS ({wanted_sql}), latest AS (
             SELECT dp.ticker, dp.date, dp.close, dp.source
-            FROM daily_prices dp
-            JOIN (
-                SELECT ticker, MAX(date) AS date
-                FROM daily_prices INDEXED BY idx_daily_prices_ticker_date_desc
-                WHERE close IS NOT NULL
-                  {ticker_filter}
-                GROUP BY ticker
-            ) latest_date
-              ON latest_date.ticker = dp.ticker
-             AND latest_date.date = dp.date
-            WHERE dp.close IS NOT NULL
+            FROM wanted w
+            JOIN daily_prices dp ON dp.rowid = (
+                SELECT p.rowid FROM daily_prices p INDEXED BY idx_daily_prices_ticker_date_desc
+                WHERE p.ticker = w.ticker AND p.close IS NOT NULL
+                ORDER BY p.date DESC LIMIT 1
+            )
         )
         SELECT
             l.ticker,

@@ -4,13 +4,7 @@ from collections.abc import Callable
 from datetime import timedelta
 
 from .dates import today_kst
-from .db import (
-    connect,
-    ensure_dividend_tables,
-    ensure_earnings_events_table,
-    ensure_stats_cache_table,
-    ensure_ticker_metadata_columns,
-)
+from .db import connect
 from .dividend_schedule import add_months, consolidated_dividend_events, event_schedule_date
 from .earnings_history import collapse_near_earnings_events
 from .tickers import ticker_scope
@@ -35,10 +29,8 @@ def load_schedule(
     end = add_months(first_of_month, 13) - timedelta(days=1)
 
     with connect() as conn:
-        ensure_ticker_metadata_columns(conn)
-        ensure_earnings_events_table(conn)
-        ensure_dividend_tables(conn)
-        ensure_stats_cache_table(conn)
+        # Schema/backfill run at startup and when earnings are collected. A GET
+        # must not acquire the SQLite writer lock, even for INSERT OR IGNORE.
         ticker_rows = conn.execute(
             """
             SELECT t.ticker,

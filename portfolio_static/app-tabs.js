@@ -91,7 +91,7 @@ async function loadStatsForRows(rows) {
   // 세부내역은 보유 데이터가 이미 그려져 있으므로 표를 덮지 않는다(통계탭
   // 제거 후 죽은 #statsRows에 에러가 그려져 안 보이던 회귀 수정).
   const target = interestModeActive() ? document.getElementById("interestRows") : null;
-  if (target && !target.children.length) target.innerHTML = skeletonRows(INTEREST_TABLE_COLUMN_COUNT);
+  if (target && !target.children.length) target.innerHTML = skeletonRows(interestRenderedColumns.length);
   statsInFlight = (async () => {
     const payload = await apiFetchStats(missing, extendedMode);
     if (usExtendedEnabled() !== extendedMode) return;
@@ -109,14 +109,14 @@ async function loadStatsForRows(rows) {
     failed = true;
     statsLoadKey = "";
     const message = `통계 조회 실패: ${err.message || String(err)}`;
-    if (target) target.innerHTML = `<tr><td colspan="${INTEREST_TABLE_COLUMN_COUNT}">${esc(message)}</td></tr>`;
+    if (target) target.innerHTML = interestEmptyRow(message);
     else if (window.__bootBanner) window.__bootBanner(message);
   } finally {
     statsInFlight = null;
     // 요청 중 계좌·통화 필터나 관심그룹이 바뀌었을 수 있으므로, 캡처된
     // 이전 rows가 아니라 현재 화면 기준으로 다시 그려 누락 종목을 후속 조회한다.
     if (!failed) {
-      if (interestModeActive()) renderInterestMainTable();
+      if (interestModeActive()) scheduleInterestMainTable();
       else renderTable();
     }
   }

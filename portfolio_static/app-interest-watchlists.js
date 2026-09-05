@@ -440,117 +440,6 @@ function syncInterestDefaultSortForGroup(group = activeInterestGroup()) {
   interestSortState.dir = -1;
 }
 
-const interestColumnWidths = {
-  display_change_pct: 85,
-  extended_change_pct: 71,
-  current_price: 109,
-  market_cap_usd: 76,
-  dividend_yield: 54,
-  dividend_growth_5y: 78,
-  dividend_streak_years: 54,
-  dividend_growth_streak_years: 54,
-  drawdown_52w: 72,
-  risk_reward_score: 58,
-  entry_risk_reward: 58,
-  beta: 42,
-  beta_adj: 44,
-  next_earnings_date: 45,
-  rsi_day: 48,
-  rsi_week: 48,
-  rsi_month: 48,
-  bb_day: 48,
-  bb_week: 48,
-  bb_month: 48,
-  trailing_pe: 62,
-  forward_pe: 62,
-  price_to_book: 44,
-  gross_margin: 72,
-  operating_margin: 72,
-  ebitda_margin: 68,
-  profit_margin: 72,
-  return_on_assets: 54,
-  return_on_equity: 54,
-  revenue_growth: 62,
-  earnings_growth: 62,
-  earnings_quarterly_growth: 72,
-  debt_to_equity: 70,
-  free_cash_flow: 76,
-  payout_ratio: 66,
-  short_percent_float: 72,
-  short_percent_shares: 72,
-  short_ratio: 60,
-  insider_ownership: 64,
-  institutional_ownership: 64,
-  perf_1w: 64,
-  perf_1m: 64,
-  perf_3m: 64,
-  perf_6m: 64,
-  perf_ytd: 64,
-  perf_1y: 64,
-  perf_3y: 64,
-  perf_5y: 64,
-  perf_10y: 64,
-  target_price: 67,
-  upside_pct: 61,
-  dispersion_pct: 54,
-  buy_strength: 76,
-  rating_rank: 66,
-};
-
-const interestAlwaysVisibleFields = new Set(["display_change_pct", "current_price"]);
-const INTEREST_TABLE_COLUMN_COUNT = 55;
-
-function interestEmptyRow(message) {
-  return `<tr class="interest-empty-row">${Array.from({ length: INTEREST_TABLE_COLUMN_COUNT }, (_, index) => {
-    if (index === 1) return `<td class="interest-empty-cell">${esc(message)}</td>`;
-    return "<td></td>";
-  }).join("")}</tr>`;
-}
-
-function hasInterestColumnValue(row, field) {
-  if (field === "next_earnings_date") return Boolean(row[field]);
-  if (field === "rating_rank") return row[field] != null;
-  if (field === "dividend_yield") return Number(row[field]) > 0;
-  return row[field] != null && Number.isFinite(Number(row[field]));
-}
-
-function syncInterestVisibleColumns(rows) {
-  const table = document.querySelector("#interestTableWrap .interest-detail-list");
-  if (!table) return;
-  const isIndexGroup = interestGroupIsIndex();
-  // 연장 컬럼은 값 유무로만 판단한다(세부내역과 동일 규칙). 예전엔 미국 장
-  // 상태로 가렸는데, 이제 한국 NXT 연장가가 따로 있어 미국 정규장 시간에
-  // 멀쩡한 한국 값까지 사라졌다. 정규장 중 값 정리는 서버가 담당한다.
-  const headers = Array.from(table.querySelectorAll("thead th[data-interest-col]"))
-    .sort((a, b) => Number(a.dataset.interestCol) - Number(b.dataset.interestCol));
-  const cols = Array.from(table.querySelectorAll("colgroup col"));
-  const tickerNameWidth = syncTickerNameColumnWidth(table);
-  const groupCounts = {};
-  let tableWidth = 40 + tickerNameWidth + 40;
-  headers.forEach((header, index) => {
-    const field = header.dataset.interestSortKey || "";
-    const hide = (isIndexGroup && field === "extended_change_pct")
-      || (Boolean(field)
-      && !interestAlwaysVisibleFields.has(field)
-      && !rows.some(row => hasInterestColumnValue(row, field)));
-    header.classList.toggle("hidden", hide);
-    cols[index]?.classList.toggle("hidden", hide);
-    table.querySelectorAll("tbody > tr").forEach(row => {
-      row.cells[index]?.classList.toggle("hidden", hide);
-    });
-    const group = header.dataset.interestGroup || "";
-    if (group && !hide) groupCounts[group] = (groupCounts[group] || 0) + 1;
-    if (field && !hide) tableWidth += interestColumnWidths[field] || 64;
-  });
-  table.querySelectorAll("[data-interest-group-head]").forEach(header => {
-    const group = header.dataset.interestGroupHead;
-    const count = groupCounts[group] || 0;
-    header.classList.toggle("hidden", count === 0);
-    if (count > 0) header.colSpan = count;
-  });
-  table.style.width = `${tableWidth}px`;
-  table.style.minWidth = "100%";
-}
 
 // 섹터 다중 선택 상태 — 빈 Set = 전체 표시
 const interestSectorSelection = new Set();
@@ -607,11 +496,24 @@ function closeInterestSectorPanel() {
   document.getElementById("interestSectorButton")?.setAttribute("aria-expanded", "false");
 }
 
+let interestRenderFrame = 0;
+
+function scheduleInterestMainTable() {
+  if (interestRenderFrame) return;
+  interestRenderFrame = requestAnimationFrame(() => {
+    interestRenderFrame = 0;
+    if (interestModeActive()) renderInterestMainTable();
+  });
+}
+
 function renderInterestMainTable() {
+  cancelAnimationFrame(interestRenderFrame);
+  interestRenderFrame = 0;
   const group = activeInterestGroup();
   const body = document.getElementById("interestRows");
   if (!body) return;
   if (!group) {
+    renderInterestFrame(body.closest("table"), visibleInterestColumns([]));
     body.innerHTML = interestEmptyRow("선택할 관심그룹이 없습니다.");
     return;
   }
@@ -633,90 +535,21 @@ function renderInterestMainTable() {
   if (missingStats) loadStatsForRows(baseRows);
   // 애널리스트 컨센서스는 개별주·ETF만 대상(환율·지수·가상자산 제외). 도착하면
   // 관심목록을 다시 그려 컨센서스 5컬럼을 채운다.
-  loadQuotesForRows(baseRows.filter(consensusCandidate).map(row => row.ticker), renderInterestMainTable);
+  loadQuotesForRows(baseRows.filter(consensusCandidate).map(row => row.ticker), scheduleInterestMainTable);
   document.getElementById("tableTitle").textContent = group.name;
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
   const suppressIndexHighlight = interestGroupIsIndex(group);
+  const table = body.closest("table");
+  const columns = visibleInterestColumns(rows, suppressIndexHighlight);
+  renderInterestFrame(table, columns);
   body.innerHTML = rows.length ? rows.map(r => `
-    <tr class="${suppressIndexHighlight ? "" : tableRowClass(r)}">
-      <td class="logo-cell">${logoMarkup(r)}</td>
-      <td>
-        <span class="ticker-text">
-          <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
-            <span class="asset-name">${esc(r.name)}</span>
-            <span class="interest-ticker-meta">
-              <span class="ticker-symbol">${esc(r.ticker)}</span>
-              ${r.sector ? `<span class="sector-chip" title="${esc(sectorLabel(r.sector))}">${esc(sectorLabel(r.sector))}</span>` : ""}
-            </span>
-          </a>
-        </span>
-      </td>
-      <td class="group-start">${changeMarkup(r)}</td>
-      <td>${extendedChangeText(r) || "-"}</td>
-      <td>${currentPriceMarkup(r)}</td>
-      <td class="group-start">${marketCapMarkup(r)}</td>
-      <td>${Number(r.dividend_yield) > 0
-        ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(r.ticker)}">${dividendYieldText(r.dividend_yield)}</button>`
-        : dividendYieldText(r.dividend_yield)}</td>
-      <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
-      <td>${dividendStreakText(r.dividend_streak_years, r.dividend_streak_floor)}</td>
-      <td>${dividendStreakText(r.dividend_growth_streak_years)}</td>
-      <td>${signedPercentText(r.drawdown_52w, 1)}</td>
-      <td>${riskRewardScoreText(r.risk_reward_score, r.risk_reward_basis, r.risk_reward_quality)}</td>
-      <td>${entryRewardText(r.entry_risk_reward)}</td>
-      <td>${betaText(r.beta)}</td>
-      <td>${betaText(r.beta_adj)}</td>
-      <td class="group-start">${earningsText(r.next_earnings_date)}</td>
-      <td class="group-start">${indicatorText(r.rsi_day, "rsi")}</td>
-      <td>${indicatorText(r.rsi_week, "rsi")}</td>
-      <td>${indicatorText(r.rsi_month, "rsi")}</td>
-      <td>${indicatorText(r.bb_day, "bb")}</td>
-      <td>${indicatorText(r.bb_week, "bb")}</td>
-      <td>${indicatorText(r.bb_month, "bb")}</td>
-      <td class="group-start">${peText(r.trailing_pe)}</td>
-      <td>${peText(r.forward_pe)}</td>
-      <td>${peText(r.price_to_book)}</td>
-      <td class="group-start">${signedPercentText(r.perf_1w, 1)}</td>
-      <td>${signedPercentText(r.perf_1m, 1)}</td>
-      <td>${signedPercentText(r.perf_3m, 0)}</td>
-      <td>${signedPercentText(r.perf_6m, 0)}</td>
-      <td>${signedPercentText(r.perf_ytd, 0)}</td>
-      <td>${signedPercentText(r.perf_1y, 0)}</td>
-      <td>${signedPercentText(r.perf_3y, 0)}</td>
-      <td>${signedPercentText(r.perf_5y, 0)}</td>
-      <td>${signedPercentText(r.perf_10y, 0)}</td>
-      <td class="group-start">${fractionPercentText(r.gross_margin)}</td>
-      <td>${fractionPercentText(r.operating_margin)}</td>
-      <td>${fractionPercentText(r.ebitda_margin)}</td>
-      <td>${fractionPercentText(r.profit_margin)}</td>
-      <td>${fractionPercentText(r.return_on_assets)}</td>
-      <td>${fractionPercentText(r.return_on_equity)}</td>
-      <td class="group-start">${fractionSignedPercentText(r.revenue_growth)}</td>
-      <td>${fractionSignedPercentText(r.earnings_growth)}</td>
-      <td>${fractionSignedPercentText(r.earnings_quarterly_growth)}</td>
-      <td class="group-start">${rawPercentText(r.debt_to_equity)}</td>
-      <td>${freeCashFlowText(r.free_cash_flow, r.financial_currency || r.currency)}</td>
-      <td class="group-start">${fractionPercentText(r.payout_ratio)}</td>
-      <td class="group-start">${fractionPercentText(r.short_percent_float)}</td>
-      <td>${fractionPercentText(r.short_percent_shares)}</td>
-      <td>${numberText(r.short_ratio, 1)}</td>
-      <td class="group-start">${fractionPercentText(r.insider_ownership)}</td>
-      <td>${fractionPercentText(r.institutional_ownership)}</td>
-      <td class="group-start">${consensusPriceText(r.target_price, r.consensus_currency || r.currency)}</td>
-      <td>${upsideText(r.upside_pct)}</td>
-      <td>${dispersionText(r.dispersion_pct, quoteFor(r.ticker)?.dispersion_basis)}</td>
-      <td>${buyStrengthMarkup(r.buy_strength)}</td>
-      <td>${ratingChipMarkup(r.rating_label)}</td>
-      <td class="group-start">${isProtectedInterestItem(r, group)
-        ? ""
-        : group.fixed
-          ? `<button class="interest-row-delete" type="button" data-interest-unregister="${esc(r.ticker)}" aria-label="${esc(r.name)} 수집 제외" title="수집 대상에서 제외">×</button>`
-          : `<button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button>`}</td>
-    </tr>
+    <tr class="${suppressIndexHighlight ? "" : tableRowClass(r)}">${interestRowCells(r, group, columns)}</tr>
   `).join("") : interestEmptyRow(nameFilterValue()
     ? "명칭 검색 결과가 없습니다."
     : group.fixed ? "모든 수집 종목이 관심그룹에 분류되어 있습니다." : "이 그룹에 등록된 종목이 없습니다.");
-  syncInterestVisibleColumns(rows);
+  const nameWidth = syncTickerNameColumnWidth(table);
+  table.style.width = `${columns.reduce((width, column) => width + (column.key === "name" ? nameWidth : column.width), 0)}px`;
+  table.style.minWidth = "100%";
   // 티커 링크·배당이력 버튼 클릭은 app.js의 문서 위임이 처리 (개별 바인딩 금지).
   // 로고·종목명 틀고정은 CSS sticky가 담당 — pc-frozen(JS) 대상 아님.
 }
@@ -970,18 +803,19 @@ function initInterestWatchlists() {
     );
   });
 
-  document.querySelectorAll("[data-interest-sort-key]").forEach(header => {
-    header.addEventListener("click", () => {
-      const key = header.dataset.interestSortKey;
-      if (!interestSortState.manual && interestSortState.key === key) interestSortState.dir *= -1;
-      else {
-        interestSortState.manual = false;
-        interestSortState.key = key;
-        // 통계탭(setCurrentSort)과 동일하게 기본 내림차순 — 탭 간 정렬방향 일관
-        interestSortState.dir = defaultSortDir[key] || -1;
-      }
-      renderInterestMainTable();
-    });
+  // 헤더는 표시 열이 바뀔 때 재생성된다. 상위 요소에서 한 번만 위임한다.
+  document.getElementById("interestTableWrap").addEventListener("click", event => {
+    const header = event.target.closest("[data-interest-sort-key]");
+    if (!header) return;
+    const key = header.dataset.interestSortKey;
+    if (!interestSortState.manual && interestSortState.key === key) interestSortState.dir *= -1;
+    else {
+      interestSortState.manual = false;
+      interestSortState.key = key;
+      // 통계탭(setCurrentSort)과 동일하게 기본 내림차순 — 탭 간 정렬방향 일관
+      interestSortState.dir = defaultSortDir[key] || -1;
+    }
+    renderInterestMainTable();
   });
 
   loadInterestWatchlists().catch(() => {});

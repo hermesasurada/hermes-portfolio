@@ -287,9 +287,17 @@ function findTradeHolding() {
   const ticker = (document.getElementById("tradeTicker")?.value || selectedTrade.ticker || "").trim().toUpperCase();
   return holdingsForAccount(accountId).find(h => h.ticker.toUpperCase() === ticker);
 }
+let tickerMetaSource = null;
+let tickerMetaIndex = new Map();
+
 function findTickerMeta(ticker) {
   const key = String(ticker || "").trim().toUpperCase();
-  return (data?.tickers || []).find(t => String(t.ticker || "").toUpperCase() === key);
+  const source = data?.tickers;
+  if (tickerMetaSource !== source) {
+    tickerMetaSource = source;
+    tickerMetaIndex = new Map((source || []).map(row => [String(row.ticker || "").toUpperCase(), row]));
+  }
+  return tickerMetaIndex.get(key);
 }
 function currentPriceForTicker(ticker) {
   const key = String(ticker || "").trim().toUpperCase();
@@ -950,6 +958,14 @@ function schedulePcFrozenColumns() {
   frozenColumnsFrame = requestAnimationFrame(syncPcFrozenColumns);
 }
 
+const tickerTextWidths = new Map();
+document.fonts?.addEventListener("loadingdone", () => {
+  tickerTextWidths.clear();
+  document.querySelectorAll(".table-wrap table").forEach(table => {
+    if (table.offsetParent) syncTickerNameColumnWidth(table);
+  });
+});
+
 function syncTickerNameColumnWidth(table, { min = 108, max = 180 } = {}) {
   if (!table) return min;
   if (window.matchMedia?.("(max-width: 980px)").matches) {
@@ -959,11 +975,23 @@ function syncTickerNameColumnWidth(table, { min = 108, max = 180 } = {}) {
   const texts = Array.from(table.querySelectorAll("tbody .ticker-link .asset-name, tbody .ticker-link .ticker-symbol"));
   const canvas = syncTickerNameColumnWidth.canvas ||= document.createElement("canvas");
   const context = canvas.getContext("2d");
+  const fonts = new Map();
   const contentWidth = texts.reduce((width, element) => {
     if (!context) return width;
-    const style = getComputedStyle(element);
-    context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-    return Math.max(width, context.measureText(element.textContent || "").width);
+    const kind = element.className;
+    if (!fonts.has(kind)) {
+      const style = getComputedStyle(element);
+      fonts.set(kind, `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`);
+    }
+    const font = fonts.get(kind);
+    const text = element.textContent || "";
+    const key = `${font}\n${text}`;
+    if (!tickerTextWidths.has(key)) {
+      if (tickerTextWidths.size >= 4096) tickerTextWidths.clear();
+      context.font = font;
+      tickerTextWidths.set(key, context.measureText(text).width);
+    }
+    return Math.max(width, tickerTextWidths.get(key));
   }, 0);
   const width = Math.ceil(Math.min(max, Math.max(min, contentWidth + 14)));
   table.style.setProperty("--ticker-name-width", `${width}px`);

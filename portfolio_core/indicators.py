@@ -107,6 +107,42 @@ def atr_percent(rows: list, period: int = 14) -> float | None:
     return (atr / last) * 100
 
 
+def rolling_atr_percent(rows: list, period: int = 14, lookback: int = 61) -> list[float | None]:
+    """Each point equals atr_percent(rows[max(0, i-lookback+1):i+1]).
+
+    Normalize OHLC and calculate true ranges once. Keep the existing finite
+    window's seed/recurrence, rather than substituting a full-history Wilder ATR
+    (which would change historical entry scores).
+    """
+    result: list[float | None] = [None] * len(rows)
+    if period <= 0 or lookback <= period:
+        return result
+    closes: list[float] = []
+    ranges: list[float] = []
+    counts = [0]
+    for row in rows:
+        close = _row_number(row, "close")
+        if close is not None and close > 0:
+            high = _row_number(row, "high")
+            low = _row_number(row, "low")
+            high = high if high is not None and high > 0 else close
+            low = low if low is not None and low > 0 else close
+            ranges.append(max(high - low, abs(high - closes[-1]), abs(low - closes[-1])) if closes else 0.0)
+            closes.append(close)
+        counts.append(len(closes))
+    for index in range(len(rows)):
+        start = counts[max(0, index - lookback + 1)]
+        end = counts[index + 1]
+        if end - start < period + 1:
+            continue
+        # The first retained close has no predecessor within this window.
+        atr = sum(ranges[start + 1:start + period + 1]) / period
+        for value in ranges[start + period + 1:end]:
+            atr = (atr * (period - 1) + value) / period
+        result[index] = atr / closes[end - 1] * 100
+    return result
+
+
 def bollinger_bounds(
     values: list[float], period: int = 20, deviations: float = 2.0
 ) -> tuple[float, float, float] | None:

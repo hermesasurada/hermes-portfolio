@@ -9,6 +9,10 @@
 시장 가격 해석은 `portfolio_core.prices`의 공용 스냅샷을 사용하며 신규 종목 조회와
 데이터 채우기는 각각 `ticker_lookup.py`, `hydration.py`가 담당합니다.
 
+관심목록의 열 순서·헤더·너비·셀 표시는 `portfolio_static/app-interest-columns.js`에서
+함께 정의하며, 값이 없는 열은 렌더링하지 않습니다. 일정 조회는 읽기 전용이고
+스키마 준비와 실적 이력 보강은 서버 초기화·수집 경로에서 수행합니다.
+
 ## 구성
 
 | 영역 | 파일 |
@@ -46,4 +50,6 @@ python3 collect_prices.py --category kr
 
 ```bash
 python3 tests/test_portfolio_core.py
+python3 tests/test_refactor_performance.py
+node tests/test_interest_columns.js
 ```
