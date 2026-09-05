@@ -561,12 +561,11 @@ function renderHeroSummaryPage() {
   indexPage.inert = !showIndexes;
 
   const nextLabel = showIndexes ? "계좌 요약 보기" : "주요 지수 보기";
-  [document.getElementById("heroPrev"), document.getElementById("heroNext")].forEach(button => {
-    if (!button) return;
-    const direction = button.id === "heroPrev" ? "이전" : "다음";
-    button.title = `${direction} 요약 · ${nextLabel}`;
-    button.setAttribute("aria-label", `${direction} 요약 · ${nextLabel}`);
-  });
+  const nextButton = document.getElementById("heroNext");
+  if (nextButton) {
+    nextButton.title = nextLabel;
+    nextButton.setAttribute("aria-label", nextLabel);
+  }
 
   // Keep the inactive page populated too: its real height reserves space
   // before the user switches, including wrapping and font changes.
@@ -590,9 +589,7 @@ function renderHeroSummaryPage() {
 }
 
 function initHeroSummaryCarousel() {
-  [document.getElementById("heroPrev"), document.getElementById("heroNext")].forEach(button => {
-    button?.addEventListener("click", toggleHeroSummaryPage);
-  });
+  document.getElementById("heroNext")?.addEventListener("click", toggleHeroSummaryPage);
 
   const shell = document.getElementById("heroPageShell");
   if (shell) {

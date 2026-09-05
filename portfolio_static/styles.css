@@ -639,10 +639,10 @@ main {
 /* ── 히어로 요약 (총 평가액 · 오늘 손익) ─────────────────── */
 .hero-strip {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  grid-template-columns: minmax(0, 1fr) 34px;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 6px 14px;
   margin-bottom: var(--sp-4);
   background:
     linear-gradient(120deg, var(--panel) 0%, color-mix(in srgb, var(--brand-soft) 48%, var(--panel)) 100%);
@@ -674,7 +674,7 @@ main {
 .hero-page-shell:active { cursor: grabbing; }
 .hero-summary-nav {
   width: 34px;
-  height: 44px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5939,18 +5939,15 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   .hero-value-row strong { font-size: clamp(20px, 6.15vw, 24px); }
   .hero-strip {
-    grid-template-columns: 28px minmax(0, 1fr) 28px;
+    grid-template-columns: minmax(0, 1fr) 28px;
     gap: 8px;
-    padding: 10px;
+    padding: 6px 10px;
   }
   .hero-summary-nav {
     width: 28px;
-    height: 42px;
+    height: 36px;
   }
   .hero-summary-nav span { font-size: 24px; }
-  .hero-page-shell {
-    min-height: 64px;
-  }
   .hero-summary-page { width: 100%; }
   .hero-value-row {
     flex-wrap: nowrap;

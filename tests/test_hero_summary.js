@@ -14,7 +14,7 @@ function element() {
     setAttribute(name, value) { this.attrs[name] = value; },
   };
 }
-const ids = Object.fromEntries(['heroPortfolioPage', 'heroIndexPage', 'heroPrev', 'heroNext', 'heroValue', 'heroChange'].map(id => [id, element()]));
+const ids = Object.fromEntries(['heroPortfolioPage', 'heroIndexPage', 'heroNext', 'heroValue', 'heroChange'].map(id => [id, element()]));
 const value = element(), change = element();
 const index = { dataset: { heroIndex: 'SP500' }, querySelector: selector => selector === '.hero-index-value' ? value : change };
 const context = vm.createContext({
@@ -40,4 +40,10 @@ assert.equal(ids.heroPortfolioPage.classList.hidden, true);
 assert.equal(ids.heroPortfolioPage.inert, true);
 assert.equal(ids.heroIndexPage.attrs['aria-hidden'], 'false');
 assert.equal(ids.heroIndexPage.inert, false);
+assert.equal(ids.heroNext.attrs['aria-label'], '계좌 요약 보기');
+const page = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+assert.doesNotMatch(page, /id="heroPrev"/);
+assert.match(page, /id="heroNext"/);
+assert.match(css, /grid-template-columns: minmax\(0, 1fr\) 34px;/);
+assert.match(css, /grid-template-columns: minmax\(0, 1fr\) 28px;/);
 console.log('Hero shared sizing and inactive-page rendering checks passed.');
