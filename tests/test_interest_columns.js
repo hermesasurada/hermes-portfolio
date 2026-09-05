@@ -11,6 +11,8 @@ const source = fs.readFileSync(path.join(__dirname, "../portfolio_static/app-int
 vm.runInContext(source, context);
 const run = code => vm.runInContext(code, context);
 assert.equal(run("INTEREST_TABLE_COLUMN_COUNT"), 57);
+// MM/DD in Roboto Mono needs room for both group-boundary paddings.
+assert.equal(run("INTEREST_COLUMNS.find(c => c.key === 'next_earnings_date').width"), 60);
 assert.equal(run("new Set(INTEREST_COLUMNS.map(c => c.key)).size"), 57);
 assert.equal(run("INTEREST_COLUMNS.filter(c => c.numeric).length"), 53);
 assert.equal(run("INTEREST_COLUMNS.filter(c => !c.numeric).map(c => c.key).join(',')"), 'logo,name,rating_rank,delete');

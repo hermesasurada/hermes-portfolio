@@ -52,7 +52,7 @@ const INTEREST_COLUMNS = [
     cell: (r, group) => `${betaText(r.beta)}` },
   { key: "beta_adj", width: 44, label: "β″", headClass: "interest-leaf-head",
     cell: (r, group) => `${betaText(r.beta_adj)}` },
-  { key: "next_earnings_date", width: 45, label: "실적", headClass: "group-start interest-leaf-head", cellClass: "group-start",
+  { key: "next_earnings_date", width: 60, label: "실적", headClass: "group-start interest-leaf-head", cellClass: "group-start",
     cell: (r, group) => `${earningsText(r.next_earnings_date)}` },
   { key: "rsi_day", width: 48, label: "<span>RSI</span><span>(일)</span>", headClass: "indicator-head group-start interest-leaf-head", group: "momentum", cellClass: "group-start",
     cell: (r, group) => `${indicatorText(r.rsi_day, "rsi")}` },
