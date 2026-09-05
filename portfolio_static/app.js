@@ -8,7 +8,6 @@ let sortState = {
 };
 let selectedTrade = { accountId: "", ticker: "" };
 let autoRefreshTimer = null;
-let usPriceTimer = null;
 let loadInFlight = null;
 let transactionsExpanded = false;
 let activeDetailTab = "detail";
@@ -193,13 +192,16 @@ function renderPortfolioRefresh() {
   renderTable();
 }
 
-async function refreshPortfolio() {
+async function refreshPortfolio({ shouldApply = () => true } = {}) {
   if (loadInFlight) return loadInFlight;
   loadInFlight = (async () => {
     const payload = await apiFetchPortfolio(usExtendedEnabled(), {
       compact: true,
       tickers: portfolioRefreshTickers(),
     });
+    // OFF/주기 변경 전에 시작된 자동 요청은 완료돼도 화면에 적용하지 않는다.
+    // 연장 토글 등 사용자가 직접 요청한 갱신은 기본값으로 정상 적용한다.
+    if (!shouldApply()) return;
     if (usExtendedEnabled() && payload?.us_market?.include_extended) {
       resetStatsForPriceMode();
     }
@@ -259,16 +261,21 @@ function renderAutoRefreshControl() {
 }
 
 function scheduleAutoRefresh() {
-  if (autoRefreshTimer) {
+  if (autoRefreshTimer !== null) {
     clearInterval(autoRefreshTimer);
     autoRefreshTimer = null;
   }
   const mode = autoRefreshMode();
   if (mode === "off") return;
   const intervalMs = Number(mode) * 60 * 1000;
-  autoRefreshTimer = setInterval(() => {
-    refreshPortfolio().catch(err => showTradeStatus(err.message || String(err), true));
+  const isCurrent = () => autoRefreshTimer === timer && autoRefreshMode() === mode;
+  const timer = setInterval(() => {
+    if (!isCurrent()) return;
+    refreshPortfolio({ shouldApply: isCurrent }).catch(err => {
+      if (isCurrent()) showTradeStatus(err.message || String(err), true);
+    });
   }, intervalMs);
+  autoRefreshTimer = timer;
 }
 
 function initAutoRefreshControls() {

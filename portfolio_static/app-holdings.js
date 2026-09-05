@@ -409,8 +409,7 @@ function renderUsPriceControl() {
   const control = document.getElementById("usPriceControl");
   const toggle = document.getElementById("usExtendedToggle");
   const status = document.getElementById("usMarketStatus");
-  // 표시 여부만 제어하고 아래 상태 갱신·타이머 재설정은 그대로 태운다
-  // (조기 반환 시 scheduleUsPriceRefresh가 걸러져 옛 타이머가 남는다).
+  // 시장 상태 표시는 갱신 타이머와 분리한다. 주기적 조회는 상단 설정 한 곳에서만 관리.
   // 토글 체크 상태는 보존 — 대상이 다시 보이면 그대로 복귀한다.
   control.classList.toggle("hidden", !hasExtendedRows());
   const regular = Boolean(market.is_regular);
@@ -438,7 +437,6 @@ function renderUsPriceControl() {
     const krNote = krActive ? ` + NXT ${krMarket.label || ""}`.trimEnd() : "";
     status.textContent = `장외${krNote} · ${toggle.checked ? "잔고 반영" : "표시만"}`;
   }
-  scheduleUsPriceRefresh();
 }
 
 function renderCurrencyFilter() {
@@ -522,18 +520,6 @@ function syncTableScrollNudge(shell) {
 
 function syncTableScrollNudges() {
   document.querySelectorAll(".table-scroll-shell").forEach(syncTableScrollNudge);
-}
-
-function scheduleUsPriceRefresh() {
-  if (usPriceTimer) {
-    clearInterval(usPriceTimer);
-    usPriceTimer = null;
-  }
-  const market = data?.us_market || {};
-  if (!market.use_live && (market.is_regular || !market.us_ticker_count)) return;
-  usPriceTimer = setInterval(() => {
-    load().catch(err => showTradeStatus(err.message || String(err), true));
-  }, 60 * 1000);   // 서버 라이브 캐시 60s와 맞춤 (외부는 배치 1회/분)
 }
 
 function syncMobileCollapsePanels() {
