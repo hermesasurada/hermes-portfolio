@@ -24,12 +24,22 @@ function buildCashFlowsMatrix(accounts, flows) {
   };
 }
 
-function filterCashFlowsMatrix(matrix, selectedIds) {
-  if (selectedIds === null) return matrix;
-  const accounts = matrix.accounts.filter(a => selectedIds.has(String(a.id)));
-  const rows = matrix.rows.filter(row => accounts.some(a => row.cells.has(String(a.id))));
-  const count = accounts.reduce((n, a) => n + (matrix.totals.get(String(a.id))?.length || 0), 0);
-  return { accounts, rows, count, totals: matrix.totals };
+function filterCashFlowsMatrix(matrix, selectedIds, year = null) {
+  if (selectedIds === null && year === null) return matrix;
+  const accounts = matrix.accounts.filter(a => selectedIds === null || selectedIds.has(String(a.id)));
+  const rows = matrix.rows.filter(row => (year === null || row.date.startsWith(`${year}-`))
+    && accounts.some(a => row.cells.has(String(a.id))));
+  const totals = new Map();
+  let count = 0;
+  for (const row of rows) for (const account of accounts) {
+    const id = String(account.id);
+    const entries = row.cells.get(id);
+    if (!entries) continue;
+    if (!totals.has(id)) totals.set(id, []);
+    totals.get(id).push(...entries);
+    count += entries.length;
+  }
+  return { accounts, rows, count, totals, year };
 }
 
 function cashFlowsAmountMarkup(entries) {
@@ -41,9 +51,9 @@ function cashFlowsAmountMarkup(entries) {
     sums.set(currency, (sums.get(currency) || 0) + Number(entry.amount));
   }
   return [...sums].sort(([a], [b]) => a.localeCompare(b)).map(([currency, amount]) => {
-    const digits = currency === "KRW" ? 1 : currency === "JPY" ? 0 : ["BTC", "ETH"].includes(currency) ? 8 : 2;
+    const digits = currency === "KRW" || currency === "JPY" ? 0 : ["BTC", "ETH"].includes(currency) ? 8 : 2;
     const text = new Intl.NumberFormat("ko-KR", {
-      minimumFractionDigits: currency === "KRW" ? 1 : 0, maximumFractionDigits: digits,
+      maximumFractionDigits: digits,
     }).format(Math.abs(currency === "KRW" ? amount / 10000 : amount));
     const sign = amount > 0 ? "+" : amount < 0 ? "−" : "";
     const cls = amount > 0 ? "up" : amount < 0 ? "down" : "flat";
@@ -58,10 +68,10 @@ function cashFlowsTableMarkup(matrix) {
     const title = date ? (entries || []).map(e => `${Number(e.amount).toLocaleString("ko-KR", { maximumFractionDigits: 8 })} ${e.currency || "KRW"}${e.note ? ` · ${e.note}` : ""}`).join("\n") : `${entries?.length || 0}건의 순입출금 합계`;
     return `<td data-account-id="${esc(a.id)}" data-flow-date="${esc(date)}" title="${esc(title)}">${cashFlowsAmountMarkup(entries)}</td>`;
   }).join("");
-  return `<table class="cash-flows-table" style="width:${86 + accounts.length * 108}px">
+  return `<table class="cash-flows-table" style="min-width:${86 + accounts.length * 96}px">
     <caption class="sr-only">계좌별 일자별 순입출금, 최신 날짜순</caption>
     <thead><tr><th scope="col">일자</th>${accounts.map(a => `<th scope="col"><span>${esc(a.memberName || "")}</span><strong>${esc(a.name)}</strong></th>`).join("")}</tr></thead>
-    <tbody><tr class="cash-flows-total"><th scope="row">순입금 합계</th>${cells(totals)}</tr>
+    <tbody><tr class="cash-flows-total"><th scope="row">${matrix.year == null ? "순입금 합계" : "연간 순입금"}</th>${cells(totals)}</tr>
     ${rows.map(row => `<tr><th scope="row"><time datetime="${esc(row.date)}">${esc(row.date)}</time></th>${cells(row.cells, row.date)}</tr>`).join("")}</tbody>
   </table>`;
 }
@@ -72,17 +82,28 @@ function initCashFlowsModal() {
   const wrap = document.getElementById("cashFlowsTableWrap");
   const refresh = document.getElementById("cashFlowsRefresh");
   const switches = document.getElementById("cashFlowsAccounts");
+  const yearLabel = document.getElementById("cashFlowsYear");
+  const prevYear = document.getElementById("cashFlowsPrevYear");
+  const nextYear = document.getElementById("cashFlowsNextYear");
+  const currentYear = Number(new Intl.DateTimeFormat("en", { timeZone: "Asia/Seoul", year: "numeric" }).format(new Date()));
+  let selectedYear = currentYear;
+  let minYear = currentYear;
+  let maxYear = currentYear;
   let fullMatrix = null;
   let selectedIds = null; // null = all, Set = explicit selection (including none)
   let requestId = 0;
   function render() {
     if (!fullMatrix) return;
-    const matrix = filterCashFlowsMatrix(fullMatrix, selectedIds);
+    const matrix = filterCashFlowsMatrix(fullMatrix, selectedIds, selectedYear);
+    yearLabel.textContent = `${selectedYear}년`;
+    prevYear.disabled = selectedYear <= minYear;
+    nextYear.disabled = selectedYear >= maxYear;
+    modal.style.setProperty("--cash-flows-width", `${Math.max(440, 86 + matrix.accounts.length * 96 + 32)}px`);
     wrap.innerHTML = matrix.accounts.length ? cashFlowsTableMarkup(matrix) : "";
     wrap.scrollTop = 0;
     wrap.scrollLeft = 0;
     status.textContent = !matrix.accounts.length ? "표시할 계좌를 선택하세요."
-      : `${matrix.accounts.length}개 계좌 · ${matrix.rows.length}일 · ${matrix.count}건 · 최신순${matrix.count ? "" : " · 등록된 내역 없음"}`;
+      : `${selectedYear}년 · ${matrix.accounts.length}개 계좌 · ${matrix.rows.length}일 · ${matrix.count}건 · 최신순${matrix.count ? "" : " · 등록된 내역 없음"}`;
     switches.querySelectorAll("[data-cash-account]").forEach(btn => {
       btn.setAttribute("aria-pressed", String(selectedIds === null || selectedIds.has(btn.dataset.cashAccount)));
     });
@@ -93,6 +114,9 @@ function initCashFlowsModal() {
     wrap.innerHTML = "";
     fullMatrix = null;
     switches.innerHTML = "";
+    yearLabel.textContent = `${selectedYear}년`;
+    prevYear.disabled = true;
+    nextYear.disabled = true;
     wrap.setAttribute("aria-busy", "true");
     refresh.disabled = true;
     try {
@@ -106,6 +130,10 @@ function initCashFlowsModal() {
       const rank = a => { const i = groupOrder.indexOf(accountGroupKey(a)); return i < 0 ? 3 : i; };
       accounts.sort((a, b) => rank(a) - rank(b));
       fullMatrix = buildCashFlowsMatrix(accounts, payload.cash_flows);
+      const years = fullMatrix.rows.map(row => Number(row.date.slice(0, 4))).filter(Number.isFinite);
+      minYear = Math.min(currentYear, ...years);
+      maxYear = Math.max(currentYear, ...years);
+      selectedYear = Math.max(minYear, Math.min(maxYear, selectedYear));
       switches.innerHTML = `<button type="button" class="cash-flows-select" data-cash-selection="all">전체 선택</button>
         <button type="button" class="cash-flows-select" data-cash-selection="none">전체 해제</button>`
         + fullMatrix.accounts.map(a => `<button type="button" class="cash-flows-switch" data-cash-account="${esc(a.id)}" aria-pressed="false"><span aria-hidden="true" class="cash-flows-dot"></span>${esc(a.memberName || "")} · ${esc(a.name)}</button>`).join("");
@@ -125,6 +153,16 @@ function initCashFlowsModal() {
   });
   document.getElementById("cashFlowsClose").addEventListener("click", () => modal.close());
   refresh.addEventListener("click", load);
+  prevYear.addEventListener("click", () => {
+    if (!fullMatrix || selectedYear <= minYear) return;
+    selectedYear -= 1;
+    render();
+  });
+  nextYear.addEventListener("click", () => {
+    if (!fullMatrix || selectedYear >= maxYear) return;
+    selectedYear += 1;
+    render();
+  });
   switches.addEventListener("click", e => {
     const btn = e.target.closest("button");
     if (!btn || !fullMatrix) return;

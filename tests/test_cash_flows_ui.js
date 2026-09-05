@@ -25,10 +25,11 @@ assert.equal(run("matrix.totals.get('1').length"), 4); // original entries kept 
 assert.match(run("cashFlowsAmountMarkup(matrix.rows[2].cells.get('1'))"), /flat\">0/);
 const mixed = run("cashFlowsAmountMarkup(matrix.rows[0].cells.get('1'))");
 assert.match(mixed, /\+12.34<small>USD/);
-assert.match(mixed, /\+0\.1<\/span>/);
-assert.match(run("cashFlowsAmountMarkup([{amount: 10000, currency: 'KRW'}])"), /\+1\.0<\/span>/);
-assert.match(run("cashFlowsAmountMarkup([{amount: -12345678, currency: 'KRW'}])"), /−1,234\.6<\/span>/);
-assert.match(run("cashFlowsAmountMarkup([{amount: 1499, currency: 'KRW'}, {amount: 1499, currency: 'KRW'}])"), /\+0\.3<\/span>/); // sum before rounding
+assert.match(mixed, /\+0<\/span>/);
+assert.match(run("cashFlowsAmountMarkup([{amount: 10000, currency: 'KRW'}])"), /\+1<\/span>/);
+assert.match(run("cashFlowsAmountMarkup([{amount: -12345678, currency: 'KRW'}])"), /−1,235<\/span>/);
+assert.match(run("cashFlowsAmountMarkup([{amount: 3000, currency: 'KRW'}, {amount: 3000, currency: 'KRW'}])"), /\+1<\/span>/); // sum before rounding
+assert.match(run("cashFlowsAmountMarkup([{amount: -5000, currency: 'KRW'}])"), /−1<\/span>/);
 assert.match(run("cashFlowsAmountMarkup(matrix.totals.get('3'))"), /down\">−10/);
 assert.match(run("cashFlowsAmountMarkup(undefined)"), /—/);
 const html = run("cashFlowsTableMarkup(matrix)");
@@ -49,4 +50,19 @@ assert.equal(run("filterCashFlowsMatrix(matrix, new Set(['1'])).rows.map(r => r.
 assert.equal(run("filterCashFlowsMatrix(matrix, new Set(['2'])).rows.length"), 0);
 assert.equal(run("filterCashFlowsMatrix(matrix, new Set()).accounts.length"), 0);
 assert.equal(run("filterCashFlowsMatrix(matrix, new Set()).count"), 0);
+run(`
+  const annual = buildCashFlowsMatrix(accounts, [...flows,
+    {account_id: 1, flow_date: '2023-12-31', amount: 30000, currency: 'KRW'},
+    {account_id: 1, flow_date: '2025-01-01', amount: 50000, currency: 'KRW'},
+  ]);
+  const year2024 = filterCashFlowsMatrix(annual, new Set(['1']), 2024);
+`);
+assert.equal(run("year2024.count"), 4);
+assert.equal(run("year2024.rows.map(r => r.date).join(',')"), '2024-02-01,2024-01-01');
+assert.equal(run("year2024.totals.get('1').filter(e => e.currency === 'KRW').reduce((n,e) => n+e.amount,0)"), 500);
+assert.equal(run("filterCashFlowsMatrix(annual, null, 2023).count"), 1);
+assert.equal(run("filterCashFlowsMatrix(annual, null, 2026).count"), 0);
+assert.equal(run("filterCashFlowsMatrix(annual, null, 2026).totals.size"), 0);
+assert.equal(run("filterCashFlowsMatrix(annual, null, 2026).accounts.length"), 3);
+assert.match(run("cashFlowsTableMarkup(year2024)"), /연간 순입금/);
 console.log("cash flow matrix: grouping, totals, currencies, zero net, empty accounts and escaping passed");

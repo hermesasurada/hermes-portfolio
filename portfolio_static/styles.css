@@ -3925,7 +3925,7 @@ th.pc-frozen-edge {
   position: fixed;
   inset: 0;
   margin: auto;
-  width: min(1200px, calc(100vw - 24px));
+  width: min(var(--cash-flows-width, 982px), calc(100vw - 24px));
   max-width: none;
   max-height: calc(100dvh - 24px);
   overflow: hidden;
@@ -3941,6 +3941,9 @@ th.pc-frozen-edge {
 .cash-flows-toolbar p, .cash-flows-footnote { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .cash-flows-toolbar button { flex-shrink: 0; }
 .cash-flows-status { color: var(--muted); font-size: 12px; }
+.cash-flows-year-nav { display: flex; align-items: center; gap: 6px; }
+.cash-flows-year-nav button { width: 28px; height: 28px; min-width: 28px; padding: 0; font-size: 21px; line-height: 1; }
+.cash-flows-year-nav strong { min-width: 60px; text-align: center; font-family: var(--chart-num-font); }
 .cash-flows-accounts { display: flex; flex-wrap: wrap; gap: 5px; max-height: 120px; overflow: auto; flex-shrink: 0; }
 .cash-flows-accounts button { display: inline-flex; align-items: center; gap: 5px; height: 26px; min-height: 26px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--muted); font-size: 11px; line-height: 16px; white-space: nowrap; box-shadow: none; }
 .cash-flows-accounts button[aria-pressed="true"] { color: var(--brand); border-color: var(--accent-soft-border); background: var(--brand-soft); }
@@ -3950,10 +3953,11 @@ th.pc-frozen-edge {
 .cash-flows-table-wrap { min-height: 0; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--line); border-radius: 8px; }
 .cash-flows-table-wrap:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .cash-flows-table-wrap::-webkit-scrollbar { width: 0; height: 8px; }
-.cash-flows-table { min-width: 0; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
+.cash-flows-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
 .cash-flows-table caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .cash-flows-table th, .cash-flows-table td {
-  width: 108px; min-width: 0; height: auto; padding: 5px 8px; font-size: 12px; line-height: 18px; white-space: nowrap;
+  width: auto; min-width: 0; height: auto; padding: 5px 8px; font-size: 12px; line-height: 18px; white-space: nowrap;
+  box-shadow: none; border-top: 0; border-left: 0;
   border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); text-align: right;
 }
 .cash-flows-table thead th { position: sticky; top: 0; z-index: 2; background: var(--surface-2); text-align: center; line-height: 14px; }
