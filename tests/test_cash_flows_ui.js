@@ -6,10 +6,7 @@ const context = vm.createContext({ window: {}, Intl });
 vm.runInContext(`function esc(s) { return String(s).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;'); }`, context);
 vm.runInContext(fs.readFileSync(path.join(__dirname, "../portfolio_static/app-cash-flows.js"), "utf8"), context);
 const run = code => vm.runInContext(code, context);
-assert.equal(run("cashFlowsAccountLabel('해외주식계좌')"), '해외주식');
-assert.equal(run("cashFlowsAccountLabel('연금저축 계좌')"), '연금저축');
-assert.equal(run("cashFlowsAccountLabel('퇴직연금')"), '퇴직연금');
-assert.match(run("cashFlowsTableMarkup(buildCashFlowsMatrix([{id: 1, name: '해외주식계좌'}], []))"), /<strong>해외주식<\/strong>/);
+assert.match(run("cashFlowsTableMarkup(buildCashFlowsMatrix([{id: 1, name: '해외주식'}], []))"), /<strong>해외주식<\/strong>/);
 run(`
   const accounts = [{id: 1, memberName: 'Test', name: '<Account>'}, {id: 2, name: 'Empty'}];
   const flows = [

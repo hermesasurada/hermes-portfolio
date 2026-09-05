@@ -121,7 +121,7 @@ def account_label(member: str, account_type: str, account_name: str | None) -> s
     if account_name:
         return account_name
     labels = {
-        "overseas": "해외주식계좌",
+        "overseas": "해외주식",
         "pension_kr": "연금저축",
         "retirement_kr": "퇴직연금",
         "kr_individual": "한국개별주",

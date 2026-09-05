@@ -61,10 +61,6 @@ function cashFlowsAmountMarkup(entries) {
   }).join("");
 }
 
-function cashFlowsAccountLabel(name) {
-  return String(name || "").replaceAll("계좌", "").trim();
-}
-
 function cashFlowsTableMarkup(matrix) {
   const { accounts, rows, totals } = matrix;
   const cells = (values, date = "") => accounts.map(a => {
@@ -74,7 +70,7 @@ function cashFlowsTableMarkup(matrix) {
   }).join("");
   return `<table class="cash-flows-table" style="min-width:${86 + accounts.length * 96}px">
     <caption class="sr-only">계좌별 일자별 순입출금, 최신 날짜순</caption>
-    <thead><tr><th scope="col">일자</th>${accounts.map(a => `<th scope="col"><span>${esc(a.memberName || "")}</span><strong>${esc(cashFlowsAccountLabel(a.name))}</strong></th>`).join("")}</tr></thead>
+    <thead><tr><th scope="col">일자</th>${accounts.map(a => `<th scope="col"><span>${esc(a.memberName || "")}</span><strong>${esc(a.name)}</strong></th>`).join("")}</tr></thead>
     <tbody><tr class="cash-flows-total"><th scope="row">${matrix.year == null ? "순입금 합계" : "연간 순입금"}</th>${cells(totals)}</tr>
     ${rows.map(row => `<tr><th scope="row"><time datetime="${esc(row.date)}">${esc(row.date.slice(5))}</time></th>${cells(row.cells, row.date)}</tr>`).join("")}</tbody>
   </table>`;
@@ -136,7 +132,7 @@ function initCashFlowsModal() {
       minYear = Math.min(currentYear, ...years);
       maxYear = Math.max(currentYear, ...years);
       selectedYear = Math.max(minYear, Math.min(maxYear, selectedYear));
-      switches.innerHTML = fullMatrix.accounts.map(a => `<button type="button" class="cash-flows-switch" data-cash-account="${esc(a.id)}" aria-pressed="false"><span aria-hidden="true" class="cash-flows-dot"></span>${esc(a.memberName || "")} · ${esc(cashFlowsAccountLabel(a.name))}</button>`).join("");
+      switches.innerHTML = fullMatrix.accounts.map(a => `<button type="button" class="cash-flows-switch" data-cash-account="${esc(a.id)}" aria-pressed="false"><span aria-hidden="true" class="cash-flows-dot"></span>${esc(a.memberName || "")} · ${esc(a.name)}</button>`).join("");
       render();
     } catch (err) {
       if (token === requestId && modal.open) status.textContent = `불러오기 실패: ${err.message || err} · 팝업을 닫고 다시 열어주세요.`;

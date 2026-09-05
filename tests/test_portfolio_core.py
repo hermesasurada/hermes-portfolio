@@ -958,7 +958,7 @@ def test_account_kind_and_label():
     assert account_kind("pension_kr") == "pension"
     assert account_kind("retirement_kr") == "pension"
     assert account_kind("overseas") == "general"
-    assert account_label("철수", "overseas", None) == "해외주식계좌"
+    assert account_label("철수", "overseas", None) == "해외주식"
     assert account_label("철수", "overseas", "내계좌") == "내계좌"  # explicit name wins
     assert account_label("철수", "unknown", None) == "철수 unknown"
 
