@@ -581,9 +581,9 @@ function renderHeroSummaryPage() {
     if (!changeEl) return;
     const cls = changePct > 0 ? "up" : changePct < 0 ? "down" : "flat";
     const arrow = changePct > 0 ? "▲" : changePct < 0 ? "▼" : "→";
-    changeEl.className = `hero-index-change ${cls}`;
+    changeEl.className = `hero-index-change pct-chip ${cls}`;
     changeEl.textContent = Number.isFinite(changePct)
-      ? `${arrow} ${changePct > 0 ? "+" : changePct < 0 ? "−" : ""}${fmt2.format(Math.abs(changePct))}%`
+      ? `${arrow} ${fmt2.format(Math.abs(changePct))}%`
       : "-";
   });
 }

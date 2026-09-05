@@ -41,6 +41,12 @@ assert.equal(ids.heroPortfolioPage.inert, true);
 assert.equal(ids.heroIndexPage.attrs['aria-hidden'], 'false');
 assert.equal(ids.heroIndexPage.inert, false);
 assert.equal(ids.heroNext.attrs['aria-label'], '계좌 요약 보기');
+for (const [pct, text, cls] of [[1.23, '▲ 1.23%', 'up'], [-1.23, '▼ 1.23%', 'down'], [0, '→ 0.00%', 'flat']]) {
+  context.findTickerMeta = () => ({ current_price: 6000, change_pct: pct });
+  vm.runInContext('renderHeroSummaryPage()', context);
+  assert.equal(change.textContent, text);
+  assert.equal(change.className, `hero-index-change pct-chip ${cls}`);
+}
 const page = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 assert.doesNotMatch(page, /id="heroPrev"/);
 assert.match(page, /id="heroNext"/);

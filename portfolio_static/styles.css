@@ -775,7 +775,11 @@ main {
   text-align: right;
   white-space: nowrap;
 }
-.hero-index-change {
+.hero-index-change.pct-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: end;
   font-size: 14px;
   font-weight: var(--fw-strong);
   text-align: right;
@@ -5975,7 +5979,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     font-size: clamp(14px, 4.1vw, 16px);
     text-align: left;
   }
-  .hero-index-change {
+  .hero-index-change.pct-chip {
     font-size: 11px;
     text-align: left;
   }
