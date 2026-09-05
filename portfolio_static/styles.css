@@ -1565,9 +1565,16 @@ th:first-child, td:first-child { text-align: left; }
 /* 숫자/날짜 데이터만 고정폭. 종목 식별·의견·거래 버튼과 표 제목은 기존 서체 유지.
    계좌표: 첫 두 열은 로고/명칭, 마지막 열은 거래. 관심목록은 열 스키마가 지정. */
 #holdings > tr > td:nth-child(n+3):not(:last-child),
-#interestRows > tr > td.numeric-cell {
+#interestRows > tr > td.numeric-cell,
+#dividendRows > tr:is(.dividend-paid-row, .dividend-upcoming-row) > td:is(:first-child, :nth-child(n+4):nth-child(-n+14)),
+#dividendRows .dividend-today-marker time {
   font-family: var(--chart-num-font);
   font-weight: 400;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+#dividendRows .dividend-month-summary strong {
+  font-family: var(--chart-num-font);
+  font-weight: 500;
   font-variant-numeric: tabular-nums lining-nums;
 }
 .dividend-list th,

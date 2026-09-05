@@ -8,6 +8,8 @@ const font = fs.readFileSync(path.join(root, "RobotoMono-Variable.woff2"));
 assert.equal(font.toString("ascii", 0, 4), "wOF2");
 assert.equal(font.readUInt32BE(8), font.length);
 assert.match(css, /--chart-num-font: "Roboto Mono",/);
+assert.ok(css.includes('#dividendRows > tr:is(.dividend-paid-row, .dividend-upcoming-row) > td:is(:first-child, :nth-child(n+4):nth-child(-n+14))'));
+assert.match(css, /#dividendRows \.dividend-month-summary strong\s*\{\s*font-family: var\(--chart-num-font\);\s*font-weight: 500;/);
 assert.match(css, /@font-face\s*\{\s*font-family: "Roboto Mono";\s*src: url\("\/static\/RobotoMono-Variable\.woff2"\) format\("woff2"\);\s*font-style: normal;\s*font-weight: 100 700;/);
 assert.match(page, /rel="preload" href="\/static\/RobotoMono-Variable\.woff2" as="font" type="font\/woff2" crossorigin/);
 assert.doesNotMatch(css + page, /https?:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com)/);
