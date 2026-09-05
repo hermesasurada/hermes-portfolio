@@ -718,7 +718,6 @@ main {
 #accounts .account-count,
 #heroValue,
 #heroChange,
-#heroIndexAsOf time,
 .hero-index-value,
 .hero-index-change {
   font-family: var(--chart-num-font);

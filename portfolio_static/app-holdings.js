@@ -569,12 +569,7 @@ function renderHeroSummaryPage() {
   });
 
   // Keep the inactive page populated too: its real height reserves space
-  // before the user switches, including timestamp wrapping and font changes.
-  const asOfEl = document.getElementById("heroIndexAsOf");
-  if (asOfEl) {
-    const updated = String(data?.price_updated_at || "").trim();
-    asOfEl.innerHTML = updated ? `주요 지수 · <time>${esc(updated)}</time> 기준` : "주요 지수 · 현재 기준";
-  }
+  // before the user switches, including wrapping and font changes.
   document.querySelectorAll("[data-hero-index]").forEach(item => {
     const ticker = item.dataset.heroIndex;
     const meta = findTickerMeta(ticker);
@@ -648,9 +643,8 @@ function initHeroSummaryCarousel() {
 // 값은 renderAccounts와 동일 기준(보유분 고정, 표 필터 무관)으로 현재 선택 계좌 합계.
 function updateHeroSummary(byAccount, totalStats, accounts) {
   const valueEl = document.getElementById("heroValue");
-  const labelEl = document.getElementById("heroLabel");
   const changeEl = document.getElementById("heroChange");
-  if (!valueEl || !labelEl || !changeEl) return;
+  if (!valueEl || !changeEl) return;
   let value = 0;
   let change = 0;
   let label = "총 평가액 · 전체 계좌";
@@ -669,7 +663,7 @@ function updateHeroSummary(byAccount, totalStats, accounts) {
       ? `총 평가액 · ${selected[0].memberName} ${selected[0].name}`
       : `총 평가액 · ${selected.length}개 계좌`;
   }
-  labelEl.textContent = label;
+  valueEl.setAttribute("aria-label", label);
   valueEl.textContent = krw(value);
   const previous = value - change;
   const pct = previous > 0 ? (change / previous) * 100 : null;

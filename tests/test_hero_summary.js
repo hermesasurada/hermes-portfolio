@@ -14,11 +14,11 @@ function element() {
     setAttribute(name, value) { this.attrs[name] = value; },
   };
 }
-const ids = Object.fromEntries(['heroPortfolioPage', 'heroIndexPage', 'heroPrev', 'heroNext', 'heroIndexAsOf'].map(id => [id, element()]));
+const ids = Object.fromEntries(['heroPortfolioPage', 'heroIndexPage', 'heroPrev', 'heroNext', 'heroValue', 'heroChange'].map(id => [id, element()]));
 const value = element(), change = element();
 const index = { dataset: { heroIndex: 'SP500' }, querySelector: selector => selector === '.hero-index-value' ? value : change };
 const context = vm.createContext({
-  window: {}, heroSummaryPage: 'portfolio', data: { price_updated_at: '2026-09-05 12:00' },
+  window: {}, storageGet: () => null, heroSummaryStorage: { page: 'hero-page' }, selectionMode: 'all', krw: n => String(n),
   document: { getElementById: id => ids[id], querySelectorAll: () => [index] },
   findTickerMeta: () => ({ current_price: 6000.12, change_pct: 1.23 }),
   fmt1: new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
@@ -26,11 +26,15 @@ const context = vm.createContext({
   esc: s => String(s).replaceAll('<', '&lt;'),
 });
 vm.runInContext(fs.readFileSync(path.join(root, 'app-holdings.js'), 'utf8'), context);
+context.findTickerMeta = () => ({ current_price: 6000.12, change_pct: 1.23 });
 vm.runInContext('renderHeroSummaryPage()', context);
 assert.equal(ids.heroIndexPage.classList.hidden, true);
 assert.equal(ids.heroIndexPage.inert, true);
 assert.equal(value.textContent, '6,000.1'); // populated while hidden
-assert.match(ids.heroIndexAsOf.innerHTML, /2026-09-05 12:00/);
+vm.runInContext('updateHeroSummary(new Map(), {value_krw: 10000, change_krw: 100}, [])', context);
+assert.equal(ids.heroValue.textContent, '10000');
+assert.equal(ids.heroValue.attrs['aria-label'], '총 평가액 · 전체 계좌');
+assert.doesNotMatch(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /id="heroLabel"|id="heroIndexAsOf"/);
 vm.runInContext('heroSummaryPage = "indexes"; renderHeroSummaryPage()', context);
 assert.equal(ids.heroPortfolioPage.classList.hidden, true);
 assert.equal(ids.heroPortfolioPage.inert, true);
