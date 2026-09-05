@@ -72,7 +72,7 @@ function cashFlowsTableMarkup(matrix) {
     <caption class="sr-only">계좌별 일자별 순입출금, 최신 날짜순</caption>
     <thead><tr><th scope="col">일자</th>${accounts.map(a => `<th scope="col"><span>${esc(a.memberName || "")}</span><strong>${esc(a.name)}</strong></th>`).join("")}</tr></thead>
     <tbody><tr class="cash-flows-total"><th scope="row">${matrix.year == null ? "순입금 합계" : "연간 순입금"}</th>${cells(totals)}</tr>
-    ${rows.map(row => `<tr><th scope="row"><time datetime="${esc(row.date)}">${esc(row.date)}</time></th>${cells(row.cells, row.date)}</tr>`).join("")}</tbody>
+    ${rows.map(row => `<tr><th scope="row"><time datetime="${esc(row.date)}">${esc(row.date.slice(5))}</time></th>${cells(row.cells, row.date)}</tr>`).join("")}</tbody>
   </table>`;
 }
 
@@ -80,7 +80,6 @@ function initCashFlowsModal() {
   const modal = document.getElementById("cashFlowsModal");
   const status = document.getElementById("cashFlowsStatus");
   const wrap = document.getElementById("cashFlowsTableWrap");
-  const refresh = document.getElementById("cashFlowsRefresh");
   const switches = document.getElementById("cashFlowsAccounts");
   const yearLabel = document.getElementById("cashFlowsYear");
   const prevYear = document.getElementById("cashFlowsPrevYear");
@@ -118,7 +117,6 @@ function initCashFlowsModal() {
     prevYear.disabled = true;
     nextYear.disabled = true;
     wrap.setAttribute("aria-busy", "true");
-    refresh.disabled = true;
     try {
       const [payload, portfolio] = await Promise.all([
         apiFetchCashFlows(),
@@ -134,15 +132,12 @@ function initCashFlowsModal() {
       minYear = Math.min(currentYear, ...years);
       maxYear = Math.max(currentYear, ...years);
       selectedYear = Math.max(minYear, Math.min(maxYear, selectedYear));
-      switches.innerHTML = `<button type="button" class="cash-flows-select" data-cash-selection="all">전체 선택</button>
-        <button type="button" class="cash-flows-select" data-cash-selection="none">전체 해제</button>`
-        + fullMatrix.accounts.map(a => `<button type="button" class="cash-flows-switch" data-cash-account="${esc(a.id)}" aria-pressed="false"><span aria-hidden="true" class="cash-flows-dot"></span>${esc(a.memberName || "")} · ${esc(a.name)}</button>`).join("");
+      switches.innerHTML = fullMatrix.accounts.map(a => `<button type="button" class="cash-flows-switch" data-cash-account="${esc(a.id)}" aria-pressed="false"><span aria-hidden="true" class="cash-flows-dot"></span>${esc(a.memberName || "")} · ${esc(a.name)}</button>`).join("");
       render();
     } catch (err) {
-      if (token === requestId && modal.open) status.textContent = `불러오기 실패: ${err.message || err} · 새로고침으로 다시 시도하세요.`;
+      if (token === requestId && modal.open) status.textContent = `불러오기 실패: ${err.message || err} · 팝업을 닫고 다시 열어주세요.`;
     } finally {
       if (token === requestId) {
-        refresh.disabled = false;
         wrap.setAttribute("aria-busy", "false");
       }
     }
@@ -152,7 +147,6 @@ function initCashFlowsModal() {
     load();
   });
   document.getElementById("cashFlowsClose").addEventListener("click", () => modal.close());
-  refresh.addEventListener("click", load);
   prevYear.addEventListener("click", () => {
     if (!fullMatrix || selectedYear <= minYear) return;
     selectedYear -= 1;
@@ -166,8 +160,7 @@ function initCashFlowsModal() {
   switches.addEventListener("click", e => {
     const btn = e.target.closest("button");
     if (!btn || !fullMatrix) return;
-    if (btn.dataset.cashSelection) selectedIds = btn.dataset.cashSelection === "all" ? null : new Set();
-    else if (btn.dataset.cashAccount) {
+    if (btn.dataset.cashAccount) {
       if (selectedIds === null) selectedIds = new Set(fullMatrix.accounts.map(a => String(a.id)));
       const id = btn.dataset.cashAccount;
       if (selectedIds.has(id)) selectedIds.delete(id);

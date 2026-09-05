@@ -470,7 +470,7 @@
       </div>
     </form>
   </dialog>
-  <dialog class="watch-modal cash-flows-modal" id="cashFlowsModal" aria-labelledby="cashFlowsTitle" aria-describedby="cashFlowsHelp">
+  <dialog class="watch-modal cash-flows-modal" id="cashFlowsModal" aria-labelledby="cashFlowsTitle">
     <div class="modal-card cash-flows-card">
       <div class="modal-head">
         <strong id="cashFlowsTitle">계좌별 입출금</strong>
@@ -481,14 +481,9 @@
         </div>
         <button class="ghost-btn" id="cashFlowsClose" type="button" autofocus>닫기</button>
       </div>
-      <div class="cash-flows-toolbar">
-        <p id="cashFlowsHelp">단위: 만원(반올림) · 입금 + / 출금 − · 외화는 통화별 원단위</p>
-        <button class="ghost-btn" id="cashFlowsRefresh" type="button">새로고침</button>
-      </div>
       <div id="cashFlowsAccounts" class="cash-flows-accounts" role="group" aria-label="표시할 계좌 선택"></div>
       <div id="cashFlowsStatus" class="cash-flows-status" role="status" aria-live="polite"></div>
       <div id="cashFlowsTableWrap" class="cash-flows-table-wrap" tabindex="0" role="region" aria-label="계좌별 입출금 표, 가로 스크롤 가능"></div>
-      <p class="cash-flows-footnote">같은 날·계좌·통화별 순입출금입니다. —는 해당 일자 내역 없음이며, 내역이 없는 계좌는 미입력 상태일 수 있습니다.</p>
     </div>
   </dialog>
 

@@ -38,6 +38,24 @@ assert.match(html, /&lt;note>/);
 assert.equal((html.match(/scope="col"/g) || []).length, 4);
 assert.equal((html.match(/<td /g) || []).length, 12);
 assert.match(html, /data-account-id="1" data-flow-date="2024-02-01"/);
+assert.match(html, /<time datetime="2024-02-01">02-01<\/time>/);
+assert.doesNotMatch(html, />2024-02-01<\/time>/);
+const page = fs.readFileSync(path.join(__dirname, "../portfolio_static/index.html"), "utf8");
+const popup = page.match(/<dialog[^>]*id="cashFlowsModal"[\s\S]*?<\/dialog>/)[0];
+assert.doesNotMatch(popup, /cashFlowsRefresh|cashFlowsHelp|cash-flows-footnote|cash-flows-toolbar/);
+const script = fs.readFileSync(path.join(__dirname, "../portfolio_static/app-cash-flows.js"), "utf8");
+assert.doesNotMatch(script, /cashFlowsRefresh|data-cash-selection|cashSelection/);
+assert.match(popup, /id="cashFlowsPrevYear"/);
+assert.match(popup, /id="cashFlowsNextYear"/);
+// Initialization must work with only the controls still present in the page.
+const ids = [...page.matchAll(/id="([^"]+)"/g)].map(match => match[1]);
+context.document = {
+  getElementById(id) {
+    assert.ok(ids.includes(id), `Missing element: ${id}`);
+    return { addEventListener() {} };
+  },
+};
+run("initCashFlowsModal()");
 assert.equal(run("buildCashFlowsMatrix(accounts, []).rows.length"), 0);
 assert.equal(run("buildCashFlowsMatrix(accounts, []).accounts.length"), 2);
 assert.equal(run("flows[0].amount"), 100); // no input mutation
