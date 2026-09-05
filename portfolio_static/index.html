@@ -83,6 +83,7 @@
           <button id="watchlistOpen" class="ghost-btn" type="button"><span class="label-full">관리종목</span><span class="label-short">종목</span></button>
           <button id="scheduleOpen" class="ghost-btn" type="button">일정</button>
           <button id="performanceOpen" class="ghost-btn" type="button"><span class="label-full">성과차트</span><span class="label-short">성과</span></button>
+          <button id="cashFlowsOpen" class="ghost-btn" type="button" aria-haspopup="dialog">입출금</button>
         </div>
         <div class="ctrl-group" aria-label="환경">
           <button id="themeToggle" class="theme-btn" type="button" title="테마">자동</button>
@@ -465,6 +466,22 @@
       </div>
     </form>
   </dialog>
+  <dialog class="watch-modal cash-flows-modal" id="cashFlowsModal" aria-labelledby="cashFlowsTitle" aria-describedby="cashFlowsHelp">
+    <div class="modal-card cash-flows-card">
+      <div class="modal-head">
+        <strong id="cashFlowsTitle">계좌별 입출금</strong>
+        <button class="ghost-btn" id="cashFlowsClose" type="button" autofocus>닫기</button>
+      </div>
+      <div class="cash-flows-toolbar">
+        <p id="cashFlowsHelp">입금 + / 출금 − · KRW는 원 단위 · 같은 날은 순입출금 합산</p>
+        <button class="ghost-btn" id="cashFlowsRefresh" type="button">새로고침</button>
+      </div>
+      <div id="cashFlowsStatus" class="cash-flows-status" role="status" aria-live="polite"></div>
+      <div id="cashFlowsTableWrap" class="cash-flows-table-wrap" tabindex="0" role="region" aria-label="계좌별 입출금 표, 가로 스크롤 가능"></div>
+      <p class="cash-flows-footnote">등록된 입출금만 표시합니다. —는 해당 일자 내역 없음이며, 내역이 없는 계좌는 미입력 상태일 수 있습니다.</p>
+    </div>
+  </dialog>
+
   <dialog class="watch-modal ticker-search-modal" id="tickerSearchModal">
     <form method="dialog" class="modal-card ticker-search-card">
       <div class="modal-head">
@@ -720,6 +737,7 @@
   <script src="/static/app-interest-watchlists.js"></script>
   <script src="/static/app-ticker-search.js"></script>
   <script src="/static/app-calendar.js"></script>
+  <script src="/static/app-cash-flows.js"></script>
   <script src="/static/app.js"></script>
   <script>
     // 부트 검사: 각 JS 파일 마지막 줄의 로드 마커와 대조. 파일이 파스
@@ -729,7 +747,7 @@
       var expected = ["state", "format", "api", "chart-utils", "app-consensus", "app-interest-columns",
         "app-tabs", "app-charts", "app-holdings", "app-chart-scale", "app-chart-metrics", "app-line-chart",
         "app-chart-compare", "app-transactions", "app-trade-controls",
-        "app-watchlist", "app-interest-watchlists", "app-ticker-search", "app-calendar", "app"];
+        "app-watchlist", "app-interest-watchlists", "app-ticker-search", "app-calendar", "app-cash-flows", "app"];
       var loaded = window.__loaded || new Set();
       var missing = expected.filter(function (name) { return !loaded.has(name); });
       if (missing.length && window.__bootBanner) {

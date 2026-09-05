@@ -41,6 +41,10 @@ function apiFetchSchedule() {
   return fetchJson("/api/schedule");
 }
 
+function apiFetchCashFlows() {
+  return fetchJson("/api/cash-flows");
+}
+
 function apiFetchChart(ticker, usExtended = usExtendedEnabled(), options = {}) {
   const query = new URLSearchParams({
     ticker: ticker || "",

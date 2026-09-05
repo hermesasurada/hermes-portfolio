@@ -3921,6 +3921,54 @@ th.pc-frozen-edge {
   border-radius: var(--radius);
   background: transparent;
 }
+.watch-modal.cash-flows-modal {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(1500px, calc(100vw - 24px));
+  max-width: none;
+  max-height: calc(100dvh - 24px);
+  overflow: hidden;
+}
+.cash-flows-modal .cash-flows-card {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 24px);
+  box-sizing: border-box;
+  gap: 10px;
+}
+.cash-flows-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cash-flows-toolbar p, .cash-flows-footnote { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.cash-flows-toolbar button { flex-shrink: 0; }
+.cash-flows-status { color: var(--muted); font-size: 12px; }
+.cash-flows-table-wrap { min-height: 0; overflow: auto; overscroll-behavior: contain; border: 1px solid var(--line); border-radius: 8px; }
+.cash-flows-table-wrap:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.cash-flows-table-wrap::-webkit-scrollbar { width: 0; height: 8px; }
+.cash-flows-table { width: 100%; min-width: 0; border-collapse: separate; border-spacing: 0; }
+.cash-flows-table caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.cash-flows-table th, .cash-flows-table td {
+  min-width: 138px; padding: 10px 12px; font-size: 12px; white-space: nowrap;
+  border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); text-align: right;
+}
+.cash-flows-table thead th { position: sticky; top: 0; z-index: 2; background: var(--surface-2); text-align: center; }
+.cash-flows-table thead th span { display: block; color: var(--muted); font-size: 11px; font-weight: 500; }
+.cash-flows-table thead th strong { display: block; color: var(--ink); margin-top: 3px; font-size: 12px; }
+.cash-flows-table tr > :first-child {
+  position: sticky; left: 0; z-index: 1; min-width: 100px; text-align: left;
+  background: var(--panel); font-weight: 600;
+}
+.cash-flows-table thead tr > :first-child { z-index: 3; background: var(--surface-2); }
+.cash-flows-table tbody th { top: auto; }
+.cash-flows-table .cash-flows-total > * { background: var(--brand-soft); font-weight: 700; }
+.cash-flows-table tbody tr:hover > * { background: var(--surface-hover); }
+.cash-flows-amount { display: block; font-variant-numeric: tabular-nums; }
+.cash-flows-amount small { color: var(--muted); font-size: 10px; font-weight: 400; margin-left: 4px; }
+.cash-flows-empty { color: var(--muted); }
+@media (max-width: 640px) {
+  .cash-flows-modal .cash-flows-card { padding: 10px; gap: 8px; }
+  .cash-flows-table th, .cash-flows-table td { min-width: 118px; padding: 9px 8px; }
+  .cash-flows-table tr > :first-child { min-width: 84px; font-size: 11px; }
+}
 .watch-modal.trade-modal {
   width: min(560px, calc(100vw - 24px));
 }

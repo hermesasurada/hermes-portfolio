@@ -313,6 +313,7 @@ function initUsPriceControls() {
 // app-trade-controls.js loaded separately.
 // app-watchlist.js loaded separately.
 document.getElementById("chartBack").addEventListener("click", closeChart);
+initCashFlowsModal();
 document.getElementById("performanceOpen").addEventListener("click", () => {
   history.pushState(null, "", "#performance");
   openPerformanceChart();
