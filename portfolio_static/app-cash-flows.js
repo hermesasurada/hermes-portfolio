@@ -24,6 +24,14 @@ function buildCashFlowsMatrix(accounts, flows) {
   };
 }
 
+function filterCashFlowsMatrix(matrix, selectedIds) {
+  if (selectedIds === null) return matrix;
+  const accounts = matrix.accounts.filter(a => selectedIds.has(String(a.id)));
+  const rows = matrix.rows.filter(row => accounts.some(a => row.cells.has(String(a.id))));
+  const count = accounts.reduce((n, a) => n + (matrix.totals.get(String(a.id))?.length || 0), 0);
+  return { accounts, rows, count, totals: matrix.totals };
+}
+
 function cashFlowsAmountMarkup(entries) {
   if (!entries?.length) return '<span class="cash-flows-empty">—</span>';
   // Never add different currencies or apply today's FX to historical cash flows.
@@ -33,11 +41,13 @@ function cashFlowsAmountMarkup(entries) {
     sums.set(currency, (sums.get(currency) || 0) + Number(entry.amount));
   }
   return [...sums].sort(([a], [b]) => a.localeCompare(b)).map(([currency, amount]) => {
-    const digits = currency === "KRW" || currency === "JPY" ? 0 : ["BTC", "ETH"].includes(currency) ? 8 : 2;
-    const text = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: digits }).format(Math.abs(amount));
+    const digits = currency === "KRW" ? 1 : currency === "JPY" ? 0 : ["BTC", "ETH"].includes(currency) ? 8 : 2;
+    const text = new Intl.NumberFormat("ko-KR", {
+      minimumFractionDigits: currency === "KRW" ? 1 : 0, maximumFractionDigits: digits,
+    }).format(Math.abs(currency === "KRW" ? amount / 10000 : amount));
     const sign = amount > 0 ? "+" : amount < 0 ? "−" : "";
     const cls = amount > 0 ? "up" : amount < 0 ? "down" : "flat";
-    return `<span class="cash-flows-amount ${cls}">${sign}${text}<small>${esc(currency === "KRW" ? "원" : currency)}</small></span>`;
+    return `<span class="cash-flows-amount ${cls}">${sign}${text}${currency === "KRW" ? "" : `<small>${esc(currency)}</small>`}</span>`;
   }).join("");
 }
 
@@ -48,7 +58,7 @@ function cashFlowsTableMarkup(matrix) {
     const title = date ? (entries || []).map(e => `${Number(e.amount).toLocaleString("ko-KR", { maximumFractionDigits: 8 })} ${e.currency || "KRW"}${e.note ? ` · ${e.note}` : ""}`).join("\n") : `${entries?.length || 0}건의 순입출금 합계`;
     return `<td data-account-id="${esc(a.id)}" data-flow-date="${esc(date)}" title="${esc(title)}">${cashFlowsAmountMarkup(entries)}</td>`;
   }).join("");
-  return `<table class="cash-flows-table">
+  return `<table class="cash-flows-table" style="width:${86 + accounts.length * 108}px">
     <caption class="sr-only">계좌별 일자별 순입출금, 최신 날짜순</caption>
     <thead><tr><th scope="col">일자</th>${accounts.map(a => `<th scope="col"><span>${esc(a.memberName || "")}</span><strong>${esc(a.name)}</strong></th>`).join("")}</tr></thead>
     <tbody><tr class="cash-flows-total"><th scope="row">순입금 합계</th>${cells(totals)}</tr>
@@ -61,11 +71,28 @@ function initCashFlowsModal() {
   const status = document.getElementById("cashFlowsStatus");
   const wrap = document.getElementById("cashFlowsTableWrap");
   const refresh = document.getElementById("cashFlowsRefresh");
+  const switches = document.getElementById("cashFlowsAccounts");
+  let fullMatrix = null;
+  let selectedIds = null; // null = all, Set = explicit selection (including none)
   let requestId = 0;
+  function render() {
+    if (!fullMatrix) return;
+    const matrix = filterCashFlowsMatrix(fullMatrix, selectedIds);
+    wrap.innerHTML = matrix.accounts.length ? cashFlowsTableMarkup(matrix) : "";
+    wrap.scrollTop = 0;
+    wrap.scrollLeft = 0;
+    status.textContent = !matrix.accounts.length ? "표시할 계좌를 선택하세요."
+      : `${matrix.accounts.length}개 계좌 · ${matrix.rows.length}일 · ${matrix.count}건 · 최신순${matrix.count ? "" : " · 등록된 내역 없음"}`;
+    switches.querySelectorAll("[data-cash-account]").forEach(btn => {
+      btn.setAttribute("aria-pressed", String(selectedIds === null || selectedIds.has(btn.dataset.cashAccount)));
+    });
+  }
   async function load() {
     const token = ++requestId;
     status.textContent = "입출금 내역을 불러오는 중…";
     wrap.innerHTML = "";
+    fullMatrix = null;
+    switches.innerHTML = "";
     wrap.setAttribute("aria-busy", "true");
     refresh.disabled = true;
     try {
@@ -78,11 +105,11 @@ function initCashFlowsModal() {
       const groupOrder = ["overseas", "kr_individual", "pension", "other", "bitcoin"];
       const rank = a => { const i = groupOrder.indexOf(accountGroupKey(a)); return i < 0 ? 3 : i; };
       accounts.sort((a, b) => rank(a) - rank(b));
-      const matrix = buildCashFlowsMatrix(accounts, payload.cash_flows);
-      wrap.innerHTML = cashFlowsTableMarkup(matrix);
-      status.textContent = matrix.count
-        ? `${matrix.accounts.length}개 계좌 · ${matrix.rows.length}일 · ${matrix.count}건 · 최신순`
-        : "등록된 입출금 내역이 없습니다.";
+      fullMatrix = buildCashFlowsMatrix(accounts, payload.cash_flows);
+      switches.innerHTML = `<button type="button" class="cash-flows-select" data-cash-selection="all">전체 선택</button>
+        <button type="button" class="cash-flows-select" data-cash-selection="none">전체 해제</button>`
+        + fullMatrix.accounts.map(a => `<button type="button" class="cash-flows-switch" data-cash-account="${esc(a.id)}" aria-pressed="false"><span aria-hidden="true" class="cash-flows-dot"></span>${esc(a.memberName || "")} · ${esc(a.name)}</button>`).join("");
+      render();
     } catch (err) {
       if (token === requestId && modal.open) status.textContent = `불러오기 실패: ${err.message || err} · 새로고침으로 다시 시도하세요.`;
     } finally {
@@ -98,6 +125,18 @@ function initCashFlowsModal() {
   });
   document.getElementById("cashFlowsClose").addEventListener("click", () => modal.close());
   refresh.addEventListener("click", load);
+  switches.addEventListener("click", e => {
+    const btn = e.target.closest("button");
+    if (!btn || !fullMatrix) return;
+    if (btn.dataset.cashSelection) selectedIds = btn.dataset.cashSelection === "all" ? null : new Set();
+    else if (btn.dataset.cashAccount) {
+      if (selectedIds === null) selectedIds = new Set(fullMatrix.accounts.map(a => String(a.id)));
+      const id = btn.dataset.cashAccount;
+      if (selectedIds.has(id)) selectedIds.delete(id);
+      else selectedIds.add(id);
+    }
+    render();
+  });
   modal.addEventListener("close", () => { requestId += 1; });
   modal.addEventListener("click", e => {
     if (e.target !== modal) return;

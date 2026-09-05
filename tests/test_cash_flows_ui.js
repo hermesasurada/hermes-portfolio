@@ -25,7 +25,10 @@ assert.equal(run("matrix.totals.get('1').length"), 4); // original entries kept 
 assert.match(run("cashFlowsAmountMarkup(matrix.rows[2].cells.get('1'))"), /flat\">0/);
 const mixed = run("cashFlowsAmountMarkup(matrix.rows[0].cells.get('1'))");
 assert.match(mixed, /\+12.34<small>USD/);
-assert.match(mixed, /\+500<small>원/);
+assert.match(mixed, /\+0\.1<\/span>/);
+assert.match(run("cashFlowsAmountMarkup([{amount: 10000, currency: 'KRW'}])"), /\+1\.0<\/span>/);
+assert.match(run("cashFlowsAmountMarkup([{amount: -12345678, currency: 'KRW'}])"), /−1,234\.6<\/span>/);
+assert.match(run("cashFlowsAmountMarkup([{amount: 1499, currency: 'KRW'}, {amount: 1499, currency: 'KRW'}])"), /\+0\.3<\/span>/); // sum before rounding
 assert.match(run("cashFlowsAmountMarkup(matrix.totals.get('3'))"), /down\">−10/);
 assert.match(run("cashFlowsAmountMarkup(undefined)"), /—/);
 const html = run("cashFlowsTableMarkup(matrix)");
@@ -37,4 +40,13 @@ assert.match(html, /data-account-id="1" data-flow-date="2024-02-01"/);
 assert.equal(run("buildCashFlowsMatrix(accounts, []).rows.length"), 0);
 assert.equal(run("buildCashFlowsMatrix(accounts, []).accounts.length"), 2);
 assert.equal(run("flows[0].amount"), 100); // no input mutation
+assert.equal(run("filterCashFlowsMatrix(matrix, null) === matrix"), true);
+assert.equal(run("filterCashFlowsMatrix(matrix, new Set(['3'])).accounts.length"), 1);
+assert.equal(run("filterCashFlowsMatrix(matrix, new Set(['3'])).rows.length"), 1);
+assert.equal(run("filterCashFlowsMatrix(matrix, new Set(['3'])).rows[0].date"), '2024-01-15');
+assert.equal(run("filterCashFlowsMatrix(matrix, new Set(['1'])).count"), 4);
+assert.equal(run("filterCashFlowsMatrix(matrix, new Set(['1'])).rows.map(r => r.date).join(',')"), '2024-02-01,2024-01-01');
+assert.equal(run("filterCashFlowsMatrix(matrix, new Set(['2'])).rows.length"), 0);
+assert.equal(run("filterCashFlowsMatrix(matrix, new Set()).accounts.length"), 0);
+assert.equal(run("filterCashFlowsMatrix(matrix, new Set()).count"), 0);
 console.log("cash flow matrix: grouping, totals, currencies, zero net, empty accounts and escaping passed");
