@@ -701,6 +701,16 @@ main {
   gap: 12px;
   flex-wrap: wrap;
 }
+#accounts .account .meta,
+#accounts .account-count,
+#heroValue,
+#heroChange,
+#heroIndexAsOf time,
+.hero-index-value,
+.hero-index-change {
+  font-family: var(--chart-num-font);
+  font-variant-numeric: tabular-nums lining-nums;
+}
 .hero-value-row strong {
   font-size: var(--fs-hero);
   font-weight: var(--fw-strong);

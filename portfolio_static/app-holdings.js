@@ -570,7 +570,7 @@ function renderHeroSummaryPage() {
   const asOfEl = document.getElementById("heroIndexAsOf");
   if (asOfEl) {
     const updated = String(data?.price_updated_at || "").trim();
-    asOfEl.textContent = updated ? `주요 지수 · ${updated} 기준` : "주요 지수 · 현재 기준";
+    asOfEl.innerHTML = updated ? `주요 지수 · <time>${esc(updated)}</time> 기준` : "주요 지수 · 현재 기준";
   }
   document.querySelectorAll("[data-hero-index]").forEach(item => {
     const ticker = item.dataset.heroIndex;
@@ -741,7 +741,7 @@ function renderAccounts() {
     return `
       <div class="account-group">
         <button class="group-head ${isPartial ? "partial" : ""}" data-group="${group.key}">
-          <span>${group.label} · ${selectedCount}/${groupAccounts.length}</span>
+          <span>${group.label} · <span class="account-count">${selectedCount}/${groupAccounts.length}</span></span>
           <span class="group-action">${action}</span>
         </button>
         ${groupAccounts.map(accountButton).join("")}
