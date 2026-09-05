@@ -292,12 +292,15 @@ def test_transaction_hidden_flag_persists_and_is_returned():
         CREATE TABLE holdings (
             account_id INTEGER,
             ticker TEXT,
-            name TEXT
+            name TEXT,
+            qty REAL,
+            currency TEXT
         );
         CREATE TABLE tickers (
             ticker TEXT PRIMARY KEY,
             name TEXT
         );
+        CREATE TABLE daily_prices (ticker TEXT, date TEXT, close REAL);
         CREATE TABLE transactions (
             id INTEGER PRIMARY KEY,
             trade_date TEXT,
@@ -319,11 +322,13 @@ def test_transaction_hidden_flag_persists_and_is_returned():
         """
     )
 
+    original_connect = transactions_module.connect
+    # 스냅샷도 같은 픽스처 연결에서 갱신한다. 커밋/롤백 계약은 실제 connect와 동일.
     @contextmanager
     def fake_connect():
-        yield conn
+        with conn:
+            yield conn
 
-    original_connect = transactions_module.connect
     try:
         transactions_module.connect = fake_connect
         transactions_module.update_transaction({"id": 1, "hidden": 1})

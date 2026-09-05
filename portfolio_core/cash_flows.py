@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from .dates import now_kst_text, parse_iso_date
 from .db import connect, ensure_cash_flow_table
-from .performance_snapshots import rebuild_account_snapshots
+from .performance_snapshots import rebuild_account_snapshots_in_transaction
 
 
 def list_cash_flows(account_id: int | None = None) -> dict:
@@ -43,6 +43,7 @@ def add_cash_flow(payload: dict) -> dict:
         raise ValueError("금액은 0이 될 수 없습니다.")
     note = str(payload.get("note") or "").strip()
     with connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
         ensure_cash_flow_table(conn)
         account = conn.execute("SELECT id, currency FROM accounts WHERE id = ?", (account_id,)).fetchone()
         if not account:
@@ -56,8 +57,7 @@ def add_cash_flow(payload: dict) -> dict:
             (account_id, flow_date.isoformat(), amount, currency, note, now_kst_text()),
         )
         flow_id = cursor.lastrowid
-        conn.commit()
-    rebuild_account_snapshots([account_id])
+        rebuild_account_snapshots_in_transaction(conn, [account_id])
     return {"ok": True, "id": flow_id, **list_cash_flows(account_id)}
 
 
@@ -66,12 +66,12 @@ def delete_cash_flow(payload: dict) -> dict:
     if not flow_id:
         raise ValueError("입출금 id가 필요합니다.")
     with connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
         ensure_cash_flow_table(conn)
         row = conn.execute("SELECT account_id FROM account_cash_flows WHERE id = ?", (flow_id,)).fetchone()
         if not row:
             raise ValueError("존재하지 않는 입출금입니다.")
         conn.execute("DELETE FROM account_cash_flows WHERE id = ?", (flow_id,))
-        conn.commit()
         account_id = int(row["account_id"])
-    rebuild_account_snapshots([account_id])
+        rebuild_account_snapshots_in_transaction(conn, [account_id])
     return {"ok": True, **list_cash_flows(account_id)}

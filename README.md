@@ -13,6 +13,10 @@
 함께 정의하며, 값이 없는 열은 렌더링하지 않습니다. 일정 조회는 읽기 전용이고
 스키마 준비와 실적 이력 보강은 서버 초기화·수집 경로에서 수행합니다.
 
+거래·잔고·현금 입출금 변경과 해당 계좌 성과 스냅샷은 같은 DB 트랜잭션에서
+저장합니다. 스냅샷 계산/저장이 실패하면 원장 변경도 롤백됩니다. 일배치·수동
+재계산도 읽기 전에 쓰기 잠금을 잡아 동시 거래를 놓친 결과가 덮어써지지 않게 합니다.
+
 ## 구성
 
 | 영역 | 파일 |
@@ -51,5 +55,6 @@ python3 collect_prices.py --category kr
 ```bash
 python3 tests/test_portfolio_core.py
 python3 tests/test_refactor_performance.py
+python3 tests/test_atomic_writes.py
 node tests/test_interest_columns.js
 ```

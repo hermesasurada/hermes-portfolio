@@ -187,29 +187,43 @@ def build_account_series(conn: sqlite3.Connection, account_id: int) -> list[dict
 
 
 def rebuild_account_snapshots(account_ids: list[int] | None = None) -> dict[int, int]:
-    """계좌별 스냅샷을 다시 만든다. {account_id: 행 수}."""
-    written: dict[int, int] = {}
+    """일배치·수동 재계산용. 읽기부터 저장까지 한 트랜잭션으로 처리한다."""
     with connect() as conn:
-        ensure_account_history_columns(conn)
-        ensure_cash_flow_table(conn)
-        ensure_value_snapshot_table(conn)
-        ids = [int(x) for x in account_ids] if account_ids else [
-            int(r["id"]) for r in conn.execute("SELECT id FROM accounts ORDER BY id")
-        ]
-        stamp = now_kst_text()
-        for account_id in ids:
-            rows = build_account_series(conn, account_id)
-            conn.execute("DELETE FROM account_value_snapshots WHERE account_id = ?", (account_id,))
-            conn.executemany(
-                """
-                INSERT INTO account_value_snapshots
-                  (account_id, date, holdings_value_krw, trade_cash_krw, flow_krw, computed_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                [(account_id, r["date"], r["holdings_value_krw"], r["trade_cash_krw"], r["flow_krw"], stamp) for r in rows],
-            )
-            written[account_id] = len(rows)
-        conn.commit()
+        # 계산 도중 거래가 바뀌고 이전 결과가 나중에 덮어써지는 것을 방지한다.
+        conn.execute("BEGIN IMMEDIATE")
+        return rebuild_account_snapshots_in_transaction(conn, account_ids)
+
+
+def rebuild_account_snapshots_in_transaction(
+    conn: sqlite3.Connection, account_ids: list[int] | None = None,
+) -> dict[int, int]:
+    """호출자의 미커밋 거래·입출금을 포함해 재계산한다. 커밋/롤백은 호출자 소유.
+
+    호출자는 변경 전 읽기부터 BEGIN IMMEDIATE로 보호해야 한다. 별도 연결이나
+    중간 커밋을 사용하지 않아 원장·잔고·스냅샷이 모두 함께 저장/롤백된다.
+    """
+    if not conn.in_transaction:
+        raise ValueError("스냅샷 갱신에는 활성 DB 트랜잭션이 필요합니다.")
+    written: dict[int, int] = {}
+    ensure_account_history_columns(conn)
+    ensure_cash_flow_table(conn)
+    ensure_value_snapshot_table(conn)
+    ids = [int(x) for x in account_ids] if account_ids else [
+        int(r["id"]) for r in conn.execute("SELECT id FROM accounts ORDER BY id")
+    ]
+    stamp = now_kst_text()
+    for account_id in ids:
+        rows = build_account_series(conn, account_id)
+        conn.execute("DELETE FROM account_value_snapshots WHERE account_id = ?", (account_id,))
+        conn.executemany(
+            """
+            INSERT INTO account_value_snapshots
+              (account_id, date, holdings_value_krw, trade_cash_krw, flow_krw, computed_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [(account_id, r["date"], r["holdings_value_krw"], r["trade_cash_krw"], r["flow_krw"], stamp) for r in rows],
+        )
+        written[account_id] = len(rows)
     return written
 
 
