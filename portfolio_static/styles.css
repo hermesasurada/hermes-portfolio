@@ -2366,6 +2366,10 @@ th.pc-frozen-edge {
   align-items: center;
   gap: 5px;
 }
+.chart-unit-controls { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; }
+.chart-control-label { color: var(--muted); font-size: 11px; font-weight: 500; white-space: nowrap; flex: 0 0 auto; }
+.chart-ma-caption { margin-left: 5px; padding-left: 8px; border-left: 1px solid var(--line); }
+.chart-marker-short { display: none; }
 .chart-head-toggle {
   display: inline-flex;
   align-items: center;
@@ -6171,11 +6175,15 @@ body:not(.watchlist-editing) .interest-group { grid-template-columns: minmax(0, 
     flex-wrap: nowrap;
   }
   .chart-bottom-controls .chart-display-controls:not(.hidden),
+  .chart-bottom-controls .chart-unit-controls:not(.hidden),
   .chart-bottom-controls .chart-range-host,
   .chart-bottom-controls .chart-ranges,
   .chart-bottom-controls .chart-marker-toggles {
     display: contents;
   }
+  .chart-bottom-controls .chart-control-label,
+  .chart-bottom-controls .chart-marker-full { display: none; }
+  .chart-bottom-controls .chart-marker-short { display: inline; }
   .chart-bottom-controls > * + *,
   .chart-bottom-controls .chart-marker-toggles {
     margin-left: 0;

@@ -24,6 +24,7 @@
 - Individual-chart SMA overlays use 20/50/200 trading-day closes from full history before range trimming. Weekly/monthly bars carry the last daily SMA; they never reinterpret the periods as weeks/months. Live-price overlays follow the existing extended-session selection; incomplete windows stay absent.
 - SMA period buttons live inside the chart control row and toggle each line independently, with per-period local preferences. Preserve the old master-toggle preference when initializing missing per-period settings.
 - Keep BB and Ichimoku controls adjacent, followed by the 20/50/200 SMA controls.
+- Desktop chart controls show group captions (이동평균선, 단위, 기간, 거래) and Buy/Sell labels; mobile hides captions and retains compact B/S labels.
 - `daily_prices.close` is the raw, dividend-unadjusted market close. Performance and technical indicators use price returns.
 - Split repair uses recorded `stock_splits` ratios and adjusts only the contiguous old-scale segment. Spike cleanup removes temporary spikes only; it must preserve real crashes and splits.
 - Use `prices.fx_rates()` as the single FX mapping source.

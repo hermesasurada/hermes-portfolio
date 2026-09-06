@@ -73,11 +73,13 @@ function renderChartRangeButtons() {
   const rangeLabel = chartRange === "custom" ? "직접" : (currentChoice?.label || "전체");
   return `
     <div class="chart-ranges" role="group" aria-label="차트 기간">
+      <span class="chart-control-label">기간</span>
       <button class="chart-range-btn range-popup-btn active" type="button" data-chart-range-popup aria-haspopup="dialog" aria-label="현재 조회 기간 ${rangeLabel}, 기간 선택">${rangeLabel}</button>
       ${(!isCompare && !performanceChartOpen) ? `
         <span class="chart-marker-toggles" role="group" aria-label="거래 마커 표시">
-          <button class="chart-range-btn marker-toggle buy ${chartShowBuys ? "active" : ""}" type="button" data-marker-toggle="buy" aria-label="매수 마커" title="매수 마커" aria-pressed="${chartShowBuys}" ${chartInterval === "day" ? "" : `disabled title="일 단위에서만 표시"`}><i></i>B</button>
-          <button class="chart-range-btn marker-toggle sell ${chartShowSells ? "active" : ""}" type="button" data-marker-toggle="sell" aria-label="매도 마커" title="매도 마커" aria-pressed="${chartShowSells}" ${chartInterval === "day" ? "" : `disabled title="일 단위에서만 표시"`}><i></i>S</button>
+          <span class="chart-control-label">거래</span>
+          <button class="chart-range-btn marker-toggle buy ${chartShowBuys ? "active" : ""}" type="button" data-marker-toggle="buy" aria-label="매수 마커" title="${chartInterval === "day" ? "매수 마커" : "일 단위에서만 표시"}" aria-pressed="${chartShowBuys}" ${chartInterval === "day" ? "" : "disabled"}><i></i><span class="chart-marker-full">Buy</span><span class="chart-marker-short">B</span></button>
+          <button class="chart-range-btn marker-toggle sell ${chartShowSells ? "active" : ""}" type="button" data-marker-toggle="sell" aria-label="매도 마커" title="${chartInterval === "day" ? "매도 마커" : "일 단위에서만 표시"}" aria-pressed="${chartShowSells}" ${chartInterval === "day" ? "" : "disabled"}><i></i><span class="chart-marker-full">Sell</span><span class="chart-marker-short">S</span></button>
         </span>
       ` : ""}
     </div>
@@ -112,6 +114,7 @@ function syncChartIntervalControl() {
   const labels = { day: "일", week: "주", month: "월" };
   const next = order[(order.indexOf(chartInterval) + 1) % order.length];
   toggle.classList.toggle("hidden", !chartTicker || performanceChartOpen);
+  document.getElementById("chartUnitControls")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
   toggle.textContent = labels[chartInterval] || "일";
   toggle.setAttribute("aria-pressed", "true");
   toggle.setAttribute("aria-label", `현재 ${labels[chartInterval] || "일"} 단위, 클릭하면 ${labels[next]}`);
@@ -171,6 +174,7 @@ function syncChartDisplayControls(visible = Boolean(chartTicker || performanceCh
   ichimokuToggle?.setAttribute("aria-pressed", String(chartShowIchimoku));
   bollingerToggle?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
   ichimokuToggle?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
+  document.getElementById("chartMaCaption")?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
   CHART_MOVING_AVERAGES.forEach(series => {
     const toggle = document.getElementById(`chartMa${series.period}Toggle`);
     toggle?.classList.toggle("active", chartMovingAveragePeriods[series.period]);
