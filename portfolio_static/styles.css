@@ -268,29 +268,26 @@ header {
 }
 /* 브랜드 텍스트는 정보가치가 낮으므로 작게 — 큰 숫자는 히어로 요약이 담당 */
 h1 {
-  margin: 0 0 3px;
+  margin: 0;
   color: var(--ink);
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: -.03em;
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: 0;
 }
+.service-brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.service-logo { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 32px; border-radius: var(--radius-sm); background: var(--brand); color: var(--button-active-ink); }
+.service-logo svg { width: 20px; height: 20px; }
+.service-brand em { color: var(--muted); font-style: normal; font-weight: 400; }
 .home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   color: var(--ink);
   text-decoration: none;
 }
 .home-link:hover {
   color: var(--brand);
-}
-.fx-top {
-  color: var(--muted);
-  font-size: 11.5px;
-  font-weight: 600;
-  line-height: 1.35;
-}
-.fx-line {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }
 .help-icon-btn {
   width: 18px;
@@ -638,7 +635,7 @@ main {
   touch-action: pan-y;
   user-select: none;
 }
-/* Both pages size the same grid cell, even when inactive. Switching pages
+/* All pages size the same grid cell, even when inactive. Switching pages
    cannot resize the strip; content/zoom can still grow without clipping. */
 .hero-page-shell > .hero-summary-page {
   grid-area: 1 / 1;

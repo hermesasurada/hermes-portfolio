@@ -26,6 +26,7 @@
 - Keep BB and Ichimoku controls adjacent, followed by the 20/50/200 SMA controls.
 - Desktop chart controls show group captions (이동평균선, 단위, 기간, 거래) and Buy/Sell labels; mobile hides captions and retains compact B/S labels.
 - Stock-chart price-axis bounds always include every available SMA, BB, Ichimoku value and eligible trade marker in the selected range, regardless of visibility toggles. Toggling overlays/markers must not move the price line; missing values remain excluded.
+- Header branding follows the sibling services' local Pretendard, compact logo/title style; no header FX strip. The persisted hero carousel cycles portfolio → indexes → FX (USD/KRW, EUR/KRW, JPY/KRW per 1 currency unit), with all pages sharing stable height and FX rates sourced from the existing data.fx mapping.
 - `daily_prices.close` is the raw, dividend-unadjusted market close. Performance and technical indicators use price returns.
 - Split repair uses recorded `stock_splits` ratios and adjusts only the contiguous old-scale segment. Spike cleanup removes temporary spikes only; it must preserve real crashes and splits.
 - Use `prices.fx_rates()` as the single FX mapping source.

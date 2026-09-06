@@ -56,12 +56,9 @@
 <body>
   <header>
     <div class="bar">
-      <div>
-        <h1><a class="home-link" href="/">Portfolio v2</a></h1>
-        <div class="fx-line">
-          <div class="fx-top" id="fxTop">환율 loading...</div>
-          <button class="help-icon-btn" id="dataHelpOpen" type="button" aria-label="수집 도움말" title="수집 도움말">?</button>
-        </div>
+      <div class="service-brand">
+        <h1><a class="home-link" href="/"><span class="service-logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16M7 14l4-4 4 2 5-7M16 5h4v4"/></svg></span><span>Portfolio <em>v2</em></span></a></h1>
+        <button class="help-icon-btn" id="dataHelpOpen" type="button" aria-label="수집 도움말" title="수집 도움말">?</button>
       </div>
       <div class="controls">
         <div class="ctrl-group" aria-label="데이터 설정">
@@ -124,7 +121,7 @@
       </aside>
       </div>
       <div class="main-col">
-      <section class="section hero-strip" id="heroStrip" aria-label="계좌 및 주요 지수 요약">
+      <section class="section hero-strip" id="heroStrip" aria-label="계좌·주요 지수·환율 요약">
         <div class="hero-page-shell" id="heroPageShell">
           <div class="hero-main hero-summary-page" id="heroPortfolioPage">
             <div class="hero-value-row">
@@ -146,6 +143,25 @@
               </div>
               <div class="hero-index-item" data-hero-index="KOSPI">
                 <span class="hero-index-name">코스피</span>
+                <strong class="hero-index-value">-</strong>
+                <span class="hero-index-change pct-chip flat">-</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-summary-page hero-fx-page hidden" id="heroFxPage">
+            <div class="hero-index-grid">
+              <div class="hero-index-item" data-hero-fx="USD">
+                <span class="hero-index-name">달러/원</span>
+                <strong class="hero-index-value">-</strong>
+                <span class="hero-index-change pct-chip flat">-</span>
+              </div>
+              <div class="hero-index-item" data-hero-fx="EUR">
+                <span class="hero-index-name">유로/원</span>
+                <strong class="hero-index-value">-</strong>
+                <span class="hero-index-change pct-chip flat">-</span>
+              </div>
+              <div class="hero-index-item" data-hero-fx="JPY">
+                <span class="hero-index-name">엔화/원</span>
                 <strong class="hero-index-value">-</strong>
                 <span class="hero-index-change pct-chip flat">-</span>
               </div>

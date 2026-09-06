@@ -362,9 +362,8 @@ function aggregateRows(rows) {
 }
 
 function renderSummary() {
-  const updated = data.fx_updated ? ` · ${data.fx_updated} 갱신` : "";
-  document.getElementById("fxTop").textContent = `환율 USD ${fmt.format(data.fx.USD)} · EUR ${fmt.format(data.fx.EUR)} · JPY ${fmt2.format(data.fx.JPY)}${updated}`;
   renderUsPriceControl();
+  renderHeroSummaryPage();
 }
 
 function usExtendedEnabled() {
@@ -540,10 +539,12 @@ function syncMobileCollapsePanels() {
 const priceFlashMap = new Map();
 
 // ── 히어로 요약 (총 평가액 + 오늘 손익) ──
-let heroSummaryPage = storageGet(heroSummaryStorage.page) === "indexes" ? "indexes" : "portfolio";
+const heroSummaryPages = ["portfolio", "indexes", "fx"];
+let heroSummaryPage = heroSummaryPages.includes(storageGet(heroSummaryStorage.page))
+  ? storageGet(heroSummaryStorage.page) : "portfolio";
 
 function toggleHeroSummaryPage() {
-  heroSummaryPage = heroSummaryPage === "portfolio" ? "indexes" : "portfolio";
+  heroSummaryPage = heroSummaryPages[(heroSummaryPages.indexOf(heroSummaryPage) + 1) % heroSummaryPages.length];
   storageSet(heroSummaryStorage.page, heroSummaryPage);
   renderHeroSummaryPage();
 }
@@ -552,22 +553,23 @@ function renderHeroSummaryPage() {
   const portfolioPage = document.getElementById("heroPortfolioPage");
   const indexPage = document.getElementById("heroIndexPage");
   if (!portfolioPage || !indexPage) return;
-  const showIndexes = heroSummaryPage === "indexes";
-  portfolioPage.classList.toggle("hidden", showIndexes);
-  indexPage.classList.toggle("hidden", !showIndexes);
-  portfolioPage.setAttribute("aria-hidden", String(showIndexes));
-  indexPage.setAttribute("aria-hidden", String(!showIndexes));
-  portfolioPage.inert = showIndexes;
-  indexPage.inert = !showIndexes;
+  const fxPage = document.getElementById("heroFxPage");
+  [["portfolio", portfolioPage], ["indexes", indexPage], ["fx", fxPage]].forEach(([key, page]) => {
+    if (!page) return;
+    const hidden = heroSummaryPage !== key;
+    page.classList.toggle("hidden", hidden);
+    page.setAttribute("aria-hidden", String(hidden));
+    page.inert = hidden;
+  });
 
-  const nextLabel = showIndexes ? "계좌 요약 보기" : "주요 지수 보기";
+  const nextLabel = {portfolio: "주요 지수 보기", indexes: "환율 보기", fx: "계좌 요약 보기"}[heroSummaryPage];
   const nextButton = document.getElementById("heroNext");
   if (nextButton) {
     nextButton.title = nextLabel;
     nextButton.setAttribute("aria-label", nextLabel);
   }
 
-  // Keep the inactive page populated too: its real height reserves space
+  // Keep inactive pages populated too: their real height reserves space
   // before the user switches, including wrapping and font changes.
   document.querySelectorAll("[data-hero-index]").forEach(item => {
     const ticker = item.dataset.heroIndex;
@@ -585,6 +587,23 @@ function renderHeroSummaryPage() {
     changeEl.textContent = Number.isFinite(changePct)
       ? `${arrow} ${fmt2.format(Math.abs(changePct))}%`
       : "-";
+  });
+  document.querySelectorAll("[data-hero-fx]").forEach(item => {
+    const currency = item.dataset.heroFx;
+    const rawPrice = data?.fx?.[currency];
+    const price = rawPrice == null ? NaN : Number(rawPrice);
+    const meta = findTickerMeta(`${currency}KRW`);
+    const changePct = meta?.change_pct == null ? NaN : Number(meta.change_pct);
+    const valueEl = item.querySelector(".hero-index-value");
+    const changeEl = item.querySelector(".hero-index-change");
+    if (valueEl) valueEl.textContent = Number.isFinite(price) && price > 0 ? fmt2.format(price) : "조회불가";
+    item.title = `1 ${currency} 기준 원화${data?.fx_updated ? ` · ${data.fx_updated} 갱신` : ""}`;
+    if (!changeEl) return;
+    const cls = changePct > 0 ? "up" : changePct < 0 ? "down" : "flat";
+    const arrow = changePct > 0 ? "▲" : changePct < 0 ? "▼" : "→";
+    changeEl.className = `hero-index-change pct-chip ${cls}`;
+    changeEl.textContent = Number.isFinite(price) && price > 0 && Number.isFinite(changePct)
+      ? `${arrow} ${fmt2.format(Math.abs(changePct))}%` : "-";
   });
 }
 
