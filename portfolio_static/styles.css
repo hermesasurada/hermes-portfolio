@@ -6596,6 +6596,16 @@ body:not(.watchlist-editing) .interest-group { grid-template-columns: minmax(0, 
 .schedule-type-badge { font-size: 11px; font-weight: 500; }
 @media (max-width: 980px) {
   .chart-head .chart-identity { grid-template-columns: auto minmax(0, 1fr); width: 100%; gap: 8px; }
+  /* 거래내역: 접힘/펼침 모두 제목·검색·버튼을 한 줄에 유지한다. */
+  .transaction-panel > .toolbar { flex-direction: row; flex-wrap: nowrap; gap: 8px; padding: 8px 10px; min-height: 46px; }
+  .transaction-panel > .toolbar .title-tools { flex: 0 0 auto; width: auto; flex-wrap: nowrap; white-space: nowrap; }
+  .transaction-panel > .toolbar strong { font-size: 13px; }
+  .transaction-panel #tradeScope { display: none; }
+  .transaction-panel .transaction-actions { flex: 1 1 0; min-width: 0; flex-wrap: nowrap; gap: 5px; }
+  .transaction-panel .transaction-name-filter { flex: 1 1 0; min-width: 0; }
+  .transaction-panel .transaction-name-filter > span { display: none; }
+  .transaction-panel .transaction-name-filter input { width: 100%; min-width: 0; padding: 4px 6px; font-size: 11px; }
+  .transaction-panel .transaction-actions .ghost-btn { flex: 0 0 auto; min-height: 30px; height: 30px; padding: 0 7px; font-size: 11px; white-space: nowrap; }
   .chart-head { display: flex; flex-wrap: wrap; gap: 8px; }
   .chart-head strong#chartName { font-size: 17px; }
   .chart-price-summary { grid-column: 1 / -1; margin: 2px 0 0; width: 100%; padding: 8px 0 0; border-left: 0; border-top: 1px solid var(--line); justify-self: start; }

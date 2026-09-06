@@ -15,6 +15,7 @@
 - Use the single delegated document handler in `app.js` for ticker and dividend actions. Do not bind listeners again after each render.
 - `sortState`, `sortRows`, and `scheduleAutoRefresh` are the single authorities for sorting and periodic refresh behavior.
 - Transaction APIs return the selected account's full history. Filter in the frontend, paginate at 20 rows, and calculate reconstructed balances from the unfiltered ledger.
+- Mobile transaction headers keep title, name filter, hidden-history toggle and expand/collapse button on one row; hide the account-scope badge and redundant filter caption only on mobile. Keep all filter and ledger behavior intact.
 - Preserve every JavaScript load marker and the boot error check in `index.html`.
 - Chart controls stay in one normal-flow row above the plot on desktop and mobile; do not restore overlay offsets or reserve control height inside the plot. Performance legends separate accounts (click to emphasize, not hide) from benchmark visibility toggles. Show actual plotted portfolio dates and the backend's TWR basis, not a new return calculation.
 - Calendar view honors saved grid/list choice; only a first-time mobile user defaults to list. Mobile calendar grids retain readable text and horizontal scrolling. Preserve event type/region/holdings filters and earnings-first, market-cap-descending ordering. Regression checks: `node tests/test_analysis_views.js`.
