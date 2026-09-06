@@ -92,29 +92,11 @@ function renderChartRangeControls() {
 }
 
 function syncChartOverlayPosition() {
-  const stage = document.querySelector(".chart-stage");
+  // Desktop and mobile both use a normal-flow control row above the plot.
   const control = document.getElementById("chartBottomControls");
-  const plot = document.querySelector("#chartCanvas .chart-plot-border");
-  if (!stage || !control) return;
-  // 컨트롤은 '플롯 박스 안쪽' 상단·우측 8px에 오버레이한다. 차트선과의
-  // 겹침은 renderLineChart가 데이터 y매핑에 컨트롤 높이만큼 헤드룸을 줘서
-  // 방지 — 플롯 위치(pad.top)는 고정이라 따라 내려가는 순환이 없다.
-  // 모바일(≤980px)은 컨트롤을 차트영역 '위' 정적 배치(CSS) — 인라인 위치 제거
-  if (window.matchMedia?.("(max-width: 980px)")?.matches) {
-    control.style.top = "";
-    control.style.right = "";
-    return;
-  }
-  const INSET = 8;
-  if (plot) {
-    const stageRect = stage.getBoundingClientRect();
-    const plotRect = plot.getBoundingClientRect();
-    control.style.top = `${Math.max(INSET, plotRect.top - stageRect.top + INSET)}px`;
-    control.style.right = `${Math.max(INSET, stageRect.right - plotRect.right + INSET)}px`;
-  } else {
-    control.style.top = `${INSET}px`;
-    control.style.right = `${INSET}px`;
-  }
+  if (!control) return;
+  control.style.top = "";
+  control.style.right = "";
 }
 
 function syncChartBottomControls(visible = Boolean(chartTicker || performanceChartOpen)) {
@@ -1225,16 +1207,9 @@ function renderLineChart(payload) {
   const tradeMarkerRadius = compactChart ? 10 : 5;
   document.getElementById("chartMeta").textContent = "";
 
-  // 컨트롤바는 플롯 '안쪽' 상단에 오버레이되므로 플롯 자체(pad.top)는 작게
-  // 유지하고, 대신 데이터 y매핑에 '컨트롤 실제 높이 + 여백' 헤드룸을 줘서
-  // 차트선 최고점이 컨트롤 아래에서 시작하게 한다.
-  // ⚠ 헤드룸은 화면 픽셀, y좌표는 viewBox(980) 단위 — 픽셀→viewBox 환산 필수.
-  const controlEl = document.getElementById("chartBottomControls");
-  // 8(인셋) + 컨트롤 높이 + 12(여백) + 14(고점 마커 라벨).
-  // 모바일은 컨트롤이 차트 위 정적 배치라 고점 라벨 여유만 두면 된다.
-  const headroomPx = compactChart
-    ? 16
-    : 8 + (controlEl && !controlEl.classList.contains("hidden") ? controlEl.offsetHeight : 40) + 26;
+  // 컨트롤은 차트 밖 상단 한 줄. 플롯에는 고점 라벨 여유만 남긴다.
+  // 화면 픽셀을 viewBox 단위로 환산하는 규칙은 유지한다.
+  const headroomPx = 16;
   const canvasEl = document.getElementById("chartCanvas");
   const pxToView = width / Math.max(1, canvasEl?.clientWidth || width);
   const dataHeadroom = Math.ceil(headroomPx * pxToView);

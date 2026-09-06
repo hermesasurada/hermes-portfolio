@@ -119,11 +119,30 @@ function performanceSeries(payload) {
 
 // 범례 = 색 표시 + 지수 on/off 한 줄. 계좌 선은 정보 칩(고정), 비교 지수는
 // 끄든 켜든 항상 자리에 있고 클릭으로 토글된다(꺼진 것도 보여야 다시 켤 수 있다).
+let performanceFocusKey = null;
+
+function performanceOverview(payload, series = []) {
+  const points = series.find(item => item.primary)?.points || [];
+  const period = points.length ? `${points[0].date} — ${points[points.length - 1].date}` : "표시 기간 없음";
+  const basis = payload?.twr_basis === "full" ? "시간가중 수익률" : payload?.twr_basis === "securities" ? "시간가중 · 증권 기준" : "수익률 기준 확인 필요";
+  return `<div class="perf-overview"><span class="perf-period"><span>표시 기간</span><time>${esc(period)}</time></span><span class="perf-basis">${esc(basis)}</span><span class="perf-baseline">각 시리즈 시작점 = 0%</span></div>`;
+}
+
+function applyPerformanceFocus() {
+  document.querySelectorAll("[data-perf-focus]").forEach(button => {
+    button.setAttribute("aria-pressed", String(button.dataset.perfFocus === performanceFocusKey));
+  });
+  document.querySelectorAll("#chartCanvas [data-perf-series]").forEach(line => {
+    line.classList.toggle("perf-dimmed", Boolean(performanceFocusKey && line.dataset.perfSeries !== performanceFocusKey));
+    line.classList.toggle("perf-focused", line.dataset.perfSeries === performanceFocusKey);
+  });
+}
+
 function renderPerformanceLegend(series = []) {
   const indexKeys = new Set(PERF_INDEX_META.map(([key]) => key));
   const accountChips = series
     .filter(item => !indexKeys.has(item.key))
-    .map(item => `<span class="perf-legend-item"><i style="background:${item.color}"></i>${esc(item.name)}</span>`)
+    .map(item => `<button type="button" class="perf-legend-item perf-account-focus" data-perf-focus="${esc(item.key)}" aria-pressed="${item.key === performanceFocusKey}" title="${esc(item.name)} 선 강조 · 다시 누르면 해제"><i style="background:${item.color}"></i>${esc(item.name)}</button>`)
     .join("");
   const indexChips = PERF_INDEX_META
     .map(([key, label, color]) => {
@@ -132,7 +151,7 @@ function renderPerformanceLegend(series = []) {
       return `<button class="perf-legend-item perf-index-toggle${on ? " active" : ""}" type="button" data-index="${key}" aria-pressed="${on ? "true" : "false"}" title="${esc(label)} ${on ? "숨기기" : "표시"}"><i style="background:${on ? color : "var(--chart-axis)"}"></i>${esc(label)}</button>`;
     })
     .join("");
-  return `<div class="perf-legend" role="group" aria-label="차트 선 표시">${accountChips}${indexChips}</div>`;
+  return `<div class="perf-legend-groups"><div class="perf-legend-section"><span class="perf-group-label">계좌 · 강조</span><div class="perf-legend" role="group" aria-label="계좌 선 강조">${accountChips || '<span class="perf-empty-label">표시할 계좌 없음</span>'}</div></div><div class="perf-legend-section"><span class="perf-group-label">비교지수</span><div class="perf-legend" role="group" aria-label="비교지수 표시">${indexChips}</div></div></div>`;
 }
 
 function bindPerformanceHover(series, geometry) {
@@ -189,6 +208,7 @@ function bindPerformanceHover(series, geometry) {
 function renderPerformanceChart(payload) {
   performancePayload = payload;
   const series = performanceSeries(payload);
+  if (!series.some(item => item.key === performanceFocusKey)) performanceFocusKey = null;
   if (typeof syncChartBottomControls === "function") syncChartBottomControls(true);
   // syncChartLogToggle은 곧 syncChartDisplayControls라 인자가 그대로 표시 여부가 된다.
   // 예전엔 false를 넘겨 컨트롤 묶음을 통째로 숨겼지만, 이제 성과차트도 '부드럽게'를
@@ -206,7 +226,7 @@ function renderPerformanceChart(payload) {
 
   if (!series.length || !series[0]?.points.length) {
     document.getElementById("chartMeta").textContent = `${payload?.holdings_count || 0}개 종목`;
-    syncPerformanceLegendHost(renderPerformanceLegend());
+    syncPerformanceLegendHost(performanceOverview(payload) + renderPerformanceLegend());
     document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">성과 차트 데이터 없음</div>`;
     renderChartRangeControls();
     bindPerformanceChartControls();
@@ -245,6 +265,7 @@ function renderPerformanceChart(payload) {
       const lastPoint = item.points[item.points.length - 1];
       const last = lastPoint.close;
       return {
+        key: item.key,
         color: item.color,
         close: last,
         value: "",
@@ -253,7 +274,7 @@ function renderPerformanceChart(payload) {
     })
     , 13);
   // (#3) 범례에 색·이름만 두고 %는 선 끝으로. 지수 on/off도 이 범례가 겸한다.
-  syncPerformanceLegendHost(renderPerformanceLegend(series));
+  syncPerformanceLegendHost(performanceOverview(payload, series) + renderPerformanceLegend(series));
   document.getElementById("chartCanvas").innerHTML = `
     <svg class="line-chart perf-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="계좌 기간 성과 차트">
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
@@ -273,10 +294,10 @@ function renderPerformanceChart(payload) {
         return `<text class="chart-x-label" x="${x.toFixed(2)}" y="${height - 6}" text-anchor="${anchor}">${esc(perfGridLabel(time, vGrid.unit))}</text>`;
       }).join("")}
       ${series.map(item => `
-        <path class="perf-line ${item.primary ? "primary" : "index"}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>
+        <path class="perf-line ${item.primary ? "primary" : "index"}" data-perf-series="${esc(item.key)}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>
       `).join("")}
       ${endLabels.map(label => `
-        <text class="perf-end-label" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(pctChartLabel1(label.close))}</text>
+        <text class="perf-end-label" data-perf-series="${esc(label.key)}" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(pctChartLabel1(label.close))}</text>
       `).join("")}
       <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
       <g id="chartHoverGroup" class="chart-hover hidden">
@@ -292,6 +313,13 @@ function renderPerformanceChart(payload) {
 }
 
 function bindPerformanceChartControls() {
+  applyPerformanceFocus();
+  document.querySelectorAll("[data-perf-focus]").forEach(button => {
+    button.addEventListener("click", () => {
+      performanceFocusKey = performanceFocusKey === button.dataset.perfFocus ? null : button.dataset.perfFocus;
+      applyPerformanceFocus();
+    });
+  });
   document.querySelectorAll(".perf-index-toggle").forEach(btn => {
     btn.addEventListener("click", () => {
       const key = btn.dataset.index;

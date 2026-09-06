@@ -3092,24 +3092,21 @@ th.pc-frozen-edge {
 .chart-canvas > .chart-empty { order: 0; }
 .chart-canvas > .chart-compare-panel { order: 1; }
 .chart-bottom-controls {
-  position: absolute;
-  top: 8px;
-  left: auto;
-  right: 8px;
-  width: max-content;
-  max-width: calc(100% - 16px);
+  position: relative;
+  width: 100%;
+  max-width: 100%;
   z-index: 5;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 5px;
   min-width: 0;
-  padding: 3px 4px;
-  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--chart-tooltip-bg) 88%, transparent);
-  box-shadow: var(--chart-shadow);
-  backdrop-filter: blur(10px) saturate(1.2);
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  box-shadow: none;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
@@ -3672,7 +3669,7 @@ th.pc-frozen-edge {
   gap: 6px;
   color: var(--muted);   /* JS가 선 색으로 인라인 오버라이드 (기업명=선 색) */
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
   padding: 3px 10px;
   border-radius: var(--radius-sm);
   background: var(--surface-2);   /* 칩 배경으로 컬러 텍스트 대비 확보 */
@@ -3717,7 +3714,7 @@ th.pc-frozen-edge {
   /* 전역 button{height:36px}을 끄고 왼쪽 정보 칩(span)과 같은 자연 높이로 */
   height: auto;
   /* 꺼짐 — 글자를 크게 낮추고 표면도 한 톤 죽여 상태가 분명히 보이게 */
-  color: color-mix(in srgb, var(--muted) 38%, transparent);
+  color: var(--muted);
   background: color-mix(in srgb, var(--surface-2) 55%, transparent);
   border-color: color-mix(in srgb, var(--line) 55%, transparent);
 }
@@ -6504,4 +6501,103 @@ body:not(.watchlist-editing) .interest-group { grid-template-columns: minmax(0, 
 .filter-toggle-control.enabled .toggle-label { color: var(--brand); }
 :where(button, .chart-link-btn, .apply-toggle):disabled {
   opacity: .45;
+}
+
+/* ── 분석 화면: 정보 위계와 조작 상태 ──────────────────────────────── */
+.chart-head { align-items: flex-start; padding: 4px 0 12px; border-bottom: 1px solid var(--line); }
+.chart-head strong#chartName { font-size: 19px; font-weight: 600; color: var(--ink); }
+.chart-head #chartTicker { font-size: 12px; font-weight: 400; }
+.chart-price-summary { margin-left: auto; }
+.chart-price-current, .chart-price-row.extended .chart-price-current {
+  font-family: var(--chart-num-font); font-weight: 500;
+}
+.chart-price-current { font-size: 23px; }
+.chart-price-pill, .chart-price-today { font-family: var(--chart-num-font); font-weight: 500; }
+.chart-price-row-label, .chart-head span.chart-session-note { font-size: 10.5px; font-weight: 500; }
+.chart-meta { font-weight: 400; }
+.chart-head-toggle, .chart-range-btn { font-weight: 500; }
+#chartBottomControls #chartTypeToggle, #chartBottomControls #chartIntervalToggle { background: var(--panel); color: var(--ink); border-color: var(--line); }
+.chart-tooltip, .chart-tooltip-date, .chart-tooltip-label { font-weight: 500; }
+.chart-tooltip-num { font-weight: 500; }
+.cstat-k, .cstat-compare-key, .consensus-k { font-weight: 500; color: var(--muted); }
+.cstat-v, .cstat-compare-val, .consensus-v { font-family: var(--chart-num-font); font-weight: 400; }
+.cstat-v strong, .cstat-compare-val strong { font-weight: 500; }
+.perf-overview { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 0 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+.perf-period { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; font-size: 12px; }
+.perf-period > span, .perf-baseline { color: var(--muted); font-size: 11.5px; }
+.perf-period time { font-family: var(--chart-num-font); }
+.perf-basis { color: var(--ink); font-size: 12px; font-weight: 500; }
+.perf-baseline { margin-left: auto; }
+.perf-legend-groups { display: grid; gap: 8px; }
+.perf-legend-section { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px; align-items: start; }
+.perf-group-label { color: var(--muted); font-size: 11.5px; padding-top: 7px; }
+.perf-empty-label { color: var(--muted); padding: 6px 0; }
+.perf-legend-item { min-height: 30px; height: auto; padding: 4px 8px; }
+.perf-account-focus { color: var(--ink); background: var(--panel); }
+.perf-account-focus[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); color: var(--ink); }
+.perf-index-toggle:not(.active) { border-style: dashed; }
+.perf-index-toggle.active { background: var(--panel); }
+.perf-line.perf-dimmed, .perf-end-label.perf-dimmed { opacity: .16; }
+.perf-line.perf-focused { opacity: 1; stroke-width: 2.6; }
+.perf-account-title { font-weight: 600; color: var(--ink); font-size: 14px; }
+.perf-end-label { font-weight: 500; }
+
+/* 일정: 월/보기 탐색과 필터를 분리. 유형은 색과 텍스트를 함께 유지한다. */
+.schedule-card { padding: 16px; gap: 12px; }
+.schedule-title strong { font-size: 18px; font-weight: 600; }
+.schedule-title span, .schedule-nav > strong, .schedule-today-btn { font-weight: 500; }
+.schedule-filters { display: grid; gap: 8px; padding: 10px 12px; background: var(--surface-2); border-radius: var(--radius-sm); }
+.schedule-filter-scopes { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.schedule-filter-label { color: var(--muted); font-size: 11.5px; }
+.schedule-filter-label:not(:first-child) { margin-left: 12px; }
+.schedule-legend { flex-wrap: wrap; gap: 8px; padding: 0; font-size: 12px; font-weight: 500; }
+.schedule-type-toggle { min-height: 30px; padding: 4px 9px; border-radius: var(--radius-sm); }
+.schedule-legend-item i { width: 7px; height: 7px; padding: 0; border-radius: 50%; }
+.schedule-type-toggle:not(.active) { opacity: 1; border-style: dashed; }
+.schedule-filter-scopes .segmented, .schedule-view-toggle { background: var(--panel); }
+.schedule-modal .seg-btn { min-height: 30px; font-size: 12px; font-weight: 500; }
+#scheduleModal .segmented .seg-btn.active { background: var(--brand-soft); color: var(--brand); border-color: transparent; }
+.schedule-body { min-height: 0; }
+.schedule-weekday { font-size: 12px; font-weight: 500; }
+.schedule-day { min-height: 132px; }
+.schedule-day-number { font-family: var(--chart-num-font); font-size: 12px; font-weight: 500; }
+.schedule-event { height: 23px !important; grid-template-columns: 30px minmax(0, 1fr); }
+.schedule-event-type { height: 18px; font-size: 10px; font-weight: 500; }
+.schedule-event-label, .schedule-more { font-size: 12px; font-weight: 500; }
+.schedule-event.owned .schedule-event-label { font-weight: 600; }
+.schedule-list-identity strong { font-size: 13px; font-weight: 600; }
+.schedule-list-identity small, .schedule-list-note { font-size: 12px; font-weight: 400; }
+.schedule-owned-badge { font-weight: 500; }
+.schedule-type-badge { font-size: 11px; font-weight: 500; }
+@media (max-width: 980px) {
+  .chart-head .chart-identity { grid-template-columns: auto minmax(0, 1fr); width: 100%; gap: 8px; }
+  .chart-head { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chart-head strong#chartName { font-size: 17px; }
+  .chart-price-summary { grid-column: 1 / -1; margin: 2px 0 0; width: 100%; padding: 8px 0 0; border-left: 0; border-top: 1px solid var(--line); justify-self: start; }
+  .chart-price-current { font-size: 21px; }
+  .chart-price-row.extended .chart-price-current { font-size: 16px; }
+  .chart-price-quote { gap: 6px; }
+  .chart-bottom-controls .chart-head-toggle, .chart-bottom-controls .chart-range-btn { min-height: 30px; font-size: 11px; }
+  .perf-overview { gap: 6px 12px; }
+  .perf-baseline { margin-left: 0; }
+  .perf-legend-section { grid-template-columns: 1fr; gap: 4px; }
+  .perf-group-label { padding-top: 0; }
+  .perf-legend { gap: 6px; }
+  .perf-line.perf-focused { stroke-width: 5; }
+}
+@media (max-width: 700px) {
+  .schedule-card { padding: 10px; gap: 10px; max-height: calc(100dvh - 16px); }
+  .schedule-toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+  .schedule-options { width: auto; }
+  .schedule-filters { padding: 8px; }
+  .schedule-estimate-note { margin-left: 0; font-size: 11px; }
+  .schedule-filter-label:not(:first-child) { margin-left: 4px; }
+  .schedule-calendar { min-width: 700px; }
+  .schedule-day { padding: 5px; }
+  .schedule-day-number { width: 24px; height: 24px; }
+  .schedule-list-row { grid-template-columns: 24px 56px minmax(0, 1fr) auto; gap: 4px 6px; min-height: 64px; }
+  .schedule-list-group { grid-template-columns: 44px minmax(0, 1fr); }
+  .schedule-list-identity { min-width: 0; flex-wrap: wrap; }
+  .schedule-list-note { grid-column: 2 / -1; }
+  .schedule-more { height: 24px !important; }
 }

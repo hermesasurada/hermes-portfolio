@@ -10,7 +10,10 @@ const scheduleStorage = {
 let schedulePayload = null;
 let scheduleLoadInFlight = null;
 let scheduleMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-let scheduleView = storageGet(scheduleStorage.view) === "list" ? "list" : "grid";
+function initialScheduleView(saved, mobile) {
+  return saved === "list" || saved === "grid" ? saved : mobile ? "list" : "grid";
+}
+let scheduleView = initialScheduleView(storageGet(scheduleStorage.view), Boolean(window.matchMedia?.("(max-width: 700px)")?.matches));
 let scheduleHeldOnly = storageGet(scheduleStorage.heldOnly) === "1";
 const scheduleTypeVisible = {
   earnings: storageGet(scheduleStorage.earningsVisible) !== "0",
