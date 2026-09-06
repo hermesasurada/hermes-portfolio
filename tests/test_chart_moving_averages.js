@@ -54,6 +54,7 @@ for (const legacy of [null, 'true', 'false']) {
   assert.equal(ctx.chartMovingAveragePeriods[200], true);
 }
 const html = fs.readFileSync('portfolio_static/index.html', 'utf8');
+assert.match(html, /id="chartBollingerToggle"[^>]*>BB<\/button>\s*<button[^>]*id="chartIchimokuToggle"/);
 assert.doesNotMatch(html, /chartMaLegend|chartMovingAverageToggle/);
 for (const period of [20,50,200]) assert.match(html, new RegExp(`id="chartMa${period}Toggle"`));
 for (const compare of [true, false]) {
