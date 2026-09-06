@@ -483,12 +483,14 @@ function syncInterestSectorFilter(rows) {
   if (!showing || !interestSectorOptions.length) {
     control.classList.add("hidden");
     closeInterestSectorPanel();
+    syncMobileFilterIndicator();
     return;
   }
   button.textContent = interestSectorButtonLabel();
   button.classList.toggle("filtering", interestSectorSelection.size > 0);
   if (!document.getElementById("interestSectorPanel")?.classList.contains("hidden")) renderInterestSectorPanel();
   control.classList.remove("hidden");
+  syncMobileFilterIndicator();
 }
 
 function closeInterestSectorPanel() {
@@ -589,8 +591,34 @@ function initInterestSectorFilter() {
   });
 }
 
+// UI-only edit mode: never mutates groups or triggers a data reload.
+function setInterestEditMode(editing) {
+  document.body.classList.toggle("watchlist-editing", editing);
+  const button = document.getElementById("interestEditToggle");
+  button?.setAttribute("aria-pressed", String(editing));
+  if (button) button.textContent = editing ? "완료" : "편집";
+  if (!editing && editingInterestGroupId != null) {
+    editingInterestGroupId = null;
+    renderInterestWatchlists();
+  }
+}
+
+function setMobileFiltersExpanded(expanded) {
+  document.getElementById("mobileFiltersToggle")?.setAttribute("aria-expanded", String(expanded));
+  document.querySelector(".title-tools")?.classList.toggle("filters-expanded", expanded);
+  if (!expanded) closeInterestSectorPanel();
+}
+
 function initInterestWatchlists() {
   initInterestSectorFilter();
+  document.getElementById("interestEditToggle")?.addEventListener("click", () => {
+    const editing = !document.body.classList.contains("watchlist-editing");
+    setInterestEditMode(editing);
+  });
+  document.getElementById("mobileFiltersToggle")?.addEventListener("click", () => {
+    const button = document.getElementById("mobileFiltersToggle");
+    setMobileFiltersExpanded(button.getAttribute("aria-expanded") !== "true");
+  });
   const savedTab = storageGet(sidebarStorage.activeTab);
   activeSidebarTab = savedTab === "interest" ? "interest" : "accounts";
   syncSidebarTabs();

@@ -707,7 +707,7 @@ function renderAccounts() {
     holdings: []
   };
   const accountButton = a => `
-    <button class="account ${isAccountSelected(a.id) ? "active" : ""}" data-account="${a.id}">
+    <button class="account ${isAccountSelected(a.id) ? "active" : ""}" data-account="${a.id}" aria-pressed="${isAccountSelected(a.id)}">
       <span class="name">${a.memberName} · ${a.name}</span>
       <span class="meta"><span>${krw(accountTotal(a, byAccount))}</span>${accountChangeMarkup(byAccount.get(a.id))}</span>
     </button>
@@ -720,7 +720,7 @@ function renderAccounts() {
     { key: "bitcoin", label: "비트코인" }
   ];
   const totalButton = `
-    <button class="account ${selectionMode === "all" ? "active" : ""}" data-account="all">
+    <button class="account ${selectionMode === "all" ? "active" : ""}" data-account="all" aria-pressed="${selectionMode === "all"}">
       <span class="name">All · 전체 계좌</span>
       <span class="meta"><span>${krw(total.value_krw)}</span>${accountChangeMarkup(totalStats)}</span>
     </button>
@@ -856,6 +856,19 @@ function syncFilterToggleControls() {
   });
   document.getElementById("currencyFilterControl")?.classList.toggle("active", currencyFilterValue() !== "all");
   document.getElementById("nameFilterControl")?.classList.toggle("active", Boolean(nameFilterValue()));
+  syncMobileFilterIndicator();
+}
+
+function syncMobileFilterIndicator() {
+  const filterButton = document.getElementById("mobileFiltersToggle");
+  if (filterButton) {
+    const visible = id => !document.getElementById(id)?.classList.contains("hidden");
+    const filtered = (visible("currencyFilterControl") && currencyFilterValue() !== "all")
+      || (visible("interestSectorControl") && document.getElementById("interestSectorButton")?.classList.contains("filtering"))
+      || (visible("showIndexesControl") && document.getElementById("showIndexesToggle")?.checked);
+    filterButton.classList.toggle("active", Boolean(filtered));
+    filterButton.textContent = filtered ? "필터 · 적용" : "필터";
+  }
 }
 
 function syncDetailTabs() {
@@ -863,6 +876,7 @@ function syncDetailTabs() {
   const showingChart = Boolean(chartTicker) || performanceChartOpen;
   const showingInterest = interestModeActive() && !showingChart;
   const showingFxInterest = showingInterest && interestGroupIsFx();
+  document.getElementById("mobileFiltersToggle")?.classList.toggle("hidden", showingChart || showingFxInterest);
   document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.classList.toggle("active", !showingChart && !showingInterest && btn.dataset.tab === activeDetailTab);
   });
@@ -897,7 +911,7 @@ function syncDetailTabs() {
   // '보유종목만' 필터는 관심목록 페이지에서만 노출(환율 그룹 제외 — FX는 보유개념 없음)
   document.getElementById("interestHeldControl")?.classList.toggle("hidden", !showingInterest || showingFxInterest);
   const sectorControl = document.getElementById("interestSectorControl");
-  if (showingChart) {
+  if (!showingInterest) {
     sectorControl?.classList.add("hidden");
     closeInterestSectorPanel();
   }
@@ -908,6 +922,7 @@ function syncDetailTabs() {
     "hidden",
     showingChart || !showingInterest || showingFxInterest || Boolean(activeInterestGroup()?.fixed)
   );
+  syncMobileFilterIndicator();
   // 탭·차트 전환으로 표가 숨겨지면 그 표의 스크롤 화살표도 함께 내린다
   syncTableScrollNudges();
 }

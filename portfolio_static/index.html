@@ -108,6 +108,10 @@
             <div id="accounts" class="account-list"></div>
           </div>
           <div id="interestSidebarPane" class="hidden" role="tabpanel" aria-labelledby="interestSidebarTab">
+            <div class="interest-edit-toolbar">
+              <span>내 관심목록</span>
+              <button id="interestEditToggle" type="button" aria-pressed="false" aria-controls="interestGroups interestGroupForm interestMainItemForm">편집</button>
+            </div>
             <form class="interest-group-form" id="interestGroupForm">
               <input id="interestGroupName" type="text" maxlength="40" placeholder="새 그룹명" autocomplete="off">
               <button class="interest-icon-btn" type="submit" aria-label="그룹 추가" title="그룹 추가">+</button>
@@ -196,6 +200,7 @@
               <label for="nameFilter">명칭</label>
               <input id="nameFilter" type="search" placeholder="종목명·티커" autocomplete="off" spellcheck="false" aria-label="종목명 또는 티커 필터">
             </span>
+            <button id="mobileFiltersToggle" class="mobile-filters-toggle" type="button" aria-expanded="false" aria-controls="interestSectorControl currencyFilterControl showIndexesControl">필터</button>
             <span class="currency-filter-control sector-filter-control hidden" id="interestSectorControl">
               <label id="interestSectorLabel">섹터</label>
               <button class="sector-filter-btn" id="interestSectorButton" type="button"

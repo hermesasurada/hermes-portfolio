@@ -9,19 +9,19 @@
   --chart-num-size: 9.5px;
   --chart-num-font: "Roboto Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   /* surfaces & text */
-  --bg: #f4f8ff;
+  --bg: #f5f6f8;
   --panel: #ffffff;
-  --surface-2: #f1f6fd;     /* pills, table head, tab track */
-  --surface-hover: #edf5ff; /* row hover */
-  --index-row-bg: #f5f9ff;
-  --index-row-hover: #e9f3ff;
-  --index-row-line: #72a7e8;
-  --ink: #10233f;
-  --muted: #63748b;
-  --line: #dce7f4;
+  --surface-2: #f3f5f7;     /* pills, table head, tab track */
+  --surface-hover: #eef1f5; /* row hover */
+  --index-row-bg: #f7f8fa;
+  --index-row-hover: #eef1f5;
+  --index-row-line: #94a3b8;
+  --ink: #202b3c;
+  --muted: #697586;
+  --line: #e3e7ed;
   /* brand / semantic */
   --accent: #2563eb;
-  --accent-2: #0f7be8;
+  --accent-2: #2563eb;
   --brand: #2563eb;
   --brand-soft: #eaf2ff;
   --on-accent: #ffffff;
@@ -46,7 +46,7 @@
   --track-off-border: #c7d5e7;
   /* chart surfaces */
   --chart-bg: #ffffff;
-  --chart-grid: #e6eef8;
+  --chart-grid: #e9ecf1;
   --chart-axis: #718198;
   --chart-ink: #10233f;
   --chart-tooltip-bg: rgba(255, 255, 255, .98);
@@ -78,49 +78,44 @@
   --list-icon-size: 28px;
   --table-head-height: 48px;
   /* weights (3 tiers) */
-  --fw-md: 600;
-  --fw-bold: 700;
-  --fw-strong: 800;
+  --fw-md: 500;
+  --fw-bold: 600;
+  --fw-strong: 700;
   /* spacing (4px base) */
   --sp-1: 4px;
   --sp-2: 8px;
   --sp-3: 12px;
   --sp-4: 16px;
-  --radius: 14px;
+  --radius: 10px;
   /* 버튼·칩 모서리 — 9px는 작은 버튼에서 알약처럼 보여 6px로 낮춘다 */
   --radius-sm: 6px;
   --button-radius: 6px;
   --button-height: 28px;
-  --button-surface: #f6f9fe;
+  --button-surface: #ffffff;
   --button-active: #2563eb;
   --button-active-soft: #eaf2ff;
   --button-active-ink: #ffffff;
-  --button-shadow-raised:
-    0 1px 2px rgba(30, 64, 175, .08),
-    0 3px 9px rgba(30, 64, 175, .06);
-  --button-shadow-hover:
-    0 2px 5px rgba(30, 64, 175, .13),
-    0 6px 15px rgba(30, 64, 175, .08);
-  --button-shadow-pressed:
-    inset 0 1px 3px rgba(30, 64, 175, .16);
-  --shadow: 0 1px 2px rgba(30, 64, 175, .04), 0 10px 28px rgba(30, 64, 175, .07);
+  --button-shadow-raised: none;
+  --button-shadow-hover: none;
+  --button-shadow-pressed: none;
+  --shadow: 0 12px 36px rgba(20, 30, 45, .12);
   --t-fast: .15s ease;
-  --header-bg: rgba(255, 255, 255, .92);
+  --header-bg: #ffffff;
 }
-/* dark palette — 동일한 블루 시스템의 야간 변형 */
+/* dark palette — 중립 슬레이트, 파랑은 선택과 조작에만 사용 */
 :root[data-theme="dark"] {
-    --bg: #07111f;
-    --panel: #0d1a2c;
-    --surface-2: #14243a;
-    --surface-hover: #112b48;
-    --index-row-bg: #10233a;
-    --index-row-hover: #153354;
-    --index-row-line: #5c94d7;
-    --ink: #edf5ff;
-    --muted: #95a8bf;
-    --line: #263a55;
+    --bg: #15191f;
+    --panel: #1c222b;
+    --surface-2: #252d38;
+    --surface-hover: #2c3542;
+    --index-row-bg: #232a34;
+    --index-row-hover: #2c3542;
+    --index-row-line: #64748b;
+    --ink: #e8edf4;
+    --muted: #a0acbd;
+    --line: #343e4c;
     --accent: #60a5fa;
-    --accent-2: #38bdf8;
+    --accent-2: #60a5fa;
     --brand: #60a5fa;
     --brand-soft: #112f53;
     --schedule-earnings: #a5b4fc;
@@ -141,15 +136,15 @@
     --accent-soft-border: #315d8f;
     --track-off: #33465f;
     --track-off-border: #445b77;
-    --header-bg: rgba(7, 17, 31, .91);
-    --chart-bg: #0d1a2c;
-    --chart-grid: #223651;
+    --header-bg: #1c222b;
+    --chart-bg: #1c222b;
+    --chart-grid: #303a47;
     --chart-axis: #95a8bf;
     --chart-ink: #edf5ff;
-    --chart-tooltip-bg: rgba(13, 26, 44, .98);
+    --chart-tooltip-bg: #252d38;
     --chart-tooltip-border: #355071;
-    --chart-dot-fill: #0d1a2c;
-    --chart-label-halo: #0d1a2c;
+    --chart-dot-fill: #1c222b;
+    --chart-label-halo: #1c222b;
     --chart-hover-line: #6686aa;
     --chart-selection-fill: rgba(96, 165, 250, .16);
     --chart-shadow: drop-shadow(0 8px 18px rgba(0, 0, 0, .35));
@@ -161,18 +156,11 @@
     --chart-ichi-kijun: #fbbf24;
     --chart-ichi-span-a: #4ade80;
     --chart-ichi-span-b: #fb923c;
-    --button-surface: #14243a;
+    --button-surface: #1c222b;
     --button-active: #2563eb;
     --button-active-soft: #112f53;
     --button-active-ink: #ffffff;
-    --button-shadow-raised:
-      0 1px 2px rgba(0, 0, 0, .35),
-      0 2px 6px rgba(0, 0, 0, .25);
-    --button-shadow-hover:
-      0 2px 5px rgba(0, 0, 0, .45),
-      0 4px 10px rgba(0, 0, 0, .3);
-    --button-shadow-pressed:
-      inset 0 1px 3px rgba(0, 0, 0, .5);
+    --shadow: 0 12px 36px rgba(0, 0, 0, .3);
 }
 /* 야간에는 카드 그림자를 줄여 정보 밀도를 유지한다. */
 :root[data-theme="dark"] .account,
@@ -221,23 +209,10 @@ h1,
 .modal-head strong,
 #scheduleMonthLabel {
   font-family: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-weight: 760;
+  font-weight: 600;
   letter-spacing: -.018em;
 }
 * { box-sizing: border-box; }
-/* 종이 질감을 제거하고 화면 가장자리에 아주 옅은 블루 광원만 둔다. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 1;
-  background:
-    radial-gradient(circle at 8% -6%, color-mix(in srgb, var(--brand) 12%, transparent), transparent 32rem),
-    radial-gradient(circle at 92% 2%, color-mix(in srgb, var(--accent-2) 7%, transparent), transparent 28rem);
-}
-:root[data-theme="dark"] body::before { opacity: .72; }
 body > * { position: relative; z-index: 1; }
 body {
   margin: 0;
@@ -274,8 +249,6 @@ header {
   z-index: 20;
   background: var(--header-bg);
   border-bottom: 1px solid var(--line);
-  box-shadow: 0 5px 22px rgba(30, 64, 175, .06);
-  backdrop-filter: blur(18px) saturate(1.25);
 }
 .bar {
   width: 100%;
@@ -292,7 +265,7 @@ h1 {
   margin: 0 0 3px;
   color: var(--ink);
   font-size: 17px;
-  font-weight: 820;
+  font-weight: 700;
   letter-spacing: -.03em;
 }
 .home-link {
@@ -631,7 +604,7 @@ main {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: none;
 }
 .metric { padding: 14px; }
 .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
@@ -644,9 +617,8 @@ main {
   gap: 12px;
   padding: 6px 14px 6px 24px;
   margin-bottom: var(--sp-4);
-  background:
-    linear-gradient(120deg, var(--panel) 0%, color-mix(in srgb, var(--brand-soft) 48%, var(--panel)) 100%);
-  border-color: color-mix(in srgb, var(--brand) 16%, var(--line));
+  background: var(--panel);
+  border-color: var(--line);
 }
 .hero-page-shell,
 .hero-summary-page,
@@ -792,7 +764,7 @@ main {
 /* ── 레이아웃 · 계좌 패널 · 거래내역 패널 ────────────────────────────────── */
 .layout {
   display: grid;
-  grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+  grid-template-columns: minmax(300px, 320px) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
@@ -850,9 +822,9 @@ main {
   color: var(--ink);
 }
 .sidebar-tab.active {
-  background: linear-gradient(135deg, var(--brand), var(--accent-2));
-  color: var(--on-accent);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 24%, transparent);
+  background: var(--panel);
+  color: var(--brand);
+  box-shadow: none;
 }
 .mobile-collapse-toggle {
   display: none;
@@ -894,7 +866,7 @@ main {
   padding: 0;
   font-size: 15px;
 }
-.account-list { display: grid; gap: 7px; padding: 8px; }
+.account-list { display: grid; gap: 4px; padding: 8px; }
 
 /* ── 관심목록 사이드바 ─────────────────────────────────────────────── */
 #interestSidebarPane {
@@ -938,7 +910,7 @@ main {
 }
 .interest-groups {
   display: grid;
-  gap: 7px;
+  gap: 3px;
   padding: 8px;
 }
 .interest-group {
@@ -950,15 +922,15 @@ main {
   align-items: center;
   gap: 4px;
   padding: 3px 7px 3px 8px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-left-width: 1px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--panel);
 }
 .interest-group.active {
   background: var(--brand-soft);
-  border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
-  box-shadow: inset 3px 0 0 var(--brand);
+  border-color: transparent;
+  box-shadow: none;
 }
 .interest-group.fixed {
   grid-template-columns: minmax(0, 1fr);
@@ -1000,7 +972,7 @@ main {
   min-width: 0;
   overflow: hidden;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1011,7 +983,8 @@ main {
   background: var(--surface-2);
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-family: var(--chart-num-font);
+  font-weight: 400;
   text-align: center;
 }
 .interest-group.active .interest-count {
@@ -1339,34 +1312,37 @@ main {
   background: color-mix(in srgb, var(--sell) 8%, var(--panel));
   color: var(--sell);
 }
-/* 관심목록 카드와 같은 한 줄 계좌 카드. 좁은 폭에서는 계좌명만 말줄임한다. */
+/* 체크 + 명칭 + 숫자: 숫자 폭은 보존하고 명칭만 말줄임한다. */
 .account {
   width: 100%;
   height: auto;
   min-height: 40px;
   text-align: left;
-  padding: 3px 8px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  padding: 3px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
   border-left-width: 1px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
   align-items: center;
-  column-gap: 8px;
+  column-gap: 5px;
   background: var(--panel);
 }
 .account.active {
-  background: var(--brand-soft);
+  background: var(--surface-2);
   color: var(--ink);
-  border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
-  box-shadow: inset 3px 0 0 var(--brand);
+  border-color: transparent;
+  box-shadow: none;
 }
+.account::before { content: "✓" / ""; opacity: 0; color: var(--brand); font-size: 11px; }
+.account.active::before { opacity: 1; }
+.account:hover, .interest-group:hover { background: var(--surface-hover); }
 .account .name {
   display: block;
   min-width: 0;
   overflow: hidden;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 30px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1377,23 +1353,23 @@ main {
   min-height: 30px;
   color: var(--muted);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 5px;
 }
 .account .meta > span:first-child {
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 400;
 }
 .account-change {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-weight: 800;
+  font-weight: 400;
 }
 .account-group {
   display: grid;
@@ -1413,13 +1389,13 @@ main {
   justify-content: space-between;
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: .05em;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 .group-head .group-action {
-  color: var(--accent);
+  color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 500;
 }
 .group-head.partial .group-action { color: var(--warn); }
 .table-wrap {
@@ -2062,7 +2038,7 @@ th.pc-frozen-edge {
 .toolbar strong {
   color: var(--ink);
   font-size: 15px;
-  font-weight: 780;
+  font-weight: 600;
 }
 .title-tools {
   display: flex;
@@ -2091,9 +2067,9 @@ th.pc-frozen-edge {
   font-weight: 800;
 }
 .tab-btn.active {
-  background: linear-gradient(135deg, var(--brand), var(--accent-2));
-  color: white;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 22%, transparent);
+  background: var(--panel);
+  color: var(--brand);
+  box-shadow: none;
 }
 .pill {
   display: inline-flex;
@@ -2415,10 +2391,10 @@ th.pc-frozen-edge {
   color: var(--brand);
 }
 .chart-head-toggle.active {
-  background: linear-gradient(135deg, var(--brand), var(--accent-2));
-  border-color: var(--brand);
-  color: var(--on-accent);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--brand) 24%, transparent);
+  background: var(--button-active);
+  border-color: var(--button-active);
+  color: var(--button-active-ink);
+  box-shadow: none;
 }
 .chart-icon-slot {
   display: inline-flex;
@@ -3520,10 +3496,10 @@ th.pc-frozen-edge {
   color: var(--brand);
 }
 .chart-range-btn.active {
-  background: linear-gradient(135deg, var(--brand), var(--accent-2));
-  border-color: var(--brand);
-  color: var(--on-accent);
-  box-shadow: 0 4px 10px color-mix(in srgb, var(--brand) 22%, transparent);
+  background: var(--button-active);
+  border-color: var(--button-active);
+  color: var(--button-active-ink);
+  box-shadow: none;
 }
 .chart-range-btn.disabled,
 .chart-range-btn:disabled {
@@ -5433,9 +5409,9 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   color: var(--brand);
 }
 .chart-range-preset.active {
-  border-color: var(--brand);
-  background: linear-gradient(135deg, var(--brand), var(--accent-2));
-  color: var(--on-accent);
+  border-color: var(--button-active);
+  background: var(--button-active);
+  color: var(--button-active-ink);
 }
 .chart-range-preset:disabled {
   opacity: .35;
@@ -5468,7 +5444,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   border-color: var(--brand);
   background: var(--brand);
   color: var(--on-accent);
-  box-shadow: 0 4px 10px color-mix(in srgb, var(--brand) 22%, transparent);
+  box-shadow: none;
 }
 .watch-hint {
   flex: 1 1 180px;
@@ -5847,6 +5823,61 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   overflow: auto;
 }
 
+/* ── 공통 UI 계층: 탐색 / 필터 / 편집 ───────────────────────────────── */
+.sidebar-tab, .tab-btn, .section h2,
+.filter-toggle-control .toggle-label,
+.currency-filter-control label, .currency-filter-control select,
+.interest-detail-list thead th, .interest-detail-list thead .interest-group-head th:not([rowspan]),
+#detailTableWrap thead th, #dividendTableWrap thead th, .tx-list thead th {
+  font-weight: 600;
+}
+.interest-detail-list thead .interest-group-head th:not([rowspan]) { letter-spacing: 0; }
+.asset-name { font-weight: 600; }
+.change-cell, .pct-chip, .ticker-symbol { font-weight: 500; }
+.sidebar-tabs, .detail-tabs { border: 0; border-radius: 8px; }
+.interest-edit-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+#interestEditToggle { height: 28px; padding: 0 10px; font-weight: 500; }
+#interestEditToggle[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand); border-color: var(--brand); }
+body:not(.watchlist-editing) :is(#interestGroupForm, #interestMainItemForm,
+  .interest-group > .interest-drag-handle, .interest-group > .interest-icon-btn,
+  .interest-group > .interest-icon-placeholder, .interest-row-delete) { display: none; }
+body:not(.watchlist-editing) .interest-group { grid-template-columns: minmax(0, 1fr); }
+.interest-group-select { box-shadow: none; }
+.interest-group-select::after { content: "✓" / ""; opacity: 0; color: var(--brand); font-size: 11px; }
+.interest-group-select { grid-template-columns: 26px minmax(0, 1fr) auto 10px; }
+.interest-group.active .interest-group-select::after { opacity: 1; }
+.interest-group-icon, .interest-group.active .interest-group-icon { background: transparent; }
+.interest-count, .interest-group.active .interest-count { background: transparent; }
+.interest-main-form { padding: 8px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.title-tools { width: 100%; }
+#rowCount { margin-left: auto; background: transparent; font-family: var(--chart-num-font); font-weight: 400; }
+.currency-filter-control, .filter-toggle-control { height: 30px; }
+.filter-toggle-control { border: 1px solid var(--line) !important; }
+.filter-toggle-control.enabled { border-color: var(--brand) !important; }
+.currency-filter-control select { font-weight: 500; }
+.controls .ghost-btn { border-color: transparent; background: transparent; font-weight: 500; }
+.controls .ghost-btn:hover { background: var(--surface-2); border-color: var(--line); }
+.modal-card { box-shadow: var(--shadow); }
+.mobile-filters-toggle { display: none; }
+@media (max-width: 980px) {
+  .bar { position: relative; }
+  .controls .ctrl-group[aria-label="환경"] { position: absolute; top: 12px; right: 10px; padding: 0; }
+  .mobile-filters-toggle { display: inline-flex; align-items: center; height: 32px; font-size: 12px; }
+  .mobile-filters-toggle[aria-expanded="true"], .mobile-filters-toggle.active { background: var(--brand-soft); color: var(--brand); border-color: var(--brand); }
+  .title-tools:not(.filters-expanded) :is(#interestSectorControl, #currencyFilterControl, #showIndexesControl) { display: none; }
+  .title-tools { gap: 8px; }
+  #nameFilterControl { flex: 1 1 150px; height: 32px; }
+  #nameFilterControl input { width: 100%; font-size: 12px; }
+  .interest-group > .interest-icon-btn, .interest-drag-handle { min-height: 32px; }
+}
+
 /* ── 반응형 ② 태블릿·모바일(≤980px) — 전반 레이아웃 ───────────────────────── */
 @media (max-width: 980px) {
   /* 차트 컨트롤: 오버레이 대신 차트영역 바로 위 정적 배치 */
@@ -5865,23 +5896,22 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .consensus-cell:nth-child(2n) { border-right: 0; }
   .consensus-cell:nth-child(-n + 4) { border-bottom: 1px solid var(--line); }
 
-  /* 모바일 정보 밀도 ↑ : 전반적으로 글자를 한 단계(~1px) 줄여
-     한 화면에 더 많은 항목/글자가 보이도록 한다. */
+  /* 표의 가독성을 유지하고 부가 필터를 접어 밀도를 확보한다. */
   :root {
-    --fs-xs: 9.5px;
-    --fs-sm: 10.5px;
-    --fs-md: 11.5px;
-    --fs-lg: 13.5px;
+    --fs-xs: 10.5px;
+    --fs-sm: 11.5px;
+    --fs-md: 12.5px;
+    --fs-lg: 15px;
     --fs-xl: 19px;
   }
-  body { font-size: 11.5px; }
-  .account .name { font-size: 11px; line-height: 14px; }
-  .account .meta { font-size: 10px; line-height: 13px; }
+  body { font-size: 12.5px; }
+  .account .name { font-size: 12px; line-height: 30px; }
+  .account .meta { font-size: 11px; line-height: 1; }
   #detailTableWrap th, #detailTableWrap td,
   .dividend-list th, .dividend-list td,
   .interest-detail-list th, .interest-detail-list td,
   .tx-list th, .tx-list td {
-    font-size: 11px;
+    font-size: 12px;
   }
   .bar {
     grid-template-columns: 1fr;
@@ -6454,124 +6484,24 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
 }
 
-/* ── SA News식 soft UI 버튼 ──────────────────────────────────────────────
-   회청색 단일 표면 + 양방향 그림자, 클릭하는 순간에만 inset으로 전환한다. */
+/* ── 공통 조작 상태 — 탐색은 옅게, 저장/실행과 차트 토글은 단색 ─────── */
 :where(button, .chart-link-btn, .apply-toggle) {
-  border-radius: var(--button-radius) !important;
-  box-shadow: var(--button-shadow-raised) !important;
-  transition:
-    background var(--t-fast),
-    color var(--t-fast),
-    box-shadow var(--t-fast);
+  box-shadow: none;
 }
-button {
-  border-color: transparent;
-  background: var(--button-surface);
-}
-/* 개별 버튼 규칙(클래스 specificity)이 :where(0)를 이겨 배경이 제각각이던
-   문제 — 표면색을 !important로 강제해 전 버튼을 단일 soft 표면으로 통일.
-   active 파랑 규칙이 이 아래에 있으므로(같은 !important, 소스 순서) 눌린
-   상태는 정상적으로 파랑이 이긴다. */
-:where(
-  .ghost-btn,
-  .header-icon-btn,
-  .theme-btn,
-  .help-icon-btn,
-  .cycle-toggle-btn,
-  .tab-btn:not(.active),
-  .chart-head-toggle,
-  .chart-range-btn:not(.active),
-  .sidebar-tab:not(.active),
-  .seg-btn:not(.active),
-  .interest-icon-btn,
-  .tx-action-btn:not(.tx-save),
-  .mobile-collapse-toggle,
-  .interest-bulk-open,
-  .consensus-report-link,
-  .chart-link-btn,
-  .apply-toggle
-) {
-  border-color: color-mix(in srgb, var(--line) 80%, transparent) !important;
-  background: var(--button-surface) !important;
-}
-/* 매수·매도 마커 토글: 표면은 통일하되 의미색 보더(빨강/파랑)는 유지 */
-.chart-range-btn.marker-toggle {
-  background: var(--button-surface) !important;
-}
-:where(button, .chart-link-btn, .apply-toggle):hover:not(:disabled) {
-  box-shadow: var(--button-shadow-hover) !important;
-}
-:where(button, .chart-link-btn, .apply-toggle):active:not(:disabled) {
-  box-shadow: var(--button-shadow-pressed) !important;
-}
-:where(
-  .sidebar-tab.active,
-  .tab-btn.active,
+:is(.primary-btn, #watchAdd.watch-add-ready,
+  .interest-main-form button[type="submit"], .tx-action-btn.tx-save,
   .segmented:not(.trade-side-toggle) .seg-btn.active,
-  .chart-range-btn.active:not(.marker-toggle),
-  .chart-head-toggle[aria-pressed="true"],
-  .auto-refresh-control.enabled .cycle-toggle-btn,
-  .apply-toggle:has(input:checked)
-) {
-  border-color: var(--button-active) !important;
-  background: var(--button-active) !important;
-  color: var(--button-active-ink) !important;
-  /* inset 눌림 그림자가 파랑 위에서 명암 그라데이션처럼 번짐 → 평평한 단색 */
-  box-shadow: none !important;
-}
-:where(
-  .primary-btn,
-  #watchAdd.watch-add-ready,
-  .interest-main-form button[type="submit"],
-  .tx-action-btn.tx-save
-) {
-  border-color: var(--button-active) !important;
-  background: var(--button-active) !important;
-  color: var(--button-active-ink) !important;
-}
-.account.active {
-  border-color: color-mix(in srgb, var(--button-active) 48%, transparent) !important;
-  border-left-color: var(--button-active) !important;
-  background: var(--button-active-soft) !important;
-}
-.interest-group.active {
-  border-color: color-mix(in srgb, var(--button-active) 48%, transparent) !important;
-  border-left-color: var(--button-active) !important;
-  background: var(--button-active-soft) !important;
-}
-:where(.us-price-control.enabled) {
-  border-color: var(--button-active) !important;
-  background: var(--button-active-soft) !important;
+  .chart-head-toggle[aria-pressed="true"], .apply-toggle:has(input:checked),
+  .auto-refresh-control.enabled .cycle-toggle-btn) {
+  border-color: var(--button-active);
+  background: var(--button-active);
+  color: var(--button-active-ink);
 }
 .filter-toggle-control.enabled {
-  background: var(--button-active) !important;
-  box-shadow: none !important;
+  background: var(--brand-soft) !important;
+  color: var(--brand);
 }
-.filter-toggle-control.enabled .toggle-label { color: #fff; }
-:where(.toggle-switch, .apply-toggle) input:checked + .toggle-ui {
-  border-color: var(--button-active) !important;
-  background: var(--button-active) !important;
-}
+.filter-toggle-control.enabled .toggle-label { color: var(--brand); }
 :where(button, .chart-link-btn, .apply-toggle):disabled {
-  box-shadow: var(--button-shadow-pressed) !important;
   opacity: .45;
-}
-/* 링크·표 값·사이드바 행처럼 button 태그만 빌린 요소는 평면을 유지한다. */
-:where(
-  button.account,
-  button.ticker-link,
-  button.interest-group-select,
-  button.group-head,
-  button.interest-row-delete,
-  button.stat-yield-link,
-  button.dividend-detail-btn,
-  button.dividend-month-toggle,
-  button.history-year-toggle,
-  .interest-drag-handle
-) {
-  box-shadow: none !important;
-  background: transparent;
-}
-button.account {
-  background: var(--panel);
 }
