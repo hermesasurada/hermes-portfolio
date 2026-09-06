@@ -29,6 +29,7 @@ let chartType = "line";
 let chartLogScale = false;
 let chartSmoothLines = true;
 let chartShowBollinger = false;
+let chartShowMovingAverages = true;
 let chartShowIchimoku = false;
 let chartShowBuys = true;
 let chartShowSells = true;
@@ -420,6 +421,7 @@ chartLogScale = storageGet(detailStorage.chartLogScale) === "true";
 chartType = storageGet(detailStorage.chartType) === "candle" ? "candle" : "line";
 chartSmoothLines = storageGet(detailStorage.chartSmoothLines) !== "false";
 chartShowBollinger = storageGet(detailStorage.chartShowBollinger) === "true";
+chartShowMovingAverages = storageGet(detailStorage.chartShowMovingAverages) !== "false";
 chartShowIchimoku = storageGet(detailStorage.chartShowIchimoku) === "true";
 chartInterval = ["day", "week", "month"].includes(storageGet(detailStorage.chartInterval))
   ? storageGet(detailStorage.chartInterval)

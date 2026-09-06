@@ -15,6 +15,7 @@ const detailStorage = {
   chartLogScale: "portfolio.chart.logScale",
   chartSmoothLines: "portfolio.chart.smoothLines",
   chartShowBollinger: "portfolio.chart.showBollinger",
+  chartShowMovingAverages: "portfolio.chart.showMovingAverages",
   chartShowIchimoku: "portfolio.chart.showIchimoku",
   chartShowBuys: "portfolio.chart.showBuys",
   chartShowSells: "portfolio.chart.showSells"

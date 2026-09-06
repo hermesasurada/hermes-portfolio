@@ -35,7 +35,7 @@ def _mean(values: list[float]) -> float:
 
 
 def _chart_overlay_series(rows) -> dict[str, dict[str, float | None]]:
-    """일봉 OHLC rows → 날짜별 Bollinger/Ichimoku overlay 값.
+    """일봉 OHLC rows → 날짜별 SMA/Bollinger/Ichimoku overlay 값.
 
     통계 탭용 RSI/BB 캐시는 최신값만 저장하므로, 차트용 시계열은 응답 생성 시
     daily_prices에서 계산한다. 차트 한 종목 단위라 비용은 작고 별도 DB 컬럼을 늘리지 않는다.
@@ -45,6 +45,7 @@ def _chart_overlay_series(rows) -> dict[str, dict[str, float | None]]:
     lows: list[float] = []
     overlay: dict[str, dict[str, float | None]] = {}
     raw_spans: list[tuple[float | None, float | None]] = []
+    sma_sums = {20: 0.0, 50: 0.0, 200: 0.0}
 
     for index, row in enumerate(rows):
         close = float(row["close"])
@@ -55,6 +56,14 @@ def _chart_overlay_series(rows) -> dict[str, dict[str, float | None]]:
         lows.append(low)
 
         item: dict[str, float | None] = {}
+        # Full daily history, before response-window trimming. Never invent a
+        # partial-window average for newly listed stocks.
+        for period in sma_sums:
+            sma_sums[period] += close
+            if len(closes) > period:
+                sma_sums[period] -= closes[-period - 1]
+            if len(closes) >= period:
+                item[f"sma_{period}"] = sma_sums[period] / period
 
         if len(closes) >= 20:
             window = closes[-20:]
@@ -333,7 +342,7 @@ def _append_market_chart_point(
             {
                 key: item
                 for key, item in overlay.items()
-                if key.startswith("bb_") and item is not None
+                if key.startswith(("bb_", "sma_")) and item is not None
             }
         )
         if existing is None:

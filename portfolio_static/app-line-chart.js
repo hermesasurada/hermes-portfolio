@@ -131,7 +131,13 @@ function initChartIntervalControl() {
   });
 }
 
-// 성과차트에도 '부드럽게'만 남겨 노출한다(선 종류·log·BB·일목은 종목차트 전용).
+const CHART_MOVING_AVERAGES = [
+  { key: "sma_20", period: 20, label: "단기 20일", color: "var(--chart-ma-short)" },
+  { key: "sma_50", period: 50, label: "중기 50일", color: "var(--chart-ma-medium)" },
+  { key: "sma_200", period: 200, label: "장기 200일", color: "var(--chart-ma-long)" },
+];
+
+// 성과차트에도 '부드럽게'만 남겨 노출한다(선 종류·log·BB·MA·일목은 종목차트 전용).
 function syncChartDisplayControls(visible = Boolean(chartTicker || performanceChartOpen)) {
   const control = document.getElementById("chartDisplayControls");
   if (!control) return;
@@ -161,9 +167,21 @@ function syncChartDisplayControls(visible = Boolean(chartTicker || performanceCh
   ichimokuToggle?.setAttribute("aria-pressed", String(chartShowIchimoku));
   bollingerToggle?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
   ichimokuToggle?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
+  const maToggle = document.getElementById("chartMovingAverageToggle");
+  maToggle?.classList.toggle("active", chartShowMovingAverages);
+  maToggle?.setAttribute("aria-pressed", String(chartShowMovingAverages));
+  maToggle?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
+  document.getElementById("chartMaLegend")?.classList.toggle("hidden",
+    !visible || !chartShowMovingAverages || chartComparePayloads.length > 0 || performanceChartOpen);
 }
 
 function initChartDisplayControls() {
+  document.getElementById("chartMovingAverageToggle")?.addEventListener("click", () => {
+    chartShowMovingAverages = !chartShowMovingAverages;
+    storageSet(detailStorage.chartShowMovingAverages, String(chartShowMovingAverages));
+    syncChartDisplayControls();
+    if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
+  });
   const smoothToggle = document.getElementById("chartSmoothToggle");
   const logToggle = document.getElementById("chartLogToggle");
   const bollingerToggle = document.getElementById("chartBollingerToggle");
@@ -772,11 +790,21 @@ function chartPointTooltipLines(point, payload) {
   if (Number.isFinite(rsiValue)) lines.push([["RSI", rsiValue.toFixed(1)]]);
   const entryValue = point.entry_score == null ? NaN : Number(point.entry_score);
   if (Number.isFinite(entryValue)) lines.push([["진입점수", entryValue.toFixed(2)]]);
+  if (chartShowMovingAverages) CHART_MOVING_AVERAGES.forEach(series => {
+    const value = chartNumericValue(point, series.key);
+    if (value != null) lines.push([[`MA ${series.period}`, money(value)]]);
+  });
   return lines;
 }
 
 function chartOverlayScaleValues(points) {
   const values = [];
+  if (chartShowMovingAverages) {
+    points.forEach(point => CHART_MOVING_AVERAGES.forEach(series => {
+      const value = chartNumericValue(point, series.key);
+      if (value != null) values.push(value);
+    }));
+  }
   if (chartShowBollinger) {
     points.forEach(point => ["bb_upper", "bb_mid", "bb_lower"].forEach(key => {
       const value = chartNumericValue(point, key);
@@ -1268,6 +1296,13 @@ function renderLineChart(payload) {
   const line = chartLinePath(points.map((point, index) => ({ x: xFor(index), y: yFor(Number(point.close)) })));
   const area = `${line} L${pad.left + plotW},${pad.top + plotH} L${pad.left},${pad.top + plotH} Z`;
   const bbUpperPaths = chartShowBollinger ? chartSeriesPaths(points, "bb_upper", xFor, yFor) : [];
+  const maSeries = chartShowMovingAverages ? CHART_MOVING_AVERAGES.map(series => ({
+    ...series, paths: chartSeriesPaths(points, series.key, xFor, yFor),
+  })) : [];
+  const maLegend = document.getElementById("chartMaLegend");
+  if (maLegend) maLegend.innerHTML = maSeries.map(series =>
+    `<span class="chart-ma-label ${series.paths.length ? "" : "unavailable"}" style="color:${series.color}" title="${series.period} 거래일 단순이동평균${series.paths.length ? "" : " · 표시 구간의 데이터 부족"}"><i class="ma-${series.period}"></i>${series.label}${series.paths.length ? "" : " (자료 부족)"}</span>`
+  ).join("");
   const bbMidPaths = chartShowBollinger ? chartSeriesPaths(points, "bb_mid", xFor, yFor) : [];
   const bbLowerPaths = chartShowBollinger ? chartSeriesPaths(points, "bb_lower", xFor, yFor) : [];
   const bbRuns = chartShowBollinger ? points.reduce((runs, point, index) => {
@@ -1409,6 +1444,9 @@ function renderLineChart(payload) {
       ${chartType === "candle"
         ? `<g class="chart-candles" clip-path="url(#chartPlotClip)">${candleMarkup}</g>`
         : `<path class="chart-line" d="${line}"></path>`}
+      <g class="chart-moving-averages" clip-path="url(#chartPlotClip)">
+        ${maSeries.map(series => series.paths.map(path => `<path class="chart-ma-line ma-${series.period}" style="stroke:${series.color}" data-ma-period="${series.period}" d="${path}"></path>`).join("")).join("")}
+      </g>
       <line class="chart-current-price-tick" x1="${(pad.left + plotW).toFixed(2)}" x2="${(width - 8).toFixed(2)}" y1="${currentPriceY.toFixed(2)}" y2="${currentPriceY.toFixed(2)}"></line>
       <text class="chart-current-price-label" x="${width - 6}" y="${(currentPriceY + 4).toFixed(2)}">${esc(currentPriceLabel)}</text>
       <g class="chart-rsi-series" clip-path="url(#chartRsiClip)">

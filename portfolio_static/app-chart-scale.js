@@ -93,6 +93,7 @@ function aggregateChartPoints(points, interval = chartInterval) {
     const carryKeys = [
       "rsi", "entry_score",
       "bb_upper", "bb_mid", "bb_lower",
+      "sma_20", "sma_50", "sma_200",
       "ichi_tenkan", "ichi_kijun", "ichi_span_a", "ichi_span_b",
     ];
     const carried = {};

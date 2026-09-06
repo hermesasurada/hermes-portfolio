@@ -58,6 +58,9 @@
   --chart-shadow: drop-shadow(0 5px 14px rgba(37, 99, 235, .12));
   /* chart series — 의미가 다른 선은 hue 자체를 분리한다. */
   --chart-price: #2563eb;
+  --chart-ma-short: #d97706;
+  --chart-ma-medium: #0d9488;
+  --chart-ma-long: #c026d3;
   --chart-bb: #7c3aed;
   --chart-rsi: #0d9488;
   --chart-entry: #d97706;
@@ -149,6 +152,9 @@
     --chart-selection-fill: rgba(96, 165, 250, .16);
     --chart-shadow: drop-shadow(0 8px 18px rgba(0, 0, 0, .35));
     --chart-price: #60a5fa;
+    --chart-ma-short: #fbbf24;
+    --chart-ma-medium: #2dd4bf;
+    --chart-ma-long: #e879f9;
     --chart-bb: #c084fc;
     --chart-rsi: #2dd4bf;
     --chart-entry: #fbbf24;
@@ -3132,6 +3138,20 @@ th.pc-frozen-edge {
   padding-left: 8px;
   margin-left: 4px;
 }
+.chart-ma-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding: 6px 8px 2px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.chart-ma-label { display: inline-flex; align-items: center; gap: 5px; }
+.chart-ma-label.unavailable { opacity: .55; }
+.chart-ma-label i { width: 16px; border-top: 2px solid currentColor; }
+.chart-ma-label i.ma-200 { border-top-style: dashed; }
+.chart-ma-line { fill: none; stroke-width: 1.3; vector-effect: non-scaling-stroke; pointer-events: none; }
+.chart-ma-line.ma-200 { stroke-dasharray: 5 3; }
 .chart-marker-toggles {
   border-left: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
   padding-left: 8px;
