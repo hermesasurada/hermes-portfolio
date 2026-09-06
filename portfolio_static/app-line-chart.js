@@ -748,6 +748,7 @@ function bindLineChartControls(payload) {
 }
 
 function chartNumericValue(point, key) {
+  if (point?.[key] == null || point[key] === "") return null;
   const value = Number(point?.[key]);
   return Number.isFinite(value) ? value : null;
 }
@@ -808,26 +809,18 @@ function chartPointTooltipLines(point, payload) {
 }
 
 function chartOverlayScaleValues(points) {
+  // Visibility affects drawing only. Reserve room for every available overlay
+  // so toggling indicators never moves the price line or changes log eligibility.
   const values = [];
-  const movingAverages = activeChartMovingAverages();
-  if (movingAverages.length) {
-    points.forEach(point => movingAverages.forEach(series => {
-      const value = chartNumericValue(point, series.key);
-      if (value != null) values.push(value);
-    }));
-  }
-  if (chartShowBollinger) {
-    points.forEach(point => ["bb_upper", "bb_mid", "bb_lower"].forEach(key => {
-      const value = chartNumericValue(point, key);
-      if (value != null) values.push(value);
-    }));
-  }
-  if (chartShowIchimoku) {
-    points.forEach(point => ["ichi_tenkan", "ichi_kijun", "ichi_span_a", "ichi_span_b"].forEach(key => {
-      const value = chartNumericValue(point, key);
-      if (value != null) values.push(value);
-    }));
-  }
+  const keys = [
+    ...CHART_MOVING_AVERAGES.map(series => series.key),
+    "bb_upper", "bb_mid", "bb_lower",
+    "ichi_tenkan", "ichi_kijun", "ichi_span_a", "ichi_span_b",
+  ];
+  points.forEach(point => keys.forEach(key => {
+    const value = chartNumericValue(point, key);
+    if (value != null) values.push(value);
+  }));
   return values;
 }
 
@@ -1204,10 +1197,11 @@ function renderLineChart(payload) {
     .filter(point => Number.isFinite(Number(point.close)));
   normalizeChartRangeForPayloads([payload], false, "all");
   const points = filterChartPoints(allPoints, chartRange);
-  // 매수/매도 마커 표시 토글 반영 (꺼진 쪽은 마커·스케일에서 제외)
-  const chartTransactions = chartInterval === "day"
-    ? transactionsForChart(payload, points).filter(tx => (tx.side === "BUY" ? chartShowBuys : chartShowSells))
+  // All eligible markers contribute to the scale, including hidden buy/sell sides.
+  const allChartTransactions = chartInterval === "day"
+    ? transactionsForChart(payload, points)
     : [];
+  const chartTransactions = allChartTransactions.filter(tx => (tx.side === "BUY" ? chartShowBuys : chartShowSells));
   renderChartIdentity(payload);
   if (points.length < 2) {
     syncChartLogToggle(false);
@@ -1230,7 +1224,7 @@ function renderLineChart(payload) {
       })
     : [];
   const overlayValues = chartOverlayScaleValues(points);
-  const markerValues = chartTransactions.map(tx => tx.price);
+  const markerValues = allChartTransactions.map(tx => tx.price);
   // 로그 스케일은 모든 값이 양수일 때만 적용 (아니면 선형 폴백)
   const scaleValues = [...values, ...candleScaleValues, ...markerValues, ...overlayValues];
   const useLog = chartLogScale && scaleValues.every(value => value > 0);

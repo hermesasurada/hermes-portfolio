@@ -32,12 +32,31 @@ ctx.initChartDisplayControls();
 elements.chartMa20Toggle.click();
 assert.equal(ctx.chartMovingAveragePeriods[20], false);
 assert.deepEqual(ctx.saved, ['ma.20', 'false']);
-assert.deepEqual(Array.from(ctx.chartOverlayScaleValues(points)), [80, 70, 81, 71]);
+assert.deepEqual(Array.from(ctx.chartOverlayScaleValues(points)), [90, 80, 70, 91, 81, 71]);
 assert.doesNotMatch(JSON.stringify(ctx.chartPointTooltipLines(points[1], {})), /MA 20"/);
 assert.match(JSON.stringify(ctx.chartPointTooltipLines(points[1], {})), /MA 200/);
 elements.chartMa50Toggle.click();
 elements.chartMa200Toggle.click();
-assert.equal(ctx.chartOverlayScaleValues(points).length, 0);
+assert.equal(ctx.chartOverlayScaleValues(points).length, 6);
+// All 32 visibility combinations must have identical scale inputs and bounds.
+const overlayPoints = [{close:100,sma_20:90,sma_50:80,sma_200:50,
+  bb_upper:150,bb_mid:100,bb_lower:60,ichi_tenkan:110,ichi_kijun:95,ichi_span_a:180,ichi_span_b:40},
+  {close:110,sma_20:null,sma_50:undefined,sma_200:NaN,bb_lower:Infinity}];
+const expectedValues = [90,80,50,150,100,60,110,95,180,40];
+const expectedScale = ctx.tightLowerChartScale([100,110,...expectedValues]);
+for (let mask = 0; mask < 32; mask++) {
+  ctx.chartMovingAveragePeriods = {20:Boolean(mask & 1),50:Boolean(mask & 2),200:Boolean(mask & 4)};
+  ctx.chartShowBollinger = Boolean(mask & 8);
+  ctx.chartShowIchimoku = Boolean(mask & 16);
+  const values = ctx.chartOverlayScaleValues(overlayPoints);
+  assert.deepEqual(Array.from(values), expectedValues);
+  assert.deepEqual(ctx.tightLowerChartScale([100,110,...values]), expectedScale);
+  assert.deepEqual(ctx.logChartScale([100,110,...values]), ctx.logChartScale([100,110,...expectedValues]));
+}
+ctx.chartMovingAveragePeriods = {20:false,50:false,200:false};
+ctx.chartShowBollinger = false;
+ctx.chartShowIchimoku = false;
+assert.match(fs.readFileSync('portfolio_static/app-line-chart.js', 'utf8'), /const markerValues = allChartTransactions\.map/);
 elements.chartMa20Toggle.click();
 assert.equal(elements.chartMa20Toggle.attrs['aria-pressed'], 'true');
 assert.equal(elements.chartMa50Toggle.attrs['aria-pressed'], 'false');
