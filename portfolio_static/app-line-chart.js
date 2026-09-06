@@ -137,6 +137,10 @@ const CHART_MOVING_AVERAGES = [
   { key: "sma_200", period: 200, label: "장기 200일", color: "var(--chart-ma-long)" },
 ];
 
+function activeChartMovingAverages() {
+  return CHART_MOVING_AVERAGES.filter(series => chartMovingAveragePeriods[series.period]);
+}
+
 // 성과차트에도 '부드럽게'만 남겨 노출한다(선 종류·log·BB·MA·일목은 종목차트 전용).
 function syncChartDisplayControls(visible = Boolean(chartTicker || performanceChartOpen)) {
   const control = document.getElementById("chartDisplayControls");
@@ -167,20 +171,22 @@ function syncChartDisplayControls(visible = Boolean(chartTicker || performanceCh
   ichimokuToggle?.setAttribute("aria-pressed", String(chartShowIchimoku));
   bollingerToggle?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
   ichimokuToggle?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
-  const maToggle = document.getElementById("chartMovingAverageToggle");
-  maToggle?.classList.toggle("active", chartShowMovingAverages);
-  maToggle?.setAttribute("aria-pressed", String(chartShowMovingAverages));
-  maToggle?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
-  document.getElementById("chartMaLegend")?.classList.toggle("hidden",
-    !visible || !chartShowMovingAverages || chartComparePayloads.length > 0 || performanceChartOpen);
+  CHART_MOVING_AVERAGES.forEach(series => {
+    const toggle = document.getElementById(`chartMa${series.period}Toggle`);
+    toggle?.classList.toggle("active", chartMovingAveragePeriods[series.period]);
+    toggle?.setAttribute("aria-pressed", String(chartMovingAveragePeriods[series.period]));
+    toggle?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
+  });
 }
 
 function initChartDisplayControls() {
-  document.getElementById("chartMovingAverageToggle")?.addEventListener("click", () => {
-    chartShowMovingAverages = !chartShowMovingAverages;
-    storageSet(detailStorage.chartShowMovingAverages, String(chartShowMovingAverages));
-    syncChartDisplayControls();
-    if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
+  CHART_MOVING_AVERAGES.forEach(series => {
+    document.getElementById(`chartMa${series.period}Toggle`)?.addEventListener("click", () => {
+      chartMovingAveragePeriods[series.period] = !chartMovingAveragePeriods[series.period];
+      storageSet(`${detailStorage.chartMovingAveragePeriods}.${series.period}`, String(chartMovingAveragePeriods[series.period]));
+      syncChartDisplayControls();
+      if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
+    });
   });
   const smoothToggle = document.getElementById("chartSmoothToggle");
   const logToggle = document.getElementById("chartLogToggle");
@@ -790,7 +796,7 @@ function chartPointTooltipLines(point, payload) {
   if (Number.isFinite(rsiValue)) lines.push([["RSI", rsiValue.toFixed(1)]]);
   const entryValue = point.entry_score == null ? NaN : Number(point.entry_score);
   if (Number.isFinite(entryValue)) lines.push([["진입점수", entryValue.toFixed(2)]]);
-  if (chartShowMovingAverages) CHART_MOVING_AVERAGES.forEach(series => {
+  activeChartMovingAverages().forEach(series => {
     const value = chartNumericValue(point, series.key);
     if (value != null) lines.push([[`MA ${series.period}`, money(value)]]);
   });
@@ -799,8 +805,9 @@ function chartPointTooltipLines(point, payload) {
 
 function chartOverlayScaleValues(points) {
   const values = [];
-  if (chartShowMovingAverages) {
-    points.forEach(point => CHART_MOVING_AVERAGES.forEach(series => {
+  const movingAverages = activeChartMovingAverages();
+  if (movingAverages.length) {
+    points.forEach(point => movingAverages.forEach(series => {
       const value = chartNumericValue(point, series.key);
       if (value != null) values.push(value);
     }));
@@ -1296,13 +1303,14 @@ function renderLineChart(payload) {
   const line = chartLinePath(points.map((point, index) => ({ x: xFor(index), y: yFor(Number(point.close)) })));
   const area = `${line} L${pad.left + plotW},${pad.top + plotH} L${pad.left},${pad.top + plotH} Z`;
   const bbUpperPaths = chartShowBollinger ? chartSeriesPaths(points, "bb_upper", xFor, yFor) : [];
-  const maSeries = chartShowMovingAverages ? CHART_MOVING_AVERAGES.map(series => ({
+  const maSeries = activeChartMovingAverages().map(series => ({
     ...series, paths: chartSeriesPaths(points, series.key, xFor, yFor),
-  })) : [];
-  const maLegend = document.getElementById("chartMaLegend");
-  if (maLegend) maLegend.innerHTML = maSeries.map(series =>
-    `<span class="chart-ma-label ${series.paths.length ? "" : "unavailable"}" style="color:${series.color}" title="${series.period} 거래일 단순이동평균${series.paths.length ? "" : " · 표시 구간의 데이터 부족"}"><i class="ma-${series.period}"></i>${series.label}${series.paths.length ? "" : " (자료 부족)"}</span>`
-  ).join("");
+  }));
+  CHART_MOVING_AVERAGES.forEach(series => {
+    const available = points.some(point => chartNumericValue(point, series.key) != null);
+    const toggle = document.getElementById(`chartMa${series.period}Toggle`);
+    if (toggle) toggle.title = `${series.label} · ${series.period} 거래일 단순이동평균${available ? "" : " · 표시 구간의 데이터 부족"}`;
+  });
   const bbMidPaths = chartShowBollinger ? chartSeriesPaths(points, "bb_mid", xFor, yFor) : [];
   const bbLowerPaths = chartShowBollinger ? chartSeriesPaths(points, "bb_lower", xFor, yFor) : [];
   const bbRuns = chartShowBollinger ? points.reduce((runs, point, index) => {

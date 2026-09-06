@@ -3138,18 +3138,18 @@ th.pc-frozen-edge {
   padding-left: 8px;
   margin-left: 4px;
 }
-.chart-ma-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  padding: 6px 8px 2px;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
+.chart-ma-toggle { position: relative; font-family: var(--chart-num-font); }
+.chart-ma-toggle::after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  left: 25%;
+  width: 50%;
+  border-top: 2px solid var(--ma-color);
+  opacity: .4;
 }
-.chart-ma-label { display: inline-flex; align-items: center; gap: 5px; }
-.chart-ma-label.unavailable { opacity: .55; }
-.chart-ma-label i { width: 16px; border-top: 2px solid currentColor; }
-.chart-ma-label i.ma-200 { border-top-style: dashed; }
+.chart-ma-toggle.active::after { opacity: 1; }
+#chartMa200Toggle::after { border-top-style: dashed; }
 .chart-ma-line { fill: none; stroke-width: 1.3; vector-effect: non-scaling-stroke; pointer-events: none; }
 .chart-ma-line.ma-200 { stroke-dasharray: 5 3; }
 .chart-marker-toggles {

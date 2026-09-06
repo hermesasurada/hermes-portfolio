@@ -29,7 +29,7 @@ let chartType = "line";
 let chartLogScale = false;
 let chartSmoothLines = true;
 let chartShowBollinger = false;
-let chartShowMovingAverages = true;
+let chartMovingAveragePeriods = { 20: true, 50: true, 200: true };
 let chartShowIchimoku = false;
 let chartShowBuys = true;
 let chartShowSells = true;
@@ -421,7 +421,10 @@ chartLogScale = storageGet(detailStorage.chartLogScale) === "true";
 chartType = storageGet(detailStorage.chartType) === "candle" ? "candle" : "line";
 chartSmoothLines = storageGet(detailStorage.chartSmoothLines) !== "false";
 chartShowBollinger = storageGet(detailStorage.chartShowBollinger) === "true";
-chartShowMovingAverages = storageGet(detailStorage.chartShowMovingAverages) !== "false";
+Object.keys(chartMovingAveragePeriods).forEach(period => {
+  const saved = storageGet(`${detailStorage.chartMovingAveragePeriods}.${period}`);
+  chartMovingAveragePeriods[period] = (saved ?? storageGet(detailStorage.chartShowMovingAverages)) !== "false";
+});
 chartShowIchimoku = storageGet(detailStorage.chartShowIchimoku) === "true";
 chartInterval = ["day", "week", "month"].includes(storageGet(detailStorage.chartInterval))
   ? storageGet(detailStorage.chartInterval)
