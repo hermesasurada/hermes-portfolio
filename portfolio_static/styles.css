@@ -5771,7 +5771,8 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
   justify-content: flex-end;
 }
 .transaction-panel.collapsed .tx-wrap,
@@ -5829,6 +5830,15 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .transaction-panel > .toolbar {
   cursor: pointer;
 }
+.transaction-panel > .toolbar .title-tools {
+  width: auto;
+  min-width: 0;
+  flex: 1 1 0;
+  flex-wrap: nowrap;
+}
+.transaction-panel > .toolbar .title-tools > strong { flex: 0 0 auto; white-space: nowrap; }
+.transaction-panel #tradeScope { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-actions > button { flex: 0 0 auto; white-space: nowrap; }
 .transaction-actions,
 .transaction-actions button {
   cursor: default;
