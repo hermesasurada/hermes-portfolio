@@ -7,7 +7,6 @@ const usPriceStorage = {
 };
 const detailStorage = {
   fxAdjusted: "portfolio.detail.fxAdjusted",
-  showIndexes: "portfolio.detail.showIndexes",
   interestHeldOnly: "portfolio.detail.interestHeldOnly",
   currencyFilter: "portfolio.detail.currencyFilter",
   chartInterval: "portfolio.chart.interval",

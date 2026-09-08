@@ -5899,7 +5899,7 @@ body:not(.watchlist-editing) .interest-group { grid-template-columns: minmax(0, 
   .controls .ctrl-group[aria-label="환경"] { position: absolute; top: 12px; right: 10px; padding: 0; }
   .mobile-filters-toggle { display: inline-flex; align-items: center; height: 32px; font-size: 12px; }
   .mobile-filters-toggle[aria-expanded="true"], .mobile-filters-toggle.active { background: var(--brand-soft); color: var(--brand); border-color: var(--brand); }
-  .title-tools:not(.filters-expanded) :is(#interestSectorControl, #currencyFilterControl, #showIndexesControl) { display: none; }
+  .title-tools:not(.filters-expanded) :is(#interestSectorControl, #currencyFilterControl) { display: none; }
   .title-tools { gap: 8px; }
   #nameFilterControl { flex: 1 1 150px; height: 32px; }
   #nameFilterControl input { width: 100%; font-size: 12px; }

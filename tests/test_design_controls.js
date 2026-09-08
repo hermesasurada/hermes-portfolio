@@ -17,7 +17,7 @@ function element() {
   };
 }
 const ids = Object.fromEntries(['interestEditToggle', 'mobileFiltersToggle', 'currencyFilterControl',
-  'interestSectorControl', 'interestSectorButton', 'showIndexesControl', 'showIndexesToggle'].map(id => [id, element()]));
+  'interestSectorControl', 'interestSectorButton'].map(id => [id, element()]));
 const body = element(), toolbar = element();
 let renders = 0, closed = 0, currency = 'all';
 const ctx = vm.createContext({ window: {},
@@ -57,11 +57,12 @@ ids.interestSectorButton.classList.add('filtering'); sync();
 assert.equal(ids.mobileFiltersToggle.textContent, '필터 · 적용');
 ids.interestSectorControl.classList.add('hidden'); sync();
 assert.equal(ids.mobileFiltersToggle.textContent, '필터');
-ids.showIndexesToggle.checked = true; sync();
-assert.equal(ids.mobileFiltersToggle.textContent, '필터 · 적용');
 const css = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
 assert.match(css, /body:not\(\.watchlist-editing\) :is\(#interestGroupForm, #interestMainItemForm,/);
-assert.match(css, /\.title-tools:not\(\.filters-expanded\) :is\(#interestSectorControl, #currencyFilterControl, #showIndexesControl\)/);
+assert.match(css, /\.title-tools:not\(\.filters-expanded\) :is\(#interestSectorControl, #currencyFilterControl\)/);
+for (const file of ['index.html','state.js','app.js','app-holdings.js','styles.css']) {
+  assert.doesNotMatch(fs.readFileSync(path.join(root,file),'utf8'), /showIndexes|ignoreIndexes|function indexRows\(/);
+}
 assert.doesNotMatch(css, /SA News식|backdrop-filter: blur\(18px\)/);
 assert.match(css, /--up: #dc3545/);
 assert.match(css, /--down: #1976d2/);

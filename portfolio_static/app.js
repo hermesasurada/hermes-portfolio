@@ -437,12 +437,6 @@ document.getElementById("fxAdjustedToggle").addEventListener("change", () => {
   syncFilterToggleControls();
   render();
 });
-document.getElementById("showIndexesToggle").checked = storageGet(detailStorage.showIndexes) === "true";
-document.getElementById("showIndexesToggle").addEventListener("change", () => {
-  storageSet(detailStorage.showIndexes, String(document.getElementById("showIndexesToggle").checked));
-  syncFilterToggleControls();
-  render();
-});
 // '보유종목만' — 기본값 미체크
 document.getElementById("interestHeldToggle").checked = storageGet(detailStorage.interestHeldOnly) === "true";
 document.getElementById("interestHeldToggle").addEventListener("change", () => {

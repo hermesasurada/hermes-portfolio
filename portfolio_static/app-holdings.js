@@ -91,9 +91,6 @@ function krwRate(row) {
 function fxAdjustedEnabled() {
   return document.getElementById("fxAdjustedToggle")?.checked || false;
 }
-function showIndexesEnabled() {
-  return document.getElementById("showIndexesToggle")?.checked || false;
-}
 function interestHeldOnlyEnabled() {
   return document.getElementById("interestHeldToggle")?.checked || false;
 }
@@ -263,17 +260,6 @@ function watchlistRowForAccount(tickerMeta, account) {
   };
 }
 
-function indexRows() {
-  const order = new Map([
-    "SP500", "NASDAQ", "NASDAQ100", "DOW", "RUSSELL2000", "KOSPI",
-    "NIKKEI225", "SHANGHAI", "HANGSENG", "TAIWAN", "NIFTY50",
-    "FTSE100", "DAX", "CAC40", "EUROSTOXX50",
-  ].map((ticker, index) => [ticker, index]));
-  return (data?.tickers || [])
-    .filter(t => t.ticker && t.category === "index")
-    .map(t => watchlistRowForAccount(t, null))
-    .sort((a, b) => (order.get(String(a.ticker).toUpperCase()) ?? 99) - (order.get(String(b.ticker).toUpperCase()) ?? 99));
-}
 function visibleAccounts() {
   const accounts = flattenAccounts();
   return selectionMode === "all" ? accounts : accounts.filter(a => selectedAccounts.has(a.id));
@@ -817,12 +803,6 @@ function filteredRows(options = {}) {
   const fxAdjusted = fxAdjustedEnabled();
   if (!options.ignoreAccount && selectionMode !== "all") rows = rows.filter(r => selectedAccounts.has(r.accountId));
   if (!options.ignoreCurrency && currencyFilter !== "all") rows = rows.filter(r => r.currency === currencyFilter);
-  if (showIndexesEnabled() && !options.ignoreIndexes) {
-    let indexes = indexRows();
-    if (!options.ignoreCurrency && currencyFilter !== "all") indexes = indexes.filter(r => r.currency === currencyFilter);
-    const indexTickers = new Set(indexes.map(r => String(r.ticker || "").toUpperCase()));
-    rows = rows.filter(r => !indexTickers.has(String(r.ticker || "").toUpperCase())).concat(indexes);
-  }
   const enrichRows = sourceRows => sourceRows.map(row => ({
       ...row,
       display_change_pct: holdingChangePct(row),
@@ -865,7 +845,6 @@ function sortRows(rows, tab = activeDetailTab) {
 function syncFilterToggleControls() {
   [
     ["fxAdjustedToggle", "fxAdjustedControl"],
-    ["showIndexesToggle", "showIndexesControl"],
     ["interestHeldToggle", "interestHeldControl"],
     ["performanceDetailToggle", "performanceDetailControl"]
   ].forEach(([toggleId, controlId]) => {
@@ -883,8 +862,7 @@ function syncMobileFilterIndicator() {
   if (filterButton) {
     const visible = id => !document.getElementById(id)?.classList.contains("hidden");
     const filtered = (visible("currencyFilterControl") && currencyFilterValue() !== "all")
-      || (visible("interestSectorControl") && document.getElementById("interestSectorButton")?.classList.contains("filtering"))
-      || (visible("showIndexesControl") && document.getElementById("showIndexesToggle")?.checked);
+      || (visible("interestSectorControl") && document.getElementById("interestSectorButton")?.classList.contains("filtering"));
     filterButton.classList.toggle("active", Boolean(filtered));
     filterButton.textContent = filtered ? "필터 · 적용" : "필터";
   }
@@ -926,7 +904,6 @@ function syncDetailTabs() {
   );
   document.getElementById("currencyFilterControl")?.classList.toggle("hidden", showingChart || showingFxInterest);
   document.getElementById("rowCount")?.classList.toggle("hidden", showingChart);
-  document.getElementById("showIndexesControl")?.classList.toggle("hidden", showingChart || showingInterest);
   // '보유종목만' 필터는 관심목록 페이지에서만 노출(환율 그룹 제외 — FX는 보유개념 없음)
   document.getElementById("interestHeldControl")?.classList.toggle("hidden", !showingInterest || showingFxInterest);
   const sectorControl = document.getElementById("interestSectorControl");
