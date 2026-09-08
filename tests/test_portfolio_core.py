@@ -2476,6 +2476,56 @@ def test_beta_uses_252_common_trading_returns():
     assert beta_stats(stock[:39], market[:39]) == {'beta': None, 'beta_adj': None}
 
 
+def test_beta_adj_korean_benchmark_cache_routing():
+    from unittest.mock import patch
+    import portfolio_core.technical_stats as technical
+
+    for ticker in ("005930.KS", "0167Z0.KS", "278530.KS", "000660.KQ", " 005930.ks "):
+        assert technical.beta_adj_benchmark(ticker) == "278530.KS"
+    for ticker in ("AAPL", "4063.T", "KOSPI", "BTCKRW"):
+        assert technical.beta_adj_benchmark(ticker) == "SP500"
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript("""
+        CREATE TABLE daily_prices (ticker TEXT, date TEXT, close REAL, high REAL, low REAL);
+        CREATE TABLE dividend_events (ticker TEXT, ex_date TEXT, record_date TEXT, pay_date TEXT,
+            declaration_date TEXT, amount REAL, currency TEXT, source TEXT);
+        CREATE TABLE stock_splits (ticker TEXT, split_date TEXT, ratio REAL, source TEXT);
+        CREATE TABLE ticker_stats_cache (ticker TEXT, dividend_yield REAL);
+        CREATE TABLE tickers (ticker TEXT, currency TEXT, display_name TEXT, name TEXT);
+    """)
+    @contextmanager
+    def test_connect():
+        yield conn
+
+    try:
+        for ticker, scale in (("SP500", 1), ("278530.KS", 2), ("005930.KS", 3), ("AAPL", 3)):
+            price = 100.0
+            for i in range(301):
+                price *= 1 + (.001 if i % 2 else -.001) * scale
+                day = (date.today() - timedelta(days=300-i)).isoformat()
+                conn.execute("INSERT INTO daily_prices VALUES (?,?,?,?,?)", (ticker, day, price, price, price))
+        with patch.object(technical, "connect", test_connect):
+            # The domestic benchmark must load even when not itself requested.
+            assert technical.refresh_technical_stats_cache(["005930.KS", "AAPL"]) == 2
+            cached = technical.load_technical_stats_cache(conn, ["005930.KS", "AAPL"])
+            assert cached["005930.KS"]["beta_adj"] == 1.5
+            assert cached["005930.KS"]["beta_adj_benchmark"] == "278530.KS"
+            assert cached["AAPL"]["beta_adj"] == 3.0
+            assert cached["AAPL"]["beta_adj_benchmark"] == "SP500"
+            assert cached["005930.KS"]["beta"] == cached["AAPL"]["beta"] == 3.0
+            technical.refresh_technical_stats_cache(["278530.KS"])
+            assert technical.load_technical_stats_cache(conn, ["278530.KS"])["278530.KS"]["beta_adj"] == 1.0
+            conn.execute("DELETE FROM daily_prices WHERE ticker = '278530.KS'")
+            technical.refresh_technical_stats_cache(["005930.KS"])
+            missing = technical.load_technical_stats_cache(conn, ["005930.KS"])["005930.KS"]
+            assert missing["beta_adj"] is None
+            assert missing["beta"] == 3.0
+    finally:
+        conn.close()
+
+
 # --- runner -----------------------------------------------------------------
 def _run() -> int:
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]

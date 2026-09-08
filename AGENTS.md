@@ -24,6 +24,8 @@
 
 ## Data invariants
 
+- β″ uses up to 252 common trading-day returns: Korean-listed stocks/ETFs (`.KS`, `.KQ`) use KODEX 200TR (`278530.KS`); other instruments retain S&P 500. Missing Korean benchmark history must not fall back to S&P 500. Keep the first β field's existing provider/calculation behavior unchanged.
+
 - Individual-chart SMA overlays use 20/50/200 trading-day closes from full history before range trimming. Weekly/monthly bars carry the last daily SMA; they never reinterpret the periods as weeks/months. Live-price overlays follow the existing extended-session selection; incomplete windows stay absent.
 - SMA period buttons live inside the chart control row and toggle each line independently, with per-period local preferences. Preserve the old master-toggle preference when initializing missing per-period settings.
 - Keep BB and Ichimoku controls adjacent, followed by the 20/50/200 SMA controls.

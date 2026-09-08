@@ -26,13 +26,18 @@ from .indicators import (
 )
 from .paths import KST
 from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
-from .tickers import ticker_currency
+from .tickers import is_korean_stock_ticker, ticker_currency
 
-TECHNICAL_CACHE_VERSION = 12  # 12: β·β″ 계산 창을 252 공통 거래일 수익률로 확대
+TECHNICAL_CACHE_VERSION = 13  # 13: 한국 상장 종목의 β″ 기준을 KODEX 200TR로 변경
 TECHNICAL_LOOKBACK_DAYS = 11 * 366
 PRICE_ADJUSTED_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
+BETA_ADJ_KR_BENCHMARK = "278530.KS"
 BETA_WINDOW = 252
+
+
+def beta_adj_benchmark(ticker: str) -> str:
+    return BETA_ADJ_KR_BENCHMARK if is_korean_stock_ticker(ticker.strip().upper()) else BETA_BENCHMARK
 
 # 손익비 점수용 비겹침 창. (key, 필요 이력 거래일, 슬라이스 끝 오프셋)
 # 5y = 3~5년 전(returns[-1260:-756]), 3y = 1~3년 전, 1y = 최근 1년.
@@ -280,6 +285,7 @@ def calculate_technical_stats(
     rows: list[sqlite3.Row],
     daily_rsi: list[float | None] | None = None,
     benchmark_rows: list[sqlite3.Row] | None = None,
+    beta_adj_benchmark_rows: list[sqlite3.Row] | None = None,
 ) -> dict:
     daily = [float(row["close"]) for row in rows]
     weekly = resample_last(rows, "week")
@@ -288,6 +294,10 @@ def calculate_technical_stats(
         (value for value in reversed(daily_rsi or []) if value is not None),
         None,
     )
+    betas = beta_stats(rows, benchmark_rows or [])
+    if beta_adj_benchmark_rows is not None:
+        # β의 기존 계산/원천값은 유지한다. 국내 기준 이력이 없으면 β″도 결측.
+        betas["beta_adj"] = beta_stats(rows, beta_adj_benchmark_rows)["beta_adj"]
     return {
         "rsi": {
             "day": latest_daily_rsi if daily_rsi is not None else rsi_value(daily),
@@ -303,7 +313,7 @@ def calculate_technical_stats(
         "drawdown_52w": high_52w_drawdown(daily),
         "atr_pct": None if (value := atr_percent(rows)) is None else round(value, 4),
         **_entry_seat_pct(daily, weekly),
-        **beta_stats(rows, benchmark_rows or []),
+        **betas,
     }
 
 
@@ -393,7 +403,9 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
         return 0
     with connect() as conn:
         ensure_technical_stats_cache_table(conn)
-        query_tickers = sorted(set(clean_tickers) | {BETA_BENCHMARK})
+        query_tickers = sorted(set(clean_tickers) | {BETA_BENCHMARK} | {
+            beta_adj_benchmark(ticker) for ticker in clean_tickers
+        })
         grouped: dict[str, list[sqlite3.Row]] = {ticker: [] for ticker in query_tickers}
         cutoff = (datetime.now(KST).date() - timedelta(days=TECHNICAL_LOOKBACK_DAYS)).isoformat()
         rows = conn.execute(
@@ -475,7 +487,12 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
         for ticker in clean_tickers:
             price_rows = grouped.get(ticker, [])
             daily_rsi = rsi_series([float(row["close"]) for row in price_rows])
-            payload = calculate_technical_stats(price_rows, daily_rsi, grouped.get(BETA_BENCHMARK, []))
+            adj_benchmark = beta_adj_benchmark(ticker)
+            payload = calculate_technical_stats(
+                price_rows, daily_rsi, grouped.get(BETA_BENCHMARK, []),
+                grouped.get(adj_benchmark, []) if adj_benchmark != BETA_BENCHMARK else None,
+            )
+            payload["beta_adj_benchmark"] = adj_benchmark
             payload["asset_class"] = score_asset_kind(ticker, name_by_ticker.get(ticker) or "")
             payload["risk_reward"] = total_return_periods(
                 price_rows,
