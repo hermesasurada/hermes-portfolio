@@ -21,6 +21,7 @@
 - Account holdings lists end with market cap/AUM, earnings date (`실적일`), then trade action; keep header/cell order and column widths aligned.
 - Account and watchlist lists show SMA20/50/200 percentage distance immediately after monthly BB, using the API's price-mode-adjusted indicators. Missing distances sort last; all-empty watchlist columns remain hidden.
 - Preserve every JavaScript load marker and the boot error check in `index.html`.
+- Ticker/name info buttons use locally authored Korean introductions, not provider-cached business summaries. Use concise noun-style endings (no `~니다`), roughly twice the September 2026 sample length, with sources, source period and review date. Prioritize current holdings before extending coverage. Runtime catalog is `~/.hermes/data/company_profiles.json`; never fetch/generate introductions during page reads or fabricate content for pending tickers.
 - Chart controls stay in one normal-flow row above the plot on desktop and mobile; do not restore overlay offsets or reserve control height inside the plot. Performance legends separate accounts (click to emphasize, not hide) from benchmark visibility toggles. Show actual plotted portfolio dates and the backend's TWR basis, not a new return calculation.
 - Calendar view honors saved grid/list choice; only a first-time mobile user defaults to list. Mobile calendar grids retain readable text and horizontal scrolling. Preserve event type/region/holdings filters and earnings-first, market-cap-descending ordering. Regression checks: `node tests/test_analysis_views.js`.
 

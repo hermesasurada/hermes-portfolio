@@ -17,6 +17,7 @@ from urllib.parse import parse_qs, quote, urlparse
 from urllib.request import Request, urlopen
 
 from portfolio_core.cash_flows import add_cash_flow, delete_cash_flow, list_cash_flows
+from portfolio_core.company_profiles import load_company_profile
 from portfolio_core.charts import load_account_performance, load_price_chart
 from portfolio_core.performance_snapshots import load_account_snapshots, rebuild_account_snapshots
 from portfolio_core.constants import (
@@ -431,6 +432,9 @@ class Handler(BaseHTTPRequestHandler):
         with connect() as conn:
             return {"tickers": load_ticker_directory(conn)}
 
+    def api_company_profile(self, query: dict[str, list[str]]) -> dict:
+        return load_company_profile((query.get("ticker") or [""])[0])
+
     def api_diagnostics(self, query: dict[str, list[str]]) -> dict:
         # 수집 상태 진단 (실패/지연 노출). DB 전용.
         with connect() as conn:
@@ -578,6 +582,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/stats": self.api_stats,
                 "/api/quote": self.api_quote,
                 "/api/tickers": self.api_tickers,
+                "/api/company-profile": self.api_company_profile,
                 "/api/diagnostics": self.api_diagnostics,
                 "/api/chart": self.api_chart,
                 "/api/account-performance": self.api_account_performance,

@@ -3957,6 +3957,24 @@ th.pc-frozen-edge {
 .transaction-panel { margin-top: 16px; }
 
 /* ── 모달 공통 · 관리종목 · 도움말 ────────────────────────────────────── */
+/* 종목 소개: 이름 링크와 독립된 버튼, 클릭 시에만 읽는 경량 팝오버. */
+.ticker-text.ticker-with-info { display: grid; grid-template-columns: minmax(0, 1fr) 22px; align-items: start; gap: 3px; }
+.ticker-with-info .ticker-link { min-width: 0; }
+.company-info-btn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; }
+.company-info-btn:hover, .company-info-btn[aria-expanded="true"] { color: var(--brand); background: var(--brand-soft); }
+.company-info-btn:focus-visible, .company-profile-close:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.company-profile-popover { position: fixed; inset: auto; margin: 0; box-sizing: border-box; width: min(460px, calc(100vw - 20px)); max-height: calc(100dvh - 20px); overflow: auto; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); box-shadow: var(--shadow); font-family: inherit; font-size: 13px; text-align: left; }
+.company-profile-head { display: flex; align-items: start; gap: 12px; justify-content: space-between; }
+.company-profile-title { font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+.company-profile-close { flex: 0 0 28px; width: 28px; height: 28px; margin: -4px -5px 0 0; border: 0; border-radius: 6px; background: var(--surface-2); color: var(--muted); font-size: 21px; cursor: pointer; }
+.company-profile-content { line-height: 1.8; overflow-wrap: anywhere; }
+.company-profile-content p { margin: 10px 0; }
+.company-profile-meta, .company-profile-muted { color: var(--muted); }
+.company-profile-meta { font-size: 11px; margin: 3px 0 12px; }
+.company-profile-sources { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+.company-profile-sources summary { cursor: pointer; }
+.company-profile-sources a { display: block; color: var(--brand); text-decoration: underline; margin: 5px 0; }
+
 .watch-modal {
   width: min(560px, calc(100vw - 28px));
   padding: 0;

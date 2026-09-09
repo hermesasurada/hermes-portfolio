@@ -15,7 +15,7 @@ const INTEREST_COLUMNS = [
   { key: "logo", width: 40, label: "", headClass: "logo-col interest-leaf-head", ariaHidden: true, cellClass: "logo-cell", always: true,
     cell: (r, group) => `${logoMarkup(r)}` },
   { key: "name", width: 165, label: "<span data-interest-sort-key=\"ticker\">티커</span><span class=\"name-head-sep\">·</span><span data-interest-sort-key=\"name\">종목</span>", headClass: "name-head interest-leaf-head", always: true,
-    cell: (r, group) => `<span class="ticker-text">
+    cell: (r, group) => `<span class="ticker-text ticker-with-info">
           <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
             <span class="asset-name">${esc(r.name)}</span>
             <span class="interest-ticker-meta">
@@ -23,6 +23,7 @@ const INTEREST_COLUMNS = [
               ${r.sector ? `<span class="sector-chip" title="${esc(sectorLabel(r.sector))}">${esc(sectorLabel(r.sector))}</span>` : ""}
             </span>
           </a>
+          ${companyProfileButton(r.ticker, r.name)}
         </span>` },
   { key: "display_change_pct", width: 85, label: "등락", headClass: "group-start interest-leaf-head", cellClass: "group-start", always: true,
     cell: (r, group) => `${changeMarkup(r)}` },
