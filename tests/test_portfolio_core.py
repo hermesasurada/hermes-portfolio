@@ -2526,6 +2526,41 @@ def test_beta_adj_korean_benchmark_cache_routing():
         conn.close()
 
 
+def test_entry_trend_sma200_optional_weighting():
+    from portfolio_core.entry_reward import _trend_factor, entry_risk_reward_score
+    assert abs(_trend_factor(55, 2, -5) - 0.85) < 1e-12
+    assert _trend_factor(55, 2, 5) == 1.0
+    assert abs(_trend_factor(45, -2, 5) - 0.4) < 1e-12
+    assert _trend_factor(45, -2, -5) == 0.25
+    assert _trend_factor(50, 0, 0) == 0.625
+    assert _trend_factor(55, -2) == 0.625
+    assert _trend_factor(55, -2, float('nan')) == 0.625
+    args = (6, 2, 50, 55, 2, 6)
+    assert entry_risk_reward_score(*args) == 2.0
+    assert entry_risk_reward_score(*args, -5) == 1.7
+    assert entry_risk_reward_score(*args, 5) == 2.0
+    assert entry_risk_reward_score(6, 2, 50, 55, None, 6, 5) is None
+
+
+def test_entry_moving_average_windows_and_live_price():
+    from portfolio_core.technical_stats import calculate_technical_stats, calculate_price_adjusted_indicators
+    from portfolio_core.indicators import ma_pct
+    rows = [{'date': (date(2024, 1, 1) + timedelta(days=i)).isoformat(),
+             'close': 100 + i % 17 + i / 5, 'high': 120 + i / 5, 'low': 95 + i / 5}
+            for i in range(200)]
+    for size in (49, 50, 150, 199, 200):
+        values = [r['close'] for r in rows[:size]]
+        stats = calculate_technical_stats(rows[:size])
+        for period in (50, 200):
+            value = ma_pct(values, period)
+            assert stats[f'ma{period}_pct'] == (None if value is None else round(value, 4))
+        assert 'ma60_pct' not in stats
+    live = calculate_price_adjusted_indicators(rows, 160, rows[-1]['date'])
+    values = [r['close'] for r in rows[:-1]] + [160]
+    assert live['ma50_pct'] == round(ma_pct(values, 50), 4)
+    assert live['ma200_pct'] == round(ma_pct(values, 200), 4)
+
+
 # --- runner -----------------------------------------------------------------
 def _run() -> int:
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]

@@ -28,7 +28,7 @@ from .paths import KST
 from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
 from .tickers import is_korean_stock_ticker, ticker_currency
 
-TECHNICAL_CACHE_VERSION = 13  # 13: 한국 상장 종목의 β″ 기준을 KODEX 200TR로 변경
+TECHNICAL_CACHE_VERSION = 14  # 14: 진입 손익비용 50/200일 이격률
 TECHNICAL_LOOKBACK_DAYS = 11 * 366
 PRICE_ADJUSTED_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
@@ -57,13 +57,15 @@ def _entry_seat_pct(daily: list[float], weekly: list[float] | None = None) -> di
         lower = round(lower, 4)
     week_distances = bollinger_distance_pct(weekly) if weekly else None
     ma20 = ma_pct(daily, 20)
-    ma60 = ma_pct(daily, 60)
+    ma50 = ma_pct(daily, 50)
+    ma200 = ma_pct(daily, 200)
     return {
         "bb_upper_pct": upper,
         "bb_lower_pct": lower,
         "bb_upper_week_pct": None if week_distances is None else round(week_distances[0], 4),
         "ma20_pct": None if ma20 is None else round(ma20, 4),
-        "ma60_pct": None if ma60 is None else round(ma60, 4),
+        "ma50_pct": None if ma50 is None else round(ma50, 4),
+        "ma200_pct": None if ma200 is None else round(ma200, 4),
     }
 
 

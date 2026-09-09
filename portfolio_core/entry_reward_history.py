@@ -1,7 +1,7 @@
 """과거 시점의 진입 손익비 재구성.
 
 거래내역의 '거래 실행 시점 진입 손익비' 컬럼용. 그 날짜까지의 일봉으로
-현행 산식의 입력(볼린저 일·주, ATR, RSI 일·주, 60일선)을 다시 만들어
+현행 산식의 입력(볼린저 일·주, ATR, RSI 일·주, 50/200일선)을 다시 만들어
 entry_risk_reward_score를 계산한다. 과거 시점 값은 불변이므로 거래 저장
 시 1회 계산해 transactions.entry_score에 캐시한다.
 
@@ -24,7 +24,7 @@ from .indicators import (
     rsi_series,
 )
 
-MIN_HISTORY_ROWS = 80  # 60일선 + ATR(60행 창)이 서려면 이 정도는 있어야 한다
+MIN_HISTORY_ROWS = 80  # 기존 ATR 워밍업 유지. 200일선은 선택 입력이다.
 
 
 def entry_score_on(conn: sqlite3.Connection, ticker: str, trade_date: str) -> float | None:
@@ -64,8 +64,9 @@ def entry_score_on(conn: sqlite3.Connection, ticker: str, trade_date: str) -> fl
         atr,
         rsi_day,
         rsi_week,
-        ma_pct(closes, 60),
+        ma_pct(closes, 50),
         weekly_distance[0] if weekly_distance else None,
+        ma_pct(closes, 200),
     )
 
 
@@ -111,8 +112,9 @@ def entry_score_series(rows) -> list[float | None]:
             atr_values[index],
             rsi_day[index],
             rsi_week,
-            ma_pct(closes[max(0, index - 59):index + 1], 60),
+            ma_pct(closes[max(0, index - 49):index + 1], 50),
             weekly_distance[0],
+            ma_pct(closes[max(0, index - 199):index + 1], 200),
         )
     return series
 

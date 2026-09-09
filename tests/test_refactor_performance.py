@@ -89,7 +89,7 @@ def reference_scores(rows):
         else:
             result.append(entry_risk_reward_score(
                 daily_bb[0], atr_percent(prior[-61:]), rsi_series(closes)[-1],
-                rsi_series(weekly)[-1], ma_pct(closes, 60), weekly_bb[0],
+                rsi_series(weekly)[-1], ma_pct(closes, 50), weekly_bb[0], ma_pct(closes, 200),
             ))
     return result
 

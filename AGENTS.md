@@ -24,6 +24,8 @@
 
 ## Data invariants
 
+- Entry risk/reward uses daily SMA50 (±2% ramp) and optional SMA200 (±5% ramp), matching chart periods. Trend strength weights weekly RSI/SMA50/SMA200 at 40/40/20; without SMA200, weekly RSI and SMA50 each receive 50%. All other required inputs still gate missing scores. Keep live, extended-price, chart-history and transaction-score paths on this same formula.
+
 - β″ uses up to 252 common trading-day returns: Korean-listed stocks/ETFs (`.KS`, `.KQ`) use KODEX 200TR (`278530.KS`); other instruments retain S&P 500. Missing Korean benchmark history must not fall back to S&P 500. Keep the first β field's existing provider/calculation behavior unchanged.
 
 - Individual-chart SMA overlays use 20/50/200 trading-day closes from full history before range trimming. Weekly/monthly bars carry the last daily SMA; they never reinterpret the periods as weeks/months. Live-price overlays follow the existing extended-session selection; incomplete windows stay absent.

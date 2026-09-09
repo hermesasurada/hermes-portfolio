@@ -124,8 +124,9 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
             merged.get("atr_pct"),
             rsi.get("day"),
             rsi.get("week"),
-            merged.get("ma60_pct"),
+            merged.get("ma50_pct"),
             merged.get("bb_upper_week_pct"),
+            merged.get("ma200_pct"),
         )
         stats[ticker] = merged
 
