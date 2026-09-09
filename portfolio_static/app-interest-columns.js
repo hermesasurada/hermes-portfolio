@@ -66,6 +66,12 @@ const INTEREST_COLUMNS = [
     cell: (r, group) => `${indicatorText(r.bb_week, "bb")}` },
   { key: "bb_month", width: 48, label: "<span>BB</span><span>(월)</span>", headClass: "indicator-head interest-leaf-head", group: "momentum",
     cell: (r, group) => `${indicatorText(r.bb_month, "bb")}` },
+  ...[20, 50, 200].map(period => ({
+    key: `ma${period}_pct`, width: 76, label: `<span>이격</span><span>(${period}일)</span>`,
+    headClass: "indicator-head interest-leaf-head", group: "momentum",
+    title: `${period}거래일 단순이동평균선 이격률 = (현재가 ÷ 이동평균 − 1) × 100. 위면 양수, 아래면 음수. 이력이 부족하면 표시하지 않습니다.`,
+    cell: r => signedPercentText(r[`ma${period}_pct`], 1),
+  })),
   { key: "trailing_pe", width: 62, label: "<span>P/E</span><span>(t)</span>", headClass: "indicator-head group-start interest-leaf-head", group: "value", cellClass: "group-start",
     cell: (r, group) => `${peText(r.trailing_pe)}` },
   { key: "forward_pe", width: 62, label: "<span>P/E</span><span>(f)</span>", headClass: "indicator-head interest-leaf-head", group: "value",

@@ -827,7 +827,7 @@ function sortRows(rows, tab = activeDetailTab) {
   const state = sortState[tab] || sortState.detail;
   rows.sort((a, b) => {
     const av = listSortValue(a, state.key), bv = listSortValue(b, state.key);
-    if (state.key === "risk_reward_score" || state.key === "entry_risk_reward") {
+    if (["risk_reward_score", "entry_risk_reward", "ma20_pct", "ma50_pct", "ma200_pct"].includes(state.key)) {
       const aMissing = av == null || !Number.isFinite(Number(av));
       const bMissing = bv == null || !Number.isFinite(Number(bv));
       if (aMissing !== bMissing) return aMissing ? 1 : -1;
@@ -1106,6 +1106,9 @@ function renderTable() {
       <td>${indicatorText(r.bb_day, "bb")}</td>
       <td>${indicatorText(r.bb_week, "bb")}</td>
       <td>${indicatorText(r.bb_month, "bb")}</td>
+      <td class="ma-distance-col">${signedPercentText(r.ma20_pct, 1)}</td>
+      <td class="ma-distance-col">${signedPercentText(r.ma50_pct, 1)}</td>
+      <td class="ma-distance-col">${signedPercentText(r.ma200_pct, 1)}</td>
       <td class="group-start">${peText(r.trailing_pe)}</td>
       <td>${peText(r.forward_pe)}</td>
       <td>${peText(r.price_to_book)}</td>

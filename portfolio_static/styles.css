@@ -1954,18 +1954,19 @@ tr.dividend-month-row:hover td {
   padding-left: 1px;
   padding-right: 1px;
 } /* RSI/BB */
-#detailTableWrap th:nth-child(25), #detailTableWrap td:nth-child(25),
-#detailTableWrap th:nth-child(26), #detailTableWrap td:nth-child(26) { min-width: 56px; } /* P/E */
-#detailTableWrap th:nth-child(27), #detailTableWrap td:nth-child(27) { min-width: 40px; } /* P/B */
-#detailTableWrap th:nth-child(n+28):nth-child(-n+36),
-#detailTableWrap td:nth-child(n+28):nth-child(-n+36) { min-width: 58px; } /* 기간 수익률 */
-#detailTableWrap th:nth-child(37), #detailTableWrap td:nth-child(37) { min-width: 54px; } /* 거래 */
+#detailTableWrap .ma-distance-col { min-width: 76px; } /* 20/50/200일선 이격률 */
+#detailTableWrap th:nth-child(28), #detailTableWrap td:nth-child(28),
+#detailTableWrap th:nth-child(29), #detailTableWrap td:nth-child(29) { min-width: 56px; } /* P/E */
+#detailTableWrap th:nth-child(30), #detailTableWrap td:nth-child(30) { min-width: 40px; } /* P/B */
+#detailTableWrap th:nth-child(n+31):nth-child(-n+39),
+#detailTableWrap td:nth-child(n+31):nth-child(-n+39) { min-width: 58px; } /* 기간 수익률 */
+#detailTableWrap th:nth-child(40), #detailTableWrap td:nth-child(40) { min-width: 54px; } /* 거래 */
 #detailTableWrap th:nth-child(18),
 #detailTableWrap td:nth-child(18),
 #detailTableWrap th:nth-child(24),
 #detailTableWrap td:nth-child(24),
-#detailTableWrap th:nth-child(27),
-/* 그룹 경계선 앞 셀 여백 — 번호(27=P/B)로만 주면 모멘텀 마지막 BB(월)이 빠져 값이 선에 붙는다.
+#detailTableWrap th:nth-child(30),
+/* 그룹 경계선 앞 셀 여백 — P/B와 모멘텀 마지막 열의 값이 선에 붙지 않도록 한다.
    :not(.hidden)은 숨긴 셀 제외 겸 모멘텀 1px 규칙(:nth-child 둘)보다 특이도를 높이는 용도. */
 #detailTableWrap th:not(.hidden):has(+ .group-start),
 #detailTableWrap td:not(.hidden):has(+ .group-start),
