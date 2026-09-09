@@ -1089,12 +1089,10 @@ function renderTable() {
       <td>${noPosition ? "-" : changeKrwText(r.change_krw)}</td>
       <td>${noPosition ? "-" : valueMarkup(r)}</td>
       <td>${noPosition ? "-" : weightText(r.weight_pct)}</td>
-      <td>${marketCapMarkup(r)}</td>
       <td>${Number(r.dividend_yield) > 0
         ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(r.ticker)}" title="배당 이력 보기">${dividendYieldText(r.dividend_yield)}</button>`
         : dividendYieldText(r.dividend_yield)}</td>
       <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
-      <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
       <td class="group-start">${signedPercentText(r.drawdown_52w, 1)}</td>
       <td>${riskRewardScoreText(r.risk_reward_score, r.risk_reward_basis, r.risk_reward_quality)}</td>
       <td>${entryRewardText(r.entry_risk_reward)}</td>
@@ -1121,6 +1119,8 @@ function renderTable() {
       <td>${signedPercentText(r.perf_3y, 0)}</td>
       <td>${signedPercentText(r.perf_5y, 0)}</td>
       <td>${signedPercentText(r.perf_10y, 0)}</td>
+      <td class="group-start">${marketCapMarkup(r)}</td>
+      <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
       <td>${r.is_watchlist ? "-" : `<button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button>`}</td>
     </tr>
   `;
