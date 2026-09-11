@@ -298,7 +298,8 @@ def test_transaction_hidden_flag_persists_and_is_returned():
         );
         CREATE TABLE tickers (
             ticker TEXT PRIMARY KEY,
-            name TEXT
+            name TEXT,
+            display_name TEXT
         );
         CREATE TABLE daily_prices (ticker TEXT, date TEXT, close REAL);
         CREATE TABLE transactions (
@@ -352,7 +353,7 @@ def test_transaction_history_is_not_truncated_and_preserves_scope():
     conn.executescript("""
         CREATE TABLE accounts (id INTEGER PRIMARY KEY, member TEXT, account_type TEXT, name TEXT);
         CREATE TABLE holdings (account_id INTEGER, ticker TEXT, name TEXT);
-        CREATE TABLE tickers (ticker TEXT PRIMARY KEY, name TEXT);
+        CREATE TABLE tickers (ticker TEXT PRIMARY KEY, name TEXT, display_name TEXT);
         CREATE TABLE transactions (
             id INTEGER PRIMARY KEY, trade_date TEXT, created_at TEXT,
             account_id INTEGER, member TEXT, ticker TEXT, side TEXT,
@@ -361,6 +362,8 @@ def test_transaction_history_is_not_truncated_and_preserves_scope():
         );
         INSERT INTO accounts VALUES (1, 'Test', 'pension_kr', 'Pension');
         INSERT INTO accounts VALUES (2, 'Test', 'retirement_kr', 'Retirement');
+        INSERT INTO tickers VALUES ('AAA', 'Provider name', 'Display name');
+        INSERT INTO holdings VALUES (1, 'AAA', 'Old holding name');
     """)
     conn.executemany(
         "INSERT INTO transactions (id, trade_date, account_id, ticker, side, qty, price, hidden) VALUES (?, ?, ?, ?, 'BUY', 1, 100, ?)",
@@ -386,6 +389,21 @@ def test_transaction_history_is_not_truncated_and_preserves_scope():
             assert len(ticker_rows) == 203
             assert all(r['account_id'] == 1 and r['ticker'] == 'AAA' for r in ticker_rows)
             assert len(transactions_module.load_transactions(account_ids=['1', '2'])['transactions']) == 420
+            ledger_before = [tuple(row) for row in conn.execute('SELECT * FROM transactions ORDER BY id')]
+            assert all(r['name'] == 'Display name' for r in ticker_rows)
+            with patch.object(ticker_metadata_module, 'connect', fake_connect):
+                ticker_metadata_module.update_ticker_display_name({'ticker': 'AAA', 'display_name': 'New name'})
+            renamed = transactions_module.load_transactions(ticker='AAA')['transactions']
+            assert {r['account_id'] for r in renamed} == {1, 2}
+            assert all(r['name'] == 'New name' for r in renamed)  # also without a holding
+            for display, provider, expected in [('', 'Provider name', 'Provider name'),
+                                                (None, 'Provider name', 'Provider name'),
+                                                (None, None, 'Old holding name')]:
+                conn.execute('UPDATE tickers SET display_name = ?, name = ? WHERE ticker = ?', (display, provider, 'AAA'))
+                result = transactions_module.load_transactions(account_id='1', ticker='AAA')['transactions']
+                assert all(r['name'] == expected for r in result)
+            assert all(r['name'] == 'BBB' for r in transactions_module.load_transactions(ticker='BBB')['transactions'])
+            assert [tuple(row) for row in conn.execute('SELECT * FROM transactions ORDER BY id')] == ledger_before
     finally:
         conn.close()
 

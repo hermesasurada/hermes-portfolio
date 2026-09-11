@@ -73,4 +73,28 @@ assert.match(mobileCss, /\.transaction-panel > \.toolbar \.title-tools \{[^}]*wi
 assert.match(mobileCss, /\.transaction-panel #tradeScope \{ display: none; \}/);
 assert.match(mobileCss, /\.transaction-panel \.transaction-actions \{[^}]*min-width: 0;[^}]*flex-wrap: nowrap/);
 assert.match(mobileCss, /\.transaction-panel \.transaction-name-filter input \{[^}]*width: 100%/);
-console.log('transaction filter: ticker/name, case/spacing, hidden rows, empty results, paging and full-ledger balances passed');
+const chart = read('app-line-chart.js');
+vm.runInContext(chart.slice(chart.indexOf('function applyTickerDisplayNameLocally('), chart.indexOf('async function saveChartDisplayName(')), context);
+run(`
+  let data = {tickers: [{ticker: 'AAA', name: 'Old'}], members: []};
+  let chartPayload = null, chartComparePayloads = [];
+  transactionRows = [
+    {id: 1, account_id: 1, ticker: 'AAA', name: 'Old', qty: 2, price: 100},
+    {id: 2, account_id: 2, ticker: 'aaa', name: 'Old', hidden: 1},
+    {id: 3, ticker: 'BBB', name: 'Unchanged'}
+  ];
+  applyTickerDisplayNameLocally('aaa', 'New name');
+`);
+assert.equal(run('transactionRows[0].name'), 'New name');
+assert.equal(run('transactionRows[1].name'), 'New name');
+assert.equal(run('transactionRows[2].name'), 'Unchanged');
+assert.equal(run('transactionRows[0].qty'), 2);
+assert.equal(run('transactionRows[0].price'), 100);
+query = 'new name';
+assert.equal(run('visibleTransactionRows().length'), 1);
+run('showHiddenTransactions = true');
+assert.equal(run('visibleTransactionRows().length'), 2);
+query = 'old';
+assert.equal(run('visibleTransactionRows().length'), 0);
+assert.match(chart, /if \(editingTxId == null\) renderTransactions\(transactionRows, false\)/);
+console.log('transaction filter and live display-name updates passed');

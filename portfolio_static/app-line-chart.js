@@ -410,6 +410,11 @@ function openChartNameEditor() {
 
 function applyTickerDisplayNameLocally(ticker, name) {
   const key = String(ticker || "").toUpperCase();
+  if (typeof transactionRows !== "undefined") {
+    transactionRows.forEach(tx => {
+      if (String(tx.ticker || "").toUpperCase() === key) tx.name = name;
+    });
+  }
   (data?.tickers || []).forEach(item => {
     if (String(item.ticker || "").toUpperCase() === key) item.name = name;
   });
@@ -466,6 +471,8 @@ async function saveChartDisplayName(event) {
       renderChartIdentity(chartPayload || { ticker, name: result.name });
     }
     renderInterestWatchlists();
+    // Keep a pending ledger edit intact; its next render uses the updated name.
+    if (editingTxId == null) renderTransactions(transactionRows, false);
   } catch (err) {
     if (status) status.textContent = err.message || String(err);
   } finally {

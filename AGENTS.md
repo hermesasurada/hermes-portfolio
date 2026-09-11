@@ -16,6 +16,7 @@
 - `sortState`, `sortRows`, and `scheduleAutoRefresh` are the single authorities for sorting and periodic refresh behavior.
 - Account/watchlist extended-column sorting uses extended percentage change when available (including zero), otherwise regular-session percentage change, regardless of market. Rows missing both sort last in either direction. Do not fabricate extended quote display values or sort by currency-denominated prices.
 - Transaction APIs return the selected account's full history. Filter in the frontend, paginate at 20 rows, and calculate reconstructed balances from the unfiltered ledger.
+- Transaction names are live metadata, not execution-time snapshots: prefer `tickers.display_name`, then `tickers.name`, holding name and ticker. Rename updates loaded transaction names and filtering without changing ledger values or discarding pending trade edits.
 - Mobile transaction headers keep title, name filter, hidden-history toggle and expand/collapse button on one row; hide the account-scope badge and redundant filter caption only on mobile. Keep all filter and ledger behavior intact.
 - Desktop transaction headers also keep action buttons on one row. Scope the title area's flexible width to this panel so shared full-width toolbar rules cannot squeeze the action group.
 - Account holdings lists must not inject market-index rows or expose an index toggle. Index watchlists, hero ticker pages and chart benchmarks remain supported independently.
