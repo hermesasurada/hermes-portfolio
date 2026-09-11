@@ -14,6 +14,7 @@
 - Table vertical scrollbars stay hidden and horizontal scrollbars remain visible. Set `::-webkit-scrollbar { width: 0; height: 8px; }`; do not add standard `scrollbar-width` or `scrollbar-color` rules that disable the WebKit styling.
 - Use the single delegated document handler in `app.js` for ticker and dividend actions. Do not bind listeners again after each render.
 - `sortState`, `sortRows`, and `scheduleAutoRefresh` are the single authorities for sorting and periodic refresh behavior.
+- Account/watchlist extended-column sorting uses extended percentage change when available (including zero), otherwise regular-session percentage change, regardless of market. Rows missing both sort last in either direction. Do not fabricate extended quote display values or sort by currency-denominated prices.
 - Transaction APIs return the selected account's full history. Filter in the frontend, paginate at 20 rows, and calculate reconstructed balances from the unfiltered ledger.
 - Mobile transaction headers keep title, name filter, hidden-history toggle and expand/collapse button on one row; hide the account-scope badge and redundant filter caption only on mobile. Keep all filter and ledger behavior intact.
 - Desktop transaction headers also keep action buttons on one row. Scope the title area's flexible width to this panel so shared full-width toolbar rules cannot squeeze the action group.

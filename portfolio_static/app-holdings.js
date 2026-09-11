@@ -127,6 +127,14 @@ function optionalNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 function listSortValue(row, key) {
+  if (key === "extended_change_pct") {
+    // The extended column is a percentage, not a currency-denominated unit price.
+    // Missing extended quotes still participate using their regular-session move.
+    return optionalNumber(row?.extended_change_pct)
+      ?? optionalNumber(row?.regular_change_pct)
+      ?? optionalNumber(row?.display_change_pct)
+      ?? optionalNumber(row?.change_pct);
+  }
   // Status buckets only: R and ATR are different units, never compare them.
   if (key === "trade_timing") return ({sell: 0, caution: 1, wait: 2, breakout: 3, watch: 4, buy: 5})[row?.trade_timing?.state] ?? null;
   return row?.[key];
@@ -829,7 +837,7 @@ function sortRows(rows, tab = activeDetailTab) {
   const state = sortState[tab] || sortState.detail;
   rows.sort((a, b) => {
     const av = listSortValue(a, state.key), bv = listSortValue(b, state.key);
-    if (["risk_reward_score", "entry_risk_reward", "trade_timing", "ma20_pct", "ma50_pct", "ma200_pct"].includes(state.key)) {
+    if (["extended_change_pct", "risk_reward_score", "entry_risk_reward", "trade_timing", "ma20_pct", "ma50_pct", "ma200_pct"].includes(state.key)) {
       const aMissing = av == null || !Number.isFinite(Number(av));
       const bMissing = bv == null || !Number.isFinite(Number(bv));
       if (aMissing !== bMissing) return aMissing ? 1 : -1;
