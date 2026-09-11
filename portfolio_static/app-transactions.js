@@ -28,10 +28,11 @@ function renderTradeControls() {
   updateTradeScope();
 }
 
-function applyTradeHoldingDefaults(overwriteName = false) {
+function applyTradeHoldingDefaults(overwriteName = false, overwritePrice = false) {
   const holding = findTradeHolding();
   const ticker = (document.getElementById("tradeTicker").value || selectedTrade.ticker || "").trim().toUpperCase();
   const meta = findTickerMeta(ticker);
+  if (overwritePrice) document.getElementById("tradePrice").value = "";
   if (!holding && !meta) return;
   const nameInput = document.getElementById("tradeName");
   const priceInput = document.getElementById("tradePrice");
@@ -42,6 +43,35 @@ function applyTradeHoldingDefaults(overwriteName = false) {
   currencyInput.disabled = true;
   if (overwriteName || !nameInput.value) nameInput.value = holding?.name || meta?.name || ticker;
   if (!priceInput.value && price != null) priceInput.value = Number(price).toFixed(currency === "KRW" || currency === "JPY" ? 0 : 2);
+}
+
+async function updateTradeTickerDefaults() {
+  selectedTrade.ticker = document.getElementById("tradeTicker").value.trim().toUpperCase();
+  document.getElementById("tradeTicker").value = selectedTrade.ticker;
+  applyTradeHoldingDefaults(true, true);
+  resolveTradeName();
+  const ticker = selectedTrade.ticker;
+  const priceInput = document.getElementById("tradePrice");
+  if (!ticker || priceInput.value) return;
+  // A ticker outside the current compact payload may still have a collected price.
+  try {
+    const payload = await apiFetchPortfolio(usExtendedEnabled(), {compact:true, tickers:[ticker]});
+    if (document.getElementById("tradeTicker").value.trim().toUpperCase() !== ticker || priceInput.value) return;
+    const meta = payload.tickers?.find(t => t.ticker === ticker);
+    if (meta?.current_price != null && Number.isFinite(Number(meta.current_price))) {
+      priceInput.value = Number(meta.current_price).toFixed(["KRW", "JPY"].includes(meta.currency) ? 0 : 2);
+      document.getElementById("tradeCurrency").value = meta.currency;
+    }
+  } catch { /* No current quote: leave blank for manual entry, never retain the old ticker's price. */ }
+}
+
+function previewTradeTickerDefaults() {
+  const ticker = document.getElementById("tradeTicker").value.trim().toUpperCase();
+  if (ticker === selectedTrade.ticker) return;
+  selectedTrade.ticker = ticker;
+  document.getElementById("tradeName").value = "";
+  applyTradeHoldingDefaults(true, true);
+  // Local preview only; remote lookup waits until the ticker edit is committed.
 }
 
 // 종목명을 티커 기준으로 자동 채움(읽기전용 입력). 로컬(보유/메타)에 없으면 lookup.
@@ -57,7 +87,7 @@ async function resolveTradeName() {
     try {
       const res = await apiLookupTicker(ticker);
       name = res?.ticker?.name || "";
-      if (res?.ticker?.currency) {
+      if (res?.ticker?.currency && document.getElementById("tradeTicker").value.trim().toUpperCase() === ticker) {
         const currencyInput = document.getElementById("tradeCurrency");
         currencyInput.value = res.ticker.currency;
         currencyInput.disabled = true;

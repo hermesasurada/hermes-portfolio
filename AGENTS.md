@@ -36,6 +36,9 @@
 
 - Individual-chart SMA overlays use 20/50/200 trading-day closes from full history before range trimming. Weekly/monthly bars carry the last daily SMA; they never reinterpret the periods as weeks/months. Live-price overlays follow the existing extended-session selection; incomplete windows stay absent.
 - Ichimoku, unlike the daily SMAs, follows the selected day/week/month unit: 9/26/52 bars with 26-bar displacement. Compute from full history before display-window trimming, as of each daily point (no future days within an unfinished week/month). Missing weekly/monthly windows must not fall back to daily Ichimoku.
+- Draw the next 26 bars of Ichimoku leading spans from observed data only, with repeated vertical-line fills (red/blue), never synthetic future prices. Reserve their axis space and scale regardless of visibility.
+- Changing the transaction ticker replaces the unit price with that ticker's current selected-session quote (missing quotes clear the previous price). Submitting or refreshing names must preserve a manually edited execution price.
+- The cash-flow matrix opens a separate entry dialog: account/date/deposit-or-withdrawal/amount in KRW ten-thousands/optional note. Persist exact KRW amounts, prevent double submits, refresh the selected year after saving, and retain atomic snapshot rebuilds. Display rounding never changes stored amounts.
 - SMA period buttons live inside the chart control row and toggle each line independently, with per-period local preferences. Preserve the old master-toggle preference when initializing missing per-period settings.
 - Keep BB and Ichimoku controls adjacent, followed by the 20/50/200 SMA controls.
 - Desktop chart controls show group captions (이동평균선, 단위, 기간, 거래) and Buy/Sell labels; mobile hides captions and retains compact B/S labels.

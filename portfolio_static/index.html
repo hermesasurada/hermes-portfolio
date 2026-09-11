@@ -500,12 +500,28 @@
           <strong id="cashFlowsYear" aria-live="polite"></strong>
           <button class="ghost-btn" id="cashFlowsNextYear" type="button" aria-label="다음 연도" disabled>›</button>
         </div>
-        <button class="ghost-btn" id="cashFlowsClose" type="button" autofocus>닫기</button>
+        <div class="cash-flows-actions"><button class="ghost-btn" id="cashFlowsAdd" type="button" aria-haspopup="dialog">입력</button><button class="ghost-btn" id="cashFlowsClose" type="button" autofocus>닫기</button></div>
       </div>
       <div id="cashFlowsAccounts" class="cash-flows-accounts" role="group" aria-label="표시할 계좌 선택"></div>
       <div id="cashFlowsStatus" class="cash-flows-status" role="status" aria-live="polite"></div>
       <div id="cashFlowsTableWrap" class="cash-flows-table-wrap" tabindex="0" role="region" aria-label="계좌별 입출금 표, 가로 스크롤 가능"></div>
     </div>
+  </dialog>
+  <dialog class="watch-modal cash-flow-entry-modal" id="cashFlowEntryModal" aria-labelledby="cashFlowEntryTitle">
+    <form id="cashFlowEntryForm" class="modal-card">
+      <div class="modal-head"><strong id="cashFlowEntryTitle">입출금 입력</strong><button class="ghost-btn" id="cashFlowEntryClose" type="button">닫기</button></div>
+      <fieldset id="cashFlowEntryFields" class="cash-flow-entry-fields">
+        <div class="field"><label for="cashFlowAccount">계좌</label><select id="cashFlowAccount" required></select></div>
+        <div class="cash-flow-entry-row">
+          <div class="field"><label for="cashFlowDate">일자</label><input id="cashFlowDate" type="date" required></div>
+          <div class="field"><label for="cashFlowSide">구분</label><select id="cashFlowSide"><option value="deposit">입금</option><option value="withdrawal">출금</option></select></div>
+        </div>
+        <div class="field"><label for="cashFlowAmount">금액 (만원)</label><input id="cashFlowAmount" type="number" min="0.0001" step="0.0001" inputmode="decimal" placeholder="예: 6.2" required></div>
+        <div class="field"><label for="cashFlowNote">메모 (선택)</label><input id="cashFlowNote" maxlength="300"></div>
+      </fieldset>
+      <div id="cashFlowEntryStatus" role="status" aria-live="polite"></div>
+      <button id="cashFlowEntrySave" type="submit">저장</button>
+    </form>
   </dialog>
 
   <dialog class="watch-modal ticker-search-modal" id="tickerSearchModal">

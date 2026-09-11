@@ -1035,6 +1035,10 @@ function bindChartInteractions(points, payload, geometry) {
     }
     const xStart = geometry.xStart ?? geometry.pad.left;
     const xSpan = geometry.xSpan ?? geometry.plotW;
+    if (svgX > xStart + xSpan + 6) {
+      hoverGroup.classList.add("hidden");
+      return; // Leading cloud contains no future execution prices or RSI samples.
+    }
     const ratio = Math.min(1, Math.max(0, (svgX - xStart) / xSpan));
     const index = Math.min(points.length - 1, Math.max(0, Math.round(ratio * (points.length - 1))));
     const point = points[index];
@@ -1223,7 +1227,10 @@ function renderLineChart(payload) {
         return candle ? [candle.open, candle.high, candle.low, candle.close] : [];
       })
     : [];
-  const overlayValues = chartOverlayScaleValues(points);
+  const projection = (payload.ichimoku_projection?.[chartInterval] || []).slice(0, 26);
+  const futureCount = projection.some(p => chartNumericValue(p, "ichi_span_a") != null || chartNumericValue(p, "ichi_span_b") != null) ? projection.length : 0;
+  const cloudPoints = [...points, ...projection.slice(0, futureCount)];
+  const overlayValues = chartOverlayScaleValues(cloudPoints);
   const markerValues = allChartTransactions.map(tx => tx.price);
   // 로그 스케일은 모든 값이 양수일 때만 적용 (아니면 선형 폴백)
   const scaleValues = [...values, ...candleScaleValues, ...markerValues, ...overlayValues];
@@ -1258,12 +1265,13 @@ function renderLineChart(payload) {
   const range = max - min || Math.max(1, Math.abs(max));
   const logMax = useLog ? Math.log10(max) : 0;
   const logSpan = useLog ? ((Math.log10(max) - Math.log10(min)) || 1) : 1;
-  const candleWidth = Math.max(.75, Math.min(compactChart ? 10 : 8, plotW / Math.max(1, points.length) * .68));
+  const candleWidth = Math.max(.75, Math.min(compactChart ? 10 : 8, plotW / Math.max(1, points.length + futureCount) * .68));
   // 캔들 중심을 플롯 경계에 두면 clipPath가 몸통 절반을 잘라낸다. 캔들
   // 모드에서만 몸통 바깥으로 약 8 viewBox 단위의 숨 쉴 여백을 확보한다.
   const candleInset = chartType === "candle" ? Math.max(10, candleWidth / 2 + 8) : 0;
   const xStart = pad.left + candleInset;
-  const xSpan = Math.max(1, plotW - candleInset * 2);
+  // Reserve future space even while hidden: visibility toggles never move price.
+  const xSpan = Math.max(1, plotW - candleInset * 2) * (points.length - 1) / (points.length - 1 + futureCount);
   const xFor = index => points.length === 1
     ? pad.left + plotW / 2
     : xStart + index / (points.length - 1) * xSpan;
@@ -1299,7 +1307,7 @@ function renderLineChart(payload) {
     return rsiTop + (rsiScale.max - bounded) / rsiSpan * rsiH;
   };
   const line = chartLinePath(points.map((point, index) => ({ x: xFor(index), y: yFor(Number(point.close)) })));
-  const area = `${line} L${pad.left + plotW},${pad.top + plotH} L${pad.left},${pad.top + plotH} Z`;
+  const area = `${line} L${xFor(points.length - 1)},${pad.top + plotH} L${xFor(0)},${pad.top + plotH} Z`;
   const bbUpperPaths = chartShowBollinger ? chartSeriesPaths(points, "bb_upper", xFor, yFor) : [];
   const maSeries = activeChartMovingAverages().map(series => ({
     ...series, paths: chartSeriesPaths(points, series.key, xFor, yFor),
@@ -1330,9 +1338,9 @@ function renderLineChart(payload) {
   });
   const ichiTenkanPaths = chartShowIchimoku ? chartSeriesPaths(points, "ichi_tenkan", xFor, yFor) : [];
   const ichiKijunPaths = chartShowIchimoku ? chartSeriesPaths(points, "ichi_kijun", xFor, yFor) : [];
-  const ichiSpanAPaths = chartShowIchimoku ? chartSeriesPaths(points, "ichi_span_a", xFor, yFor) : [];
-  const ichiSpanBPaths = chartShowIchimoku ? chartSeriesPaths(points, "ichi_span_b", xFor, yFor) : [];
-  const ichiCloudAreas = chartShowIchimoku ? ichimokuCloudPaths(points, xFor, yFor) : [];
+  const ichiSpanAPaths = chartShowIchimoku ? chartSeriesPaths(cloudPoints, "ichi_span_a", xFor, yFor) : [];
+  const ichiSpanBPaths = chartShowIchimoku ? chartSeriesPaths(cloudPoints, "ichi_span_b", xFor, yFor) : [];
+  const ichiCloudAreas = chartShowIchimoku ? ichimokuCloudPaths(cloudPoints, xFor, yFor) : [];
   const rsiLine = chartLinePath(
     points
       .map((point, index) => ({ x: xFor(index), y: rsiYFor(Number(point.rsi)), value: Number(point.rsi) }))
@@ -1407,6 +1415,8 @@ function renderLineChart(payload) {
   document.getElementById("chartCanvas").innerHTML = `
     <svg class="line-chart single-price-chart ${chartType === "candle" ? "candle-chart" : "price-line-chart"}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(payload.name)} ${chartType === "candle" ? "캔들" : "종가"} 및 RSI 차트">
       <defs>
+        <pattern id="ichiBullHatch" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M2.5,0 V5" stroke="var(--up)" stroke-width="1" opacity=".4"/></pattern>
+        <pattern id="ichiBearHatch" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M2.5,0 V5" stroke="var(--down)" stroke-width="1" opacity=".4"/></pattern>
         <linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stop-color="var(--chart-price)" stop-opacity=".18"></stop>
           <stop offset="72%" stop-color="var(--chart-price)" stop-opacity=".045"></stop>
@@ -1422,6 +1432,7 @@ function renderLineChart(payload) {
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
       <rect class="chart-plot-border" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
       <rect class="chart-rsi-border" x="${pad.left}" y="${rsiTop}" width="${plotW}" height="${rsiH}"></rect>
+      ${futureCount && chartShowIchimoku ? `<text class="chart-x-label" x="${xFor(points.length - 1 + futureCount / 2).toFixed(2)}" y="${pad.top + 14}" text-anchor="middle">선행 26봉</text>` : ""}
       ${yTicks.map(tick => `
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
         <text class="chart-y-label" x="${width - 6}" y="${(tick.y + 4).toFixed(2)}">${esc(chartMoney(tick.value, payload.currency, payload.ticker))}</text>

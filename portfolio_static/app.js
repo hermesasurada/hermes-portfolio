@@ -369,12 +369,8 @@ document.getElementById("tradeAccount").addEventListener("change", () => {
   selectedTrade.accountId = document.getElementById("tradeAccount").value;
   renderTradeControls();
 });
-document.getElementById("tradeTicker").addEventListener("change", () => {
-  selectedTrade.ticker = document.getElementById("tradeTicker").value.trim().toUpperCase();
-  document.getElementById("tradeTicker").value = selectedTrade.ticker;
-  applyTradeHoldingDefaults(true);
-  resolveTradeName();   // 티커→종목명 자동완성 (DB에 없으면 lookup)
-});
+document.getElementById("tradeTicker").addEventListener("change", updateTradeTickerDefaults);
+document.getElementById("tradeTicker").addEventListener("input", previewTradeTickerDefaults);
 document.getElementById("tradeModalClose")?.addEventListener("click", closeTradeModal);
 document.getElementById("tradeModalCancel")?.addEventListener("click", closeTradeModal);
 document.getElementById("tradeModal")?.addEventListener("click", event => {

@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import math
+
 from .dates import now_kst_text, parse_iso_date
 from .db import connect, ensure_cash_flow_table
 from .performance_snapshots import rebuild_account_snapshots_in_transaction
@@ -39,8 +41,8 @@ def add_cash_flow(payload: dict) -> dict:
         amount = float(payload.get("amount"))
     except (TypeError, ValueError):
         raise ValueError("금액이 필요합니다(입금 +, 출금 −).")
-    if amount == 0:
-        raise ValueError("금액은 0이 될 수 없습니다.")
+    if not math.isfinite(amount) or amount == 0:
+        raise ValueError("금액은 0이 아닌 유효한 숫자여야 합니다.")
     note = str(payload.get("note") or "").strip()
     with connect() as conn:
         conn.execute("BEGIN IMMEDIATE")

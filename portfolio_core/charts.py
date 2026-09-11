@@ -58,7 +58,7 @@ def _ichimoku_values(highs, lows, raw_spans) -> dict[str, float]:
     return item
 
 
-def _chart_interval_ichimoku_series(points, interval: str) -> dict[str, dict[str, float]]:
+def _chart_interval_ichimoku_series(points, interval: str, projection=None) -> dict[str, dict[str, float]]:
     """Full-history weekly/monthly values as of each daily point, before trimming.
 
     Updating the current bucket in place avoids future-day leakage when a custom
@@ -69,7 +69,8 @@ def _chart_interval_ichimoku_series(points, interval: str) -> dict[str, dict[str
     previous_key = None
     for point in points:
         day = date.fromisoformat(point["date"])
-        key = (day.year, day.month) if interval == "month" else day.toordinal() - day.weekday()
+        key = ((day.year, day.month) if interval == "month" else
+               day.toordinal() - day.weekday() if interval == "week" else day.toordinal())
         high = float(point["high"] if point.get("high") is not None else point["close"])
         low = float(point["low"] if point.get("low") is not None else point["close"])
         if key != previous_key:
@@ -83,6 +84,10 @@ def _chart_interval_ichimoku_series(points, interval: str) -> dict[str, dict[str
             key.replace("ichi_", f"ichi_{interval}_", 1): value
             for key, value in _ichimoku_values(highs, lows, raw_spans).items()
         }
+    if projection is not None and points:
+        pending = [(None, None)] * max(0, 26 - len(raw_spans)) + raw_spans[-26:]
+        projection.extend({key: value for key, value in zip(("ichi_span_a", "ichi_span_b"), spans)
+                           if value is not None} for spans in pending)
     return overlay
 
 
@@ -268,10 +273,16 @@ def load_price_chart(
             point.update({key: value for key, value in overlay.items() if value is not None})
         points.append(point)
     _append_market_chart_point(price_record, snapshot["market_status"], points, rows, entry_scoring)
-    for interval in ("week", "month"):
-        interval_overlay = _chart_interval_ichimoku_series(points, interval)
-        for point in points:
-            point.update(interval_overlay.get(point["date"], {}))
+    _, calculation_end = price_chart_date_bounds(points, range_key, start, end)
+    calculation_points = [p for p in points if calculation_end is None or p["date"] <= calculation_end.isoformat()]
+    ichimoku_projection = {}
+    for interval in ("day", "week", "month"):
+        projection = []
+        interval_overlay = _chart_interval_ichimoku_series(calculation_points, interval, projection)
+        ichimoku_projection[interval] = projection
+        if interval != "day":
+            for point in points:
+                point.update(interval_overlay.get(point["date"], {}))
     history_start = points[0]["date"] if points else None
     history_end = points[-1]["date"] if points else None
     points, window_start, window_end = price_chart_points_for_range(points, range_key, start, end)
@@ -303,6 +314,7 @@ def load_price_chart(
         "history_start": history_start,
         "history_end": history_end,
         "range": str(range_key or "all").lower(),
+        "ichimoku_projection": ichimoku_projection,
         "points": points,
         "transactions": [
             {

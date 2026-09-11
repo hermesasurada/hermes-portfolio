@@ -6,6 +6,13 @@ const context = vm.createContext({ window: {}, Intl });
 vm.runInContext(`function esc(s) { return String(s).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;'); }`, context);
 vm.runInContext(fs.readFileSync(path.join(__dirname, "../portfolio_static/app-cash-flows.js"), "utf8"), context);
 const run = code => vm.runInContext(code, context);
+assert.equal(run("cashFlowEntryPayload({accountId:'1',date:'2026-09-11',side:'deposit',amount:'6.2'}).amount"), 62000);
+assert.equal(run("cashFlowEntryPayload({accountId:'1',date:'2026-09-11',side:'withdrawal',amount:'6.2'}).amount"), -62000);
+assert.equal(run("cashFlowEntryPayload({accountId:'1',date:'2026-09-11',side:'deposit',amount:'0.0001'}).amount"), 1);
+assert.equal(run("cashFlowEntryPayload({accountId:'1',date:'2026-09-11',side:'deposit',amount:'6.2'}).currency"), 'KRW');
+for (const value of ['', '0', '-1', 'NaN', 'Infinity']) {
+  assert.throws(() => run(`cashFlowEntryPayload({accountId:'1',date:'2026-09-11',side:'deposit',amount:${JSON.stringify(value)}})`));
+}
 assert.match(run("cashFlowsTableMarkup(buildCashFlowsMatrix([{id: 1, name: '해외주식'}], []))"), /<strong>해외주식<\/strong>/);
 run(`
   const accounts = [{id: 1, memberName: 'Test', name: '<Account>'}, {id: 2, name: 'Empty'}];

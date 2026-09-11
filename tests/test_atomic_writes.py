@@ -138,6 +138,15 @@ class AtomicWritesTests(unittest.TestCase):
         cash_flows.delete_cash_flow({"id": result["id"]})
         self.assertEqual(self.assert_consistent()["flow_krw"], 1000 * 1300)
 
+    def test_cash_flow_rejects_nonfinite_and_keeps_krw_in_foreign_account(self):
+        before = self.state()
+        for amount in (0, float('nan'), float('inf'), -float('inf')):
+            with self.assertRaises(ValueError):
+                cash_flows.add_cash_flow({"account_id": 1, "flow_date": "2026-03-03", "amount": amount})
+            self.assertEqual(self.state(), before)
+        cash_flows.add_cash_flow({"account_id": 1, "flow_date": "2026-03-03", "amount": 62000, "currency": "KRW"})
+        self.assertEqual(self.assert_consistent()["flow_krw"], 1000 * 1300 + 62000)
+
     def test_standalone_rebuild_rolls_back_every_account_on_failure(self):
         self.snapshot_failure(account_id=2)
         before = self.state()

@@ -3251,13 +3251,13 @@ th.pc-frozen-edge {
   stroke-dasharray: 4 4;
 }
 .chart-ichi-cloud {
-  opacity: .18;
+  opacity: 1;
 }
 .chart-ichi-cloud.bullish {
-  fill: var(--up);
+  fill: url(#ichiBullHatch);
 }
 .chart-ichi-cloud.bearish {
-  fill: var(--down);
+  fill: url(#ichiBearHatch);
 }
 .chart-ichi-line {
   fill: none;
@@ -4005,6 +4005,15 @@ th.pc-frozen-edge {
   gap: 10px;
 }
 .cash-flows-status { color: var(--muted); font-size: 12px; }
+.cash-flows-actions { display: flex; gap: 6px; }
+.watch-modal.cash-flow-entry-modal { width: min(380px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
+.cash-flow-entry-modal .modal-card { display: flex; flex-direction: column; gap: 14px; }
+.cash-flow-entry-fields { border: 0; padding: 0; margin: 0; display: grid; gap: 12px; min-width: 0; }
+.cash-flow-entry-row { display: grid; grid-template-columns: 1.5fr 1fr; gap: 10px; }
+.cash-flow-entry-fields .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.cash-flow-entry-fields input, .cash-flow-entry-fields select { width: 100%; min-width: 0; box-sizing: border-box; }
+#cashFlowAmount, #cashFlowDate { font-family: var(--chart-num-font); }
+#cashFlowEntryStatus { font-size: 12px; color: var(--muted); }
 .cash-flows-year-nav { display: flex; align-items: center; gap: 6px; }
 .cash-flows-year-nav button { width: 28px; height: 28px; min-width: 28px; padding: 0; font-size: 21px; line-height: 1; }
 .cash-flows-year-nav strong { min-width: 60px; text-align: center; font-family: var(--chart-num-font); }

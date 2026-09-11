@@ -45,6 +45,12 @@ function apiFetchCashFlows() {
   return fetchJson("/api/cash-flows");
 }
 
+function apiSaveCashFlow(payload) {
+  return fetchJson("/api/cash-flows", {
+    method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload),
+  });
+}
+
 function apiFetchChart(ticker, usExtended = usExtendedEnabled(), options = {}) {
   const query = new URLSearchParams({
     ticker: ticker || "",

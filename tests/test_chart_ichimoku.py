@@ -21,6 +21,28 @@ def bars(interval, count=85):
 
 
 class IchimokuTests(unittest.TestCase):
+    def test_future_projection_is_26_bars_without_future_prices(self):
+        for interval in ('day', 'week', 'month'):
+            rows = bars('month' if interval == 'month' else 'week')
+            if interval == 'day':
+                rows = [dict(row, date=(date(2020, 1, 1) + timedelta(days=i)).isoformat()) for i, row in enumerate(rows)]
+            projection = []
+            _chart_interval_ichimoku_series(rows, interval, projection)
+            self.assertEqual(len(projection), 26)
+            # Last observed index 84. First future span uses raw index 59; last uses 84.
+            self.assertEqual(projection[0]['ichi_span_b'], 133.5)
+            self.assertEqual(projection[-1]['ichi_span_b'], 158.5)
+            self.assertEqual(projection[-1]['ichi_span_a'], 175.75)
+            self.assertNotIn('close', projection[-1])
+
+    def test_short_projection_keeps_missing_windows_absent(self):
+        projection = []
+        _chart_interval_ichimoku_series(bars('week', 26), 'week', projection)
+        self.assertEqual(len(projection), 26)
+        self.assertEqual(projection[0], {})
+        self.assertIn('ichi_span_a', projection[-1])
+        self.assertNotIn('ichi_span_b', projection[-1])
+
     def test_exact_windows_and_displacement(self):
         for interval in ('week', 'month'):
             rows = bars(interval)

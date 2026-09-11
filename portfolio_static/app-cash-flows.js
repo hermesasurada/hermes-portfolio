@@ -1,4 +1,12 @@
-// Read-only ledger matrix. Keep original entries in each cell for future editing.
+// Ledger matrix, with a separate entry dialog. Keep original entries in each cell.
+function cashFlowEntryPayload({accountId, date, side, amount, note = ""}) {
+  const won = Math.round(Number(amount) * 10000);
+  if (!Number.isSafeInteger(won) || won <= 0) throw new Error("금액은 0보다 큰 만원 단위로 입력하세요.");
+  if (!accountId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("계좌와 일자를 확인하세요.");
+  if (!["deposit", "withdrawal"].includes(side)) throw new Error("입출금 구분을 확인하세요.");
+  return {account_id: accountId, flow_date: date, amount: side === "withdrawal" ? -won : won, currency: "KRW", note: note.trim()};
+}
+
 function buildCashFlowsMatrix(accounts, flows) {
   const columns = new Map(accounts.map(a => [String(a.id), { ...a }]));
   const dates = new Map();
@@ -96,6 +104,60 @@ function initCashFlowsModal() {
   let fullMatrix = null;
   let selectedIds = null; // null = all, Set = explicit selection (including none)
   let requestId = 0;
+  const entryModal = document.getElementById("cashFlowEntryModal");
+  const entryForm = document.getElementById("cashFlowEntryForm");
+  const entryStatus = document.getElementById("cashFlowEntryStatus");
+  const entryFields = document.getElementById("cashFlowEntryFields");
+  const entrySave = document.getElementById("cashFlowEntrySave");
+  let saving = false;
+  document.getElementById("cashFlowsAdd").addEventListener("click", () => {
+    if (!fullMatrix) return;
+    entryForm.reset();
+    const accountInput = document.getElementById("cashFlowAccount");
+    accountInput.innerHTML = fullMatrix.accounts.map(a => `<option value="${esc(a.id)}">${esc(a.memberName || "")} · ${esc(a.name)}</option>`).join("");
+    if (selectedIds?.size === 1) accountInput.value = [...selectedIds][0];
+    const parts = new Intl.DateTimeFormat("en", {timeZone:"Asia/Seoul", year:"numeric", month:"2-digit", day:"2-digit"}).formatToParts(new Date());
+    document.getElementById("cashFlowDate").value = ["year", "month", "day"].map(k => parts.find(p => p.type === k).value).join("-");
+    entryStatus.textContent = "";
+    entryModal.showModal();
+    document.getElementById("cashFlowAmount").focus();
+  });
+  document.getElementById("cashFlowEntryClose").addEventListener("click", () => { if (!saving) entryModal.close(); });
+  entryModal.addEventListener("cancel", e => { if (saving) e.preventDefault(); });
+  entryForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (saving) return;
+    let payload;
+    try {
+      payload = cashFlowEntryPayload({
+        accountId: document.getElementById("cashFlowAccount").value,
+        date: document.getElementById("cashFlowDate").value,
+        side: document.getElementById("cashFlowSide").value,
+        amount: document.getElementById("cashFlowAmount").value,
+        note: document.getElementById("cashFlowNote").value,
+      });
+    } catch (err) { entryStatus.textContent = err.message; return; }
+    saving = true;
+    entryFields.disabled = entrySave.disabled = true;
+    entryStatus.textContent = "저장 중…";
+    try {
+      await apiSaveCashFlow(payload);
+    } catch (err) {
+      entryStatus.textContent = `저장 확인 실패: ${err.message || err}. 내역 확인 후 재시도하세요.`;
+      saving = false;
+      entryFields.disabled = entrySave.disabled = false;
+      return;
+    }
+    saving = false;
+    entryFields.disabled = entrySave.disabled = false;
+    entryModal.close();
+    selectedYear = Number(payload.flow_date.slice(0, 4));
+    if (selectedIds !== null) selectedIds.add(String(payload.account_id));
+    await load();
+    if (typeof performanceChartOpen !== "undefined" && performanceChartOpen) {
+      try { await reloadPerformanceChart(); } catch { /* Ledger already saved; do not offer a duplicate save. */ }
+    }
+  });
   function render() {
     if (!fullMatrix) return;
     const matrix = filterCashFlowsMatrix(fullMatrix, selectedIds, selectedYear);
