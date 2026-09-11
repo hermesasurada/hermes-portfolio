@@ -268,7 +268,7 @@ function entryRewardText(v) {
   return `<span class="${cls}">${n.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
 }
 function tradeTimingMarkup(value) {
-  const labels = {buy: "매수 검토", sell: "매도 검토", caution: "주의", watch: "관찰", wait: "대기", breakout: "고점 돌파"};
+  const labels = {buy: "매수", sell: "매도", caution: "주의", watch: "관찰", wait: "대기", breakout: "돌파"};
   if (!value || !labels[value.state]) return "-";
   const state = value.state;
   const buy = state === "buy" || state === "watch";
