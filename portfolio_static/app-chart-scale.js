@@ -94,7 +94,6 @@ function aggregateChartPoints(points, interval = chartInterval) {
       "rsi", "entry_score",
       "bb_upper", "bb_mid", "bb_lower",
       "sma_20", "sma_50", "sma_200",
-      "ichi_tenkan", "ichi_kijun", "ichi_span_a", "ichi_span_b",
     ];
     const carried = {};
     carryKeys.forEach(itemKey => {
@@ -104,6 +103,14 @@ function aggregateChartPoints(points, interval = chartInterval) {
       if (Number.isFinite(value)) carried[itemKey] = value;
     });
     const next = { ...point, ...carried };
+    // Server computes these from full weekly/monthly history before range trimming.
+    // Never carry daily Ichimoku or fill missing long-window values with daily ones.
+    for (const component of ["tenkan", "kijun", "span_a", "span_b"]) {
+      const key = `ichi_${component}`;
+      delete next[key];
+      const value = point[`ichi_${interval}_${component}`];
+      if (value != null && Number.isFinite(Number(value))) next[key] = Number(value);
+    }
     const pointHasCandle = chartPointHasCandle(point);
     const previousHasCandle = chartPointHasCandle(previous);
     if (pointHasCandle) {

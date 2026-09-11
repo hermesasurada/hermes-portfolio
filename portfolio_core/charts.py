@@ -34,6 +34,58 @@ def _mean(values: list[float]) -> float:
     return sum(values) / len(values)
 
 
+def _ichimoku_values(highs, lows, raw_spans) -> dict[str, float]:
+    """9/26/52 bars, with leading spans displaced by 26 bars."""
+    item = {}
+    tenkan = (max(highs[-9:]) + min(lows[-9:])) / 2 if len(highs) >= 9 else None
+    kijun = (max(highs[-26:]) + min(lows[-26:])) / 2 if len(highs) >= 26 else None
+    if tenkan is not None:
+        item["ichi_tenkan"] = tenkan
+    if kijun is not None:
+        item["ichi_kijun"] = kijun
+    spans = (
+        (tenkan + kijun) / 2 if tenkan is not None and kijun is not None else None,
+        (max(highs[-52:]) + min(lows[-52:])) / 2 if len(highs) >= 52 else None,
+    )
+    if len(raw_spans) < len(highs):
+        raw_spans.append(spans)
+    else:
+        raw_spans[-1] = spans  # Current weekly/monthly bar is still forming.
+    if len(highs) > 26:
+        for key, value in zip(("ichi_span_a", "ichi_span_b"), raw_spans[-27]):
+            if value is not None:
+                item[key] = value
+    return item
+
+
+def _chart_interval_ichimoku_series(points, interval: str) -> dict[str, dict[str, float]]:
+    """Full-history weekly/monthly values as of each daily point, before trimming.
+
+    Updating the current bucket in place avoids future-day leakage when a custom
+    range ends midweek/month. Daily closes substitute only for missing H/L.
+    """
+    highs, lows, raw_spans = [], [], []
+    overlay = {}
+    previous_key = None
+    for point in points:
+        day = date.fromisoformat(point["date"])
+        key = (day.year, day.month) if interval == "month" else day.toordinal() - day.weekday()
+        high = float(point["high"] if point.get("high") is not None else point["close"])
+        low = float(point["low"] if point.get("low") is not None else point["close"])
+        if key != previous_key:
+            highs.append(high)
+            lows.append(low)
+        else:
+            highs[-1] = max(highs[-1], high)
+            lows[-1] = min(lows[-1], low)
+        previous_key = key
+        overlay[point["date"]] = {
+            key.replace("ichi_", f"ichi_{interval}_", 1): value
+            for key, value in _ichimoku_values(highs, lows, raw_spans).items()
+        }
+    return overlay
+
+
 def _chart_overlay_series(rows) -> dict[str, dict[str, float | None]]:
     """일봉 OHLC rows → 날짜별 SMA/Bollinger/Ichimoku overlay 값.
 
@@ -47,7 +99,7 @@ def _chart_overlay_series(rows) -> dict[str, dict[str, float | None]]:
     raw_spans: list[tuple[float | None, float | None]] = []
     sma_sums = {20: 0.0, 50: 0.0, 200: 0.0}
 
-    for index, row in enumerate(rows):
+    for row in rows:
         close = float(row["close"])
         high = float(row["high"] if row["high"] is not None else close)
         low = float(row["low"] if row["low"] is not None else close)
@@ -74,25 +126,7 @@ def _chart_overlay_series(rows) -> dict[str, dict[str, float | None]]:
             item["bb_upper"] = avg + deviation * 2
             item["bb_lower"] = avg - deviation * 2
 
-        tenkan = None
-        kijun = None
-        if len(highs) >= 9:
-            tenkan = (max(highs[-9:]) + min(lows[-9:])) / 2
-            item["ichi_tenkan"] = tenkan
-        if len(highs) >= 26:
-            kijun = (max(highs[-26:]) + min(lows[-26:])) / 2
-            item["ichi_kijun"] = kijun
-        span_a = (tenkan + kijun) / 2 if tenkan is not None and kijun is not None else None
-        span_b = (max(highs[-52:]) + min(lows[-52:])) / 2 if len(highs) >= 52 else None
-        raw_spans.append((span_a, span_b))
-
-        shifted_index = index - 26
-        if shifted_index >= 0:
-            shifted_a, shifted_b = raw_spans[shifted_index]
-            if shifted_a is not None:
-                item["ichi_span_a"] = shifted_a
-            if shifted_b is not None:
-                item["ichi_span_b"] = shifted_b
+        item.update(_ichimoku_values(highs, lows, raw_spans))
 
         overlay[row["date"]] = item
 
@@ -234,6 +268,10 @@ def load_price_chart(
             point.update({key: value for key, value in overlay.items() if value is not None})
         points.append(point)
     _append_market_chart_point(price_record, snapshot["market_status"], points, rows, entry_scoring)
+    for interval in ("week", "month"):
+        interval_overlay = _chart_interval_ichimoku_series(points, interval)
+        for point in points:
+            point.update(interval_overlay.get(point["date"], {}))
     history_start = points[0]["date"] if points else None
     history_end = points[-1]["date"] if points else None
     points, window_start, window_end = price_chart_points_for_range(points, range_key, start, end)
