@@ -1083,14 +1083,13 @@ function renderTable() {
     }
     return `
     <tr class="${tableRowClass(r)}">
-      <td class="logo-cell">${logoMarkup(r)}</td>
+      <td class="logo-cell">${companyProfileLogo(r)}</td>
       <td>
-        <span class="ticker-text ticker-with-info">
+        <span class="ticker-text">
           <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
             <span class="asset-name">${esc(r.name)}</span>
             <span class="ticker-symbol">${esc(r.ticker)}</span>
           </a>
-          ${companyProfileButton(r.ticker, r.name)}
         </span>
       </td>
       <td>${changeMarkup(r)}</td>

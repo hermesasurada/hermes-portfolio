@@ -11,6 +11,7 @@
   /* surfaces & text */
   --bg: #f5f6f8;
   --panel: #ffffff;
+  --company-profile-bg: rgba(232, 235, 239, .9);
   --surface-2: #f3f5f7;     /* pills, table head, tab track */
   --surface-hover: #eef1f5; /* row hover */
   --index-row-bg: #f7f8fa;
@@ -107,6 +108,7 @@
 }
 /* dark palette — 중립 슬레이트, 파랑은 선택과 조작에만 사용 */
 :root[data-theme="dark"] {
+    --company-profile-bg: rgba(40, 47, 57, .92);
     --bg: #15191f;
     --panel: #1c222b;
     --surface-2: #252d38;
@@ -3963,21 +3965,19 @@ th.pc-frozen-edge {
 .transaction-panel { margin-top: 16px; }
 
 /* ── 모달 공통 · 관리종목 · 도움말 ────────────────────────────────────── */
-/* 종목 소개: 이름 링크와 독립된 버튼, 클릭 시에만 읽는 경량 팝오버. */
-.ticker-text.ticker-with-info { display: grid; grid-template-columns: minmax(0, 1fr) 22px; align-items: start; gap: 3px; }
-.ticker-with-info .ticker-link { min-width: 0; }
-.company-info-btn { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); cursor: pointer; }
-.company-info-btn:hover, .company-info-btn[aria-expanded="true"] { color: var(--brand); background: var(--brand-soft); }
-.company-info-btn:focus-visible, .company-profile-close:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.company-profile-popover { position: fixed; inset: auto; margin: 0; box-sizing: border-box; width: min(460px, calc(100vw - 20px)); max-height: calc(100dvh - 20px); overflow: auto; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); box-shadow: var(--shadow); font-family: inherit; font-size: 13px; text-align: left; }
-.company-profile-head { display: flex; align-items: start; gap: 12px; justify-content: space-between; }
-.company-profile-title { font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
-.company-profile-close { flex: 0 0 28px; width: 28px; height: 28px; margin: -4px -5px 0 0; border: 0; border-radius: 6px; background: var(--surface-2); color: var(--muted); font-size: 21px; cursor: pointer; }
-.company-profile-content { line-height: 1.8; overflow-wrap: anywhere; }
-.company-profile-content p { margin: 10px 0; }
+/* 로고가 소개 버튼. 이름·티커의 차트 링크는 별도로 유지한다. */
+.company-profile-logo { display: inline-flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; padding: 0; margin: 0; border: 0; border-radius: 7px; background: transparent; box-shadow: none; line-height: inherit; cursor: pointer; vertical-align: middle; }
+.company-profile-logo:hover, .company-profile-logo[aria-expanded="true"] { outline: 1px solid var(--accent-soft-border); outline-offset: 2px; background: transparent; }
+.company-profile-logo:focus-visible, .company-profile-close:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.company-profile-popover { position: fixed; inset: auto; margin: 0; box-sizing: border-box; width: min(400px, calc(100vw - 20px)); max-height: calc(100dvh - 20px); overflow: auto; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--company-profile-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: var(--ink); box-shadow: var(--shadow); font-family: inherit; font-size: 12.5px; text-align: left; }
+.company-profile-head { display: flex; align-items: start; gap: 8px; justify-content: space-between; }
+.company-profile-title { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.company-profile-close { flex: 0 0 24px; width: 24px; height: 24px; min-height: 24px; margin: -2px -2px 0 0; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--muted); font-size: 19px; cursor: pointer; }
+.company-profile-content { line-height: 1.55; overflow-wrap: anywhere; }
+.company-profile-content p { margin: 6px 0; }
 .company-profile-meta, .company-profile-muted { color: var(--muted); }
-.company-profile-meta { font-size: 11px; margin: 3px 0 12px; }
-.company-profile-sources { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+.company-profile-meta { font-size: 11px; margin: 2px 0 6px; }
+.company-profile-sources { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
 .company-profile-sources summary { cursor: pointer; }
 .company-profile-sources a { display: block; color: var(--brand); text-decoration: underline; margin: 5px 0; }
 

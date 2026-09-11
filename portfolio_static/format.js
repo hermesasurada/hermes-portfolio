@@ -388,9 +388,9 @@ function logoMarkup(row) {
   // 흰색/연한 로고는 서버가 logo.dark 플래그로 표시 (detect_dark_logos.py 자동 감지)
   const darkLogo = row.logo?.dark ? " dark-logo" : "";
   if (url) {
-    return `<span class="asset-icon has-image" title="${row.name}"><span class="fallback-text">${text}</span><img class="${darkLogo.trim()}" src="${url}" alt="" referrerpolicy="no-referrer" onerror="this.parentElement.classList.remove('has-image');this.remove()"></span>`;
+    return `<span class="asset-icon has-image" title="${esc(row.name)}"><span class="fallback-text">${esc(text)}</span><img class="${darkLogo.trim()}" src="${esc(url)}" alt="" referrerpolicy="no-referrer" onerror="this.parentElement.classList.remove('has-image');this.remove()"></span>`;
   }
-  return `<span class="asset-icon" title="${row.name}"><span class="fallback-text">${text}</span></span>`;
+  return `<span class="asset-icon" title="${esc(row.name)}"><span class="fallback-text">${esc(text)}</span></span>`;
 }
 
 // 파일 끝 로드 마커 — 파스 에러·태그 미닫힘 시 이 줄이 실행되지 않아 부트 검사에 걸린다

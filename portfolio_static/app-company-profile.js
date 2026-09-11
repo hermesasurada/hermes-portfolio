@@ -3,11 +3,10 @@ const companyProfileCache = new Map();
 let companyProfileAnchor = null;
 let companyProfileRequest = 0;
 
-function companyProfileButton(ticker, name) {
-  return `<button class="company-info-btn" type="button" data-company-profile="${esc(ticker)}"
-    aria-label="${esc(name || ticker)} 소개" aria-haspopup="dialog" aria-expanded="false" aria-controls="companyProfilePopover">
-    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.4"/><path d="M10 9v5" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="6" r="1" fill="currentColor"/></svg>
-  </button>`;
+function companyProfileLogo(row) {
+  return `<button class="company-profile-logo" type="button" data-company-profile="${esc(row.ticker)}"
+    aria-label="${esc(row.name || row.ticker)} 소개" title="${esc(row.name || row.ticker)} 소개"
+    aria-haspopup="dialog" aria-expanded="false" aria-controls="companyProfilePopover">${logoMarkup(row)}</button>`;
 }
 
 function closeCompanyProfile(restoreFocus = false) {
@@ -25,7 +24,7 @@ function positionCompanyProfile() {
   if (!companyProfileAnchor?.isConnected) return closeCompanyProfile();
   const rect = companyProfileAnchor.getBoundingClientRect();
   const gap = 10;
-  const width = Math.min(460, window.innerWidth - gap * 2);
+  const width = Math.min(400, window.innerWidth - gap * 2);
   panel.style.width = `${width}px`;
   panel.style.left = `${Math.max(gap, Math.min(rect.left, window.innerWidth - width - gap))}px`;
   const height = panel.getBoundingClientRect().height;

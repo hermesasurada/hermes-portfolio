@@ -490,7 +490,7 @@ function renderChartIdentity(payload) {
   const row = chartLogoRow(payload);
   const editingTicker = String(document.getElementById("chartNameInput")?.dataset.ticker || "").toUpperCase();
   if (editingTicker && editingTicker !== String(row.ticker || "").toUpperCase()) closeChartNameEditor();
-  document.getElementById("chartIcon").innerHTML = logoMarkup(row);
+  document.getElementById("chartIcon").innerHTML = companyProfileLogo(row);
   document.getElementById("chartTicker").textContent = row.ticker || "";
   document.getElementById("chartName").textContent = row.name || row.ticker || "";
   document.getElementById("chartNameEdit")?.classList.toggle("hidden", !row.ticker || performanceChartOpen);
