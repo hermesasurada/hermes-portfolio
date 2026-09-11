@@ -267,6 +267,33 @@ function entryRewardText(v) {
   // 매수 기록(entry_score)과 대시보드 표시가 달라 보인다.
   return `<span class="${cls}">${n.toLocaleString("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>`;
 }
+function tradeTimingMarkup(value) {
+  const labels = {buy: "매수 검토", sell: "매도 검토", caution: "주의", watch: "관찰", wait: "대기", breakout: "고점 돌파"};
+  if (!value || !labels[value.state]) return "-";
+  const state = value.state;
+  const buy = state === "buy" || state === "watch";
+  const sell = state === "sell" || state === "caution";
+  const raw = buy ? value.buy_r : sell ? value.sell_atr : null;
+  const number = raw == null ? NaN : Number(raw);
+  // Two decimals preserve the decision boundary (1.49 must not read as 1.5R).
+  const metric = Number.isFinite(number) ? `${number.toFixed(2)}${buy ? "R" : "ATR"}` : "";
+  const price = n => n == null || !Number.isFinite(Number(n)) ? "-" : Number(n).toLocaleString("ko-KR", {maximumFractionDigits: 2});
+  const title = [
+    "실험적 매매 참고 · 우위가 검증된 매매 신호/확률 아님",
+    `기준 ${value.as_of || "-"} · ${value.provisional ? "연장가격 잠정" : "일봉 가격"} · 매입가/거래이력 미사용`,
+    "장중·장외 값은 잠정. 종가에서 조건 재확인. 배당락/갭으로 신호 왜곡 가능.",
+    "매수: 현재가 > SMA50, SMA50 > 5거래일 전 SMA50, SMA200 있으면 현재가 > SMA200",
+    "반등: 최근 3거래일 내 SMA20 상향돌파 후 현재도 SMA20 위",
+    "H=직전 20거래일 최고가, L=직전 10거래일 최저가, A=직전 일봉까지 ATR14",
+    "하단=min(L−0.5A, 현재가−1.5A), R=(H−현재가)/(현재가−하단)",
+    "추세·반등 충족 시 R≥1.5 매수 검토, 1≤R<1.5 관찰. 현재가≥H는 고점 돌파(대상 밖)",
+    "매도 경계=max(0,H−현재가)/A. SMA20 아래·경계≥2 주의; ≥3·전일 저가 이탈 시 매도 검토",
+    `추세 ${value.trend ? "충족" : "미충족"} · 반등 ${value.rebound ? "충족" : "미충족"} · 전일 저가 이탈 ${value.broke_previous_low ? "해당" : "아님"}`,
+    `현재가 ${price(value.price)} · 상단 ${price(value.upper)} · 하단 ${price(value.lower)} · ATR ${price(value.atr)} (종목 통화)`,
+    "조건 미충족은 대기이며 매도 신호가 아님. 상태별 정렬; R과 ATR 크기는 비교하지 않음."
+  ].join("\n");
+  return `<span class="trade-timing-ref ${state === "buy" ? "up" : state === "sell" ? "down" : "flat"}" title="${esc(title)}" tabindex="0"><span>${labels[state]}</span>${metric ? ` <span class="trade-timing-value">${metric}</span>` : ""}</span>`;
+}
 function indicatorToneAttr(v, kind) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "";

@@ -27,6 +27,8 @@
 
 ## Data invariants
 
+- Preserve the existing entry risk/reward column and formula. Account/watchlist lists place the separate experimental `trade_timing` reference immediately to its right. Buy requires rising SMA50, price above SMA50 and optional SMA200, an SMA20 upward cross within three bars still held, and R≥1.5. R uses prior-20-bar high and min(prior-10-bar low−0.5ATR, price−1.5ATR). Sell requires price below SMA20, ≥3ATR off the prior-20-bar high, and prior-low break; ≥2ATR below SMA20 is caution. ATR14 uses up to 61 prior OHLC bars. Same/new-session selected-price recalculation must preserve these prior-bar anchors. Missing OHLC/history and leveraged/inverse/index/FX items stay absent, never neutral-imputed. This is unvalidated price-only reference, not a trade recommendation or probability; keep R/ATR units and provisional-session caveats visible. Sort by state, never compare unlike units.
+
 - Entry risk/reward uses daily SMA50 (±2% ramp) and optional SMA200 (±5% ramp), matching chart periods. Trend strength weights weekly RSI/SMA50/SMA200 at 40/40/20; without SMA200, weekly RSI and SMA50 each receive 50%. All other required inputs still gate missing scores. Keep live, extended-price, chart-history and transaction-score paths on this same formula.
 
 - β″ uses up to 252 common trading-day returns: Korean-listed stocks/ETFs (`.KS`, `.KQ`) use KODEX 200TR (`278530.KS`); other instruments retain S&P 500. Missing Korean benchmark history must not fall back to S&P 500. Keep the first β field's existing provider/calculation behavior unchanged.

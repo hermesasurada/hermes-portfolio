@@ -410,7 +410,7 @@ function sortInterestRows(rows, group = activeInterestGroup()) {
   const { key, dir } = interestSortState;
   rows.sort((a, b) => {
     const av = listSortValue(a, key), bv = listSortValue(b, key);
-    if (key === "next_earnings_date" || key === "risk_reward_score" || key === "entry_risk_reward") {
+    if (key === "next_earnings_date" || key === "risk_reward_score" || key === "entry_risk_reward" || key === "trade_timing") {
       const aMissing = key === "next_earnings_date"
         ? !av
         : av == null || !Number.isFinite(Number(av));

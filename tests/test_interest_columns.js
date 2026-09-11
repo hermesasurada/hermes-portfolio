@@ -10,12 +10,12 @@ vm.runInContext(`
 const source = fs.readFileSync(path.join(__dirname, "../portfolio_static/app-interest-columns.js"), "utf8");
 vm.runInContext(source, context);
 const run = code => vm.runInContext(code, context);
-assert.equal(run("INTEREST_TABLE_COLUMN_COUNT"), 60);
+assert.equal(run("INTEREST_TABLE_COLUMN_COUNT"), 61);
 // MM/DD in Roboto Mono needs room for both group-boundary paddings.
 assert.equal(run("INTEREST_COLUMNS.find(c => c.key === 'next_earnings_date').width"), 60);
-assert.equal(run("new Set(INTEREST_COLUMNS.map(c => c.key)).size"), 60);
+assert.equal(run("new Set(INTEREST_COLUMNS.map(c => c.key)).size"), 61);
 assert.equal(run("INTEREST_COLUMNS.filter(c => c.numeric).length"), 56);
-assert.equal(run("INTEREST_COLUMNS.filter(c => !c.numeric).map(c => c.key).join(',')"), 'logo,name,rating_rank,delete');
+assert.equal(run("INTEREST_COLUMNS.filter(c => !c.numeric).map(c => c.key).join(',')"), 'logo,name,trade_timing,rating_rank,delete');
 const numericCells = run("interestRowCells({}, {}, INTEREST_COLUMNS.map(c => ({...c, cell: () => 'test'})))");
 assert.equal((numericCells.match(/numeric-cell/g) || []).length, 56);
 assert.match(numericCells, /class="group-start numeric-cell"/);
@@ -26,13 +26,13 @@ assert.equal(run("visibleInterestColumns([{ free_cash_flow: 0 }]).some(c => c.ke
 assert.equal(run("visibleInterestColumns([{ extended_change_pct: 1 }], true).some(c => c.key === 'extended_change_pct')"), false);
 assert.equal(run("visibleInterestColumns([{ dividend_growth_5y: 3 }]).some(c => c.key === 'dividend_growth_5y')"), true);
 const allHeaders = run("interestTableHead(INTEREST_COLUMNS)");
-assert.equal((allHeaders.match(/data-interest-col=/g) || []).length, 60);
-assert.equal((allHeaders.match(/data-interest-sort-key=/g) || []).length, 59);
+assert.equal((allHeaders.match(/data-interest-col=/g) || []).length, 61);
+assert.equal((allHeaders.match(/data-interest-sort-key=/g) || []).length, 60);
 const few = run("interestTableHead(visibleInterestColumns([{ rsi_week: 40, rsi_month: 45 }]))");
 assert.match(few, /colspan="2" class="group-start" data-interest-group-head="momentum"/);
-assert.doesNotMatch(few, /data-interest-col="16"/);
-assert.match(few, /data-interest-col="17"/);
-assert.equal((run("interestEmptyRow('none', INTEREST_COLUMNS)").match(/<td /g) || []).length, 60);
+assert.doesNotMatch(few, /data-interest-col="17"/);
+assert.match(few, /data-interest-col="18"/);
+assert.equal((run("interestEmptyRow('none', INTEREST_COLUMNS)").match(/<td /g) || []).length, 61);
 assert.match(run("interestEmptyRow('<unsafe>', visibleInterestColumns([]))"), /&lt;unsafe>/);
 run(`
   const testCol = { innerHTML: '' }, testHead = { innerHTML: '' };
@@ -43,6 +43,9 @@ assert.equal((run("testCol.innerHTML").match(/<col /g) || []).length, 5);
 run("testHead.innerHTML = 'unchanged'; renderInterestFrame(table, visibleInterestColumns([]));");
 assert.equal(run("testHead.innerHTML"), "unchanged");
 console.log("interest column schema, visibility, header alignment and frame reuse ok");
+assert.equal(run("visibleInterestColumns([{trade_timing: null}]).some(c=>c.key==='trade_timing')"), false);
+assert.equal(run("visibleInterestColumns([{trade_timing: {state:'wait'}}]).some(c=>c.key==='trade_timing')"), true);
+assert.equal(run("INTEREST_COLUMNS[INTEREST_COLUMNS.findIndex(c=>c.key==='entry_risk_reward')+1].key"), 'trade_timing');
 
 assert.equal(run("INTEREST_COLUMNS.slice(INTEREST_COLUMNS.findIndex(c => c.key === 'bb_month'), INTEREST_COLUMNS.findIndex(c => c.key === 'bb_month') + 5).map(c => c.key).join(',')"),
   'bb_month,ma20_pct,ma50_pct,ma200_pct,trailing_pe');

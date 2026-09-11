@@ -66,6 +66,7 @@ const chartCompareColors = ["var(--brand)", "#7c3aed", "#0d9488", "#d97706", "#d
 const detailSortKeys = new Set(["ticker", "name", "display_change_pct", "extended_change_pct", "change_krw", "qty", "current_price", "current_price_krw", "value", "value_krw", "weight_pct", "market_cap_usd", "dividend_yield", "dividend_growth_5y", "next_earnings_date", "drawdown_52w", "risk_reward_score", "entry_risk_reward", "beta", "beta_adj", "rsi_day", "rsi_week", "rsi_month", "bb_day", "bb_week", "bb_month", "ma20_pct", "ma50_pct", "ma200_pct", "trailing_pe", "forward_pe", "price_to_book", "perf_1w", "perf_1m", "perf_3m", "perf_6m", "perf_ytd", "perf_1y", "perf_3y", "perf_5y", "perf_10y"]);
 const dividendSortKeys = new Set(["pay_date", "target", "name", "amount", "qty", "gross", "tax", "tax_rate", "net", "fx_rate", "net_krw", "dividend_yield", "dividend_growth_5y", "ex_date"]);
 
+detailSortKeys.add("trade_timing");
 // app-holdings.js loaded separately.
 // app-line-chart.js loaded separately.
 // app-transactions.js loaded separately.

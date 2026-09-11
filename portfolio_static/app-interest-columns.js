@@ -49,6 +49,9 @@ const INTEREST_COLUMNS = [
     cell: (r, group) => `${riskRewardScoreText(r.risk_reward_score, r.risk_reward_basis, r.risk_reward_quality)}` },
   { key: "entry_risk_reward", width: 58, label: "<span>진입</span><span>손익비</span>", headClass: "indicator-head interest-leaf-head", title: "진입 손익비 = clamp(업사이드 ÷ 손절폭 × RSI계수 × 추세계수, 0, 20)\n · 업사이드 = 0.3×(일 볼린저 상단까지 %) + 0.7×min(주 볼린저 상단까지 %, 30) — 음수는 0\n · 손절폭 = max(1.5 × ATR(14) %, 1%)\n · RSI계수 = clamp(1 + (50 − 일RSI)/40 × 0.5, 0.25, 1.4) — 낮을수록 가점\n · 추세계수 = 0.25 + 0.75 × (0.4a + 0.4b + 0.2c)\n     a = clamp((주RSI − 45)/10, 0, 1), b = clamp((50일선 이격% + 2)/4, 0, 1)\n     c = clamp((200일선 이격% + 5)/10, 0, 1)\n200일선이 없으면 a·b를 각각 50% 반영. 주봉 RSI·BB·50일선 등 필수 이력이 없으면 점수 없음(-)",
     cell: (r, group) => `${entryRewardText(r.entry_risk_reward)}` },
+  { key: "trade_timing", width: 150, label: "<span>매매 참고</span><span class=\"trade-timing-note\">실험적</span>", headClass: "indicator-head interest-leaf-head", cellClass: "trade-timing-col",
+    title: "검증 전 참고 기준 · 기존 진입손익비와 별도\n매수: 상승 추세 + 최근 3일 내 20일선 상향돌파 유지 + 가격 손익비 1.5R 이상\n매도: 20일선 아래 + 20일 고점 대비 3ATR 이상 하락 + 전일 저가 이탈\n2ATR 이상 하락·20일선 아래는 주의. R과 ATR은 서로 다른 단위. 상태별 정렬, 결측은 뒤로.",
+    cell: r => tradeTimingMarkup(r.trade_timing) },
   { key: "beta", width: 42, label: "β", headClass: "interest-leaf-head",
     cell: (r, group) => `${betaText(r.beta)}` },
   { key: "beta_adj", width: 44, label: "β″", headClass: "interest-leaf-head",
@@ -149,13 +152,14 @@ const INTEREST_COLUMNS = [
           : `<button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button>`}` },
 ].map((column, index) => ({
   ...column, index,
-  numeric: !["logo", "name", "rating_rank", "delete"].includes(column.key),
+  numeric: !["logo", "name", "trade_timing", "rating_rank", "delete"].includes(column.key),
 }));
 const INTEREST_TABLE_COLUMN_COUNT = INTEREST_COLUMNS.length;
 
 let interestRenderedColumns = INTEREST_COLUMNS;
 
 function hasInterestColumnValue(row, field) {
+  if (field === "trade_timing") return Boolean(row[field]?.state);
   if (field === "next_earnings_date") return Boolean(row[field]);
   if (field === "rating_rank") return row[field] != null;
   if (field === "dividend_yield") return Number(row[field]) > 0;

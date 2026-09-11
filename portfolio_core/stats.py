@@ -36,13 +36,14 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
     with connect() as conn:
         technical = load_technical_stats_cache(conn, clean_tickers)
         placeholders_names = ",".join("?" for _ in clean_tickers)
-        ticker_names = {
-            row["ticker"]: row["name"]
+        ticker_meta = {
+            row["ticker"]: dict(row)
             for row in conn.execute(
-                f"SELECT ticker, name FROM tickers WHERE ticker IN ({placeholders_names})",
+                f"SELECT ticker, name, category FROM tickers WHERE ticker IN ({placeholders_names})",
                 clean_tickers,
             )
         }
+        ticker_names = {ticker: row["name"] for ticker, row in ticker_meta.items()}
         # The stats tab must stay read-only/low-latency. Fundamental refreshes
         # and RSI/BB/performance refreshes are handled by price/watchlist jobs.
         fundamentals = fetch_fundamentals(conn, clean_tickers, refresh_stale=False)
@@ -61,7 +62,7 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
             cutoff = (datetime.now(KST).date() - timedelta(days=PRICE_ADJUSTED_LOOKBACK_DAYS)).isoformat()
             rows = conn.execute(
                 f"""
-                SELECT ticker, date, close
+                SELECT ticker, date, close, high, low
                 FROM daily_prices
                 WHERE ticker IN ({placeholders})
                   AND date >= ?
@@ -128,6 +129,8 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
             merged.get("bb_upper_week_pct"),
             merged.get("ma200_pct"),
         )
+        if is_leveraged_product(ticker_names.get(ticker)) or ticker_meta.get(ticker, {}).get("category") in {"index", "fx"}:
+            merged["trade_timing"] = None
         stats[ticker] = merged
 
     return {

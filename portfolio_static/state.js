@@ -93,6 +93,7 @@ const defaultSortDir = {
   institutional_ownership: -1,
   risk_reward_score: -1,
   entry_risk_reward: -1,
+  trade_timing: -1,
   beta: -1,
   beta_adj: -1,
   drawdown_52w: -1,
