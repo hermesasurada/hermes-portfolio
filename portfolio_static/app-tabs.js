@@ -335,7 +335,7 @@ function renderDividendHistory(payload) {
             <th>귀속연도</th>
             <th>연간배당</th>
             <th>성장률</th>
-            ${monthlyDistribution ? "" : "<th>횟수</th>"}
+            ${monthlyDistribution ? "" : '<th class="history-count-cell">횟수</th>'}
             <th>기준일</th>
             <th>지급일</th>
             <th>주당배당금</th>
@@ -399,7 +399,7 @@ function renderDividendHistory(payload) {
               ? `총 ${fmt.format(totalPayments)}회 (정기 ${fmt.format(regularPayments)}${expectedPaymentsText}, 추가 분배 ${fmt.format(supplementalPayments)}회)`
               : `정기 ${fmt.format(regularPayments)}${expectedPaymentsText}`;
             const countCell = monthlyDistribution ? "" : `
-              <td class="history-annual-cell">
+              <td class="history-annual-cell history-count-cell">
                 <span class="history-annual-anchor${supplementalPayments ? " history-count-anchor" : ""}" title="${esc(countTitle)}">
                   ${supplementalPayments
                     ? `<span class="history-count-total">${fmt.format(totalPayments)}회</span><small class="history-count-regular">정기 ${fmt.format(regularPayments)}${expectedPaymentsText}</small>`
