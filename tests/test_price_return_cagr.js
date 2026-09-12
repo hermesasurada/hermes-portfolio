@@ -32,7 +32,9 @@ assert.equal(JSON.stringify(performance), before, 'API cumulative data must not 
 vm.runInContext(read('app-chart-metrics.js'), ctx);
 assert.equal(ctx.chartStatPercent(ctx.priceReturnCagr(null, 10), 1), '-');
 assert.match(ctx.chartStatPercent(row.perf_3y, 1), /10\.0%/);
-for (const file of ['index.html', 'app-interest-columns.js', 'app-chart-metrics.js']) {
-  assert.match(read(file), /CAGR/);
+for (const years of [3, 5, 10]) {
+  assert.match(read('index.html'), new RegExp(`data-key="perf_${years}y"[^>]*>${years}년</th>`));
+  assert.match(read('app-interest-columns.js'), new RegExp(`key: "perf_${years}y", width: 64, label: "${years}년"`));
+  assert.match(read('app-chart-metrics.js'), new RegExp(`"성과", "${years}년", chartStatPercent\\(priceReturnCagr`));
 }
 console.log('Price CAGR: annualization, missing values, short periods and source preservation passed.');
