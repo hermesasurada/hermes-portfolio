@@ -1331,6 +1331,9 @@ function renderLineChart(payload) {
   const logMax = useLog ? Math.log10(max) : 0;
   const logSpan = useLog ? ((Math.log10(max) - Math.log10(min)) || 1) : 1;
   const candleWidth = Math.max(.75, Math.min(compactChart ? 10 : 8, plotW / Math.max(1, points.length + futureCount) * .68));
+  // Inset each body edge by 0.5 screen px; keep the center, wick and plot inset unchanged.
+  // Very dense ranges retain a positive body width instead of producing invalid SVG.
+  const candleBodyWidth = Math.max(.1, candleWidth - pxToView);
   // 캔들 중심을 플롯 경계에 두면 clipPath가 몸통 절반을 잘라낸다. 캔들
   // 모드에서만 몸통 바깥으로 약 8 viewBox 단위의 숨 쉴 여백을 확보한다.
   const candleInset = chartType === "candle" ? Math.max(10, candleWidth / 2 + 8) : 0;
@@ -1358,7 +1361,7 @@ function renderLineChart(payload) {
     return `
       <g class="chart-candle ${cls}">
         <line class="chart-candle-wick" x1="${x.toFixed(2)}" x2="${x.toFixed(2)}" y1="${yFor(candle.high).toFixed(2)}" y2="${yFor(candle.low).toFixed(2)}"></line>
-        <rect class="chart-candle-body" x="${(x - candleWidth / 2).toFixed(2)}" y="${bodyY.toFixed(2)}" width="${candleWidth.toFixed(2)}" height="${bodyH.toFixed(2)}"></rect>
+        <rect class="chart-candle-body" x="${(x - candleBodyWidth / 2).toFixed(2)}" y="${bodyY.toFixed(2)}" width="${candleBodyWidth.toFixed(2)}" height="${bodyH.toFixed(2)}"></rect>
       </g>
     `;
   }).join("") : "";
