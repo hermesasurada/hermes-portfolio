@@ -304,7 +304,6 @@ function renderDividendHistory(payload) {
   initDividendHistoryCollapsedYears(payload, rows);
   const estimatedGrowthMark = `<small class="history-growth-basis" title="현재 귀속연도 예상 연간배당 기준">*</small>`;
   const rollingGrowth = summary.rolling_monthly_growth;
-  const monthlyDistribution = Number(summary.frequency) === 12;
   const latestGrowthLabel = rollingGrowth ? "최근 4개월 전년비" : (summary.latest_growth_estimated ? "예상 성장률" : "최근 성장률");
   // 지급주기는 타이틀 옆 괄호로, 연환산은 표의 예상 연간배당과 중복이라 보드에서 제외
   const summaryColumns = [
@@ -335,7 +334,6 @@ function renderDividendHistory(payload) {
             <th>귀속연도</th>
             <th>연간배당</th>
             <th>성장률</th>
-            ${monthlyDistribution ? "" : '<th class="history-count-cell">횟수</th>'}
             <th>기준일</th>
             <th>지급일</th>
             <th>주당배당금</th>
@@ -389,32 +387,14 @@ function renderDividendHistory(payload) {
                         : ""
                   }`
             }</span></td>`;
-            const regularPayments = Number(row.payments) || 0;
-            const totalPayments = Math.max(regularPayments, Number(row.total_payments) || 0);
-            const supplementalPayments = Math.max(0, totalPayments - regularPayments);
-            const expectedPaymentsText = row.expected_payments
-              ? `/${fmt.format(row.expected_payments)}`
-              : "";
-            const countTitle = supplementalPayments
-              ? `총 ${fmt.format(totalPayments)}회 (정기 ${fmt.format(regularPayments)}${expectedPaymentsText}, 추가 분배 ${fmt.format(supplementalPayments)}회)`
-              : `정기 ${fmt.format(regularPayments)}${expectedPaymentsText}`;
-            const countCell = monthlyDistribution ? "" : `
-              <td class="history-annual-cell history-count-cell">
-                <span class="history-annual-anchor${supplementalPayments ? " history-count-anchor" : ""}" title="${esc(countTitle)}">
-                  ${supplementalPayments
-                    ? `<span class="history-count-total">${fmt.format(totalPayments)}회</span><small class="history-count-regular">정기 ${fmt.format(regularPayments)}${expectedPaymentsText}</small>`
-                    : `${fmt.format(regularPayments)}${expectedPaymentsText}`}
-                </span>
-              </td>`;
             const emptyGroupCells = `
               <td class="history-group-empty"></td>
               <td class="history-group-empty"></td>
-              <td class="history-group-empty"></td>
-              ${monthlyDistribution ? "" : '<td class="history-group-empty"></td>'}`;
+              <td class="history-group-empty"></td>`;
             if (collapsed) {
               return `
                 <tr class="history-year-collapsed ${rowIndex > 0 ? "history-year-start" : ""}">
-                  ${yearCell}${amountCell}${growthCell}${countCell}
+                  ${yearCell}${amountCell}${growthCell}
                   <td class="history-collapsed-summary" colspan="3">${fmt.format(detailCount)}건 접힘</td>
                 </tr>
               `;
@@ -426,11 +406,11 @@ function renderDividendHistory(payload) {
               const compactDistributionLabel = distributionLabel === "특별배당" ? "특별" : distributionLabel;
               const specialGroupCells = `
                 <td class="history-group-empty"></td>
-                <td class="history-special-note" colspan="${monthlyDistribution ? 2 : 3}">${distributionLabel}</td>`;
+                <td class="history-special-note" colspan="2">${distributionLabel}</td>`;
               return `
                 <tr class="${index === 0 && rowIndex > 0 ? "history-year-start" : ""}">
                   ${index === 0
-                    ? `${yearCell}${amountCell}${growthCell}${countCell}`
+                    ? `${yearCell}${amountCell}${growthCell}`
                     : detail?.is_special ? specialGroupCells : emptyGroupCells}
                   <td class="history-detail-date">${detail ? shortDateText(detail.entitlement_date) : "-"}</td>
                   <td class="history-detail-date">${detail ? shortDateText(detail.pay_date) : "-"}</td>
