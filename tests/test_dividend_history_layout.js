@@ -25,7 +25,7 @@ for (const frequency of [1, 2, 4, 12]) {
   context.collapsedDividendHistoryYears.clear();
   if (collapsed) context.collapsedDividendHistoryYears.add('2026');
   context.renderDividendHistory({ticker: 'TEST', summary: {frequency}, rows: [{
-    year: 2026, amount: 12345.6789, payments: 1, expected_payments: frequency,
+    year: 2026, current_ytd: true, amount: 12345.6789, payments: 1, expected_payments: frequency,
     payments_detail: [
       {amount: 12345.6789, entitlement_date: '2026-01-01', pay_date: '2026-01-15'},
       {amount: 10, entitlement_date: '2026-02-01', pay_date: '2026-02-15', is_special: true},
@@ -34,7 +34,8 @@ for (const frequency of [1, 2, 4, 12]) {
   }]});
   const html = elements.dividendHistoryBody.innerHTML;
   assert.equal((html.match(/<th[ >]/g) || []).length, 6);
-  assert.doesNotMatch(html, /history-count|횟수/);
+  assert.doesNotMatch(html, /history-count|횟수|history-ytd|YTD/);
+  assert.match(html, /<strong>2026<\/strong>/);
   assert.match(html, /12345\.6789/);
   if (!collapsed) assert.match(html, /2026-01-15/);
   for (const row of html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)) {

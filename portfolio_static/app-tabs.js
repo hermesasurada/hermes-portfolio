@@ -362,7 +362,6 @@ function renderDividendHistory(payload) {
                 ` : ""}
                 <span class="history-year-anchor">
                   <strong>${row.year}</strong>
-                  ${row.current_ytd ? `<span class="history-ytd">YTD</span>` : ""}
                 </span>
               </td>`;
             const amountCell = `

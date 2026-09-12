@@ -5077,17 +5077,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .dividend-history-table tbody tr:last-child td {
   border-bottom: 0;
 }
-.history-ytd {
-  display: inline-flex;
-  margin-left: 2px;
-  padding: 0 2px;
-  border-radius: 3px;
-  background: var(--brand-soft);
-  color: var(--brand);
-  font-size: 10px;
-  font-weight: 800;
-  vertical-align: 1px;
-}
 .history-amount,
 .history-estimate {
   display: block;
