@@ -928,9 +928,9 @@ function rsiThresholdAreaPaths(points, threshold, direction, xFor, yFor) {
 }
 
 
-// Touch inspection is deliberate: hold still for 450ms, then slide to inspect.
+// Price inspection requires a 450ms hold; trade markers opt into immediate display.
 // Keep the result after release; the next touch anywhere dismisses it.
-function bindChartLongPress(target, show, hide) {
+function bindChartLongPress(target, show, hide, delay = 450) {
   let timer = null;
   let press = null;
   let suppressUntil = 0;
@@ -952,13 +952,15 @@ function bindChartLongPress(target, show, hide) {
     stop();
     if (wasPressing || event.isPrimary === false) return;
     press = {id: event.pointerId, x: event.clientX, y: event.clientY, active: false};
-    timer = setTimeout(() => {
+    const activate = () => {
       timer = null;
       if (!press || !target.isConnected) return;
       press.active = true;
       show(press.x, press.y);
       document.addEventListener("pointerdown", dismissOnTouch, true);
-    }, 450);
+    };
+    if (delay === 0) activate();
+    else timer = setTimeout(activate, delay);
   });
   target.addEventListener("pointermove", event => {
     if (event.pointerType !== "touch" || press?.id !== event.pointerId) return;
@@ -1245,7 +1247,7 @@ function bindChartInteractions(points, payload, geometry) {
 
   document.querySelectorAll(".trade-marker").forEach(marker => {
     const suppressMarkerHover = bindChartLongPress(marker, () => showMarker(marker),
-      () => hoverGroup.classList.add("hidden"));
+      () => hoverGroup.classList.add("hidden"), 0);
     ["pointerenter", "mouseenter", "mouseover", "focus", "click"].forEach(eventName => {
       marker.addEventListener(eventName, event => {
         if (event.pointerType === "touch" || event.sourceCapabilities?.firesTouchEvents || suppressMarkerHover()) return;
