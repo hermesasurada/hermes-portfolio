@@ -9,10 +9,13 @@ assert.match(candleBody, /x - candleBodyWidth \/ 2/);
 assert.match(candleBody, /width="\$\{candleBodyWidth\.toFixed/);
 const bodyWidthExpression = candleSource.match(/const candleBodyWidth = ([^;]+);/)[1];
 for (const pxToView of [0.75, 1, 2.5, 3]) {
-  const bodyWidth = vm.runInNewContext(bodyWidthExpression, {candleWidth: 8, pxToView});
-  assert.ok(Math.abs((8 - bodyWidth) / pxToView / 2 - 0.5) < 1e-9);
+  const roomy = vm.runInNewContext(bodyWidthExpression, {candleWidth: 8, candleSpacing: 20, pxToView});
+  assert.equal(roomy, 8, 'Already separated candles retain their original width');
+  const bodyWidth = vm.runInNewContext(bodyWidthExpression, {candleWidth: 8, candleSpacing: 3 * pxToView, pxToView});
+  assert.ok((3 * pxToView - bodyWidth) / pxToView - .65 >= .2 - 1e-9);
 }
-assert.ok(vm.runInNewContext(bodyWidthExpression, {candleWidth: 0.75, pxToView: 3}) > 0);
+assert.ok(vm.runInNewContext(bodyWidthExpression, {candleWidth: 0.75, candleSpacing: .5, pxToView: 3}) > 0);
+assert.equal(vm.runInNewContext(bodyWidthExpression, {candleWidth: 8, candleSpacing: Infinity, pxToView: 3}), 8);
 
 const context = { window: {}, chartInterval: "day" };
 vm.createContext(context);
