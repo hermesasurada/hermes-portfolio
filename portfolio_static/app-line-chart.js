@@ -928,6 +928,55 @@ function rsiThresholdAreaPaths(points, threshold, direction, xFor, yFor) {
 }
 
 
+// Touch inspection is deliberate: hold still for 450ms, then slide to inspect.
+// A quick tap, page scroll, cancellation or release must not leave a tooltip behind.
+function bindChartLongPress(target, show, hide) {
+  let timer = null;
+  let press = null;
+  let suppressUntil = 0;
+  const stop = () => {
+    clearTimeout(timer);
+    timer = null;
+    press = null;
+    hide();
+  };
+  const suppressHover = () => Date.now() < suppressUntil;
+  target.addEventListener("pointerdown", event => {
+    if (event.pointerType !== "touch") return;
+    suppressUntil = Date.now() + 1000;
+    const wasPressing = press != null;
+    stop();
+    if (wasPressing || event.isPrimary === false) return;
+    press = {id: event.pointerId, x: event.clientX, y: event.clientY, active: false};
+    timer = setTimeout(() => {
+      timer = null;
+      if (!press || !target.isConnected) return;
+      press.active = true;
+      show(press.x, press.y);
+    }, 450);
+  });
+  target.addEventListener("pointermove", event => {
+    if (event.pointerType !== "touch" || press?.id !== event.pointerId) return;
+    suppressUntil = Date.now() + 1000;
+    if (!press.active && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 10) {
+      stop();
+    } else if (press.active) {
+      show(event.clientX, event.clientY);
+    }
+  });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(name => {
+    target.addEventListener(name, event => {
+      if (event.pointerType !== "touch") return;
+      suppressUntil = Date.now() + 1000;
+      stop();
+    });
+  });
+  target.addEventListener("contextmenu", event => {
+    if (press || suppressHover()) event.preventDefault();
+  });
+  return suppressHover;
+}
+
 function bindChartInteractions(points, payload, geometry) {
   const svg = document.querySelector("#chartCanvas svg");
   const hoverLayer = document.getElementById("chartHoverLayer");
@@ -945,7 +994,6 @@ function bindChartInteractions(points, payload, geometry) {
   const selectionSummaryText = document.getElementById("chartSelectionSummaryText");
   let dragStartIndex = null;
   let isDragging = false;
-  let touchPinned = false;
   if (!svg || !hoverLayer || !hoverGroup || !hoverLine || !hoverDot || !tooltip) return;
 
   // 줄바꿈은 직계 tspan만 담당한다 — 줄 안의 라벨·값 tspan에 x를 다시 박으면 겹친다
@@ -1144,12 +1192,10 @@ function bindChartInteractions(points, payload, geometry) {
     selectionSummaryBox.setAttribute("height", (textBox.height + 10).toFixed(2));
   }
 
+  const suppressTouchHover = bindChartLongPress(hoverLayer, showPoint,
+    () => hoverGroup.classList.add("hidden"));
   hoverLayer.addEventListener("pointerdown", event => {
-    if (event.pointerType === "touch") {
-      touchPinned = true;
-      showPoint(event.clientX, event.clientY);
-      return;
-    }
+    if (event.pointerType === "touch" || suppressTouchHover()) return;
     dragStartIndex = pointIndexFromClientX(event.clientX);
     isDragging = true;
     selectionGroup?.classList.add("hidden");
@@ -1159,10 +1205,7 @@ function bindChartInteractions(points, payload, geometry) {
     event.preventDefault();
   });
   hoverLayer.addEventListener("pointermove", event => {
-    if (event.pointerType === "touch") {
-      if (event.buttons) showPoint(event.clientX, event.clientY);
-      return;
-    }
+    if (event.pointerType === "touch" || suppressTouchHover()) return;
     if (isDragging && dragStartIndex != null) {
       updateSelection(dragStartIndex, pointIndexFromClientX(event.clientX));
       return;
@@ -1170,10 +1213,7 @@ function bindChartInteractions(points, payload, geometry) {
     showPoint(event.clientX, event.clientY);
   });
   hoverLayer.addEventListener("pointerup", event => {
-    if (event.pointerType === "touch") {
-      showPoint(event.clientX, event.clientY);
-      return;
-    }
+    if (event.pointerType === "touch" || suppressTouchHover()) return;
     if (isDragging && dragStartIndex != null) {
       updateSelection(dragStartIndex, pointIndexFromClientX(event.clientX));
     }
@@ -1185,14 +1225,21 @@ function bindChartInteractions(points, payload, geometry) {
     isDragging = false;
     dragStartIndex = null;
   });
-  hoverLayer.addEventListener("pointerenter", event => showPoint(event.clientX, event.clientY));
+  hoverLayer.addEventListener("pointerenter", event => {
+    if (event.pointerType !== "touch" && !suppressTouchHover()) showPoint(event.clientX, event.clientY);
+  });
   hoverLayer.addEventListener("pointerleave", () => {
-    if (!touchPinned) hoverGroup.classList.add("hidden");
+    hoverGroup.classList.add("hidden");
   });
 
   document.querySelectorAll(".trade-marker").forEach(marker => {
+    const suppressMarkerHover = bindChartLongPress(marker, () => showMarker(marker),
+      () => hoverGroup.classList.add("hidden"));
     ["pointerenter", "mouseenter", "mouseover", "focus", "click"].forEach(eventName => {
-      marker.addEventListener(eventName, () => showMarker(marker));
+      marker.addEventListener(eventName, event => {
+        if (event.pointerType === "touch" || event.sourceCapabilities?.firesTouchEvents || suppressMarkerHover()) return;
+        showMarker(marker);
+      });
     });
   });
 }
@@ -1422,8 +1469,8 @@ function renderLineChart(payload) {
   document.getElementById("chartCanvas").innerHTML = `
     <svg class="line-chart single-price-chart ${chartType === "candle" ? "candle-chart" : "price-line-chart"}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(payload.name)} ${chartType === "candle" ? "캔들" : "종가"} 및 RSI 차트">
       <defs>
-        <pattern id="ichiBullHatch" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M2.5,0 V5" stroke="var(--up)" stroke-width="1" opacity=".4"/></pattern>
-        <pattern id="ichiBearHatch" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M2.5,0 V5" stroke="var(--down)" stroke-width="1" opacity=".4"/></pattern>
+        <pattern id="ichiBullHatch" width="5" height="6" patternUnits="userSpaceOnUse"><rect width="5" height="6" fill="var(--up)" opacity=".10"/><path d="M2.5,0 V6" stroke="var(--up)" stroke-width="1.4" opacity=".7"/></pattern>
+        <pattern id="ichiBearHatch" width="5" height="6" patternUnits="userSpaceOnUse"><rect width="5" height="6" fill="var(--down)" opacity=".10"/><path d="M2.5,0 V6" stroke="var(--down)" stroke-width="1.4" stroke-dasharray="3 3" opacity=".8"/></pattern>
         <linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stop-color="var(--chart-price)" stop-opacity=".18"></stop>
           <stop offset="72%" stop-color="var(--chart-price)" stop-opacity=".045"></stop>
