@@ -3254,17 +3254,12 @@ th.pc-frozen-edge {
 }
 .chart-ichi-cloud {
   opacity: 1;
-  stroke-width: .8;
-  stroke-linejoin: round;
 }
 .chart-ichi-cloud.bullish {
   fill: url(#ichiBullHatch);
-  stroke: var(--up);
 }
 .chart-ichi-cloud.bearish {
   fill: url(#ichiBearHatch);
-  stroke: var(--down);
-  stroke-dasharray: 3 2;
 }
 .chart-ichi-line {
   fill: none;

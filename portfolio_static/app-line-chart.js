@@ -929,15 +929,19 @@ function rsiThresholdAreaPaths(points, threshold, direction, xFor, yFor) {
 
 
 // Touch inspection is deliberate: hold still for 450ms, then slide to inspect.
-// A quick tap, page scroll, cancellation or release must not leave a tooltip behind.
+// Keep the result after release; the next touch anywhere dismisses it.
 function bindChartLongPress(target, show, hide) {
   let timer = null;
   let press = null;
   let suppressUntil = 0;
+  const dismissOnTouch = event => {
+    if (event.pointerType === "touch") stop();
+  };
   const stop = () => {
     clearTimeout(timer);
     timer = null;
     press = null;
+    document.removeEventListener("pointerdown", dismissOnTouch, true);
     hide();
   };
   const suppressHover = () => Date.now() < suppressUntil;
@@ -953,6 +957,7 @@ function bindChartLongPress(target, show, hide) {
       if (!press || !target.isConnected) return;
       press.active = true;
       show(press.x, press.y);
+      document.addEventListener("pointerdown", dismissOnTouch, true);
     }, 450);
   });
   target.addEventListener("pointermove", event => {
@@ -968,6 +973,12 @@ function bindChartLongPress(target, show, hide) {
     target.addEventListener(name, event => {
       if (event.pointerType !== "touch") return;
       suppressUntil = Date.now() + 1000;
+      if (name === "pointerup" && press?.active) {
+        press = null;
+        return;
+      }
+      // Touch pointerleave follows pointerup on release; keep the pinned result.
+      if (name === "pointerleave" && !press) return;
       stop();
     });
   });
@@ -1228,8 +1239,8 @@ function bindChartInteractions(points, payload, geometry) {
   hoverLayer.addEventListener("pointerenter", event => {
     if (event.pointerType !== "touch" && !suppressTouchHover()) showPoint(event.clientX, event.clientY);
   });
-  hoverLayer.addEventListener("pointerleave", () => {
-    hoverGroup.classList.add("hidden");
+  hoverLayer.addEventListener("pointerleave", event => {
+    if (event.pointerType !== "touch" && !suppressTouchHover()) hoverGroup.classList.add("hidden");
   });
 
   document.querySelectorAll(".trade-marker").forEach(marker => {
@@ -1469,8 +1480,8 @@ function renderLineChart(payload) {
   document.getElementById("chartCanvas").innerHTML = `
     <svg class="line-chart single-price-chart ${chartType === "candle" ? "candle-chart" : "price-line-chart"}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(payload.name)} ${chartType === "candle" ? "캔들" : "종가"} 및 RSI 차트">
       <defs>
-        <pattern id="ichiBullHatch" width="5" height="6" patternUnits="userSpaceOnUse"><rect width="5" height="6" fill="var(--up)" opacity=".10"/><path d="M2.5,0 V6" stroke="var(--up)" stroke-width="1.4" opacity=".7"/></pattern>
-        <pattern id="ichiBearHatch" width="5" height="6" patternUnits="userSpaceOnUse"><rect width="5" height="6" fill="var(--down)" opacity=".10"/><path d="M2.5,0 V6" stroke="var(--down)" stroke-width="1.4" stroke-dasharray="3 3" opacity=".8"/></pattern>
+        <pattern id="ichiBullHatch" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M2.5,0 V5" stroke="var(--up)" stroke-width="1" opacity=".4"/></pattern>
+        <pattern id="ichiBearHatch" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M2.5,0 V5" stroke="var(--down)" stroke-width="1" opacity=".4"/></pattern>
         <linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stop-color="var(--chart-price)" stop-opacity=".18"></stop>
           <stop offset="72%" stop-color="var(--chart-price)" stop-opacity=".045"></stop>
