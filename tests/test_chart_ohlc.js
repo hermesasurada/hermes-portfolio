@@ -1,6 +1,10 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const vm = require("node:vm");
+const candleSource = fs.readFileSync("portfolio_static/app-line-chart.js", "utf8");
+const candleBody = candleSource.match(/<rect class="chart-candle-body"[^>]*>/)?.[0];
+assert.ok(candleBody);
+assert.doesNotMatch(candleBody, /\b(?:rx|ry)=/, "Candle bodies must have square corners");
 
 const context = { window: {}, chartInterval: "day" };
 vm.createContext(context);

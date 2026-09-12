@@ -10,6 +10,7 @@
 ## UI invariants
 
 - Korean market colors are mandatory: gains are red (`--up`) and losses are blue (`--down`).
+- Candlestick bodies have square corners, without SVG rx/ry rounding; preserve wick thickness and gain/loss colors.
 - Keep the user-approved white/slate light/dark theme (September 2026) and use CSS color tokens. Blue indicates interaction/selection; no blue glow or cream/sepia background. Use local Pretendard and Roboto Mono fonts.
 - Table vertical scrollbars stay hidden and horizontal scrollbars remain visible. Set `::-webkit-scrollbar { width: 0; height: 8px; }`; do not add standard `scrollbar-width` or `scrollbar-color` rules that disable the WebKit styling.
 - Use the single delegated document handler in `app.js` for ticker and dividend actions. Do not bind listeners again after each render.
