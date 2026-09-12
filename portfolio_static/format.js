@@ -4,6 +4,14 @@ const fmt1 = new Intl.NumberFormat("ko-KR", { minimumFractionDigits: 1, maximumF
 const lowPriceFmt = new Intl.NumberFormat("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const btcQtyFmt = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 8 });
 
+// Display-only conversion: keep API cumulative price returns untouched.
+function priceReturnCagr(value, years) {
+  if (value == null || value === "" || typeof value === "boolean") return null;
+  const total = Number(value);
+  if (!Number.isFinite(total) || total < -100 || !Number.isFinite(years) || years <= 0) return null;
+  return total === -100 ? -100 : Math.expm1(Math.log1p(total / 100) / years) * 100;
+}
+
 function esc(v) {
   return String(v ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 }

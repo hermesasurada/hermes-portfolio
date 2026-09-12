@@ -1127,9 +1127,9 @@ function renderTable() {
       <td>${signedPercentText(r.perf_6m, 0)}</td>
       <td>${signedPercentText(r.perf_ytd, 0)}</td>
       <td>${signedPercentText(r.perf_1y, 0)}</td>
-      <td>${signedPercentText(r.perf_3y, 0)}</td>
-      <td>${signedPercentText(r.perf_5y, 0)}</td>
-      <td>${signedPercentText(r.perf_10y, 0)}</td>
+      <td>${signedPercentText(r.perf_3y, 1)}</td>
+      <td>${signedPercentText(r.perf_5y, 1)}</td>
+      <td>${signedPercentText(r.perf_10y, 1)}</td>
       <td class="group-start">${marketCapMarkup(r)}</td>
       <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
       <td>${r.is_watchlist ? "-" : `<button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button>`}</td>

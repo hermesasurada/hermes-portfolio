@@ -3,6 +3,7 @@
 let chartStatsLoadKey = "";
 
 function chartStatPercent(value, digits = 1) {
+  if (value == null || value === "") return "-";
   const number = Number(value);
   if (!Number.isFinite(number)) return "-";
   const cls = number > 0 ? "cstat-positive" : number < 0 ? "cstat-negative" : "";
@@ -77,9 +78,9 @@ function chartStatMetricRows(payload) {
     ["성과", "6개월", chartStatPercent(perf.six_month, 0), finiteMetric(perf.six_month), "high"],
     ["성과", "YTD", chartStatPercent(perf.ytd, 0), finiteMetric(perf.ytd), "high"],
     ["성과", "1년", chartStatPercent(perf.one_year, 0), finiteMetric(perf.one_year), "high"],
-    ["성과", "3년", chartStatPercent(perf.three_year, 0), finiteMetric(perf.three_year), "high"],
-    ["성과", "5년", chartStatPercent(perf.five_year, 0), finiteMetric(perf.five_year), "high"],
-    ["성과", "10년", chartStatPercent(perf.ten_year, 0), finiteMetric(perf.ten_year), "high"],
+    ["성과", "3년 CAGR", chartStatPercent(priceReturnCagr(perf.three_year, 3), 1), priceReturnCagr(perf.three_year, 3), "high"],
+    ["성과", "5년 CAGR", chartStatPercent(priceReturnCagr(perf.five_year, 5), 1), priceReturnCagr(perf.five_year, 5), "high"],
+    ["성과", "10년 CAGR", chartStatPercent(priceReturnCagr(perf.ten_year, 10), 1), priceReturnCagr(perf.ten_year, 10), "high"],
     ["위험", "52주 고점 대비", chartStatPercent(s.drawdown_52w), finiteMetric(s.drawdown_52w), "high"],
     ["위험", "변동성 손익비", riskRewardScoreText(s.risk_reward_score, s.risk_reward_basis, s.risk_reward_quality), finiteMetric(s.risk_reward_score), "high"],
     ["위험", "진입 손익비", entryRewardText(s.entry_risk_reward), finiteMetric(s.entry_risk_reward), "high"],

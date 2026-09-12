@@ -63,9 +63,9 @@ function statsRows(rows) {
       perf_6m: perf.six_month,
       perf_ytd: perf.ytd,
       perf_1y: perf.one_year,
-      perf_3y: perf.three_year,
-      perf_5y: perf.five_year,
-      perf_10y: perf.ten_year
+      perf_3y: priceReturnCagr(perf.three_year, 3),
+      perf_5y: priceReturnCagr(perf.five_year, 5),
+      perf_10y: priceReturnCagr(perf.ten_year, 10)
     };
   });
 }
