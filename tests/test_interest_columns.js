@@ -67,7 +67,7 @@ for (const period of [20, 50, 200]) {
 }
 // Exercise the real comparator: absent SMA stays last for both sort directions.
 const holdings = read('app-holdings.js');
-vm.runInContext(holdings.slice(holdings.indexOf('function listSortValue('), holdings.indexOf('function holdingChangeBasePrice(')), context);
+vm.runInContext(holdings.slice(holdings.indexOf('function tradeTimingSortValue('), holdings.indexOf('function holdingChangeBasePrice(')), context);
 const sortFunction = holdings.slice(holdings.indexOf('function sortRows('), holdings.indexOf('function syncFilterToggleControls('));
 run(`const sortState = {detail:{key:'ma200_pct',dir:1}}; const activeDetailTab='detail';`);
 vm.runInContext(sortFunction, context);

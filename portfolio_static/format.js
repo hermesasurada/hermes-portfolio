@@ -298,7 +298,7 @@ function tradeTimingMarkup(value) {
     "매도 경계=max(0,H−현재가)/A. SMA20 아래·경계≥2 주의; ≥3·전일 저가 이탈 시 매도 검토",
     `추세 ${value.trend ? "충족" : "미충족"} · 반등 ${value.rebound ? "충족" : "미충족"} · 전일 저가 이탈 ${value.broke_previous_low ? "해당" : "아님"}`,
     `현재가 ${price(value.price)} · 상단 ${price(value.upper)} · 하단 ${price(value.lower)} · ATR ${price(value.atr)} (종목 통화)`,
-    "조건 미충족은 대기이며 매도 신호가 아님. 상태별 정렬; R과 ATR 크기는 비교하지 않음."
+    "조건 미충족은 대기이며 매도 신호가 아님. 정렬은 상태 순(매도→매수), 같은 상태 안에서는 ATR 큰 순·R 작은 순."
   ].join("\n");
   return `<span class="trade-timing-ref ${state === "buy" ? "up" : state === "sell" ? "down" : "flat"}" title="${esc(title)}" tabindex="0"><span>${labels[state]}</span>${metric ? ` <span class="trade-timing-value">${metric}</span>` : ""}</span>`;
 }

@@ -22,7 +22,7 @@ assert.match(read('styles.css'), /\.trade-timing-ref \{[^}]*flex-direction: colu
 assert.match(read('styles.css'), /#detailTableWrap \.trade-timing-col \{ min-width: 76px; width: 76px;/);
 assert.match(read('app-interest-columns.js'), /key: "trade_timing", width: 76/);
 const holdings = read('app-holdings.js');
-run(holdings.slice(holdings.indexOf('function listSortValue('), holdings.indexOf('function holdingChangeBasePrice(')));
+run(holdings.slice(holdings.indexOf('function tradeTimingSortValue('), holdings.indexOf('function holdingChangeBasePrice(')));
 run(holdings.slice(holdings.indexOf('function sortRows('), holdings.indexOf('function syncFilterToggleControls(')));
 run(`const sortState={detail:{key:'trade_timing',dir:-1}}; const activeDetailTab='detail';
  const samples=[{}, {trade_timing:{state:'sell',sell_atr:10}}, {trade_timing:{state:'buy',buy_r:1.6}}, {trade_timing:{state:'wait'}}];`);
@@ -37,3 +37,16 @@ run("const interestSortState={key:'trade_timing',dir:-1};");
 run(watch.slice(watch.indexOf('function sortInterestRows('), watch.indexOf('function syncInterestDefaultSortForGroup(')));
 assert.equal(run("const w=samples.slice(); sortInterestRows(w, {}); w.map(r=>r.trade_timing?.state||'missing').join(',')"), 'buy,wait,sell,missing');
 console.log('Trade timing rendering, distinct units, escaping, account/watchlist sorting and missing values OK');
+
+// Sort key: status bucket first, then the metric inside the bucket, never across buckets.
+const key = t => run(`tradeTimingSortValue(${JSON.stringify(t)})`);
+assert.equal(key(null), null);
+assert.equal(key({state:'bogus'}), null);
+assert.ok(key({state:'sell',sell_atr:8}) < key({state:'sell',sell_atr:3.1}), 'deeper ATR sells first');
+assert.ok(key({state:'sell',sell_atr:0.1}) < key({state:'caution',sell_atr:99}), 'sell bucket stays below caution');
+assert.ok(key({state:'caution',sell_atr:5}) < key({state:'caution',sell_atr:2}), 'deeper ATR caution first');
+assert.ok(key({state:'caution',sell_atr:0}) < key({state:'wait'}) && key({state:'wait'}) < key({state:'breakout'}), 'wait/breakout between');
+assert.ok(key({state:'watch',buy_r:1.0}) < key({state:'watch',buy_r:1.49}), 'larger R later');
+assert.ok(key({state:'watch',buy_r:1000}) < key({state:'buy',buy_r:1.5}), 'watch bucket stays below buy');
+assert.ok(key({state:'buy',buy_r:1.5}) < key({state:'buy',buy_r:4}), 'larger R buys last');
+assert.ok(key({state:'buy',buy_r:null}) > 5 && key({state:'buy',buy_r:null}) < 6, 'missing metric stays inside bucket');

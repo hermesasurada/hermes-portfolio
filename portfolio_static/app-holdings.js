@@ -126,6 +126,18 @@ function optionalNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
+// Status bucket first, then the state's own metric inside the bucket. One axis
+// runs bad→good: sell/caution rank by ATR (deeper drawdown first), watch/buy by R
+// (larger reward last). The metric is squashed into (0,1) so it never crosses buckets;
+// R and ATR still never compete against each other.
+function tradeTimingSortValue(timing) {
+  const rank = ({sell: 0, caution: 1, wait: 2, breakout: 3, watch: 4, buy: 5})[timing?.state];
+  if (rank == null) return null;
+  const squash = v => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) / (1 + Number(v)) : 0.5);
+  if (rank <= 1) return rank + (1 - squash(timing.sell_atr)) * 0.98 + 0.01;
+  if (rank >= 4) return rank + squash(timing.buy_r) * 0.98 + 0.01;
+  return rank + 0.5;
+}
 function listSortValue(row, key) {
   if (key === "extended_change_pct") {
     // The extended column is a percentage, not a currency-denominated unit price.
@@ -135,8 +147,7 @@ function listSortValue(row, key) {
       ?? optionalNumber(row?.display_change_pct)
       ?? optionalNumber(row?.change_pct);
   }
-  // Status buckets only: R and ATR are different units, never compare them.
-  if (key === "trade_timing") return ({sell: 0, caution: 1, wait: 2, breakout: 3, watch: 4, buy: 5})[row?.trade_timing?.state] ?? null;
+  if (key === "trade_timing") return tradeTimingSortValue(row?.trade_timing);
   return row?.[key];
 }
 function holdingChangeBasePrice(row) {
