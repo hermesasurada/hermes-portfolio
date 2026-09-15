@@ -388,11 +388,15 @@ def _append_market_chart_point(
         if latest_entry is not None:
             point["entry_score"] = latest_entry
         overlay = adjusted_overlays.get(today) or {}
+        # 일목(ichi_*)도 함께 옮긴다. 빠뜨리면 당일 일봉이 아직 없는 장중에
+        # 마지막 점만 전환선·기준선·구름 값이 비어, 주가가 끝나는 자리에
+        # 한 봉짜리 빈 세로 틈이 생긴다(2026-09-15 보고). 주·월 값은 뒤에서
+        # _chart_interval_ichimoku_series가 날짜로 채운다.
         point.update(
             {
                 key: item
                 for key, item in overlay.items()
-                if key.startswith(("bb_", "sma_")) and item is not None
+                if key.startswith(("bb_", "sma_", "ichi_")) and item is not None
             }
         )
         if existing is None:

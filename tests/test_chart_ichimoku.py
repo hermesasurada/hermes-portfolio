@@ -1,12 +1,13 @@
 """Interval Ichimoku: exact windows, displacement and no future leakage."""
 import sys
 import unittest
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from portfolio_core.charts import (
-    _chart_interval_ichimoku_series, _chart_overlay_series, price_chart_points_for_range,
+    US_EASTERN, _append_market_chart_point, _chart_interval_ichimoku_series,
+    _chart_overlay_series, price_chart_points_for_range,
 )
 
 
@@ -99,6 +100,37 @@ class IchimokuTests(unittest.TestCase):
         result = _chart_interval_ichimoku_series(rows, 'week')
         self.assertEqual(result['2019-01-01']['ichi_week_span_a'],
                          result['2018-12-31']['ichi_week_span_a'])
+
+
+class LiveChartPointIchimoku(unittest.TestCase):
+    """장중 라이브 점도 일목 값을 갖는다 — 없으면 구름·전환선이 한 봉 일찍 끊긴다."""
+
+    def daily_rows(self, count=120):
+        start = date(2026, 1, 1)
+        return [dict(date=(start + timedelta(days=i)).isoformat(),
+                     close=20 + (i % 7) - 3, high=24 + (i % 7) - 3,
+                     low=16 + (i % 7) - 3, open=20 + (i % 7) - 3)
+                for i in range(count)]
+
+    def test_new_live_point_carries_ichimoku(self):
+        rows = self.daily_rows()
+        points = [dict(date=row['date'], close=row['close']) for row in rows]
+        _append_market_chart_point({'price': 19.5}, {'use_live': True}, points, rows, False)
+        today = datetime.now(US_EASTERN).strftime('%Y-%m-%d')
+        self.assertEqual(points[-1]['date'], today)  # 당일 일봉이 없어 새 점이 붙는다
+        for key in ('ichi_tenkan', 'ichi_kijun', 'ichi_span_a', 'ichi_span_b'):
+            self.assertIn(key, points[-1])
+        self.assertIn('sma_20', points[-1])  # 기존 이동평균·볼린저 이관은 그대로
+
+    def test_live_point_ichimoku_matches_adjusted_series(self):
+        rows = self.daily_rows()
+        points = [dict(date=row['date'], close=row['close']) for row in rows]
+        today = datetime.now(US_EASTERN).strftime('%Y-%m-%d')
+        _append_market_chart_point({'price': 19.5}, {'use_live': True}, points, rows, False)
+        expected = _chart_overlay_series(rows + [dict(date=today, close=19.5,
+                                                      high=19.5, low=19.5, open=19.5)])[today]
+        self.assertEqual(points[-1]['ichi_span_a'], expected['ichi_span_a'])
+        self.assertEqual(points[-1]['ichi_tenkan'], expected['ichi_tenkan'])
 
 
 if __name__ == '__main__':
