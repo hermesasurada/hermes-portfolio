@@ -591,18 +591,6 @@ function initInterestSectorFilter() {
   });
 }
 
-// UI-only edit mode: never mutates groups or triggers a data reload.
-function setInterestEditMode(editing) {
-  document.body.classList.toggle("watchlist-editing", editing);
-  const button = document.getElementById("interestEditToggle");
-  button?.setAttribute("aria-pressed", String(editing));
-  if (button) button.textContent = editing ? "완료" : "편집";
-  if (!editing && editingInterestGroupId != null) {
-    editingInterestGroupId = null;
-    renderInterestWatchlists();
-  }
-}
-
 function setMobileFiltersExpanded(expanded) {
   document.getElementById("mobileFiltersToggle")?.setAttribute("aria-expanded", String(expanded));
   document.querySelector(".title-tools")?.classList.toggle("filters-expanded", expanded);
@@ -611,10 +599,6 @@ function setMobileFiltersExpanded(expanded) {
 
 function initInterestWatchlists() {
   initInterestSectorFilter();
-  document.getElementById("interestEditToggle")?.addEventListener("click", () => {
-    const editing = !document.body.classList.contains("watchlist-editing");
-    setInterestEditMode(editing);
-  });
   document.getElementById("mobileFiltersToggle")?.addEventListener("click", () => {
     const button = document.getElementById("mobileFiltersToggle");
     setMobileFiltersExpanded(button.getAttribute("aria-expanded") !== "true");

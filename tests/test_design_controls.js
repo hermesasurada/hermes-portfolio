@@ -16,7 +16,7 @@ function element() {
     getAttribute(name) { return this.attrs[name]; },
   };
 }
-const ids = Object.fromEntries(['interestEditToggle', 'mobileFiltersToggle', 'currencyFilterControl',
+const ids = Object.fromEntries(['mobileFiltersToggle', 'currencyFilterControl',
   'interestSectorControl', 'interestSectorButton'].map(id => [id, element()]));
 const body = element(), toolbar = element();
 let renders = 0, closed = 0, currency = 'all';
@@ -31,14 +31,8 @@ for (const file of ['app-holdings.js', 'app-interest-watchlists.js']) {
 ctx.renderInterestWatchlists = () => renders++;
 ctx.closeInterestSectorPanel = () => closed++;
 ctx.currencyFilterValue = () => currency;
-vm.runInContext('setInterestEditMode(true)', ctx);
-assert.equal(ids.interestEditToggle.textContent, '완료');
-assert.equal(ids.interestEditToggle.attrs['aria-pressed'], 'true');
-assert.ok(body.classList.contains('watchlist-editing'));
-vm.runInContext('editingInterestGroupId = 3; setInterestEditMode(false)', ctx);
-assert.equal(ids.interestEditToggle.textContent, '편집');
-assert.equal(vm.runInContext('editingInterestGroupId', ctx), null);
-assert.equal(renders, 1); // Cancels only the unsaved editor; no API dependency.
+// 편집 모드 없음: 그룹·종목 관리 컨트롤은 항상 보인다(2026-09-15 사용자 지시로 원복).
+assert.equal(vm.runInContext('typeof setInterestEditMode', ctx), 'undefined');
 assert.ok(!body.classList.contains('watchlist-editing'));
 vm.runInContext('setMobileFiltersExpanded(true)', ctx);
 assert.equal(ids.mobileFiltersToggle.attrs['aria-expanded'], 'true');
@@ -58,7 +52,10 @@ assert.equal(ids.mobileFiltersToggle.textContent, '필터 · 적용');
 ids.interestSectorControl.classList.add('hidden'); sync();
 assert.equal(ids.mobileFiltersToggle.textContent, '필터');
 const css = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
-assert.match(css, /body:not\(\.watchlist-editing\) :is\(#interestGroupForm, #interestMainItemForm,/);
+// 숨김 게이트가 되살아나면 실패한다. 삭제(×) 열은 오른쪽 sticky로 항상 닿아야 한다.
+assert.doesNotMatch(css, /watchlist-editing/);
+assert.doesNotMatch(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /interestEditToggle/);
+assert.match(css, /#interestTableWrap \.interest-detail-list td\.interest-delete-col \{[^}]*position: sticky;[^}]*right: 0;/);
 assert.match(css, /\.title-tools:not\(\.filters-expanded\) :is\(#interestSectorControl, #currencyFilterControl\)/);
 for (const file of ['index.html','state.js','app.js','app-holdings.js','styles.css']) {
   assert.doesNotMatch(fs.readFileSync(path.join(root,file),'utf8'), /showIndexes|ignoreIndexes|function indexRows\(/);
@@ -66,4 +63,4 @@ for (const file of ['index.html','state.js','app.js','app-holdings.js','styles.c
 assert.doesNotMatch(css, /SA News식|backdrop-filter: blur\(18px\)/);
 assert.match(css, /--up: #dc3545/);
 assert.match(css, /--down: #1976d2/);
-console.log('Design controls: edit mode, mobile expansion, active filters and palette invariants passed.');
+console.log('Design controls: always-on watchlist editing, mobile expansion, active filters and palette invariants passed.');
