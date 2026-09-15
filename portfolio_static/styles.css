@@ -1254,6 +1254,25 @@ main {
 #interestTableWrap .interest-detail-list td:nth-child(2) {
   box-shadow: 2px 0 0 color-mix(in srgb, var(--line) 85%, transparent);
 }
+/* 삭제(×) 열은 59개 컬럼 맨 끝이라 편집 중에도 3,400px를 스크롤해야 닿았다.
+   편집 모드에서만 오른쪽에 sticky로 붙인다 — 평소에는 자리를 차지하지 않는다.
+   왼쪽 고정과 같은 CSS sticky 방식(JS pc-frozen 금지 규칙 유지). */
+body.watchlist-editing #interestTableWrap .interest-detail-list th.interest-delete-col,
+body.watchlist-editing #interestTableWrap .interest-detail-list td.interest-delete-col {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: var(--panel);
+  background-clip: padding-box;
+  box-shadow: -2px 0 0 color-mix(in srgb, var(--line) 85%, transparent);
+}
+body.watchlist-editing #interestTableWrap .interest-detail-list thead th.interest-delete-col {
+  z-index: 14;
+  background: var(--surface-2);
+}
+body.watchlist-editing #interestTableWrap .interest-detail-list tbody tr:hover > td.interest-delete-col {
+  background: var(--surface-hover);
+}
 /* hover 시 고정 셀도 행 배경과 함께 바뀌어야 스크롤 콘텐츠와 어긋나 보이지
    않는다 (과거 pc-frozen(JS)이 해주던 처리의 CSS 대응) */
 #interestTableWrap .interest-detail-list tbody tr:hover > td:first-child,

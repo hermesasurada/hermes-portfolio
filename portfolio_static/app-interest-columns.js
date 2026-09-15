@@ -143,7 +143,7 @@ const INTEREST_COLUMNS = [
     cell: (r, group) => `${buyStrengthMarkup(r.buy_strength)}` },
   { key: "rating_rank", width: 66, label: "투자의견", headClass: "interest-leaf-head", group: "consensus",
     cell: (r, group) => `${ratingChipMarkup(r.rating_label)}` },
-  { key: "delete", width: 40, label: "", headClass: "group-start interest-leaf-head", ariaLabel: "삭제", cellClass: "group-start", always: true,
+  { key: "delete", width: 40, label: "", headClass: "group-start interest-leaf-head interest-delete-col", ariaLabel: "삭제", cellClass: "group-start interest-delete-col", always: true,
     cell: (r, group) => `${isProtectedInterestItem(r, group)
         ? ""
         : group.fixed
