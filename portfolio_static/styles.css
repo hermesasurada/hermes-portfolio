@@ -6536,7 +6536,9 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .chart-head { align-items: flex-start; padding: 4px 0 12px; border-bottom: 1px solid var(--line); }
 .chart-head strong#chartName { font-size: 19px; font-weight: 600; color: var(--ink); }
 .chart-head #chartTicker { font-size: 12px; font-weight: 400; }
-.chart-price-summary { margin-left: auto; }
+/* PC에서는 가격을 종목명 바로 옆에 붙인다(2026-09-15 사용자 지시).
+   오른쪽 끝으로 밀면 이름과 시선이 화면 폭만큼 떨어진다. 980px 이하는 아래 줄로 내려간다. */
+.chart-price-summary { margin-right: auto; }
 .chart-price-current, .chart-price-row.extended .chart-price-current {
   font-family: var(--chart-num-font); font-weight: 500;
 }

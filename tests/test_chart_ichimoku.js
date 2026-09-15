@@ -37,4 +37,12 @@ for (const expected of [81, 61, 102]) {
   elements.chartIntervalToggle.click();
   assert.equal(ctx.rendered.at(-1).ichi_span_a, expected);
 }
-console.log('chart Ichimoku interval switching ok');
+// 선행 26봉 x축 자리는 구름을 실제로 그릴 때만 예약한다. 끈 상태에서 예약하면
+// 주가선이 오른쪽 축에 닿지 못하고 그만큼 빈 공간이 남는다(2026-09-15 보고).
+const chartSource = fs.readFileSync('portfolio_static/app-line-chart.js', 'utf8');
+const futureLine = chartSource.split('\n').find(line => line.includes('const futureCount'));
+assert.ok(futureLine && futureLine.includes('chartShowIchimoku'), futureLine);
+// 세로 축은 토글과 무관하게 선행 구름 값까지 포함해 고정한다.
+const scaleLine = chartSource.split('\n').find(line => line.includes('const overlayValues'));
+assert.ok(scaleLine && scaleLine.includes('hasProjection'), scaleLine);
+console.log('chart Ichimoku interval switching and future-space reservation ok');

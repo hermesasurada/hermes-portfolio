@@ -1295,9 +1295,14 @@ function renderLineChart(payload) {
       })
     : [];
   const projection = (payload.ichimoku_projection?.[chartInterval] || []).slice(0, 26);
-  const futureCount = projection.some(p => chartNumericValue(p, "ichi_span_a") != null || chartNumericValue(p, "ichi_span_b") != null) ? projection.length : 0;
+  const hasProjection = projection.some(p => chartNumericValue(p, "ichi_span_a") != null
+    || chartNumericValue(p, "ichi_span_b") != null);
+  // 선행 26봉 자리는 구름을 실제로 그릴 때만 비워 둔다. 일목을 끈 상태에서도 자리를
+  // 예약하면 주가선이 오른쪽 축에 닿지 못하고 그만큼 빈 공간만 남는다.
+  const futureCount = hasProjection && chartShowIchimoku ? projection.length : 0;
   const cloudPoints = [...points, ...projection.slice(0, futureCount)];
-  const overlayValues = chartOverlayScaleValues(cloudPoints);
+  // 세로 축은 토글과 무관하게 고정 — 선행 구름 값까지 항상 범위에 넣는다.
+  const overlayValues = chartOverlayScaleValues(hasProjection ? [...points, ...projection] : points);
   const markerValues = allChartTransactions.map(tx => tx.price);
   // 로그 스케일은 모든 값이 양수일 때만 적용 (아니면 선형 폴백)
   const scaleValues = [...values, ...candleScaleValues, ...markerValues, ...overlayValues];
@@ -1503,7 +1508,7 @@ function renderLineChart(payload) {
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
       <rect class="chart-plot-border" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
       <rect class="chart-rsi-border" x="${pad.left}" y="${rsiTop}" width="${plotW}" height="${rsiH}"></rect>
-      ${futureCount && chartShowIchimoku ? `<text class="chart-x-label" x="${xFor(points.length - 1 + futureCount / 2).toFixed(2)}" y="${pad.top + 14}" text-anchor="middle">선행 26봉</text>` : ""}
+      ${futureCount ? `<text class="chart-x-label" x="${xFor(points.length - 1 + futureCount / 2).toFixed(2)}" y="${pad.top + 14}" text-anchor="middle">선행 26봉</text>` : ""}
       ${yTicks.map(tick => `
         <line class="chart-grid" x1="${pad.left}" x2="${pad.left + plotW}" y1="${tick.y.toFixed(2)}" y2="${tick.y.toFixed(2)}"></line>
         <text class="chart-y-label" x="${width - 6}" y="${(tick.y + 4).toFixed(2)}">${esc(chartMoney(tick.value, payload.currency, payload.ticker))}</text>
