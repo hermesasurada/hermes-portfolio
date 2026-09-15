@@ -37,6 +37,29 @@ for (const expected of [81, 61, 102]) {
   elements.chartIntervalToggle.click();
   assert.equal(ctx.rendered.at(-1).ichi_span_a, expected);
 }
+// 양운↔음운이 바뀌는 자리에서 두 구름이 교차점을 공유해야 한 봉짜리 세로 틈이 안 생긴다.
+{
+  const cloudCtx = vm.createContext({});
+  vm.runInContext('function chartNumericValue(p, k) { return p[k] == null ? null : Number(p[k]); }', cloudCtx);
+  vm.runInContext('function straightLinePath(list) { return "M" + list.map(i => i.x.toFixed(2) + "," + i.y.toFixed(2)).join(" L"); }', cloudCtx);
+  const source = fs.readFileSync('portfolio_static/app-line-chart.js', 'utf8');
+  vm.runInContext(source.slice(source.indexOf('function ichimokuCloudPaths('),
+    source.indexOf('function rsiThresholdAreaPaths(')), cloudCtx);
+  cloudCtx.rows = [{ichi_span_a: 10, ichi_span_b: 5}, {ichi_span_a: 9, ichi_span_b: 6},
+    {ichi_span_a: 4, ichi_span_b: 7}, {ichi_span_a: 3, ichi_span_b: 8}, {ichi_span_a: 9, ichi_span_b: 8}];
+  const areas = vm.runInContext('ichimokuCloudPaths(rows, i => i * 10, v => 100 - v)', cloudCtx);
+  const xOf = d => [...d.matchAll(/(-?[\d.]+),-?[\d.]+/g)].map(m => Number(m[1]));
+  assert.equal(areas.length, 3);
+  assert.equal(areas.map(a => a.bullish).join(','), 'true,false,true');
+  for (let i = 1; i < areas.length; i += 1) {
+    // 끝난 구름의 오른쪽 끝 = 새 구름의 왼쪽 끝. 틈이 생기면 여기서 잡힌다.
+    assert.equal(Math.max(...xOf(areas[i - 1].d)), Math.min(...xOf(areas[i].d)));
+  }
+  assert.ok(xOf(areas[0].d).includes(15)); // 10↔20 봉 사이 교차점
+  const nulls = vm.runInContext('ichimokuCloudPaths([{ichi_span_a: 1, ichi_span_b: 2}, {ichi_span_a: null, ichi_span_b: 2}, {ichi_span_a: 3, ichi_span_b: 1}], i => i, v => v)', cloudCtx);
+  assert.equal(nulls.length, 0); // 값이 끊기면 구름도 끊는다(억지로 잇지 않는다).
+}
+
 // 선행 26봉 x축 자리는 구름을 실제로 그릴 때만 예약한다. 끈 상태에서 예약하면
 // 주가선이 오른쪽 축에 닿지 못하고 그만큼 빈 공간이 남는다(2026-09-15 보고).
 const chartSource = fs.readFileSync('portfolio_static/app-line-chart.js', 'utf8');

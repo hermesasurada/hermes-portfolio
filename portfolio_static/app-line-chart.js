@@ -870,9 +870,27 @@ function ichimokuCloudPaths(points, xFor, yFor) {
       return;
     }
     const bullish = a >= b;
-    if (run.length && bullish !== runBullish) flush();
+    const item = { x: xFor(index), a, b };
+    if (run.length && bullish !== runBullish) {
+      // 양운/음운이 바뀌는 봉을 양쪽 구름이 교차점으로 나눠 갖게 한다. 이전에는
+      // 끝난 구름이 직전 봉에서 멈추고 새 구름이 이 봉에서 시작해, 그 사이에
+      // 한 봉짜리 빈 세로 틈이 남았다(2026-09-15 보고).
+      const previous = run[run.length - 1];
+      const before = previous.a - previous.b;
+      const after = a - b;
+      const ratio = before === after ? 1 : Math.min(1, Math.max(0, before / (before - after)));
+      const cross = {
+        x: previous.x + (item.x - previous.x) * ratio,
+        a: previous.a + (a - previous.a) * ratio,
+        b: previous.b + (b - previous.b) * ratio,
+      };
+      run.push(cross);
+      flush();
+      run = [cross];
+      runBullish = bullish;
+    }
     if (!run.length) runBullish = bullish;
-    run.push({ x: xFor(index), a, b });
+    run.push(item);
   });
   flush();
   return paths;
