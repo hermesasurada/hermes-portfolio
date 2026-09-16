@@ -20,8 +20,13 @@ assert.equal(ctx.initialScheduleView(null, false), 'grid');
 vm.runInContext(read('app-charts.js'), ctx);
 const series = [{key:'portfolio', primary:true, name:'선택 <계좌>', color:'var(--brand)', points:[{date:'2026-01-02'}, {date:'2026-09-04'}]}];
 const legend = ctx.renderPerformanceLegend(series);
-assert.match(legend, /aria-label="계좌 선 강조"/);
+// 범례는 두 줄뿐 — 고정환율 칩은 계좌 줄에 얹고 별도 '환율' 줄은 두지 않는다.
+assert.match(legend, /aria-label="계좌 선 강조와 고정환율 표시"/);
 assert.match(legend, /aria-label="비교지수 표시"/);
+assert.equal((legend.match(/perf-legend-section/g) || []).length, 2);
+assert.doesNotMatch(legend, /perf-group-label">환율</);
+const fxAt = legend.indexOf('perf-fx-toggle'), indexAt = legend.indexOf('perf-index-toggle');
+assert.ok(fxAt > legend.indexOf('perf-account-focus') && fxAt < indexAt, '고정환율 칩은 계좌 칩 뒤·비교지수 앞');
 assert.match(legend, /선택 &lt;계좌>/);
 assert.match(legend, /data-perf-focus="portfolio"/);
 assert.equal((legend.match(/data-index=/g) || []).length, 4);

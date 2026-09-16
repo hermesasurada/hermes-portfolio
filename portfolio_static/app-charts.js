@@ -184,7 +184,9 @@ function renderPerformanceLegend(series = []) {
   const fxOn = !!performanceFixedFx;
   const fxAvailable = series.some(item => item.fixed) || !fxOn;
   const fxChip = `<button class="perf-legend-item perf-fx-toggle${fxOn ? " active" : ""}${fxAvailable ? "" : " unavailable"}" type="button" data-perf-fx="1" aria-pressed="${fxOn ? "true" : "false"}" title="${fxOn ? "고정환율 선 숨기기" : "고정환율 선 표시"} · 기준일 환율로 고정해 환율 변동을 걷어낸 시간가중 수익률(점선)"><i class="dashed" style="border-color:${fxOn ? "var(--brand)" : "var(--chart-axis)"}"></i>고정환율</button>`;
-  return `<div class="perf-legend-groups"><div class="perf-legend-section"><span class="perf-group-label">계좌 · 강조</span><div class="perf-legend" role="group" aria-label="계좌 선 강조">${accountChips || '<span class="perf-empty-label">표시할 계좌 없음</span>'}</div></div><div class="perf-legend-section"><span class="perf-group-label">환율</span><div class="perf-legend" role="group" aria-label="고정환율 선 표시">${fxChip}</div></div><div class="perf-legend-section"><span class="perf-group-label">비교지수</span><div class="perf-legend" role="group" aria-label="비교지수 표시">${indexChips}</div></div></div>`;
+  // 고정환율 칩은 계좌 줄에 함께 둔다 — 계좌 선에 딸린 옵션이라 별도 '환율' 줄을
+  // 만들면 한 줄을 통째로 쓰면서도 칩은 하나뿐이었다(2026-09-16 사용자 지시).
+  return `<div class="perf-legend-groups"><div class="perf-legend-section"><span class="perf-group-label">계좌 · 강조</span><div class="perf-legend" role="group" aria-label="계좌 선 강조와 고정환율 표시">${accountChips || '<span class="perf-empty-label">표시할 계좌 없음</span>'}${fxChip}</div></div><div class="perf-legend-section"><span class="perf-group-label">비교지수</span><div class="perf-legend" role="group" aria-label="비교지수 표시">${indexChips}</div></div></div>`;
 }
 
 function bindPerformanceHover(series, geometry) {
