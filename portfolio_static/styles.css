@@ -5964,11 +5964,41 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   body { font-size: 12.5px; }
   .account .name { font-size: 12px; line-height: 30px; }
   .account .meta { font-size: 11px; line-height: 1; }
+  /* 표(그리드) 글자는 본문보다 한 단계 작게 — 좁은 화면에 행·열을 더 담는다.
+     셀 기준값 --grid-fs 하나와, 거기 딸린 보조 텍스트(티커·원화환산·칩)만
+     같은 비율로 줄인다. 값을 조정할 땐 이 네 변수만 건드리면 된다.
+     로고 이니셜(.fallback-text)은 아이콘 크기에 묶여 있어 제외. */
+  #detailTableWrap, .dividend-list, .interest-detail-list, .tx-list {
+    --grid-fs: 11px;        /* 셀 기본 */
+    --grid-fs-sub: 9.5px;   /* 티커 심볼 · 원화 환산 */
+    --grid-fs-chip: 10px;   /* 등락 칩 · 매매참고 수치 */
+    --grid-fs-tiny: 9px;    /* 배당 성장 기준 등 각주 */
+  }
   #detailTableWrap th, #detailTableWrap td,
   .dividend-list th, .dividend-list td,
   .interest-detail-list th, .interest-detail-list td,
   .tx-list th, .tx-list td {
-    font-size: 12px;
+    font-size: var(--grid-fs);
+  }
+  :is(#detailTableWrap, .dividend-list, .interest-detail-list, .tx-list)
+    :is(.ticker-symbol, .krw-sub, .sector-chip) {
+    font-size: var(--grid-fs-sub);
+  }
+  :is(#detailTableWrap, .dividend-list, .interest-detail-list, .tx-list)
+    :is(.pct-chip, .trade-timing-value) {
+    font-size: var(--grid-fs-chip);
+  }
+  :is(#detailTableWrap, .dividend-list, .interest-detail-list, .tx-list)
+    .history-growth-basis {
+    font-size: var(--grid-fs-tiny);
+  }
+  /* 관심목록 헤더는 그룹행(작은 라벨)·잎행(rowspan)이 각자 크기를 갖고 있어
+     위 th 규칙보다 우선순위가 높다 — 같은 비율로 함께 줄인다. */
+  .interest-detail-list thead .interest-group-head th[rowspan] {
+    font-size: var(--grid-fs);
+  }
+  .interest-detail-list thead .interest-group-head th:not([rowspan]) {
+    font-size: var(--grid-fs-tiny);
   }
   .bar {
     grid-template-columns: 1fr;

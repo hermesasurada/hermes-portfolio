@@ -13,6 +13,7 @@
 - **테이블 세로 스크롤바는 숨김, 가로만 표시**: `::-webkit-scrollbar { width:0; height:8px }`.
   - webkit 함정 ①: 축 pseudo(`:vertical`)에 width를 주면 무시됨 — 반드시 `::-webkit-scrollbar`에 width/height.
   - webkit 함정 ②: 표준 `scrollbar-width`/`scrollbar-color`를 선언하면 Chrome이 `::-webkit-scrollbar*` 전체를 무시 → 선언 금지.
+- **모바일(≤980px) 표 글자 크기**는 `--grid-fs`(셀 11px)·`--grid-fs-sub`(티커·원화환산 9.5px)·`--grid-fs-chip`(등락 칩·매매참고 10px)·`--grid-fs-tiny`(각주 9px) 네 변수로만 조정한다. 네 그리드(`#detailTableWrap`·`.dividend-list`·`.interest-detail-list`·`.tx-list`)가 이 변수를 공유하므로 개별 px 하드코딩 금지. 관심목록 헤더는 `.interest-group-head th[rowspan]` 등 자체 규칙이 우선순위가 높아 따로 덮는다. 데스크톱 기본값(12/10.5/11px)은 그대로. 테스트: `node tests/test_mobile_grid_scale.js`.
 - 색상은 CSS 변수 토큰만 사용(하드코딩 hex 지양). 네이버 그린(#03c75a) 등 브랜드색은 예외.
 - **테마 = '화이트·슬레이트'(2026-09-06 사용자 승인 개편)**: 라이트=`--bg #f5f6f8`+화이트 패널+잉크 `#202b3c`, 다크=`--bg #15191f`+슬레이트 패널. 브랜드 블루는 선택·조작에 사용. 배경 광원·글래스 블러·버튼 그림자 없이 평면으로, 그림자는 팝업 위주. Pretendard 산세리프 + 숫자는 로컬 Roboto Mono 유지. 계좌·관심목록은 표/행 중심(카드화 금지), 주요 제목 600·요약 700·본문/숫자 400~500. 이전 크림/세피아나 블루 글로우로 임의 복귀 금지.
 - 관심목록 그룹 생성·이름/순서/삭제 및 종목 추가·삭제 컨트롤은 **항상 보인다**. 2026-09-06 d45f4f0이 '편집 → 완료' 토글 뒤에 숨겼다가, 기능이 사라진 것으로 읽혀 **2026-09-15 사용자 지시로 토글을 제거**했다(`watchlist-editing` 클래스·`interestEditToggle`·`setInterestEditMode` 전부 삭제). 다시 숨기려면 토글 부활이 아니라 컨트롤 자체를 재검토할 것. 테스트가 `watchlist-editing` 재등장을 실패로 잡는다. 모바일은 검색을 항상 보이고 섹터·통화·지수는 **필터** 버튼으로 접는다. 적용 중인 부가 필터는 접혀도 버튼에 표시. 편집 모드 전환 자체는 서버를 호출하지 않는다. 테스트: `node tests/test_design_controls.js`.
