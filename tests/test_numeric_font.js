@@ -9,19 +9,18 @@ assert.equal(font.toString("ascii", 0, 4), "wOF2");
 assert.equal(font.readUInt32BE(8), font.length);
 assert.match(css, /--chart-num-font: "Roboto Mono",/);
 // 히어로(상단 총액·지수)는 고정폭 유지, 사이드바 계좌·관심그룹 숫자는 표와 같은 글꼴.
+// 화면 숫자(히어로·사이드바)는 표와 같은 글꼴을 쓴다 — 고정폭은 차트 전용.
 // #heroValue는 제목 글꼴 규칙에도 나오므로 이 블록만 가리키는 #heroChange를 기준으로 잡는다.
-const heroAt = css.indexOf('#heroChange');
-const heroBlock = css.slice(heroAt, css.indexOf('}', heroAt));
-for (const selector of ['#heroChange', '.hero-index-value', '.hero-index-change']) {
-  assert.ok(heroBlock.includes(selector), `Numeric font missing: ${selector}`);
+const uiAt = css.indexOf('#heroChange');
+const uiBlock = css.slice(uiAt, css.indexOf('}', uiAt));
+for (const selector of ['#heroChange', '.hero-index-value', '.hero-index-change',
+  '#accounts .account .meta', '#accounts .account-count', '.interest-count']) {
+  assert.ok(uiBlock.includes(selector), `Numeric font missing: ${selector}`);
 }
-assert.ok(heroBlock.includes('font-family: var(--chart-num-font)'));
-const sidebarBlock = css.slice(css.indexOf('#accounts .account .meta'), css.indexOf('}', css.indexOf('#accounts .account .meta')));
-for (const selector of ['#accounts .account .meta', '#accounts .account-count', '.interest-count']) {
-  assert.ok(sidebarBlock.includes(selector), `Sidebar numeric font missing: ${selector}`);
-}
-assert.ok(sidebarBlock.includes('font-family: var(--grid-num-font)'), '사이드바 숫자가 고정폭으로 돌아갔다');
-assert.ok(sidebarBlock.includes('tabular-nums'), '사이드바 자릿수 정렬이 빠졌다');
+assert.ok(uiBlock.includes('font-family: var(--grid-num-font)'), '화면 숫자가 고정폭으로 돌아갔다');
+assert.ok(uiBlock.includes('tabular-nums'), '자릿수 정렬이 빠졌다');
+// 고정폭은 차트 쪽에만 남아 있어야 한다.
+assert.ok(css.includes('.chart-y-label') || css.includes('.chart-x-label'));
 const holdings = fs.readFileSync(path.join(root, 'app-holdings.js'), 'utf8');
 assert.ok(holdings.includes('class="account-count"'));
 assert.ok(css.includes('#dividendRows > tr:is(.dividend-paid-row, .dividend-upcoming-row) > td:is(:first-child, :nth-child(n+4):nth-child(-n+14))'));

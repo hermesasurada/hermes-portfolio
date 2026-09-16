@@ -699,13 +699,10 @@ main {
 #heroValue,
 #heroChange,
 .hero-index-value,
-.hero-index-change {
-  font-family: var(--chart-num-font);
-  font-variant-numeric: tabular-nums lining-nums;
-}
-/* 사이드바 계좌·관심그룹 숫자는 표와 같은 글꼴로(2026-09-16 사용자 지시).
-   목록과 표가 나란히 보이는 화면이라 둘이 다르면 톤이 튄다. 자릿수 정렬은
-   tabular-nums가 계속 맡는다. 히어로(상단 총액)는 --chart-num-font 유지. */
+.hero-index-change,
+/* 사이드바 계좌·관심그룹 숫자, 상단 총액·지수까지 표와 같은 글꼴로
+   (2026-09-16 사용자 지시 — 한 화면에 같이 보여 고정폭만 남으면 톤이 튄다).
+   자릿수 정렬은 tabular-nums가 계속 맡는다. 차트 축·툴팁만 --chart-num-font. */
 #accounts .account .meta,
 #accounts .account-count,
 .interest-count {
@@ -4912,6 +4909,10 @@ th.pc-frozen-edge {
 .watch-modal.dividend-history-modal {
   /* Size to this ticker's actual columns; only the table scrolls on narrow screens. */
   width: fit-content;
+  /* PC에서는 최소 너비를 채운다(2026-09-16 사용자 지시). 표가 6열 ~350px라
+     fit-content만 쓰면 창이 420px로 쪼그라들어 긴 종목명이 잘렸다.
+     좁은 화면은 뷰포트가 상한이라 이 값이 무시된다. */
+  min-width: min(600px, calc(100vw - 16px));
   max-width: calc(100vw - 16px);
   max-height: min(760px, calc(100vh - 28px));
 }
@@ -5109,7 +5110,10 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .dividend-history-table {
   /* Natural column widths also account for monthly distributions and long amounts. */
   width: max-content;
-  min-width: 0; /* 전역 table { min-width: 660px } 오버라이드 */
+  /* 창 최소 너비를 채울 땐 표도 같이 늘어나야 오른쪽이 비지 않는다.
+     내용이 더 넓으면 max-content가 이겨 가로 스크롤은 그대로 동작한다.
+     (전역 table { min-width: 660px } 오버라이드 역할도 겸한다) */
+  min-width: 100%;
   border-collapse: collapse;
   table-layout: auto;
   font-size: 13.5px;
