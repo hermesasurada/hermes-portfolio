@@ -134,10 +134,12 @@ function sessionNoteTitle(note) {
 }
 // 연속 배당 지급·증액 연수 — 미국 상장 전용, 값 없으면 컬럼 자동 숨김.
 // floor는 yfinance 이력 한계(1962)에 닿아 실제로는 더 길다는 표시.
+// 단위는 '년' 대신 'Y'(2026-09-16 사용자 지시) — 한글 한 글자보다 좁아 열이 덜 밀리고
+// 숫자와 같은 라틴 글자라 톤이 고르다. '+'는 이력 한계(1962)로 실제는 더 길다는 표시.
 function dividendStreakText(years, floor) {
   const n = Number(years);
   if (years == null || !Number.isFinite(n)) return "-";
-  return `${Math.round(n)}년${floor ? "+" : ""}`;
+  return `${Math.round(n)}Y${floor ? "+" : ""}`;
 }
 
 function changeMarkup(row) {

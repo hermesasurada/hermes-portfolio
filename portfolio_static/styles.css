@@ -8,6 +8,11 @@
   /* 차트 영역 숫자(축·끝라벨·현재가) 공통 — 고정폭이라 자릿수가 흔들리지 않는다 */
   --chart-num-size: 9.5px;
   --chart-num-font: "Roboto Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  /* 표(그리드) 숫자는 고정폭 글꼴을 쓰지 않는다(2026-09-16 사용자 지시).
+     Roboto Mono는 자간이 넓어 열이 길어지고 한글·기호와 섞이면 톤이 튄다.
+     본문과 같은 Pretendard를 쓰되 tabular-nums로 자릿수 정렬만 유지한다.
+     차트 축·툴팁은 --chart-num-font(고정폭) 그대로. */
+  --grid-num-font: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   /* surfaces & text */
   --bg: #f5f6f8;
   --panel: #ffffff;
@@ -1595,12 +1600,12 @@ th:first-child, td:first-child { text-align: left; }
 #interestRows > tr > td.numeric-cell,
 #dividendRows > tr:is(.dividend-paid-row, .dividend-upcoming-row) > td:is(:first-child, :nth-child(n+4):nth-child(-n+14)),
 #dividendRows .dividend-today-marker time {
-  font-family: var(--chart-num-font);
+  font-family: var(--grid-num-font);
   font-weight: 400;
   font-variant-numeric: tabular-nums lining-nums;
 }
 #dividendRows .dividend-month-summary strong {
-  font-family: var(--chart-num-font);
+  font-family: var(--grid-num-font);
   font-weight: 500;
   font-variant-numeric: tabular-nums lining-nums;
 }
@@ -1975,7 +1980,7 @@ tr.dividend-month-row:hover td {
 .trade-timing-col { text-align: center; }
 .trade-timing-ref { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.2; white-space: nowrap; font-family: "Pretendard Variable", sans-serif; cursor: help; }
 .trade-timing-ref:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
-.trade-timing-value { font-family: var(--chart-num-font); font-variant-numeric: tabular-nums; font-size: 11px; }
+.trade-timing-value { font-family: var(--grid-num-font); font-variant-numeric: tabular-nums lining-nums; font-size: 11px; }
 .trade-timing-note { color: var(--muted); font-size: 10px; font-weight: 400; }
 #detailTableWrap th:nth-child(16), #detailTableWrap td:nth-child(16),
 #detailTableWrap th:nth-child(17), #detailTableWrap td:nth-child(17) { min-width: calc(42px * var(--col-scale, 1)); } /* β */
