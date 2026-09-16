@@ -26,6 +26,7 @@ assert.match(headers[23], /ma20_pct/);
 assert.match(headers[29], /perf_1w/);
 assert.match(headers[37], /perf_10y/);
 const css = read('styles.css');
-assert.match(css, /td:nth-child\(40\) \{ min-width: 60px; \} \/\* 실적일/);
-assert.match(css, /td:nth-child\(39\) \{ min-width: 76px; \} \/\* 시총\/AUM/);
+// 폭은 --col-scale 배율을 타되 기본값(데스크톱)은 원래 값 그대로다.
+assert.match(css, /td:nth-child\(40\) \{ min-width: calc\(60px \* var\(--col-scale, 1\)\); \} \/\* 실적일/);
+assert.match(css, /td:nth-child\(39\) \{ min-width: calc\(76px \* var\(--col-scale, 1\)\); \} \/\* 시총\/AUM/);
 console.log('Account headers, cells and widths aligned; market cap and earnings date precede trade action.');

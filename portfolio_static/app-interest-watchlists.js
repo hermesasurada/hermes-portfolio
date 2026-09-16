@@ -550,7 +550,11 @@ function renderInterestMainTable() {
     ? "명칭 검색 결과가 없습니다."
     : group.fixed ? "모든 수집 종목이 관심그룹에 분류되어 있습니다." : "이 그룹에 등록된 종목이 없습니다.");
   const nameWidth = syncTickerNameColumnWidth(table);
-  table.style.width = `${columns.reduce((width, column) => width + (column.key === "name" ? nameWidth : column.width), 0)}px`;
+  // 표 전체 폭도 colgroup과 같은 --col-scale을 타야 한다. 여기만 원래 합을 쓰면
+  // fixed 레이아웃이 남는 폭을 열마다 비례 배분해 축소가 통째로 무효가 된다.
+  // 종목명 열은 내용 폭으로 측정된 값이라 배율에서 제외한다.
+  const scaled = columns.reduce((width, column) => width + (column.key === "name" ? 0 : column.width), 0);
+  table.style.width = `calc(${scaled}px * var(--col-scale, 1) + ${nameWidth}px)`;
   table.style.minWidth = "100%";
   // 티커 링크·배당이력 버튼 클릭은 app.js의 문서 위임이 처리 (개별 바인딩 금지).
   // 로고·종목명 틀고정은 CSS sticky가 담당 — pc-frozen(JS) 대상 아님.

@@ -204,7 +204,9 @@ function renderInterestFrame(table, columns) {
   if (table.dataset.columnKey === key) return;
   table.dataset.columnKey = key;
   table.querySelector("colgroup").innerHTML = columns.map(column =>
-    `<col style="width:${column.key === "name" ? "var(--ticker-name-width, 165px)" : `${column.width}px`}">`
+    // 폭의 권위는 여전히 colgroup. 좁은 화면에서 한 번에 줄일 수 있도록 --col-scale만 곱한다
+    // (기본 1 = 원래 폭). 종목명 열은 내용 폭으로 이미 측정돼 있어 그대로 둔다.
+    `<col style="width:${column.key === "name" ? "var(--ticker-name-width, 165px)" : `calc(${column.width}px * var(--col-scale, 1))`}">`
   ).join("");
   table.querySelector("thead").innerHTML = interestTableHead(columns);
 }

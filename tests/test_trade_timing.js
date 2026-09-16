@@ -19,7 +19,8 @@ assert.match(run('tradeTimingMarkup({state:"buy",buy_r:2})'), />매수<\/span>/)
 assert.match(run('tradeTimingMarkup({state:"sell",sell_atr:3.2})'), />매도<\/span>/);
 assert.match(run('tradeTimingMarkup({state:"breakout"})'), />돌파<\/span>/);
 assert.match(read('styles.css'), /\.trade-timing-ref \{[^}]*flex-direction: column;[^}]*gap: 2px/);
-assert.match(read('styles.css'), /#detailTableWrap \.trade-timing-col \{ min-width: 76px; width: 76px;/);
+// 폭은 --col-scale 배율을 타되 기본값(데스크톱)은 원래 76px 그대로다.
+assert.match(read('styles.css'), /#detailTableWrap \.trade-timing-col \{ min-width: calc\(76px \* var\(--col-scale, 1\)\); width: calc\(76px \* var\(--col-scale, 1\)\);/);
 assert.match(read('app-interest-columns.js'), /key: "trade_timing", width: 76/);
 const holdings = read('app-holdings.js');
 run(holdings.slice(holdings.indexOf('function tradeTimingSortValue('), holdings.indexOf('function holdingChangeBasePrice(')));

@@ -81,4 +81,28 @@ for (const grid of ['#detailTableWrap thead th', '.interest-detail-list thead th
 }
 assert.match(desktop, /\.interest-detail-list thead \.interest-group-head th:not\(\[rowspan\]\) \{[^}]*height: 22px/);
 
-console.log('mobile grid: font scale, density vars, button de-inflation, minimum gaps and head specificity ok');
+
+// ── 가로 밀도 ────────────────────────────────────────────────────────────
+// 컬럼 폭은 --col-scale 하나로 줄인다. 계좌표는 CSS min-width, 관심목록은
+// colgroup <col>과 표 전체 폭(JS)까지 같은 배율을 타야 fixed 레이아웃이
+// 남는 폭을 열마다 비례 배분해 축소를 무효로 만들지 않는다.
+const colScale = Number(mobile.match(/--col-scale:\s*(\.?\d*\.?\d+)/)[1]);
+assert.ok(colScale > 0 && colScale < 1, `--col-scale은 0~1 사이여야 한다: ${colScale}`);
+assert.ok(colScale >= 0.75, `너무 좁히면 숫자가 서로 붙는다: ${colScale}`);
+// 데스크톱 기본은 1 — calc의 fallback으로 보장한다.
+assert.match(desktop, /#detailTableWrap th:nth-child\(3\)[^{]*\{ min-width: calc\(76px \* var\(--col-scale, 1\)\); \}/);
+const scaledWidths = (desktop.match(/calc\(\d+px \* var\(--col-scale, 1\)\)/g) || []).length;
+assert.ok(scaledWidths >= 20, `계좌표 컬럼 폭이 배율을 타지 않는다: ${scaledWidths}개만 적용`);
+
+const columnsJs = fs.readFileSync(path.join(__dirname, '../portfolio_static/app-interest-columns.js'), 'utf8');
+assert.match(columnsJs, /calc\(\$\{column\.width\}px \* var\(--col-scale, 1\)\)/, 'colgroup 폭이 배율을 타야 한다');
+const watchlistsJs = fs.readFileSync(path.join(__dirname, '../portfolio_static/app-interest-watchlists.js'), 'utf8');
+assert.match(watchlistsJs, /table\.style\.width = `calc\(\$\{scaled\}px \* var\(--col-scale, 1\) \+ \$\{nameWidth\}px\)`/,
+  '표 전체 폭이 배율을 타지 않으면 fixed 레이아웃이 축소를 되돌린다');
+
+// 좌우 여백도 줄이되 0으로 붙이지는 않는다.
+const padX = Number(mobile.match(/--grid-pad-x, ([\d.]+)px/)[1]);
+assert.ok(padX >= 3 && padX < 6, `좌우 여백이 범위를 벗어났다: ${padX}px`);
+assert.match(mobile, /:is\(th, td\)\.group-start \{\s*padding-left: [\d.]+px;/, '열 묶음 경계는 조금 더 띄운다');
+
+console.log('mobile grid: font scale, 40px rows, column scale across both tables, minimum gaps and head specificity ok');

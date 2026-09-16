@@ -1944,49 +1944,52 @@ tr.dividend-month-row:hover td {
 .dividend-list td:nth-child(13) {
   text-align: right;
 }
+/* 컬럼 폭은 --col-scale로 한 번에 줄인다(기본 1 = 데스크톱 원래 폭).
+   table-layout:auto + white-space:nowrap이라 min-width를 줄여도 내용보다
+   좁아지지 않는다 — 여백만 깎이고 글자는 잘리지 않는다. */
 #detailTableWrap th:first-child,
-#detailTableWrap td:first-child { min-width: 45px; width: 45px; }   /* 로고 (틀고정) */
+#detailTableWrap td:first-child { min-width: calc(45px * var(--col-scale, 1)); width: calc(45px * var(--col-scale, 1)); }   /* 로고 (틀고정) */
 #detailTableWrap th:nth-child(2),
 #detailTableWrap td:nth-child(2) {
   width: var(--ticker-name-width, 180px);
   min-width: var(--ticker-name-width, 180px);
   max-width: var(--ticker-name-width, 180px);
 }                                                                  /* 종목명 */
-#detailTableWrap th:nth-child(3), #detailTableWrap td:nth-child(3) { min-width: 76px; }   /* 등락 */
-#detailTableWrap th:nth-child(4), #detailTableWrap td:nth-child(4) { min-width: 56px; }   /* 연장 */
-#detailTableWrap th:nth-child(5), #detailTableWrap td:nth-child(5) { min-width: 86px; }   /* 현재단가 */
-#detailTableWrap th:nth-child(6), #detailTableWrap td:nth-child(6) { min-width: 44px; }   /* 수량 */
-#detailTableWrap th:nth-child(7), #detailTableWrap td:nth-child(7) { min-width: 80px; }   /* 등락금액 */
-#detailTableWrap th:nth-child(8), #detailTableWrap td:nth-child(8) { min-width: 74px; }   /* 평가액 */
-#detailTableWrap th:nth-child(9), #detailTableWrap td:nth-child(9) { min-width: 54px; }   /* 비중 */
-#detailTableWrap th:nth-child(39), #detailTableWrap td:nth-child(39) { min-width: 76px; } /* 시총/AUM */
-#detailTableWrap th:nth-child(10), #detailTableWrap td:nth-child(10) { min-width: 48px; } /* 배당율 */
-#detailTableWrap th:nth-child(11), #detailTableWrap td:nth-child(11) { min-width: 72px; } /* 5년 배당성장 */
-#detailTableWrap th:nth-child(40), #detailTableWrap td:nth-child(40) { min-width: 60px; } /* 실적일 */
-#detailTableWrap th:nth-child(12), #detailTableWrap td:nth-child(12) { min-width: 62px; } /* 52주高 */
-#detailTableWrap th:nth-child(13), #detailTableWrap td:nth-child(13) { min-width: 58px; } /* 변동성 손익비 */
-#detailTableWrap th:nth-child(14), #detailTableWrap td:nth-child(14) { min-width: 58px; } /* 진입 손익비 */
-#detailTableWrap .trade-timing-col { min-width: 76px; width: 76px; }
+#detailTableWrap th:nth-child(3), #detailTableWrap td:nth-child(3) { min-width: calc(76px * var(--col-scale, 1)); }   /* 등락 */
+#detailTableWrap th:nth-child(4), #detailTableWrap td:nth-child(4) { min-width: calc(56px * var(--col-scale, 1)); }   /* 연장 */
+#detailTableWrap th:nth-child(5), #detailTableWrap td:nth-child(5) { min-width: calc(86px * var(--col-scale, 1)); }   /* 현재단가 */
+#detailTableWrap th:nth-child(6), #detailTableWrap td:nth-child(6) { min-width: calc(44px * var(--col-scale, 1)); }   /* 수량 */
+#detailTableWrap th:nth-child(7), #detailTableWrap td:nth-child(7) { min-width: calc(80px * var(--col-scale, 1)); }   /* 등락금액 */
+#detailTableWrap th:nth-child(8), #detailTableWrap td:nth-child(8) { min-width: calc(74px * var(--col-scale, 1)); }   /* 평가액 */
+#detailTableWrap th:nth-child(9), #detailTableWrap td:nth-child(9) { min-width: calc(54px * var(--col-scale, 1)); }   /* 비중 */
+#detailTableWrap th:nth-child(39), #detailTableWrap td:nth-child(39) { min-width: calc(76px * var(--col-scale, 1)); } /* 시총/AUM */
+#detailTableWrap th:nth-child(10), #detailTableWrap td:nth-child(10) { min-width: calc(48px * var(--col-scale, 1)); } /* 배당율 */
+#detailTableWrap th:nth-child(11), #detailTableWrap td:nth-child(11) { min-width: calc(72px * var(--col-scale, 1)); } /* 5년 배당성장 */
+#detailTableWrap th:nth-child(40), #detailTableWrap td:nth-child(40) { min-width: calc(60px * var(--col-scale, 1)); } /* 실적일 */
+#detailTableWrap th:nth-child(12), #detailTableWrap td:nth-child(12) { min-width: calc(62px * var(--col-scale, 1)); } /* 52주高 */
+#detailTableWrap th:nth-child(13), #detailTableWrap td:nth-child(13) { min-width: calc(58px * var(--col-scale, 1)); } /* 변동성 손익비 */
+#detailTableWrap th:nth-child(14), #detailTableWrap td:nth-child(14) { min-width: calc(58px * var(--col-scale, 1)); } /* 진입 손익비 */
+#detailTableWrap .trade-timing-col { min-width: calc(76px * var(--col-scale, 1)); width: calc(76px * var(--col-scale, 1)); }
 .trade-timing-col { text-align: center; }
 .trade-timing-ref { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.2; white-space: nowrap; font-family: "Pretendard Variable", sans-serif; cursor: help; }
 .trade-timing-ref:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
 .trade-timing-value { font-family: var(--chart-num-font); font-variant-numeric: tabular-nums; font-size: 11px; }
 .trade-timing-note { color: var(--muted); font-size: 10px; font-weight: 400; }
 #detailTableWrap th:nth-child(16), #detailTableWrap td:nth-child(16),
-#detailTableWrap th:nth-child(17), #detailTableWrap td:nth-child(17) { min-width: 42px; } /* β */
+#detailTableWrap th:nth-child(17), #detailTableWrap td:nth-child(17) { min-width: calc(42px * var(--col-scale, 1)); } /* β */
 #detailTableWrap th:nth-child(n+18):nth-child(-n+23),
 #detailTableWrap td:nth-child(n+18):nth-child(-n+23) {
-  min-width: 43px;
+  min-width: calc(43px * var(--col-scale, 1));
   padding-left: 1px;
   padding-right: 1px;
 } /* RSI/BB */
-#detailTableWrap .ma-distance-col { min-width: 76px; } /* 20/50/200일선 이격률 */
+#detailTableWrap .ma-distance-col { min-width: calc(76px * var(--col-scale, 1)); } /* 20/50/200일선 이격률 */
 #detailTableWrap th:nth-child(27), #detailTableWrap td:nth-child(27),
-#detailTableWrap th:nth-child(28), #detailTableWrap td:nth-child(28) { min-width: 56px; } /* P/E */
-#detailTableWrap th:nth-child(29), #detailTableWrap td:nth-child(29) { min-width: 40px; } /* P/B */
+#detailTableWrap th:nth-child(28), #detailTableWrap td:nth-child(28) { min-width: calc(56px * var(--col-scale, 1)); } /* P/E */
+#detailTableWrap th:nth-child(29), #detailTableWrap td:nth-child(29) { min-width: calc(40px * var(--col-scale, 1)); } /* P/B */
 #detailTableWrap th:nth-child(n+30):nth-child(-n+38),
-#detailTableWrap td:nth-child(n+30):nth-child(-n+38) { min-width: 58px; } /* 기간 수익률 */
-#detailTableWrap th:nth-child(41), #detailTableWrap td:nth-child(41) { min-width: 54px; } /* 거래 */
+#detailTableWrap td:nth-child(n+30):nth-child(-n+38) { min-width: calc(58px * var(--col-scale, 1)); } /* 기간 수익률 */
+#detailTableWrap th:nth-child(41), #detailTableWrap td:nth-child(41) { min-width: calc(54px * var(--col-scale, 1)); } /* 거래 */
 #detailTableWrap th:nth-child(17),
 #detailTableWrap td:nth-child(17),
 #detailTableWrap th:nth-child(23),
@@ -6001,16 +6004,18 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     font-size: var(--grid-fs-tiny);
   }
 
-  /* 정보 밀도: 행 높이를 내용이 정하게 두고, 상하 여백은 항목이 붙어 보이지
-     않을 최소치(3px)만 남긴다. 행 구분은 기존 아래 테두리 1px가 계속 맡는다.
-     가로 여백(6px)은 컬럼 구분이라 그대로 — 좁히면 숫자가 서로 달라붙는다.
+  /* 정보 밀도는 가로 위주로 — 행 높이는 40px를 유지하고(터치 목표), 대신 컬럼 폭과
+     좌우 여백을 줄여 한 화면에 열을 더 담는다.
      전역 button{height:36px}가 셀 안 로고·배당률 버튼까지 키워 행이 47.5px로
-     불어나 있었다. 그리드 안에서만 자연 높이로 되돌리는 게 밀도 이득의 대부분. */
+     불어나 있었다. 그리드 안에서만 자연 높이로 되돌려야 40px가 지켜진다. */
   #detailTableWrap, .dividend-list, .interest-detail-list, .tx-list {
-    --list-row-height: 30px;
-    --list-cell-y: 3px;
-    --list-icon-size: 22px;
-    --table-head-height: 30px;
+    --list-row-height: 40px;
+    --list-cell-y: 4px;
+    --list-icon-size: 24px;
+    --table-head-height: 34px;
+    /* 컬럼 폭 일괄 축소 — 계좌표는 min-width, 관심목록은 colgroup에 곱해진다.
+       내용보다 좁아지지는 않으므로(nowrap + auto/fixed) 숫자가 잘리지 않는다. */
+    --col-scale: .84;
   }
   /* 셀렉터를 나열로 푼 이유: :is()에 #id를 섞으면 특이도가 id급으로 올라가
      관심목록 그룹 라벨 띠(22px)의 자체 규칙까지 덮어써 헤더가 되레 두꺼워진다. */
@@ -6022,6 +6027,17 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     padding-top: 4px;
     padding-bottom: 4px;
   }
+  /* 좌우 여백: 6px → 4px. 열 구분은 group-start의 세로선과 우측 정렬이 맡으므로
+     4px면 숫자끼리 붙어 보이지 않는다. RSI/BB처럼 이미 1px인 열은 그대로. */
+  :is(#detailTableWrap, .dividend-list, .interest-detail-list, .tx-list)
+    :is(th, td) {
+    padding-left: var(--grid-pad-x, 4px);
+    padding-right: var(--grid-pad-x, 4px);
+  }
+  :is(#detailTableWrap, .dividend-list, .interest-detail-list, .tx-list)
+    :is(th, td).group-start {
+    padding-left: 6px;
+  }
   :is(#detailTableWrap, .dividend-list, .interest-detail-list, .tx-list)
     tbody :is(.company-profile-logo, .stat-yield-link) {
     height: auto;
@@ -6030,19 +6046,8 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   /* 셀 안 액션 버튼은 눌러야 하므로 자연 높이로 뭉개지 않고 한 단계만 줄인다. */
   :is(#detailTableWrap, .dividend-list, .interest-detail-list, .tx-list)
     tbody :is(.tx-pick, .interest-row-delete) {
-    height: 26px;
-    min-height: 26px;
-  }
-  /* 2행 셀(종목명+티커, 매매참고)의 줄 간격 — 붙지 않을 만큼만 */
-  :is(#detailTableWrap, .dividend-list, .interest-detail-list, .tx-list)
-    :is(.ticker-text, .ticker-link, .price-cell, .trade-timing-ref) {
-    gap: 1px;
-  }
-  /* 섹터 칩이 티커 줄을 혼자 키우고 있었다 — 세로 여백만 걷고 글자는 그대로. */
-  :is(#detailTableWrap, .dividend-list, .interest-detail-list, .tx-list) tbody .sector-chip {
-    padding-top: 0;
-    padding-bottom: 0;
-    line-height: 1.35;
+    height: 28px;
+    min-height: 28px;
   }
   .bar {
     grid-template-columns: 1fr;
