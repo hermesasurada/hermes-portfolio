@@ -36,10 +36,20 @@ assert.equal((run("interestEmptyRow('none', INTEREST_COLUMNS)").match(/<td /g) |
 assert.match(run("interestEmptyRow('<unsafe>', visibleInterestColumns([]))"), /&lt;unsafe>/);
 run(`
   const testCol = { innerHTML: '' }, testHead = { innerHTML: '' };
-  const table = { dataset: {}, querySelector: s => s === 'colgroup' ? testCol : testHead };
+  const vars = {};
+  const table = { dataset: {}, style: { setProperty: (k, v) => { vars[k] = v; } },
+    querySelector: s => s === 'colgroup' ? testCol : testHead };
   renderInterestFrame(table, visibleInterestColumns([]));
 `);
 assert.equal((run("testCol.innerHTML").match(/<col /g) || []).length, 5);
+// 종목명 열 sticky 오프셋이 쓰는 값 = 로고 열 colgroup 폭. 어긋나면 두 고정열
+// 사이가 벌어져 가로 스크롤되는 데이터가 그 틈으로 비친다.
+const logoVar = run("vars['--interest-logo-col']");
+assert.match(logoVar, /^calc\(\d+px \* var\(--col-scale, 1\)\)$/);
+assert.ok(run("testCol.innerHTML").includes(`width:${logoVar}"`), '로고 열 colgroup 폭과 변수가 달라졌다');
+const css = fs.readFileSync(path.join(__dirname, '../portfolio_static/styles.css'), 'utf8');
+assert.match(css, /left: var\(--interest-logo-col, 40px\);/);
+assert.match(css, /width: var\(--interest-logo-col, 40px\);/);
 run("testHead.innerHTML = 'unchanged'; renderInterestFrame(table, visibleInterestColumns([]));");
 assert.equal(run("testHead.innerHTML"), "unchanged");
 console.log("interest column schema, visibility, header alignment and frame reuse ok");

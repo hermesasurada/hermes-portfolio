@@ -1215,9 +1215,19 @@ main {
 .interest-detail-list th.name-head {
   text-align: left;
 }
+/* table-layout:fixed라 내용이 열보다 길면 셀 밖으로 삐져나간다. 그 조각이
+   가로 스크롤 중 고정열(로고·종목명) 오른쪽으로 새어 나와 데이터가 겹쳐
+   보였다 — 각 셀 안에서 자르게 한다. 폭보다 긴 값은 이웃 열을 침범하는 대신
+   잘린다(원래도 침범해 겹쳐 있던 자리다). */
+.interest-detail-list th,
+.interest-detail-list td {
+  overflow: hidden;
+}
 .interest-detail-list th[data-interest-col="0"],
 .interest-detail-list td:first-child {
-  width: 40px;
+  /* 로고 열 폭 — renderInterestFrame이 colgroup과 같은 식으로 채운다.
+     아래 종목명 열의 sticky 오프셋이 이 값을 그대로 쓰므로 둘이 어긋나지 않는다. */
+  width: var(--interest-logo-col, 40px);
   text-align: center;
 }
 .interest-detail-list th[data-interest-col="1"],
@@ -1242,7 +1252,7 @@ main {
 }
 #interestTableWrap .interest-detail-list th[data-interest-col="1"],
 #interestTableWrap .interest-detail-list td:nth-child(2) {
-  left: 40px;
+  left: var(--interest-logo-col, 40px);
   z-index: 2;
 }
 #interestTableWrap .interest-detail-list thead th[data-interest-col="0"],

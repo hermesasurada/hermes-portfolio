@@ -25,7 +25,7 @@
 - 주기 갱신은 `scheduleAutoRefresh` 한 곳(OFF/1분/5분). 시장상태 렌더에서 별도 타이머를 만들지 않는다. OFF/주기 전환 전 자동 요청의 늦은 응답도 버리며, 사용자 조작에 따른 명시적 재조회는 유지한다. 테스트: `node tests/test_auto_refresh.js`.
 - 거래내역 API는 선택 계좌의 전체 이력을 반환한다(최근 200건 제한 금지). 프런트에서 티커/종목명·숨김 조건으로 필터링한 뒤 **20건씩** 페이지를 나누며, 잔고 역산에는 필터 전 전체 원장을 사용한다. 테스트: `node tests/test_transaction_filter.js`.
 - 관심목록 테이블 고정컬럼은 **CSS sticky만**(detail/dividend는 JS pc-frozen) — 이중 시스템 금지.
-  로고·종목명은 왼쪽, 삭제(×)는 **오른쪽** sticky(`.interest-delete-col`). 삭제 열은 59개 컬럼 맨 끝이라 고정하지 않으면 3,400px를 스크롤해야 닿는다(기타 그룹에서 '삭제 기능이 없다'는 보고로 드러남).
+  로고·종목명은 왼쪽, 삭제(×)는 **오른쪽** sticky(`.interest-delete-col`). **종목명 열의 `left` 오프셋은 로고 열 실제 폭(`--interest-logo-col`)을 써야 한다** — `renderInterestFrame`이 colgroup과 같은 식으로 채운다. 40px로 굳혀 두면 `--col-scale`이 걸린 화면에서 두 고정열 사이가 그 차이만큼 벌어지고 가로 스크롤 데이터가 그 틈으로 비친다(2026-09-16 보고). 또 `table-layout: fixed`라 내용이 열보다 길면 셀 밖으로 삐져나와 고정열 옆으로 새므로 `.interest-detail-list th, td { overflow: hidden }`으로 셀 안에서 자른다. 삭제 열은 59개 컬럼 맨 끝이라 고정하지 않으면 3,400px를 스크롤해야 닿는다(기타 그룹에서 '삭제 기능이 없다'는 보고로 드러남).
 - 관심목록 컬럼 폭의 권위는 `<colgroup>`.
 - 각 JS 파일 끝의 로드 마커(`window.__loaded`)와 index.html의 부트 검사·에러 배너를 유지할 것. **인라인 스크립트 주석에도 닫는 script 태그 문자열을 절대 쓰지 말 것**(HTML 파서가 태그로 해석해 그 지점에서 잘림).
 

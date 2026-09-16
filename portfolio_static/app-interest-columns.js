@@ -203,11 +203,17 @@ function renderInterestFrame(table, columns) {
   const key = columns.map(column => column.key).join(",");
   if (table.dataset.columnKey === key) return;
   table.dataset.columnKey = key;
-  table.querySelector("colgroup").innerHTML = columns.map(column =>
+  const columnWidth = column => column.key === "name"
+    ? "var(--ticker-name-width, 165px)"
     // 폭의 권위는 여전히 colgroup. 좁은 화면에서 한 번에 줄일 수 있도록 --col-scale만 곱한다
     // (기본 1 = 원래 폭). 종목명 열은 내용 폭으로 이미 측정돼 있어 그대로 둔다.
-    `<col style="width:${column.key === "name" ? "var(--ticker-name-width, 165px)" : `calc(${column.width}px * var(--col-scale, 1))`}">`
-  ).join("");
+    : `calc(${column.width}px * var(--col-scale, 1))`;
+  table.querySelector("colgroup").innerHTML = columns
+    .map(column => `<col style="width:${columnWidth(column)}">`).join("");
+  // 종목명 열의 sticky 오프셋 = 로고 열 실제 폭. 폭에 배율이 걸리는데 오프셋만
+  // 40px로 굳어 있으면 그 차이만큼 두 고정열 사이가 벌어지고, 그 틈으로 가로
+  // 스크롤되는 데이터가 비쳐 보인다(2026-09-16 보고).
+  table.style.setProperty("--interest-logo-col", columnWidth(columns[0]));
   table.querySelector("thead").innerHTML = interestTableHead(columns);
 }
 
