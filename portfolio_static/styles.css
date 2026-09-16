@@ -1510,10 +1510,14 @@ main {
 }
 
 
-/* 표 헤더 아래에 옅은 블루 룰을 둬 본문과 위계를 구분한다. */
+/* 표 헤더 아래에 옅은 블루 룰을 둬 본문과 위계를 구분한다.
+   관심목록 헤더는 2행이라 tr:last-child만으로는 그룹(모멘텀·밸류 …)에 속한
+   열에만 룰이 깔린다. 두 행을 가로지르는 rowspan 헤더도 헤더의 맨 아래라
+   함께 넣어야 굵은 선이 일부 구간에서만 끊겨 보이지 않는다(2026-09-16 보고). */
 #detailTableWrap thead tr:last-child th,
 #dividendTableWrap thead tr:last-child th,
 #interestTableWrap thead tr:last-child th,
+#interestTableWrap thead .interest-group-head th[rowspan],
 .tx-list thead th,
 .dividend-history-table-wrap thead th {
   border-bottom: 2px solid color-mix(in srgb, var(--brand) 22%, var(--line));
