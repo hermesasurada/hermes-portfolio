@@ -1177,6 +1177,40 @@ def test_nvda_march_dividend_closes_fiscal_year():
         assert final["date"].month == 3
 
 
+def test_jpm_october_raise_groups_four_equal_quarters():
+    """JPM은 10월 회차부터 인상분을 지급한다 → 10월~익년 7월이 한 배당년도.
+
+    4월에도 중간 인상이 잦아 자동 사이클은 2회씩 끊기고, 한 라벨에 4회를 넘겨
+    역년으로 통째 폴백한다(같은 1.5달러 네 회차가 두 해로 갈렸다).
+    FISCAL_END_MONTH_OVERRIDES는 재라벨을 타지 않아 회계연도 귀속이 유지된다.
+    """
+    from portfolio_core.dividends import FISCAL_END_MONTH_OVERRIDES
+
+    assert FISCAL_END_MONTH_OVERRIDES.get("JPM") == 9
+    rows = [
+        {"record_date": None, "ex_date": ex, "pay_date": None, "declaration_date": None,
+         "amount": amount, "source": "test"}
+        for ex, amount in [
+            ("2023-10-05", 1.05), ("2024-01-04", 1.05), ("2024-04-04", 1.15), ("2024-07-05", 1.15),
+            ("2024-10-04", 1.25), ("2025-01-06", 1.25), ("2025-04-04", 1.40), ("2025-07-03", 1.40),
+            ("2025-10-06", 1.50), ("2026-01-06", 1.50), ("2026-04-06", 1.50), ("2026-07-06", 1.50),
+        ]
+    ]
+
+    events, _ = _attributed_history_events(rows, "JPM", False, 9)
+    annual = _aggregate_annual_dividends(events)
+
+    # 같은 1.5달러 네 회차가 한 해로 묶인다.
+    assert annual[2026]["payments"] == 4
+    assert round(annual[2026]["amount"], 2) == 6.00
+    assert [event["date"].isoformat() for event in annual[2026]["events"]][0] == "2025-10-06"
+    assert round(annual[2025]["amount"], 2) == 5.30
+    assert round(annual[2024]["amount"], 2) == 4.40
+    # 9월 결산이라 10월이 되어야 다음 배당년도가 열린다.
+    assert _active_dividend_year(date(2026, 9, 17), 9) == 2026
+    assert _active_dividend_year(date(2026, 10, 1), 9) == 2027
+
+
 def test_hsbc_groups_three_interims_with_following_final():
     """영국식 '중간배당 3회 + 이듬해 3월 결산배당 1회'를 한 사업연도로 묶는다."""
     rows = [
