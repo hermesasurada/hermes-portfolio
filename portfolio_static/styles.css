@@ -696,13 +696,20 @@ main {
   gap: 12px;
   flex-wrap: wrap;
 }
-#accounts .account .meta,
-#accounts .account-count,
 #heroValue,
 #heroChange,
 .hero-index-value,
 .hero-index-change {
   font-family: var(--chart-num-font);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* 사이드바 계좌·관심그룹 숫자는 표와 같은 글꼴로(2026-09-16 사용자 지시).
+   목록과 표가 나란히 보이는 화면이라 둘이 다르면 톤이 튄다. 자릿수 정렬은
+   tabular-nums가 계속 맡는다. 히어로(상단 총액)는 --chart-num-font 유지. */
+#accounts .account .meta,
+#accounts .account-count,
+.interest-count {
+  font-family: var(--grid-num-font);
   font-variant-numeric: tabular-nums lining-nums;
 }
 .hero-value-row strong {
@@ -993,7 +1000,6 @@ main {
   background: var(--surface-2);
   color: var(--muted);
   font-size: 11px;
-  font-family: var(--chart-num-font);
   font-weight: 400;
   text-align: center;
 }
