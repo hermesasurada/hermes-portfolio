@@ -211,6 +211,24 @@ function tightLowerChartScale(values, desiredTicks = 5) {
   return { ...scale, min, ticks };
 }
 
+// 가격축 눈금을 한 단계 촘촘하게. desiredTicks를 올리는 것만으로는 부족한데,
+// 눈금 단위가 1·2·2.5·5 사다리라 종목에 따라 같은 단위에 머무는 구간이 넓기 때문이다
+// (NVDA는 5→9를 줘도 25 그대로였다). 후보를 훑어 목표 개수에 가장 가까우면서
+// 상한을 넘지 않는 스케일을 고른다 — 상한은 좁은 화면에서 라벨이 붙는 걸 막는다.
+function denseLowerChartScale(values, targetTicks = 9, maxTicks = 11) {
+  let best = null;
+  for (let desired = 5; desired <= 14; desired += 1) {
+    const scale = tightLowerChartScale(values, desired);
+    const count = scale.ticks.length;
+    if (count > maxTicks) continue;
+    const gap = Math.abs(count - targetTicks);
+    const bestGap = best ? Math.abs(best.ticks.length - targetTicks) : Infinity;
+    // 동률이면 눈금이 적은 쪽 — 같은 밀도면 덜 빽빽한 축이 읽기 쉽다.
+    if (gap < bestGap || (gap === bestGap && best && count < best.ticks.length)) best = scale;
+  }
+  return best || tightLowerChartScale(values);
+}
+
 // RSI는 이론상 0~100이지만 실제 관측 구간만 확대해서 변화를 읽기 쉽게 한다.
 // 축 경계는 5단위로 정리하되 실제 최저·최고에서 최소 3포인트 여백을 둔다.
 function dynamicRsiChartScale(values) {

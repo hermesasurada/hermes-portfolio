@@ -1325,11 +1325,14 @@ function renderLineChart(payload) {
   // 로그 스케일은 모든 값이 양수일 때만 적용 (아니면 선형 폴백)
   const scaleValues = [...values, ...candleScaleValues, ...markerValues, ...overlayValues];
   const useLog = chartLogScale && scaleValues.every(value => value > 0);
-  const scale = useLog ? logChartScale(scaleValues) : tightLowerChartScale(scaleValues);
+  const compactChart = window.matchMedia?.("(max-width: 980px)")?.matches;
+  // 좁은 화면은 같은 플롯 높이가 픽셀로는 훨씬 작다 — 목표·상한을 한 단계 낮춘다.
+  const scale = useLog
+    ? logChartScale(scaleValues)
+    : denseLowerChartScale(scaleValues, compactChart ? 7 : 9, compactChart ? 8 : 11);
   const min = scale.min;
   const max = scale.max;
   const width = 980;
-  const compactChart = window.matchMedia?.("(max-width: 980px)")?.matches;
   const height = compactChart ? 900 : 530;
   const last = values[values.length - 1];
   const overlayMetrics = chartOverlayMetrics(values);
