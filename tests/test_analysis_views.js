@@ -7,6 +7,7 @@ const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const esc = s => String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 const ctx = vm.createContext({window: {}, storageGet: () => null, esc,
   performanceIndexes: {SP500:true},
+  performanceFixedFx: true,
 });
 vm.runInContext(read('app-calendar.js'), ctx);
 for (const mobile of [false, true]) {

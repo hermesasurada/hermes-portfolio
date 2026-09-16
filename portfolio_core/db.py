@@ -487,3 +487,8 @@ def ensure_value_snapshot_table(conn: sqlite3.Connection) -> None:
         )
         """
     )
+    # 고정환율(기준일 환율) 평가 구성요소 — 성과차트의 '고정환율' 선용. 기존 DB에는 ALTER로 추가.
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(account_value_snapshots)").fetchall()}
+    for column in ("holdings_value_fixed_krw", "trade_cash_fixed_krw", "flow_fixed_krw"):
+        if column not in columns:
+            conn.execute(f"ALTER TABLE account_value_snapshots ADD COLUMN {column} REAL")

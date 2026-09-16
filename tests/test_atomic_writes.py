@@ -82,7 +82,8 @@ class AtomicWritesTests(unittest.TestCase):
         with db.connect() as conn:
             expected = snapshots.build_account_series(conn, account_id)
             actual = [dict(row) for row in conn.execute("""
-                SELECT date, holdings_value_krw, trade_cash_krw, flow_krw
+                SELECT date, holdings_value_krw, trade_cash_krw, flow_krw,
+                       holdings_value_fixed_krw, trade_cash_fixed_krw, flow_fixed_krw
                 FROM account_value_snapshots WHERE account_id = ? ORDER BY date
             """, (account_id,))]
         self.assertEqual(actual, expected)

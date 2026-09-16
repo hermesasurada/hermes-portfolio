@@ -2425,6 +2425,104 @@ def test_performance_snapshot_reconstructs_opening_and_applies_fx():
     conn.close()
 
 
+def test_performance_snapshot_fixed_fx_components():
+    """고정환율 구성요소: 보유·거래는 기준일 환율(r0) 곱, 외화 계좌의 원화 입금은
+    그날 환율로 계좌통화가 된 뒤 r0로 되돌린다(허수 현금 방지). 원화 계좌는 실제값과 동일."""
+    import sqlite3
+    import portfolio_core.performance_snapshots as ps
+    from portfolio_core.performance_snapshots import build_account_series, twr_index
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript("""
+        CREATE TABLE accounts (id INTEGER PRIMARY KEY, member TEXT, name TEXT, account_type TEXT, currency TEXT, region TEXT, history_start TEXT);
+        CREATE TABLE holdings (id INTEGER PRIMARY KEY, account_id INTEGER, ticker TEXT, qty REAL, currency TEXT);
+        CREATE TABLE transactions (id INTEGER PRIMARY KEY, account_id INTEGER, trade_date TEXT, ticker TEXT, side TEXT, qty REAL, price REAL, currency TEXT);
+        CREATE TABLE account_cash_flows (id INTEGER PRIMARY KEY, account_id INTEGER, flow_date TEXT, amount REAL, currency TEXT);
+        CREATE TABLE daily_prices (date TEXT, ticker TEXT, close REAL);
+        INSERT INTO accounts VALUES (1, 'A', '해외', 'overseas', 'USD', 'US', '2026-03-02');
+        INSERT INTO accounts VALUES (2, 'A', '국내', 'domestic', 'KRW', 'KR', '2026-03-02');
+        -- 계좌1(USD): 03-02 원화 130만 입금 → 그날 환율 1300으로 $1,000 → $100짜리 10주 매수. 현재 잔고 10주.
+        INSERT INTO holdings VALUES (1, 1, 'XYZ', 10, 'USD');
+        INSERT INTO account_cash_flows VALUES (1, 1, '2026-03-02', 1300000, 'KRW');
+        INSERT INTO transactions VALUES (1, 1, '2026-03-02', 'XYZ', 'BUY', 10, 100, 'USD');
+        -- 계좌2(KRW): 원화 종목 5주, 입금 50만
+        INSERT INTO holdings VALUES (2, 2, 'KOR', 5, 'KRW');
+        INSERT INTO account_cash_flows VALUES (2, 2, '2026-03-02', 500000, 'KRW');
+        INSERT INTO transactions VALUES (2, 2, '2026-03-02', 'KOR', 'BUY', 5, 100000, 'KRW');
+    """)
+    # 주가는 그대로($100), 환율만 1300 → 1400 → 1500 으로 오른다: 실제 선은 상승, 고정환율 선은 0%.
+    for day, fx in (("2026-03-01", 1300), ("2026-03-02", 1300), ("2026-03-03", 1400), ("2026-03-04", 1500)):
+        conn.execute("INSERT INTO daily_prices VALUES (?, 'XYZ', 100)", (day,))
+        conn.execute("INSERT INTO daily_prices VALUES (?, 'KOR', 100000)", (day,))
+        conn.execute("INSERT INTO daily_prices VALUES (?, 'USDKRW', ?)", (day, fx))
+    original_today = ps.today_kst
+    ps.today_kst = lambda: date(2026, 3, 4)
+    try:
+        usd = build_account_series(conn, 1)
+        krw = build_account_series(conn, 2)
+    finally:
+        ps.today_kst = original_today
+
+    # 실제 환율: 평가액이 환율만큼 커진다
+    assert [r["holdings_value_krw"] for r in usd] == [10 * 100 * 1300, 10 * 100 * 1400, 10 * 100 * 1500]
+    # 고정환율(r0=기준일 1300): 평가액이 전 구간 동일
+    assert [r["holdings_value_fixed_krw"] for r in usd] == [1300000, 1300000, 1300000]
+    assert usd[0]["trade_cash_fixed_krw"] == -10 * 100 * 1300
+    # 원화 입금 130만은 그날 환율(1300)로 $1,000 → r0(1300)으로 130만. 매수 대금과 정확히 상쇄되어 허수 현금 0.
+    assert usd[0]["flow_fixed_krw"] == 1300000
+    assert usd[0]["flow_fixed_krw"] + usd[0]["trade_cash_fixed_krw"] == 0
+    # 시간가중: 실제는 +15.4%(환율 1300→1500), 고정환율은 0%
+    actual = twr_index([{"value": r["holdings_value_krw"], "trade_cash": r["trade_cash_krw"], "flow": r["flow_krw"]} for r in usd], "full")
+    fixed = twr_index([{"value": r["holdings_value_fixed_krw"], "trade_cash": r["trade_cash_fixed_krw"], "flow": r["flow_fixed_krw"]} for r in usd], "full")
+    assert abs(actual[-1] - 1500 / 1300) < 1e-9
+    assert abs(fixed[-1] - 1.0) < 1e-9
+    # 원화 계좌는 두 값이 완전히 같다
+    for row in krw:
+        assert row["holdings_value_fixed_krw"] == row["holdings_value_krw"]
+        assert row["trade_cash_fixed_krw"] == row["trade_cash_krw"]
+        assert row["flow_fixed_krw"] == row["flow_krw"]
+    conn.close()
+
+
+def test_performance_snapshot_fixed_fx_krw_flow_at_later_rate():
+    """외화 계좌에 나중 날짜(환율이 달라진 뒤)에 원화로 입금해도 그날 매수와 상쇄된다."""
+    import sqlite3
+    import portfolio_core.performance_snapshots as ps
+    from portfolio_core.performance_snapshots import build_account_series
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript("""
+        CREATE TABLE accounts (id INTEGER PRIMARY KEY, member TEXT, name TEXT, account_type TEXT, currency TEXT, region TEXT, history_start TEXT);
+        CREATE TABLE holdings (id INTEGER PRIMARY KEY, account_id INTEGER, ticker TEXT, qty REAL, currency TEXT);
+        CREATE TABLE transactions (id INTEGER PRIMARY KEY, account_id INTEGER, trade_date TEXT, ticker TEXT, side TEXT, qty REAL, price REAL, currency TEXT);
+        CREATE TABLE account_cash_flows (id INTEGER PRIMARY KEY, account_id INTEGER, flow_date TEXT, amount REAL, currency TEXT);
+        CREATE TABLE daily_prices (date TEXT, ticker TEXT, close REAL);
+        INSERT INTO accounts VALUES (1, 'A', '해외', 'overseas', 'USD', 'US', '2026-03-02');
+        INSERT INTO holdings VALUES (1, 1, 'XYZ', 10, 'USD');
+        -- 03-03 환율 1400: 원화 140만 입금 = $1,000 → 10주 매수
+        INSERT INTO account_cash_flows VALUES (1, 1, '2026-03-03', 1400000, 'KRW');
+        INSERT INTO transactions VALUES (1, 1, '2026-03-03', 'XYZ', 'BUY', 10, 100, 'USD');
+    """)
+    for day, fx in (("2026-03-02", 1300), ("2026-03-03", 1400), ("2026-03-04", 1500)):
+        conn.execute("INSERT INTO daily_prices VALUES (?, 'XYZ', 100)", (day,))
+        conn.execute("INSERT INTO daily_prices VALUES (?, 'USDKRW', ?)", (day, fx))
+    original_today = ps.today_kst
+    ps.today_kst = lambda: date(2026, 3, 4)
+    try:
+        rows = build_account_series(conn, 1)
+    finally:
+        ps.today_kst = original_today
+    day = next(r for r in rows if r["date"] == "2026-03-03")
+    # 실제: 입금 140만, 매수 −$1,000×1400 = −140만 → 현금 0
+    assert day["flow_krw"] + day["trade_cash_krw"] == 0
+    # 고정(r0=1300): 입금 140만 × 1300/1400 = 130만, 매수 −$1,000×1300 = −130만 → 현금 0
+    assert abs(day["flow_fixed_krw"] - 1300000) < 1e-6
+    assert abs(day["flow_fixed_krw"] + day["trade_cash_fixed_krw"]) < 1e-6
+    conn.close()
+
+
 def test_twr_index_neutralizes_flows():
     from portfolio_core.performance_snapshots import twr_index
 

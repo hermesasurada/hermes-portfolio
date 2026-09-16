@@ -16,6 +16,16 @@
   holdings_value_krw : 그날 보유 증권 평가액
   trade_cash_krw     : 기준일 이후 누적 거래 현금(매도 +, 매수 −)
   flow_krw           : 기준일 이후 누적 외부 입출금(입금 +, 출금 −)
+
+같은 세 값을 **고정환율**로도 저장한다(*_fixed_krw). 환율은 통화별로 기준일
+환율 하나로 고정해 환율 변동을 성과에서 걷어낸 선(현지통화 수익률)을 그린다.
+  - 보유·거래는 그 통화의 고정환율을 곱한다.
+  - 외화 계좌에 **원화로** 넣은 입출금은 그날 실제 환율로 계좌통화로 바꾼 뒤
+    고정환율로 되돌린다(amount × r0/r_day). 안 그러면 매수 대금(고정환율)과
+    입금(원화 그대로)이 어긋나 허수 현금이 생겨 TWR이 희석된다.
+  - 시간가중 지수는 상수배에 불변이라 단일통화 계좌는 r0를 무엇으로 잡아도
+    선 모양이 같다. 다통화 계좌·합산에서만 통화 간 가중이 조금 달라진다.
+  - 원화 계좌는 두 값이 같다(선이 겹치므로 프런트가 고정환율 선을 생략한다).
 """
 
 from __future__ import annotations
@@ -92,6 +102,12 @@ def build_account_series(conn: sqlite3.Connection, account_id: int) -> list[dict
     today = today_kst().isoformat()
     since = _shift_days(anchor, PRICE_WARMUP_DAYS)
 
+    # 계좌통화 — 원화 입출금을 고정환율로 옮길 때 기준. 컬럼이 없는 최소 스키마(테스트)는 KRW.
+    account_columns = {row["name"] for row in conn.execute("PRAGMA table_info(accounts)").fetchall()}
+    account_currency = "KRW"
+    if "currency" in account_columns:
+        account_row = conn.execute("SELECT currency FROM accounts WHERE id = ?", (account_id,)).fetchone()
+        account_currency = str((account_row["currency"] if account_row else None) or "KRW").upper()
     holdings = {
         str(r["ticker"]).upper(): (float(r["qty"] or 0), str(r["currency"] or "KRW").upper())
         for r in conn.execute("SELECT ticker, qty, currency FROM holdings WHERE account_id = ?", (account_id,))
@@ -123,7 +139,8 @@ def build_account_series(conn: sqlite3.Connection, account_id: int) -> list[dict
     tickers = sorted(opening)
     prices = {ticker: _load_series(conn, ticker, since) for ticker in tickers}
     fx: dict[str, _Series | None] = {}
-    for currency in set(currency_of.values()) | {str(f["currency"] or "KRW").upper() for f in flows}:
+    for currency in (set(currency_of.values()) | {str(f["currency"] or "KRW").upper() for f in flows}
+                     | {account_currency}):
         fx[currency] = None if currency == "KRW" else _load_series(conn, FX_TICKER_FOR.get(currency, f"{currency}KRW"), since)
 
     def to_krw(amount: float, currency: str, day: str) -> float | None:
@@ -132,6 +149,28 @@ def build_account_series(conn: sqlite3.Connection, account_id: int) -> list[dict
             return amount
         rate = series.at(day)
         return None if rate is None else amount * rate
+
+    # 고정환율 r0: 통화별 기준일 환율(없으면 그 통화 시계열의 첫 값). 원화는 1.
+    fixed_rate: dict[str, float | None] = {}
+    for currency, series in fx.items():
+        if series is None:
+            fixed_rate[currency] = 1.0
+        else:
+            fixed_rate[currency] = series.at(anchor) if series.at(anchor) is not None else (
+                series.values[0] if series.values else None)
+
+    def to_fixed_krw(amount: float, currency: str) -> float | None:
+        rate = fixed_rate.get(currency)
+        return None if rate is None else amount * rate
+
+    def flow_to_fixed_krw(amount: float, currency: str, day: str) -> float | None:
+        # 외화 계좌에 원화로 넣은 돈은 그날 환율로 계좌통화가 된 뒤 고정환율로 평가한다.
+        if currency == "KRW" and account_currency != "KRW":
+            series = fx.get(account_currency)
+            actual = series.at(day) if series is not None else None
+            fixed = fixed_rate.get(account_currency)
+            return None if actual is None or fixed is None or actual == 0 else amount * fixed / actual
+        return to_fixed_krw(amount, currency)
 
     # 거래 캘린더: 관련 종목 종가 날짜의 합집합(기준일~오늘)
     days = sorted({d for s in prices.values() for d in s.dates if anchor <= d <= today})
@@ -148,6 +187,8 @@ def build_account_series(conn: sqlite3.Connection, account_id: int) -> list[dict
     positions = dict(opening)
     trade_cash = 0.0
     flow_cash = 0.0
+    trade_cash_fixed = 0.0
+    flow_cash_fixed = 0.0
     out: list[dict] = []
     pending_days = sorted(set(trades_by_day) | set(flows_by_day))
     pending_index = 0
@@ -159,29 +200,47 @@ def build_account_series(conn: sqlite3.Connection, account_id: int) -> list[dict
                 ticker = str(t["ticker"]).upper()
                 signed = float(t["qty"]) * (1 if t["side"] == "BUY" else -1)
                 positions[ticker] = positions.get(ticker, 0.0) + signed
-                cash = to_krw(float(t["qty"]) * float(t["price"]), str(t["currency"] or "KRW").upper(), event_day)
+                trade_currency = str(t["currency"] or "KRW").upper()
+                gross = float(t["qty"]) * float(t["price"])
+                sign = -1 if t["side"] == "BUY" else 1
+                cash = to_krw(gross, trade_currency, event_day)
                 if cash is not None:
-                    trade_cash += -cash if t["side"] == "BUY" else cash
+                    trade_cash += sign * cash
+                cash_fixed = to_fixed_krw(gross, trade_currency)
+                if cash_fixed is not None:
+                    trade_cash_fixed += sign * cash_fixed
             for f in flows_by_day.get(event_day, []):
-                amount = to_krw(float(f["amount"]), str(f["currency"] or "KRW").upper(), event_day)
+                flow_currency = str(f["currency"] or "KRW").upper()
+                amount = to_krw(float(f["amount"]), flow_currency, event_day)
                 if amount is not None:
                     flow_cash += amount
+                amount_fixed = flow_to_fixed_krw(float(f["amount"]), flow_currency, event_day)
+                if amount_fixed is not None:
+                    flow_cash_fixed += amount_fixed
             pending_index += 1
         value = 0.0
+        value_fixed = 0.0
         for ticker, qty in positions.items():
             if abs(qty) < 1e-12:
                 continue
             close = prices[ticker].at(day)
             if close is None:
                 continue
-            krw = to_krw(qty * close, currency_of.get(ticker, "KRW"), day)
+            currency = currency_of.get(ticker, "KRW")
+            krw = to_krw(qty * close, currency, day)
             if krw is not None:
                 value += krw
+            krw_fixed = to_fixed_krw(qty * close, currency)
+            if krw_fixed is not None:
+                value_fixed += krw_fixed
         out.append({
             "date": day,
             "holdings_value_krw": round(value, 2),
             "trade_cash_krw": round(trade_cash, 2),
             "flow_krw": round(flow_cash, 2),
+            "holdings_value_fixed_krw": round(value_fixed, 2),
+            "trade_cash_fixed_krw": round(trade_cash_fixed, 2),
+            "flow_fixed_krw": round(flow_cash_fixed, 2),
         })
     return out
 
@@ -218,10 +277,12 @@ def rebuild_account_snapshots_in_transaction(
         conn.executemany(
             """
             INSERT INTO account_value_snapshots
-              (account_id, date, holdings_value_krw, trade_cash_krw, flow_krw, computed_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+              (account_id, date, holdings_value_krw, trade_cash_krw, flow_krw,
+               holdings_value_fixed_krw, trade_cash_fixed_krw, flow_fixed_krw, computed_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            [(account_id, r["date"], r["holdings_value_krw"], r["trade_cash_krw"], r["flow_krw"], stamp) for r in rows],
+            [(account_id, r["date"], r["holdings_value_krw"], r["trade_cash_krw"], r["flow_krw"],
+              r["holdings_value_fixed_krw"], r["trade_cash_fixed_krw"], r["flow_fixed_krw"], stamp) for r in rows],
         )
         written[account_id] = len(rows)
     return written
@@ -247,7 +308,8 @@ def load_account_snapshots(
         clause = ("WHERE " + " AND ".join(where)) if where else ""
         rows = conn.execute(
             f"""
-            SELECT s.account_id, s.date, s.holdings_value_krw, s.trade_cash_krw, s.flow_krw, s.computed_at
+            SELECT s.account_id, s.date, s.holdings_value_krw, s.trade_cash_krw, s.flow_krw,
+                   s.holdings_value_fixed_krw, s.trade_cash_fixed_krw, s.flow_fixed_krw, s.computed_at
             FROM account_value_snapshots s {clause}
             ORDER BY s.account_id, s.date
             """,
@@ -266,6 +328,9 @@ def load_account_snapshots(
             "holdings_value_krw": r["holdings_value_krw"],
             "trade_cash_krw": r["trade_cash_krw"],
             "flow_krw": r["flow_krw"],
+            "holdings_value_fixed_krw": r["holdings_value_fixed_krw"],
+            "trade_cash_fixed_krw": r["trade_cash_fixed_krw"],
+            "flow_fixed_krw": r["flow_fixed_krw"],
         })
         computed_at = r["computed_at"] or computed_at
     return {

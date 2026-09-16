@@ -431,13 +431,25 @@ def performance_date_bounds(
     return (shift_months(today, -months).isoformat(), None) if months else (None, None)
 
 
+def _attach_twr(points: list[dict], basis: str) -> None:
+    """실제 환율 체인(twr)과 고정환율 체인(twr_fixed)을 같은 basis로 함께 붙인다."""
+    for point, growth in zip(points, twr_index(points, basis)):
+        point["twr"] = growth
+    fixed_view = [{"value": p.get("value_fixed", p.get("value")),
+                   "trade_cash": p.get("trade_cash_fixed", p.get("trade_cash")),
+                   "flow": p.get("flow_fixed", p.get("flow"))} for p in points]
+    for point, growth in zip(points, twr_index(fixed_view, basis)):
+        point["twr_fixed"] = growth
+
+
 def _rebase_twr(points: list[dict]) -> None:
-    """구간 첫 점의 twr을 1.0으로 맞춘다."""
+    """구간 첫 점의 twr(및 twr_fixed)을 1.0으로 맞춘다."""
     if not points:
         return
-    base = float(points[0].get("twr") or 1.0) or 1.0
-    for point in points:
-        point["twr"] = float(point.get("twr") or 1.0) / base
+    for key in ("twr", "twr_fixed"):
+        base = float(points[0].get(key) or 1.0) or 1.0
+        for point in points:
+            point[key] = float(point.get(key) or 1.0) / base
 
 
 def load_account_performance(
@@ -477,7 +489,8 @@ def load_account_performance(
             placeholders = ",".join("?" for _ in selected)
             snapshot_rows = conn.execute(
                 f"""
-                SELECT account_id, date, holdings_value_krw, trade_cash_krw, flow_krw
+                SELECT account_id, date, holdings_value_krw, trade_cash_krw, flow_krw,
+                       holdings_value_fixed_krw, trade_cash_fixed_krw, flow_fixed_krw
                 FROM account_value_snapshots
                 WHERE account_id IN ({placeholders})
                 ORDER BY account_id, date
@@ -508,18 +521,23 @@ def load_account_performance(
             [*index_tickers, *index_params],
         ).fetchall()
 
-    # 계좌별 날짜→값, 그리고 날짜 합집합 위에서 이월 합산
-    per_account: dict[str, dict[str, tuple[float, float, float]]] = {}
+    # 계좌별 날짜→값, 그리고 날짜 합집합 위에서 이월 합산.
+    # 튜플 뒤쪽 3개는 고정환율(기준일 환율) 구성요소 — 컬럼이 비어 있으면(재계산 전) 실제값으로 대체.
+    per_account: dict[str, dict[str, tuple[float, float, float, float, float, float]]] = {}
     for row in snapshot_rows:
+        value = float(row["holdings_value_krw"] or 0.0)
+        trade_cash = float(row["trade_cash_krw"] or 0.0)
+        flow = float(row["flow_krw"] or 0.0)
         per_account.setdefault(str(row["account_id"]), {})[row["date"]] = (
-            float(row["holdings_value_krw"] or 0.0),
-            float(row["trade_cash_krw"] or 0.0),
-            float(row["flow_krw"] or 0.0),
+            value, trade_cash, flow,
+            float(row["holdings_value_fixed_krw"]) if row["holdings_value_fixed_krw"] is not None else value,
+            float(row["trade_cash_fixed_krw"]) if row["trade_cash_fixed_krw"] is not None else trade_cash,
+            float(row["flow_fixed_krw"]) if row["flow_fixed_krw"] is not None else flow,
         )
     all_dates = sorted({d for series in per_account.values() for d in series})
     # 모든 선택 계좌에 값이 생긴 날부터 — 그 전엔 합계가 계좌 일부만 담아 왜곡된다
     coverage_start = max((min(series) for series in per_account.values() if series), default=None)
-    carried: dict[str, tuple[float, float, float]] = {}
+    carried: dict[str, tuple[float, float, float, float, float, float]] = {}
     points: list[dict] = []
     account_points: dict[str, list[dict]] = {aid: [] for aid in per_account} if detail else {}
     for day in all_dates:
@@ -532,6 +550,9 @@ def load_account_performance(
                         "value": series[day][0],
                         "trade_cash": series[day][1],   # 시간가중 체인이 흐름을 알아야 매수가 수익으로 잡히지 않는다
                         "flow": series[day][2],
+                        "value_fixed": series[day][3],
+                        "trade_cash_fixed": series[day][4],
+                        "flow_fixed": series[day][5],
                     })
         if coverage_start and day < coverage_start:
             continue
@@ -548,6 +569,9 @@ def load_account_performance(
                 "value": value,
                 "trade_cash": sum(item[1] for item in carried.values()),
                 "flow": sum(item[2] for item in carried.values()),
+                "value_fixed": sum(item[3] for item in carried.values()),
+                "trade_cash_fixed": sum(item[4] for item in carried.values()),
+                "flow_fixed": sum(item[5] for item in carried.values()),
             })
     # 시간가중 지수 — 선택 계좌 전부에 현금 입출금이 있으면 정식(외부 흐름만),
     # 아니면 증권 기준(매수·매도를 외부 흐름으로). 체인은 전체 이력에서 잇고
@@ -555,14 +579,11 @@ def load_account_performance(
     has_flows = {aid: any(abs(item[2]) > 1e-9 for item in series.values()) for aid, series in per_account.items()}
     twr_basis = "full" if per_account and all(has_flows.values()) else "securities"
     if points:
-        chained = twr_index(points, twr_basis)
-        for point, growth in zip(points, chained):
-            point["twr"] = growth
+        _attach_twr(points, twr_basis)
         _rebase_twr(points)
     if detail:
         for aid, series in account_points.items():
-            for point, growth in zip(series, twr_index(series, "full" if has_flows.get(aid) else "securities")):
-                point["twr"] = growth
+            _attach_twr(series, "full" if has_flows.get(aid) else "securities")
             # 보유가 생기기 전(입금만 있고 종목은 없던 구간)은 선으로 그리지 않는다 —
             # 합산 points가 value>0부터 시작하는 것과 같은 기준
             held_start = next((p["date"] for p in series if p["value"] > 0), None)

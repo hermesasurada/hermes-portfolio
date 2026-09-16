@@ -40,6 +40,8 @@ let performancePayload = null;
 let performanceLoadInFlight = null;
 let performanceLoadToken = 0;
 let performanceIndexes = { SP500: true, NIKKEI225: true, NASDAQ: true, KOSPI: true };
+// 성과차트 고정환율(기준일 환율) 점선 — 범례 '환율' 칩으로 켜고 끈다. 기본 켜짐.
+let performanceFixedFx = true;
 let mobileAccountsCollapsed = true;
 let watchLookupResult = null;
 let watchPending = [];

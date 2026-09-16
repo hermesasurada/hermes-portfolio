@@ -38,10 +38,11 @@ const PERF_INDEX_META = [
 
 // useTwr: 계좌 선은 평가액 변화율이 아니라 시간가중 지수(point.twr, 백엔드 체인)로 %를 그린다.
 // 평가액(point.value)은 호버 금액·끝 라벨용으로 그대로 들고 간다.
-function normalizePerformancePoints(points, rangeKey, bounds = null, useTwr = false) {
+// twrKey: "twr"(실제 환율) 또는 "twr_fixed"(고정환율) — 백엔드가 두 체인을 함께 실어 준다.
+function normalizePerformancePoints(points, rangeKey, bounds = null, useTwr = false, twrKey = "twr") {
   const raw = (points || [])
     .filter(point => point.date && Number.isFinite(Number(point.value)))
-    .map(point => ({ date: point.date, value: Number(point.value), twr: Number.isFinite(Number(point.twr)) ? Number(point.twr) : null }));
+    .map(point => ({ date: point.date, value: Number(point.value), twr: Number.isFinite(Number(point[twrKey])) ? Number(point[twrKey]) : null }));
   const startDate = bounds?.startDate || null;
   const endDate = bounds?.endDate || null;
   const filtered = startDate || endDate
@@ -73,6 +74,30 @@ function performanceValueText(point) {
   return Number.isFinite(value) ? krwShort(value) : "";
 }
 
+// 고정환율 선: 같은 색·점선. 원화 계좌처럼 실제 선과 겹치면(환노출 없음) 그리지 않는다.
+// 금액은 기준일 환율 기준이라 실제 평가액과 비교되지 않으므로 툴팁엔 %만 싣는다.
+function performanceFixedFxDiffers(rawPoints) {
+  return (rawPoints || []).some(point => {
+    const actual = Number(point.twr), fixed = Number(point.twr_fixed);
+    return Number.isFinite(actual) && Number.isFinite(fixed) && Math.abs(actual - fixed) > 1e-6;
+  });
+}
+
+function pushFixedFxSeries(series, base, rawPoints, bounds) {
+  if (!performanceFixedFx || !performanceFixedFxDiffers(rawPoints)) return;
+  series.push({
+    key: `${base.key}-fixed`,
+    base: base.key,
+    name: `${base.name} · 고정환율`,
+    color: base.color,
+    points: normalizePerformancePoints(rawPoints, chartRange, bounds, true, "twr_fixed"),
+    primary: false,
+    detail: Boolean(base.detail),
+    fixed: true,
+    amount: false,
+  });
+}
+
 function performanceSeries(payload) {
   const portfolioRaw = payload?.points || [];
   const accountSeries = payload?.account_series || [];
@@ -90,9 +115,10 @@ function performanceSeries(payload) {
       amount: true,
     },
   ];
+  pushFixedFxSeries(series, series[0], portfolioRaw, bounds);
   if (performanceDetailEnabled() && accountSeries.length > 1) {
     accountSeries.forEach((account, index) => {
-      series.push({
+      const item = {
         key: `account-${account.id}`,
         name: account.name || `계좌 ${index + 1}`,
         color: chartCompareColors[(index + 1) % chartCompareColors.length],
@@ -100,7 +126,9 @@ function performanceSeries(payload) {
         primary: false,
         detail: true,
         amount: true,
-      });
+      };
+      series.push(item);
+      pushFixedFxSeries(series, item, account.points || [], bounds);
     });
   }
   PERF_INDEX_META.forEach(([key, label, color]) => {
@@ -133,15 +161,16 @@ function applyPerformanceFocus() {
     button.setAttribute("aria-pressed", String(button.dataset.perfFocus === performanceFocusKey));
   });
   document.querySelectorAll("#chartCanvas [data-perf-series]").forEach(line => {
-    line.classList.toggle("perf-dimmed", Boolean(performanceFocusKey && line.dataset.perfSeries !== performanceFocusKey));
-    line.classList.toggle("perf-focused", line.dataset.perfSeries === performanceFocusKey);
+    const base = line.dataset.perfBase || line.dataset.perfSeries;
+    line.classList.toggle("perf-dimmed", Boolean(performanceFocusKey && base !== performanceFocusKey));
+    line.classList.toggle("perf-focused", base === performanceFocusKey);
   });
 }
 
 function renderPerformanceLegend(series = []) {
   const indexKeys = new Set(PERF_INDEX_META.map(([key]) => key));
   const accountChips = series
-    .filter(item => !indexKeys.has(item.key))
+    .filter(item => !indexKeys.has(item.key) && !item.fixed)
     .map(item => `<button type="button" class="perf-legend-item perf-account-focus" data-perf-focus="${esc(item.key)}" aria-pressed="${item.key === performanceFocusKey}" title="${esc(item.name)} 선 강조 · 다시 누르면 해제"><i style="background:${item.color}"></i>${esc(item.name)}</button>`)
     .join("");
   const indexChips = PERF_INDEX_META
@@ -151,7 +180,11 @@ function renderPerformanceLegend(series = []) {
       return `<button class="perf-legend-item perf-index-toggle${on ? " active" : ""}" type="button" data-index="${key}" aria-pressed="${on ? "true" : "false"}" title="${esc(label)} ${on ? "숨기기" : "표시"}"><i style="background:${on ? color : "var(--chart-axis)"}"></i>${esc(label)}</button>`;
     })
     .join("");
-  return `<div class="perf-legend-groups"><div class="perf-legend-section"><span class="perf-group-label">계좌 · 강조</span><div class="perf-legend" role="group" aria-label="계좌 선 강조">${accountChips || '<span class="perf-empty-label">표시할 계좌 없음</span>'}</div></div><div class="perf-legend-section"><span class="perf-group-label">비교지수</span><div class="perf-legend" role="group" aria-label="비교지수 표시">${indexChips}</div></div></div>`;
+  // 고정환율 칩: 켜짐/꺼짐 토글. 환노출이 없어 선이 생기지 않는 선택(원화 계좌만)에서는 칩을 흐리게 표시.
+  const fxOn = !!performanceFixedFx;
+  const fxAvailable = series.some(item => item.fixed) || !fxOn;
+  const fxChip = `<button class="perf-legend-item perf-fx-toggle${fxOn ? " active" : ""}${fxAvailable ? "" : " unavailable"}" type="button" data-perf-fx="1" aria-pressed="${fxOn ? "true" : "false"}" title="${fxOn ? "고정환율 선 숨기기" : "고정환율 선 표시"} · 기준일 환율로 고정해 환율 변동을 걷어낸 시간가중 수익률(점선)"><i class="dashed" style="border-color:${fxOn ? "var(--brand)" : "var(--chart-axis)"}"></i>고정환율</button>`;
+  return `<div class="perf-legend-groups"><div class="perf-legend-section"><span class="perf-group-label">계좌 · 강조</span><div class="perf-legend" role="group" aria-label="계좌 선 강조">${accountChips || '<span class="perf-empty-label">표시할 계좌 없음</span>'}</div></div><div class="perf-legend-section"><span class="perf-group-label">환율</span><div class="perf-legend" role="group" aria-label="고정환율 선 표시">${fxChip}</div></div><div class="perf-legend-section"><span class="perf-group-label">비교지수</span><div class="perf-legend" role="group" aria-label="비교지수 표시">${indexChips}</div></div></div>`;
 }
 
 function bindPerformanceHover(series, geometry) {
@@ -192,7 +225,10 @@ function bindPerformanceHover(series, geometry) {
       if (!point) return "";
       const cls = point.close > 0 ? "up" : point.close < 0 ? "down" : "flat";
       const value = item.amount ? performanceValueText(point) : "";
-      return `<div class="ct-row simple perf-tooltip-row${item.amount ? " with-value" : ""}"><span class="ct-name" style="color:${item.color}">${esc(item.name)}</span><span class="ct-pct ${cls}">${esc(pctChartLabel1(point.close))}</span><span class="ct-value">${esc(value)}</span></div>`;
+      const nameHtml = item.fixed
+        ? `<span class="ct-name perf-fixed-name" style="color:${item.color}">${esc(item.name.replace(/ · 고정환율$/, ""))}<small>고정환율</small></span>`
+        : `<span class="ct-name" style="color:${item.color}">${esc(item.name)}</span>`;
+      return `<div class="ct-row simple perf-tooltip-row${item.amount ? " with-value" : ""}${item.fixed ? " fixed" : ""}">${nameHtml}<span class="ct-pct ${cls}">${esc(pctChartLabel1(point.close))}</span><span class="ct-value">${esc(value)}</span></div>`;
     }).join("");
     tooltip.innerHTML = `<div class="ct-date">${esc(chartFullDateLabel(dateText))}</div>${rows}`;
     tooltip.classList.remove("hidden");
@@ -266,6 +302,8 @@ function renderPerformanceChart(payload) {
       const last = lastPoint.close;
       return {
         key: item.key,
+        base: item.base,
+        fixed: Boolean(item.fixed),
         color: item.color,
         close: last,
         value: "",
@@ -294,10 +332,10 @@ function renderPerformanceChart(payload) {
         return `<text class="chart-x-label" x="${x.toFixed(2)}" y="${height - 6}" text-anchor="${anchor}">${esc(perfGridLabel(time, vGrid.unit))}</text>`;
       }).join("")}
       ${series.map(item => `
-        <path class="perf-line ${item.primary ? "primary" : "index"}" data-perf-series="${esc(item.key)}" d="${pathFor(item.points)}" style="stroke:${item.color}"></path>
+        <path class="perf-line ${item.primary ? "primary" : item.fixed ? "fixed" : "index"}" data-perf-series="${esc(item.key)}"${item.base ? ` data-perf-base="${esc(item.base)}"` : ""} d="${pathFor(item.points)}" style="stroke:${item.color}"></path>
       `).join("")}
       ${endLabels.map(label => `
-        <text class="perf-end-label" data-perf-series="${esc(label.key)}" x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(pctChartLabel1(label.close))}</text>
+        <text class="perf-end-label${label.fixed ? " fixed" : ""}" data-perf-series="${esc(label.key)}"${label.base ? ` data-perf-base="${esc(label.base)}"` : ""} x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(pctChartLabel1(label.close))}</text>
       `).join("")}
       <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
       <g id="chartHoverGroup" class="chart-hover hidden">
@@ -324,6 +362,12 @@ function bindPerformanceChartControls() {
     btn.addEventListener("click", () => {
       const key = btn.dataset.index;
       performanceIndexes[key] = !performanceIndexes[key];
+      renderPerformanceChart(performancePayload);
+    });
+  });
+  document.querySelectorAll(".perf-fx-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+      performanceFixedFx = !performanceFixedFx;
       renderPerformanceChart(performancePayload);
     });
   });
