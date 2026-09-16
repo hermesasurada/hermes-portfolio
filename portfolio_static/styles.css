@@ -1264,24 +1264,8 @@ main {
 #interestTableWrap .interest-detail-list td:nth-child(2) {
   box-shadow: 2px 0 0 color-mix(in srgb, var(--line) 85%, transparent);
 }
-/* 삭제(×) 열은 59개 컬럼 맨 끝이라 고정하지 않으면 3,400px를 스크롤해야 닿는다.
-   오른쪽에 sticky로 붙인다 — 왼쪽 로고·종목명과 같은 CSS sticky 방식(JS pc-frozen 금지 규칙 유지). */
-#interestTableWrap .interest-detail-list th.interest-delete-col,
-#interestTableWrap .interest-detail-list td.interest-delete-col {
-  position: sticky;
-  right: 0;
-  z-index: 2;
-  background: var(--panel);
-  background-clip: padding-box;
-  box-shadow: -2px 0 0 color-mix(in srgb, var(--line) 85%, transparent);
-}
-#interestTableWrap .interest-detail-list thead th.interest-delete-col {
-  z-index: 14;
-  background: var(--surface-2);
-}
-#interestTableWrap .interest-detail-list tbody tr:hover > td.interest-delete-col {
-  background: var(--surface-hover);
-}
+/* 삭제(×) 열은 고정하지 않는다(2026-09-16 사용자 지시). 오른쪽 sticky로 붙여
+   두면 가로 스크롤 중 마지막 열을 늘 덮어 값이 가려진다. 맨 끝까지 스크롤해서 쓴다. */
 /* hover 시 고정 셀도 행 배경과 함께 바뀌어야 스크롤 콘텐츠와 어긋나 보이지
    않는다 (과거 pc-frozen(JS)이 해주던 처리의 CSS 대응) */
 #interestTableWrap .interest-detail-list tbody tr:hover > td:first-child,
@@ -1291,6 +1275,14 @@ main {
 .interest-detail-list th[data-interest-col="2"],
 .interest-detail-list td[data-interest-col="2"] {
   width: 86px;
+}
+/* 세션 배지(종)는 폭 0으로 셀 오른쪽 패딩 위에 겹쳐 뜬다(위 .change-session-note 참고).
+   셀을 overflow:hidden으로 자르므로 그 자리를 패딩으로 확보하지 않으면 배지가 잘린다.
+   배지 유무로 우측 정렬이 어긋나지 않게 열 전체에 같은 값을 준다.
+   #interestTableWrap을 붙인 이유: 좁은 화면의 여백 축소 규칙(:is(#id …))보다 우선해야 한다. */
+#interestTableWrap .interest-detail-list th[data-interest-col="2"],
+#interestTableWrap .interest-detail-list td[data-interest-col="2"] {
+  padding-right: 9px;
 }
 .interest-detail-list th[data-interest-col="3"],
 .interest-detail-list td[data-interest-col="3"] {

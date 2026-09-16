@@ -55,7 +55,10 @@ const css = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
 // 숨김 게이트가 되살아나면 실패한다. 삭제(×) 열은 오른쪽 sticky로 항상 닿아야 한다.
 assert.doesNotMatch(css, /watchlist-editing/);
 assert.doesNotMatch(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /interestEditToggle/);
-assert.match(css, /#interestTableWrap \.interest-detail-list td\.interest-delete-col \{[^}]*position: sticky;[^}]*right: 0;/);
+// 삭제(×) 열은 고정하지 않는다 — 오른쪽 sticky는 가로 스크롤 중 마지막 열을 덮는다.
+assert.doesNotMatch(css, /\.interest-delete-col[^{]*\{[^}]*position: sticky/);
+// 세션 배지(종)가 잘리지 않도록 등락 열은 배지 폭만큼 오른쪽 패딩을 확보한다.
+assert.match(css, /#interestTableWrap \.interest-detail-list td\[data-interest-col="2"\] \{\s*padding-right: 9px;/);
 assert.match(css, /\.title-tools:not\(\.filters-expanded\) :is\(#interestSectorControl, #currencyFilterControl\)/);
 for (const file of ['index.html','state.js','app.js','app-holdings.js','styles.css']) {
   assert.doesNotMatch(fs.readFileSync(path.join(root,file),'utf8'), /showIndexes|ignoreIndexes|function indexRows\(/);
