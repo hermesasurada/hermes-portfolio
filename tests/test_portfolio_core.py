@@ -1211,6 +1211,41 @@ def test_jpm_october_raise_groups_four_equal_quarters():
     assert _active_dividend_year(date(2026, 10, 1), 9) == 2027
 
 
+def test_jp_history_fills_estimated_pay_date():
+    """일본 종목은 원천이 이력 지급일을 주지 않는다 — 관례로 채우고 추정 표시를 단다.
+
+    닌텐도 실측: 이력 14건 중 지급일이 있는 건 야후 캘린더가 준 최근 1건뿐이었다.
+    실제 지급일이 있으면 그대로 두고 덮어쓰지 않는다.
+    """
+    rows = [
+        {"record_date": None, "ex_date": "2025-03-28", "pay_date": None,
+         "declaration_date": None, "amount": 85.0, "source": "yf-history"},
+        {"record_date": None, "ex_date": "2025-09-29", "pay_date": None,
+         "declaration_date": None, "amount": 42.0, "source": "yf-history"},
+        {"record_date": None, "ex_date": "2026-03-30", "pay_date": "2026-06-29",
+         "declaration_date": None, "amount": 177.0, "source": "yf-calendar"},
+    ]
+
+    events, _ = _attributed_history_events(rows, "7974.T", False, None)
+    by_date = {event["date"].isoformat(): event for event in events}
+
+    estimated = by_date["2025-03-28"]
+    assert estimated["pay_date_estimated"] is True
+    assert estimated["pay_date"] == date(2025, 6, 27)   # 기준일 +3개월 말 영업일
+    actual = by_date["2026-03-30"]
+    assert actual["pay_date_estimated"] is False
+    assert actual["pay_date"] == date(2026, 6, 29)      # 원천 값을 덮어쓰지 않는다
+
+    # 미국 종목은 지급일이 없어도 추정하지 않는다(폴리곤이 권위 소스라 공백=수집 문제).
+    us_events, _ = _attributed_history_events(
+        [{"record_date": None, "ex_date": "2025-03-28", "pay_date": None,
+          "declaration_date": None, "amount": 1.0, "source": "test"}],
+        "AAPL", False, None,
+    )
+    assert us_events[0]["pay_date"] is None
+    assert us_events[0]["pay_date_estimated"] is False
+
+
 def test_hsbc_groups_three_interims_with_following_final():
     """영국식 '중간배당 3회 + 이듬해 3월 결산배당 1회'를 한 사업연도로 묶는다."""
     rows = [

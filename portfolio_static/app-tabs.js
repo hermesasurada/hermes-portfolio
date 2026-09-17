@@ -412,7 +412,9 @@ function renderDividendHistory(payload) {
                     ? `${yearCell}${amountCell}${growthCell}`
                     : detail?.is_special ? specialGroupCells : emptyGroupCells}
                   <td class="history-detail-date">${detail ? shortDateText(detail.entitlement_date) : "-"}</td>
-                  <td class="history-detail-date">${detail ? shortDateText(detail.pay_date) : "-"}</td>
+                  <td class="history-detail-date">${detail
+                    ? `<span class="${detail.pay_date_estimated ? "estimated-date" : "confirmed-date"}">${shortDateText(detail.pay_date)}</span>`
+                    : "-"}</td>
                   <td class="history-detail-amount">${
                     index === 0 && distributionLabel ? `<span class="history-special-note">${compactDistributionLabel}</span> ` : ""
                   }${detail ? dividendAmountText(detail.amount, payload.currency) : "-"}</td>

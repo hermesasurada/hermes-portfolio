@@ -15,7 +15,7 @@ from .corporate_actions import (
 from .dates import parse_iso_date, positive_float, today_kst
 from .db import connect, ensure_stats_cache_table
 from .dividend_refresh import dividend_history_start, refresh_dividend_events
-from .dividend_schedule import consolidated_dividend_events, event_schedule_date
+from .dividend_schedule import consolidated_dividend_events, estimated_jp_pay_date, event_schedule_date
 from .prices import fx_rates, latest_prices
 from .queries import clean_account_ids, load_holding_rows
 from .tickers import ticker_currency
@@ -533,6 +533,13 @@ def _attributed_history_events(
         if entitlement_date is None or attributed_year is None:
             continue
         raw_amount = float(event["amount"])
+        # 일본 종목은 원천(yfinance 이력)이 지급일을 주지 않는다 — 기준일 + 3개월
+        # 말일(영업일)의 관례로 채우고 추정 표시를 단다. 일정 탭이 쓰던 규칙과 같은 함수.
+        pay_date = _history_date(event["pay_date"])
+        pay_date_estimated = False
+        if pay_date is None and str(ticker or "").upper().endswith(".T"):
+            pay_date = estimated_jp_pay_date(entitlement_date)
+            pay_date_estimated = True
         distribution_type = _distribution_type_override(ticker, event)
         final_dividend_count += int(is_final)
         for component_amount, special_override in _dividend_components(
@@ -553,7 +560,8 @@ def _attributed_history_events(
                     "source": event["source"],
                     "declaration_date": _history_date(event["declaration_date"]),
                     "ex_date": _history_date(event["ex_date"]),
-                    "pay_date": _history_date(event["pay_date"]),
+                    "pay_date": pay_date,
+                    "pay_date_estimated": pay_date_estimated,
                     "is_final": is_final and special_override is not True,
                     "special_override": special_override,
                     "distribution_type": distribution_type,
@@ -785,6 +793,7 @@ def _history_year_rows(
                         "entitlement_date": event["date"].isoformat(),
                         "ex_date": event["ex_date"].isoformat() if event["ex_date"] else None,
                         "pay_date": event["pay_date"].isoformat() if event["pay_date"] else None,
+                    "pay_date_estimated": bool(event.get("pay_date_estimated")),
                         "amount": event["amount"],
                         "raw_amount": event["raw_amount"],
                         "split_factor": event["split_factor"],
