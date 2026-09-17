@@ -206,10 +206,13 @@ def _nasdaq_candidate(ticker: str) -> bool:
 # 2025-09-29 배당락 → 2025-12-01 지급. 관례 추정(+3개월 말일)은 12-30으로 4주 틀렸다).
 # 다만 **금액은 분할 미보정**이다(닌텐도 2022-09-29 630엔 = 10:1 분할 전 기준,
 # yfinance는 63엔). 그래서 해외는 이벤트를 통째로 들이지 않고 **지급일만** 옮긴다.
-# 한국(.KS/.KQ)은 제외 — OpenDART/KIND가 권위 소스이고 지급예정일도 함께 준다.
+# 한국도 포함한다(2026-09-17) — OpenDART/KIND가 주는 지급예정일은 최근분뿐이고
+# 과거분(yfinance kr-history 1,024건)은 전부 비어 있었다. 지급일만 채우므로
+# 권위 소스가 이미 넣은 값은 건드리지 않는다. 코스피는 krx, 코스닥은 kosdaq 경로.
 STOCKANALYSIS_EXCHANGES = {
     ".T": "tyo", ".TW": "tpe", ".DE": "etr", ".PA": "epa", ".L": "lon",
     ".MI": "bit", ".ST": "sto", ".OL": "osl", ".MC": "bme", ".SS": "sha", ".SZ": "shz",
+    ".KS": "krx", ".KQ": "kosdaq",
 }
 
 

@@ -1216,13 +1216,14 @@ def test_stockanalysis_fills_foreign_pay_dates_without_touching_amounts():
 
     StockAnalysis 금액은 분할 미보정이다(닌텐도 2022-09-29 630엔 = 10:1 분할 전,
     yfinance는 63엔). 그래서 이벤트를 통째로 들이지 않고 빈 지급일만 옮긴다.
-    한국은 OpenDART/KIND가 권위 소스라 이 경로를 타지 않는다.
+    한국도 같은 경로를 타지만, 빈 칸만 채우므로 OpenDART/KIND가 넣은 지급예정일은 그대로다.
     """
     import portfolio_core.dividend_sources as S
 
     assert S._stockanalysis_exchange("7974.T") == "tyo"
     assert S._stockanalysis_exchange("RMS.PA") == "epa"
-    assert S._stockanalysis_exchange("005930.KS") is None   # 한국 제외
+    assert S._stockanalysis_exchange("005930.KS") == "krx"      # 코스피
+    assert S._stockanalysis_exchange("067310.KQ") == "kosdaq"   # 코스닥은 경로가 다르다
     assert S._stockanalysis_exchange("AAPL") is None
     assert S._stockanalysis_urls("7974.T") == ("https://stockanalysis.com/quote/tyo/7974/dividend/",)
 
