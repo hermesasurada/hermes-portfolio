@@ -777,7 +777,7 @@ main {
   font-variant-numeric: tabular-nums;
 }
 /* 클릭하면 해당 지수·환율 차트로 — 표의 티커 링크와 같은 위임을 탄다. */
-a.hero-index-item { text-decoration: none; color: inherit; }
+a.hero-index-item { text-decoration: none; color: inherit; -webkit-user-drag: none; }
 a.hero-index-item:hover .hero-index-value { color: var(--brand); }
 a.hero-index-item:hover .hero-index-name { color: var(--brand); }
 a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

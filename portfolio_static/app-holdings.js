@@ -631,24 +631,42 @@ function initHeroSummaryCarousel() {
   const shell = document.getElementById("heroPageShell");
   if (shell) {
     let dragStart = null;
+    let swiped = false;
     const clearDrag = () => { dragStart = null; };
 
+    // 스와이프는 시작·끝 좌표만 있으면 된다. setPointerCapture는 쓰지 않는다 —
+    // 캡처를 걸면 이어지는 click의 target이 캡처 요소(shell)로 바뀌어,
+    // 칸 안의 링크를 눌러도 .ticker-link 위임이 링크를 못 찾는다(PC 무반응 원인).
+    // pointerdown의 preventDefault도 같은 이유로 뺀다(뒤따르는 click이 사라진다).
+    // 드래그 중 텍스트 선택은 .hero-page-shell의 user-select:none이 막는다.
     shell.addEventListener("pointerdown", event => {
       if (event.pointerType === "mouse" && event.button !== 0) return;
       dragStart = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
-      shell.setPointerCapture?.(event.pointerId);
-      if (event.pointerType === "mouse") event.preventDefault();
     });
-    shell.addEventListener("pointerup", event => {
+    // 포인터가 판 밖에서 떨어져도 한 번의 스와이프로 끝나도록 window에서 받는다.
+    window.addEventListener("pointerup", event => {
       if (!dragStart || dragStart.pointerId !== event.pointerId) return;
       const deltaX = event.clientX - dragStart.x;
       const deltaY = event.clientY - dragStart.y;
       clearDrag();
       if (Math.abs(deltaX) >= 36 && Math.abs(deltaX) > Math.abs(deltaY) * 1.15) {
+        swiped = true;
         toggleHeroSummaryPage();
       }
     });
     shell.addEventListener("pointercancel", clearDrag);
+    // 링크 위에서 끌면 브라우저가 기본 링크 드래그를 시작해 포인터 시퀀스가
+    // pointercancel로 끊긴다 → 스와이프가 먹지 않는다. 기본 드래그만 막는다
+    // (pointerdown을 막으면 클릭까지 사라진다).
+    shell.addEventListener("dragstart", event => event.preventDefault());
+    // 스와이프로 면을 넘긴 직후 따라오는 click은 삼킨다 — 링크 위에서 끌었을 때
+    // 면 전환과 차트 이동이 함께 일어나지 않게.
+    shell.addEventListener("click", event => {
+      if (!swiped) return;
+      swiped = false;
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
 
     let wheelDistance = 0;
     let wheelLocked = false;

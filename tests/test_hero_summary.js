@@ -92,4 +92,21 @@ for (const ticker of ['SP500', 'NASDAQ', 'KOSPI', 'USDKRW', 'EURKRW', 'JPYKRW'])
 }
 assert.equal((page.match(/class="ticker-link hero-index-item"/g) || []).length, 6);
 assert.equal((page.match(/class="hero-summary-dot"/g) || []).length, 3);
-console.log('Hero shared sizing and inactive-page rendering checks passed.');
+// 전광판 스와이프가 칸 클릭을 삼키면 안 된다(2026-09-17 PC 무반응 회귀).
+const holdings = fs.readFileSync(path.join(root, 'app-holdings.js'), 'utf8');
+const carousel = holdings.slice(holdings.indexOf('function initHeroSummaryCarousel('),
+  holdings.indexOf('function ', holdings.indexOf('function initHeroSummaryCarousel(') + 40));
+// setPointerCapture를 걸면 뒤따르는 click의 target이 캡처 요소로 바뀌어
+// 칸 안의 링크를 .ticker-link 위임이 못 찾는다(주석 언급은 제외하고 호출만 본다).
+assert.doesNotMatch(carousel, /shell\.setPointerCapture/);
+// pointerdown 처리기 안의 preventDefault는 click을 통째로 없앤다.
+const pointerdownStart = carousel.indexOf('shell.addEventListener("pointerdown"');
+const pointerdownBody = carousel.slice(pointerdownStart, carousel.indexOf('});', pointerdownStart));
+assert.ok(pointerdownStart > 0);
+assert.doesNotMatch(pointerdownBody, /preventDefault/);
+// 링크 위에서 끌면 브라우저 기본 드래그가 포인터 시퀀스를 끊어 스와이프가 죽는다.
+assert.match(carousel, /"dragstart", event => event\.preventDefault\(\)/);
+assert.match(css, /a\.hero-index-item \{[^}]*-webkit-user-drag: none/);
+// 스와이프 직후의 click은 삼켜 면 전환과 차트 이동이 겹치지 않게 한다.
+assert.match(carousel, /if \(!swiped\) return;/);
+console.log('Hero sizing, page dots, chart links and swipe-vs-click checks passed.');
