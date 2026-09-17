@@ -201,6 +201,25 @@ def _nasdaq_candidate(ticker: str) -> bool:
     return ticker_currency(ticker) == "USD" and "." not in ticker
 
 
+# StockAnalysis는 해외 거래소도 /quote/{거래소}/{코드}/ 경로로 배당 이력을 준다.
+# yfinance 이력이 주지 않는 **지급일**이 여기엔 들어 있다(닌텐도 중간배당 실측:
+# 2025-09-29 배당락 → 2025-12-01 지급. 관례 추정(+3개월 말일)은 12-30으로 4주 틀렸다).
+# 다만 **금액은 분할 미보정**이다(닌텐도 2022-09-29 630엔 = 10:1 분할 전 기준,
+# yfinance는 63엔). 그래서 해외는 이벤트를 통째로 들이지 않고 **지급일만** 옮긴다.
+# 한국(.KS/.KQ)은 제외 — OpenDART/KIND가 권위 소스이고 지급예정일도 함께 준다.
+STOCKANALYSIS_EXCHANGES = {
+    ".T": "tyo", ".TW": "tpe", ".DE": "etr", ".PA": "epa", ".L": "lon",
+    ".MI": "bit", ".ST": "sto", ".OL": "osl", ".MC": "bme", ".SS": "sha", ".SZ": "shz",
+}
+
+
+def _stockanalysis_exchange(ticker: str) -> str | None:
+    symbol = str(ticker or "").upper()
+    if "." not in symbol:
+        return None
+    return STOCKANALYSIS_EXCHANGES.get(symbol[symbol.rindex("."):])
+
+
 def _stockanalysis_candidate(ticker: str) -> bool:
     return ticker_currency(ticker) == "USD" and "." not in ticker and ticker != "BTC"
 
@@ -432,6 +451,11 @@ def _fetch_kind_etf_dividends(ticker: str, name: str | None) -> list[dict]:
 
 
 def _stockanalysis_urls(ticker: str) -> tuple[str, ...]:
+    exchange = _stockanalysis_exchange(ticker)
+    if exchange:
+        # 종목코드에서 접미사를 떼고 거래소 경로에 붙인다(7974.T → tyo/7974).
+        code = ticker[:ticker.rindex(".")]
+        return (f"https://stockanalysis.com/quote/{exchange}/{code}/dividend/",)
     symbol = ticker.lower()
     return (
         f"https://stockanalysis.com/stocks/{symbol}/dividend/",
@@ -568,6 +592,46 @@ def _collect_source(
         sources.append(_source_error(label, ticker, exc))
 
 
+def _apply_stockanalysis_pay_dates(
+    ticker: str, events: dict[str, dict], sources: list[str],
+) -> None:
+    """해외 종목의 빈 지급일을 StockAnalysis 값으로 채운다(금액·기준일은 손대지 않는다).
+
+    배당락일이 하루씩 어긋나는 원천 차이를 감안해 ±3일까지 같은 회차로 본다.
+    이미 지급일이 있는 회차(야후 캘린더가 준 다가올 1건 등)는 덮어쓰지 않는다.
+    """
+    try:
+        fetched = _fetch_stockanalysis_dividends(ticker)
+    except Exception as exc:
+        sources.append(_source_error("sa_paydate", ticker, exc))
+        return
+    pay_dates: list[tuple[date, str]] = []
+    for event in fetched:
+        ex_text, pay_text = event.get("ex_date"), event.get("pay_date")
+        if not ex_text or not pay_text:
+            continue
+        try:
+            pay_dates.append((date.fromisoformat(ex_text), pay_text))
+        except ValueError:
+            continue
+    if not pay_dates:
+        sources.append("sa_paydate0")
+        return
+    filled = 0
+    for ex_text, event in events.items():
+        if event.get("pay_date"):
+            continue
+        try:
+            ex_date = date.fromisoformat(ex_text)
+        except ValueError:
+            continue
+        match = min(pay_dates, key=lambda item: abs((item[0] - ex_date).days))
+        if abs((match[0] - ex_date).days) <= 3:
+            event["pay_date"] = match[1]
+            filled += 1
+    sources.append("sa_paydate" if filled else "sa_paydate0")
+
+
 def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], str]:
     events: dict[str, dict] = {}
     sources = []
@@ -646,6 +710,8 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
 
     if _stockanalysis_candidate(ticker):
         _collect_source(ticker, "stockanalysis", _fetch_stockanalysis_dividends, events, sources)
+    elif _stockanalysis_exchange(ticker):
+        _apply_stockanalysis_pay_dates(ticker, events, sources)
 
     if _nasdaq_candidate(ticker):
         _collect_source(ticker, "nasdaq", _fetch_nasdaq_dividends, events, sources)

@@ -88,7 +88,7 @@
 
 - 배당 **귀속연도**는 '최근 인상월 직전'을 결산월로 잡아 같은 금액 N회차를 한 해로 묶는다. 한 해에 두 번 인상하는 종목은 사이클이 2회씩 끊겨 한 라벨에 4회를 넘기고 **역년으로 통째 폴백**한다. 그런 종목은 `FISCAL_END_MONTH_OVERRIDES`에 결산월을 적는다(오버라이드는 재라벨을 타지 않는다). 현재 `NVDA: 3`, **`JPM: 9`**(2026-09-17 — 10월 회차부터 인상분 지급, 4월 중간 인상 탓에 1.5달러 네 회차가 2025/2026으로 갈렸다). 테스트: `python3 tests/test_portfolio_core.py`.
 
-- **일본 종목 배당 지급일은 원천에 없다**(yfinance 이력은 배당락일·금액만, 야후 캘린더가 주는 다가올 1건만 실제 지급일). 이력 팝업도 일정 탭과 같은 `estimated_jp_pay_date`(기준일 +3개월 말 영업일)로 채우고 **추정 표시**(`pay_date_estimated` → `.estimated-date` 기울임·흐림)를 단다. 미국은 Polygon이 권위 소스라 공백이면 수집 문제이므로 추정하지 않는다. **한계: 중간배당(9월 기준일)은 이사회 결의만으로 12월 초에 지급하는 관례라 +3개월 규칙이 3~4주 늦게 잡힌다** — 기말(3월 기준일)은 주총 후 6월 말이라 잘 맞는다. 테스트: `python3 tests/test_portfolio_core.py`.
+- **해외 배당 지급일은 StockAnalysis에서 보강한다**(2026-09-17). yfinance 배당 이력은 배당락일·금액만 주고 지급일이 없어 일본 99.9%·유럽 100%가 비어 있었다. `/quote/{거래소}/{코드}/dividend/`(`STOCKANALYSIS_EXCHANGES`: tyo·tpe·etr·epa·lon·bit·sto·osl·bme·sha·shz)가 실제 지급일을 준다 → **JP 46.6%·EU 47.7%까지 공백 축소**(나머지는 그쪽 이력 범위 밖). **금액은 절대 들이지 말 것** — StockAnalysis 해외 금액은 분할 미보정이다(닌텐도 2022-09-29 630엔 = 10:1 분할 전, yfinance 63엔). `_apply_stockanalysis_pay_dates`가 **빈 지급일만** ±3일 매칭으로 옮긴다. 한국(.KS/.KQ)은 OpenDART/KIND가 권위 소스라 제외. 그래도 남는 공백은 일본에 한해 `estimated_jp_pay_date`(기준일 +3개월 말 영업일)로 채우고 `.estimated-date`(기울임·흐림)로 표시한다 — 중간배당은 실제로 12월 초라 이 추정이 3~4주 늦다. 미국은 Polygon이 권위 소스라 공백이면 수집 문제이므로 추정하지 않는다. 테스트: `python3 tests/test_portfolio_core.py`.
 
 ## 크론/운영
 - `collect_quotes.py`(분 단위 시세), `collect_prices.py`(일배치), `collect_prices.py --dividends-only`(배당 일배치), `portfolio_healthcheck.py`.

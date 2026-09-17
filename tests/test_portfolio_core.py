@@ -1211,6 +1211,46 @@ def test_jpm_october_raise_groups_four_equal_quarters():
     assert _active_dividend_year(date(2026, 10, 1), 9) == 2027
 
 
+def test_stockanalysis_fills_foreign_pay_dates_without_touching_amounts():
+    """해외 종목 지급일은 StockAnalysis에서 가져오되 **금액은 건드리지 않는다**.
+
+    StockAnalysis 금액은 분할 미보정이다(닌텐도 2022-09-29 630엔 = 10:1 분할 전,
+    yfinance는 63엔). 그래서 이벤트를 통째로 들이지 않고 빈 지급일만 옮긴다.
+    한국은 OpenDART/KIND가 권위 소스라 이 경로를 타지 않는다.
+    """
+    import portfolio_core.dividend_sources as S
+
+    assert S._stockanalysis_exchange("7974.T") == "tyo"
+    assert S._stockanalysis_exchange("RMS.PA") == "epa"
+    assert S._stockanalysis_exchange("005930.KS") is None   # 한국 제외
+    assert S._stockanalysis_exchange("AAPL") is None
+    assert S._stockanalysis_urls("7974.T") == ("https://stockanalysis.com/quote/tyo/7974/dividend/",)
+
+    events = {
+        "2025-09-29": {"ticker": "7974.T", "ex_date": "2025-09-29", "pay_date": None, "amount": 42.0},
+        "2022-09-29": {"ticker": "7974.T", "ex_date": "2022-09-29", "pay_date": None, "amount": 63.0},
+        "2026-03-30": {"ticker": "7974.T", "ex_date": "2026-03-30", "pay_date": "2026-06-29", "amount": 177.0},
+        "2019-01-01": {"ticker": "7974.T", "ex_date": "2019-01-01", "pay_date": None, "amount": 1.0},
+    }
+    original = S._fetch_stockanalysis_dividends
+    S._fetch_stockanalysis_dividends = lambda ticker: [
+        {"ex_date": "2025-09-30", "pay_date": "2025-12-01", "amount": 42.0},    # 배당락일 하루 차이
+        {"ex_date": "2022-09-29", "pay_date": "2022-12-01", "amount": 630.0},   # 분할 미보정 금액
+    ]
+    sources: list[str] = []
+    try:
+        S._apply_stockanalysis_pay_dates("7974.T", events, sources)
+    finally:
+        S._fetch_stockanalysis_dividends = original
+
+    assert events["2025-09-29"]["pay_date"] == "2025-12-01"   # ±3일 안이면 같은 회차
+    assert events["2022-09-29"]["pay_date"] == "2022-12-01"
+    assert events["2022-09-29"]["amount"] == 63.0             # 분할 미보정 금액을 들이지 않는다
+    assert events["2026-03-30"]["pay_date"] == "2026-06-29"   # 이미 있는 지급일은 유지
+    assert events["2019-01-01"]["pay_date"] is None           # 멀면 채우지 않는다
+    assert sources == ["sa_paydate"]
+
+
 def test_jp_history_fills_estimated_pay_date():
     """일본 종목은 원천이 이력 지급일을 주지 않는다 — 관례로 채우고 추정 표시를 단다.
 
