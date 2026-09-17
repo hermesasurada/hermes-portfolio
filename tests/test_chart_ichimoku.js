@@ -64,7 +64,10 @@ for (const expected of [81, 61, 102]) {
 // 주가선이 오른쪽 축에 닿지 못하고 그만큼 빈 공간이 남는다(2026-09-15 보고).
 const chartSource = fs.readFileSync('portfolio_static/app-line-chart.js', 'utf8');
 const futureLine = chartSource.split('\n').find(line => line.includes('const futureCount'));
-assert.ok(futureLine && futureLine.includes('chartShowIchimoku'), futureLine);
+// showIchimoku = chartShowIchimoku && 오버레이 적용 종목(환율 제외).
+assert.ok(futureLine && futureLine.includes('showIchimoku'), futureLine);
+const chartSrc2 = fs.readFileSync('portfolio_static/app-line-chart.js', 'utf8');
+assert.match(chartSrc2, /const showIchimoku = chartShowIchimoku && overlaysApply;/);
 // 세로 축은 토글과 무관하게 선행 구름 값까지 포함해 고정한다.
 const scaleLine = chartSource.split('\n').find(line => line.includes('const overlayValues'));
 assert.ok(scaleLine && scaleLine.includes('hasProjection'), scaleLine);

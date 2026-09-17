@@ -144,6 +144,13 @@ function activeChartMovingAverages() {
   return CHART_MOVING_AVERAGES.filter(series => chartMovingAveragePeriods[series.period]);
 }
 
+// 환율은 통화쌍 가격이라 추세 오버레이(BB·일목·이동평균)를 쓰지 않는다
+// (2026-09-17 사용자 지시). 저장된 선호는 건드리지 않고 이 차트에서만 끈다 —
+// 종목 차트로 돌아가면 켜 두었던 상태가 그대로 살아난다.
+function chartOverlaysApply(payload) {
+  return String(payload?.category || "") !== "fx";
+}
+
 // 성과차트에도 '부드럽게'만 남겨 노출한다(선 종류·log·BB·MA·일목은 종목차트 전용).
 function syncChartDisplayControls(visible = Boolean(chartTicker || performanceChartOpen)) {
   const control = document.getElementById("chartDisplayControls");
@@ -175,11 +182,29 @@ function syncChartDisplayControls(visible = Boolean(chartTicker || performanceCh
   bollingerToggle?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
   ichimokuToggle?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
   document.getElementById("chartMaCaption")?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
+  // 환율 차트에서는 오버레이 버튼을 잠근다. 숨기지 않고 비활성으로 남겨
+  // '이 화면에선 안 쓰는 기능'임이 보이게 한다.
+  const overlaysApply = chartOverlaysApply(chartPayload);
+  const overlayNote = "환율 차트에서는 사용하지 않습니다";
+  [bollingerToggle, ichimokuToggle].forEach(toggle => {
+    if (!toggle) return;
+    toggle.disabled = !overlaysApply;
+    if (!overlaysApply) {
+      toggle.classList.remove("active");
+      toggle.setAttribute("aria-pressed", "false");
+      toggle.title = overlayNote;
+    }
+  });
   CHART_MOVING_AVERAGES.forEach(series => {
     const toggle = document.getElementById(`chartMa${series.period}Toggle`);
-    toggle?.classList.toggle("active", chartMovingAveragePeriods[series.period]);
-    toggle?.setAttribute("aria-pressed", String(chartMovingAveragePeriods[series.period]));
+    const on = chartMovingAveragePeriods[series.period] && overlaysApply;
+    toggle?.classList.toggle("active", on);
+    toggle?.setAttribute("aria-pressed", String(on));
     toggle?.classList.toggle("hidden", chartComparePayloads.length > 0 || performanceChartOpen);
+    if (toggle) {
+      toggle.disabled = !overlaysApply;
+      if (!overlaysApply) toggle.title = overlayNote;
+    }
   });
 }
 
@@ -723,6 +748,7 @@ function bindLineChartControls(payload) {
     btn.addEventListener("click", () => {
       if (btn.disabled) return;
       if (btn.dataset.chartOverlayToggle != null) {
+        if (!chartOverlaysApply(payload)) return;   // 환율 차트에서는 오버레이를 켜지 않는다
         if (btn.dataset.chartOverlayToggle === "bollinger") {
           chartShowBollinger = !chartShowBollinger;
           storageSet(detailStorage.chartShowBollinger, String(chartShowBollinger));
@@ -1312,12 +1338,16 @@ function renderLineChart(payload) {
         return candle ? [candle.open, candle.high, candle.low, candle.close] : [];
       })
     : [];
+  // 환율이면 오버레이를 이 차트에 한해 끈다(저장된 선호는 유지).
+  const overlaysApply = chartOverlaysApply(payload);
+  const showBollinger = chartShowBollinger && overlaysApply;
+  const showIchimoku = chartShowIchimoku && overlaysApply;
   const projection = (payload.ichimoku_projection?.[chartInterval] || []).slice(0, 26);
   const hasProjection = projection.some(p => chartNumericValue(p, "ichi_span_a") != null
     || chartNumericValue(p, "ichi_span_b") != null);
   // 선행 26봉 자리는 구름을 실제로 그릴 때만 비워 둔다. 일목을 끈 상태에서도 자리를
   // 예약하면 주가선이 오른쪽 축에 닿지 못하고 그만큼 빈 공간만 남는다.
-  const futureCount = hasProjection && chartShowIchimoku ? projection.length : 0;
+  const futureCount = hasProjection && showIchimoku ? projection.length : 0;
   const cloudPoints = [...points, ...projection.slice(0, futureCount)];
   // 세로 축은 토글과 무관하게 고정 — 선행 구름 값까지 항상 범위에 넣는다.
   const overlayValues = chartOverlayScaleValues(hasProjection ? [...points, ...projection] : points);
@@ -1405,18 +1435,23 @@ function renderLineChart(payload) {
   };
   const line = chartLinePath(points.map((point, index) => ({ x: xFor(index), y: yFor(Number(point.close)) })));
   const area = `${line} L${xFor(points.length - 1)},${pad.top + plotH} L${xFor(0)},${pad.top + plotH} Z`;
-  const bbUpperPaths = chartShowBollinger ? chartSeriesPaths(points, "bb_upper", xFor, yFor) : [];
-  const maSeries = activeChartMovingAverages().map(series => ({
+  const bbUpperPaths = showBollinger ? chartSeriesPaths(points, "bb_upper", xFor, yFor) : [];
+  const maSeries = (overlaysApply ? activeChartMovingAverages() : []).map(series => ({
     ...series, paths: chartSeriesPaths(points, series.key, xFor, yFor),
   }));
   CHART_MOVING_AVERAGES.forEach(series => {
     const available = points.some(point => chartNumericValue(point, series.key) != null);
     const toggle = document.getElementById(`chartMa${series.period}Toggle`);
-    if (toggle) toggle.title = `${series.label} · ${series.period} 거래일 단순이동평균${available ? "" : " · 표시 구간의 데이터 부족"}`;
+    // 렌더가 sync보다 뒤라 여기서도 환율 안내를 유지해야 한다(덮어쓰기 주의).
+    if (toggle) {
+      toggle.title = overlaysApply
+        ? `${series.label} · ${series.period} 거래일 단순이동평균${available ? "" : " · 표시 구간의 데이터 부족"}`
+        : "환율 차트에서는 사용하지 않습니다";
+    }
   });
-  const bbMidPaths = chartShowBollinger ? chartSeriesPaths(points, "bb_mid", xFor, yFor) : [];
-  const bbLowerPaths = chartShowBollinger ? chartSeriesPaths(points, "bb_lower", xFor, yFor) : [];
-  const bbRuns = chartShowBollinger ? points.reduce((runs, point, index) => {
+  const bbMidPaths = showBollinger ? chartSeriesPaths(points, "bb_mid", xFor, yFor) : [];
+  const bbLowerPaths = showBollinger ? chartSeriesPaths(points, "bb_lower", xFor, yFor) : [];
+  const bbRuns = showBollinger ? points.reduce((runs, point, index) => {
     const upper = chartNumericValue(point, "bb_upper");
     const lower = chartNumericValue(point, "bb_lower");
     if (upper == null || lower == null) {
@@ -1433,11 +1468,11 @@ function renderLineChart(payload) {
     const bottom = [...run].reverse().map(item => ({ x: item.x, y: item.lower }));
     return `${straightLinePath(top)} L${bottom.map(item => `${item.x.toFixed(2)},${item.y.toFixed(2)}`).join(" L")} Z`;
   });
-  const ichiTenkanPaths = chartShowIchimoku ? chartSeriesPaths(points, "ichi_tenkan", xFor, yFor) : [];
-  const ichiKijunPaths = chartShowIchimoku ? chartSeriesPaths(points, "ichi_kijun", xFor, yFor) : [];
-  const ichiSpanAPaths = chartShowIchimoku ? chartSeriesPaths(cloudPoints, "ichi_span_a", xFor, yFor) : [];
-  const ichiSpanBPaths = chartShowIchimoku ? chartSeriesPaths(cloudPoints, "ichi_span_b", xFor, yFor) : [];
-  const ichiCloudAreas = chartShowIchimoku ? ichimokuCloudPaths(cloudPoints, xFor, yFor) : [];
+  const ichiTenkanPaths = showIchimoku ? chartSeriesPaths(points, "ichi_tenkan", xFor, yFor) : [];
+  const ichiKijunPaths = showIchimoku ? chartSeriesPaths(points, "ichi_kijun", xFor, yFor) : [];
+  const ichiSpanAPaths = showIchimoku ? chartSeriesPaths(cloudPoints, "ichi_span_a", xFor, yFor) : [];
+  const ichiSpanBPaths = showIchimoku ? chartSeriesPaths(cloudPoints, "ichi_span_b", xFor, yFor) : [];
+  const ichiCloudAreas = showIchimoku ? ichimokuCloudPaths(cloudPoints, xFor, yFor) : [];
   const rsiLine = chartLinePath(
     points
       .map((point, index) => ({ x: xFor(index), y: rsiYFor(Number(point.rsi)), value: Number(point.rsi) }))
