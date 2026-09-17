@@ -1,4 +1,4 @@
-// 표는 기본 10행 + 헤더까지만 보이고 나머지는 표 안에서 스크롤한다.
+// 표는 기본 12행 + 헤더까지만 보이고 나머지는 표 안에서 스크롤한다.
 // 행 높이는 변수(--list-row-height)가 최소값이라 CSS 계산식으로는 어긋난다 — 실측값을 쓴다.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -15,7 +15,7 @@ assert.doesNotMatch(css, /--list-visible-rows/);
 const ctx = vm.createContext({ window: { innerHeight: 900 } });
 vm.runInContext(holdings.slice(holdings.indexOf('const LIST_VISIBLE_ROWS'),
   holdings.indexOf('function schedulePcFrozenColumns(')), ctx);
-assert.equal(vm.runInContext('LIST_VISIBLE_ROWS', ctx), 10);
+assert.equal(vm.runInContext('LIST_VISIBLE_ROWS', ctx), 12);
 
 const makeWrap = (rowHeight, headHeight, { visible = true } = {}) => {
   const vars = {};
@@ -33,18 +33,18 @@ const run = wraps => {
   vm.runInContext('syncTableViewportRows()', ctx);
 };
 
-// PC: 헤더 48 + 47.5 × 10 + 2 = 525 (변수식 45 × 10이면 500이라 9.5행이 된다)
+// PC: 헤더 48 + 47.5 × 12 + 2 = 620 (변수식 45 × 12면 588이라 11.4행이 된다)
 const pc = makeWrap(47.5, 48);
 run([pc]);
-assert.equal(pc.vars['--list-rows-max-height'], '525px');
-// 모바일: 헤더 34 + 40 × 10 + 2 = 436
+assert.equal(pc.vars['--list-rows-max-height'], '620px');
+// 모바일: 헤더 34 + 40 × 12 + 2 = 516
 const mobile = makeWrap(40, 34);
 run([mobile]);
-assert.equal(mobile.vars['--list-rows-max-height'], '436px');
+assert.equal(mobile.vars['--list-rows-max-height'], '516px');
 // 관심목록은 헤더가 2행(22 + 34.8)이라 그만큼 더 잡는다 — 헤더를 재므로 자동이다.
 const interest = makeWrap(47.5, 70);
 run([interest]);
-assert.equal(interest.vars['--list-rows-max-height'], '547px');
+assert.equal(interest.vars['--list-rows-max-height'], '642px');
 // 화면이 낮으면 뷰포트가 상한 — 표가 화면 밖으로 밀리지 않는다.
 ctx.window.innerHeight = 500;
 const short = makeWrap(47.5, 48);
@@ -62,4 +62,4 @@ for (const file of ['app-tabs.js', 'app-interest-watchlists.js']) {
   assert.ok(fs.readFileSync(path.join(root, file), 'utf8').includes('scheduleTableViewportRows()'),
     `${file}에서 표를 그린 뒤 10행 뷰포트를 잡지 않는다`);
 }
-console.log('table viewport: 10 rows from measured heights, viewport cap and hidden-table guard ok');
+console.log('table viewport: 12 rows from measured heights, viewport cap and hidden-table guard ok');

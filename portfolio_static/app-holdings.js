@@ -994,10 +994,10 @@ function syncTransactionPanel() {
 
 let frozenColumnsFrame = 0;
 
-// 표는 기본 10행까지만 보이고 나머지는 표 안에서 스크롤한다(2026-09-17 사용자 지시).
+// 표는 기본 12행까지만 보이고 나머지는 표 안에서 스크롤한다(2026-09-17 사용자 지시).
 // 행 높이는 변수(--list-row-height)가 최소값일 뿐 내용에 따라 더 커져서(PC 45 → 47.5)
-// CSS 계산식으로는 10행이 9.5행이 된다 — 그려진 뒤 실측해서 맞춘다.
-const LIST_VISIBLE_ROWS = 10;
+// CSS 계산식으로는 어긋난다 — 그려진 뒤 실측해서 맞춘다.
+const LIST_VISIBLE_ROWS = 12;
 
 function syncTableViewportRows() {
   document.querySelectorAll(".holdings-section .table-wrap").forEach(wrap => {
