@@ -556,6 +556,9 @@ function renderInterestMainTable() {
   const scaled = columns.reduce((width, column) => width + (column.key === "name" ? 0 : column.width), 0);
   table.style.width = `calc(${scaled}px * var(--col-scale, 1) + ${nameWidth}px)`;
   table.style.minWidth = "100%";
+  // 관심목록은 pc-frozen(JS)을 쓰지 않아 그쪽 후처리를 타지 않는다 — 10행 뷰포트
+  // 높이는 여기서 직접 잡아 준다(그리기 전에 재면 행 높이가 0이라 rAF 뒤에).
+  if (typeof scheduleTableViewportRows === "function") scheduleTableViewportRows();
   // 티커 링크·배당이력 버튼 클릭은 app.js의 문서 위임이 처리 (개별 바인딩 금지).
   // 로고·종목명 틀고정은 CSS sticky가 담당 — pc-frozen(JS) 대상 아님.
 }

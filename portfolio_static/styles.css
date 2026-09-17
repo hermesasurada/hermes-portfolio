@@ -5956,7 +5956,13 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   cursor: pointer;
 }
 .holdings-section .table-wrap {
-  max-height: calc(100vh - 190px);
+  /* 한 화면에 기본 10행 + 헤더까지만 두고 나머지는 표 안에서 스크롤한다
+     (2026-09-17 사용자 지시). 예전 calc(100vh - 190px)는 화면 높이에 따라
+     보이는 행 수가 제각각이었다. 높이는 syncTableViewportRows()가 실제 헤더·행을
+     재서 채운다 — 행 높이 변수는 최소값일 뿐이라(PC 45 → 실제 47.5) CSS 식으로
+     계산하면 10행이 9.5행이 된다. 행 수는 JS의 LIST_VISIBLE_ROWS로 바꾼다.
+     화면이 그보다 낮으면 뷰포트가 상한이라 표가 화면 밖으로 밀리지 않는다. */
+  max-height: var(--list-rows-max-height, calc(100vh - 190px));
   overflow: auto;
 }
 

@@ -994,6 +994,33 @@ function syncTransactionPanel() {
 
 let frozenColumnsFrame = 0;
 
+// 표는 기본 10행까지만 보이고 나머지는 표 안에서 스크롤한다(2026-09-17 사용자 지시).
+// 행 높이는 변수(--list-row-height)가 최소값일 뿐 내용에 따라 더 커져서(PC 45 → 47.5)
+// CSS 계산식으로는 10행이 9.5행이 된다 — 그려진 뒤 실측해서 맞춘다.
+const LIST_VISIBLE_ROWS = 10;
+
+function syncTableViewportRows() {
+  document.querySelectorAll(".holdings-section .table-wrap").forEach(wrap => {
+    const body = wrap.querySelector("tbody");
+    const row = body?.querySelector("tr");
+    if (!row || !wrap.offsetParent) return;
+    const head = wrap.querySelector("thead");
+    const rowHeight = row.getBoundingClientRect().height;
+    if (!rowHeight) return;
+    const headHeight = head ? head.getBoundingClientRect().height : 0;
+    // 화면이 낮으면 뷰포트가 상한 — 표가 화면 밖으로 밀리지 않게.
+    const viewportCap = window.innerHeight - 190;
+    const wanted = headHeight + rowHeight * LIST_VISIBLE_ROWS + 2;
+    wrap.style.setProperty("--list-rows-max-height", `${Math.round(Math.min(wanted, viewportCap))}px`);
+  });
+}
+
+// rAF로 미루지 않는다 — 표는 innerHTML 직후라 이미 배치가 끝나 있고,
+// 탭이 백그라운드면 rAF가 지연돼 높이가 한참 안 잡힌다(미리보기에서 실측).
+function scheduleTableViewportRows() {
+  syncTableViewportRows();
+}
+
 function schedulePcFrozenColumns() {
   cancelAnimationFrame(frozenColumnsFrame);
   frozenColumnsFrame = requestAnimationFrame(syncPcFrozenColumns);
@@ -1042,6 +1069,7 @@ function syncTickerNameColumnWidth(table, { min = 108, max = 180 } = {}) {
 }
 
 function syncPcFrozenColumns() {
+  syncTableViewportRows();
   const frozenCells = document.querySelectorAll(".pc-frozen-col, .pc-frozen-edge");
   frozenCells.forEach(cell => {
     cell.classList.remove("pc-frozen-col", "pc-frozen-edge");
@@ -1190,6 +1218,7 @@ function renderTable() {
   syncTickerNameColumnWidth(document.querySelector("#detailTableWrap table"));
   if (activeDetailTab === "dividend") renderDividendTable();
   schedulePcFrozenColumns();
+  scheduleTableViewportRows();   // 10행 뷰포트는 rAF를 기다리지 않는다
 }
 
 // 파일 끝 로드 마커 — 파스 에러·태그 미닫힘 시 이 줄이 실행되지 않아 부트 검사에 걸린다

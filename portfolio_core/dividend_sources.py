@@ -457,7 +457,9 @@ def _stockanalysis_urls(ticker: str) -> tuple[str, ...]:
     exchange = _stockanalysis_exchange(ticker)
     if exchange:
         # 종목코드에서 접미사를 떼고 거래소 경로에 붙인다(7974.T → tyo/7974).
-        code = ticker[:ticker.rindex(".")]
+        # 스웨덴 등 복수 종류주는 야후가 하이픈, StockAnalysis는 점을 쓴다
+        # (SAAB-B.ST → sto/SAAB.B). 하이픈 그대로 두면 404.
+        code = ticker[:ticker.rindex(".")].replace("-", ".")
         return (f"https://stockanalysis.com/quote/{exchange}/{code}/dividend/",)
     symbol = ticker.lower()
     return (

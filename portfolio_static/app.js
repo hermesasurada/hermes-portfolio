@@ -486,6 +486,8 @@ document.addEventListener("click", event => {
 });
 window.addEventListener("hashchange", syncChartRoute);
 window.addEventListener("resize", schedulePcFrozenColumns);
+// 창 높이가 바뀌면 10행 뷰포트도 다시 잡는다(낮은 화면은 뷰포트가 상한).
+window.addEventListener("resize", scheduleTableViewportRows);
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     activeDetailTab = btn.dataset.tab || "detail";
