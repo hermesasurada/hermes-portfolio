@@ -622,10 +622,11 @@ main {
 /* ── 히어로 요약 (총 평가액 · 오늘 손익) ─────────────────── */
 .hero-strip {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px;
+  /* 요약 · 페이지 점 · 다음 버튼. 점은 3면이 있다는 걸 알리고 바로 이동도 한다. */
+  grid-template-columns: minmax(0, 1fr) auto 34px;
   align-items: center;
   gap: 12px;
-  padding: 6px 14px 6px 24px;
+  padding: 8px 14px 8px 24px;
   margin-bottom: var(--sp-4);
   background: var(--panel);
   border-color: var(--line);
@@ -690,12 +691,41 @@ main {
   letter-spacing: .04em;
   margin-bottom: 4px;
 }
+.hero-main {
+  display: grid;
+  gap: 2px;
+  align-content: center;
+}
 .hero-value-row {
   display: flex;
   align-items: baseline;
   gap: 12px;
   flex-wrap: wrap;
 }
+/* 페이지 점 — 켜진 면만 브랜드색으로 채운다(선택·조작은 브랜드 블루 규칙). */
+.hero-summary-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.hero-summary-dot {
+  width: 7px;
+  height: 7px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--muted) 34%, transparent);
+  cursor: pointer;
+  transition: background .15s ease, transform .15s ease;
+}
+.hero-summary-dot:hover { background: color-mix(in srgb, var(--brand) 55%, transparent); }
+.hero-summary-dot[aria-current="true"] {
+  background: var(--brand);
+  transform: scale(1.25);
+}
+.hero-summary-dot:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 #heroValue,
 #heroChange,
 .hero-index-value,
@@ -726,21 +756,36 @@ main {
 .hero-change.up { color: var(--up); background: color-mix(in srgb, var(--up) 11%, transparent); }
 .hero-change.down { color: var(--down); background: color-mix(in srgb, var(--down) 11%, transparent); }
 .hero-change.flat { color: var(--muted); background: var(--surface-2); }
+/* 세 칸을 균등 분할한다. 예전에는 칸마다 최소폭을 박은 flex라 합이 표시폭을
+   넘으면 마지막 칸(코스피·엔화)이 잘렸다 — 이름 위·값 아래 두 줄로 쌓아
+   가로를 줄이고, 남는 이름은 말줄임으로 흘린다. */
 .hero-index-grid {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
-  justify-content: flex-start;
 }
 .hero-index-item {
   display: grid;
-  grid-template-columns: max-content minmax(76px, max-content) minmax(66px, max-content);
-  align-items: baseline;
-  gap: 8px;
-  flex: 0 0 auto;
+  gap: 2px;
+  align-content: center;
   min-width: 0;
+  width: auto;
+  max-width: 100%;
   padding: 0 14px;
   border-left: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   font-variant-numeric: tabular-nums;
+}
+/* 클릭하면 해당 지수·환율 차트로 — 표의 티커 링크와 같은 위임을 탄다. */
+a.hero-index-item { text-decoration: none; color: inherit; }
+a.hero-index-item:hover .hero-index-value { color: var(--brand); }
+a.hero-index-item:hover .hero-index-name { color: var(--brand); }
+a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.hero-index-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
 }
 .hero-index-item:first-child {
   padding-left: 0;
@@ -751,24 +796,31 @@ main {
   color: var(--muted);
   font-size: var(--fs-xs);
   font-weight: var(--fw-bold);
+  letter-spacing: .02em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color .15s ease;
 }
 .hero-index-value {
   min-width: 0;
   font-size: 20px;
   font-weight: var(--fw-strong);
   letter-spacing: -.25px;
-  text-align: right;
+  text-align: left;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color .15s ease;
 }
 .hero-index-change.pct-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  justify-self: end;
-  font-size: 14px;
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  font-size: 12.5px;
   font-weight: var(--fw-strong);
-  text-align: right;
   white-space: nowrap;
 }
 .hero-index-change.up { color: var(--up); }
@@ -6130,10 +6182,12 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   .hero-value-row strong { font-size: clamp(20px, 6.15vw, 24px); }
   .hero-strip {
-    grid-template-columns: minmax(0, 1fr) 28px;
+    grid-template-columns: minmax(0, 1fr) auto 28px;
     gap: 8px;
     padding: 6px 10px 6px 18px;
   }
+  .hero-summary-dots { gap: 5px; }
+  .hero-summary-dot { width: 6px; height: 6px; }
   .hero-summary-nav {
     width: 28px;
     height: 36px;
@@ -6153,6 +6207,9 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0;
   }
+  /* 좁은 화면: 칸이 86px 남짓이라 값과 등락칩을 한 줄에 못 넣는다(겹침).
+     이름·값·등락을 각자 한 줄씩 쌓는다. .hero-index-line은 display:contents로
+     걷어내 세 요소가 이 컬럼의 직계가 되게 한다. */
   .hero-index-item {
     display: flex;
     flex-direction: column;
@@ -6160,6 +6217,10 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     gap: 1px;
     padding: 0 clamp(7px, 2.6vw, 10px);
   }
+  .hero-index-line { display: contents; }
+  .hero-index-name,
+  .hero-index-value,
+  .hero-index-change.pct-chip { max-width: 100%; }
   .hero-index-item:first-child { padding-left: 0; }
   .hero-index-item:last-child { padding-right: 0; }
   .hero-index-value {
@@ -6168,6 +6229,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   .hero-index-change.pct-chip {
     font-size: 11px;
+    padding: 0 5px;
     text-align: left;
   }
   .summary { grid-template-columns: repeat(2, minmax(140px, 1fr)); }

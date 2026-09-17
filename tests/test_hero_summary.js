@@ -22,10 +22,14 @@ const fxItems = ['USD','EUR','JPY'].map(currency => {
   return {dataset:{heroFx:currency},value,change,querySelector:selector => selector === '.hero-index-value' ? value : change};
 });
 let savedPage;
+// 페이지 점 — 현재 면만 aria-current="true"가 된다.
+const dots = ['portfolio', 'indexes', 'fx'].map(page => ({ ...element(), dataset: { heroPage: page } }));
 const context = vm.createContext({
   window: {}, data:{fx:{USD:1346.12,EUR:1562.34,JPY:8.59},fx_updated:'2026-09-05'},
   storageGet: () => null, storageSet: (key,value) => {savedPage=value;}, heroSummaryStorage: { page: 'hero-page' }, selectionMode: 'all', krw: n => String(n),
-  document: { getElementById: id => ids[id], querySelectorAll: selector => selector === '[data-hero-fx]' ? fxItems : [index] },
+  document: { getElementById: id => ids[id],
+    querySelectorAll: selector => selector === '[data-hero-fx]' ? fxItems
+      : selector.includes('hero-summary-dot') ? dots : [index] },
   findTickerMeta: () => ({ current_price: 6000.12, change_pct: 1.23 }),
   fmt1: new Intl.NumberFormat('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
   fmt2: new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -47,6 +51,8 @@ assert.equal(ids.heroPortfolioPage.inert, true);
 assert.equal(ids.heroIndexPage.attrs['aria-hidden'], 'false');
 assert.equal(ids.heroIndexPage.inert, false);
 assert.equal(ids.heroNext.attrs['aria-label'], '환율 보기');
+// 점은 현재 면 하나만 켜진다.
+assert.deepEqual(dots.map(dot => dot.attrs['aria-current']), ['false', 'true', 'false']);
 context.toggleHeroSummaryPage();
 assert.equal(savedPage, 'fx');
 assert.equal(ids.heroFxPage.classList.hidden, false);
@@ -75,6 +81,15 @@ assert.match(page, /id="heroNext"/);
 assert.doesNotMatch(page, /id="fxTop"/);
 assert.match(page, /class="service-logo"/);
 assert.ok(page.indexOf('id="heroFxPage"') > page.indexOf('id="heroIndexPage"'));
-assert.match(css, /grid-template-columns: minmax\(0, 1fr\) 34px;/);
-assert.match(css, /grid-template-columns: minmax\(0, 1fr\) 28px;/);
+// 요약 · 페이지 점 · 다음 버튼 세 칸(점 칸이 빠지면 점이 요약 폭을 먹는다).
+assert.match(css, /grid-template-columns: minmax\(0, 1fr\) auto 34px;/);
+assert.match(css, /grid-template-columns: minmax\(0, 1fr\) auto 28px;/);
+// 지수·환율 칸은 균등 분할 — 예전 flex 최소폭 조합은 합이 넘치면 마지막 칸을 잘랐다.
+assert.match(css, /\.hero-index-grid \{[^}]*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
+// 클릭하면 해당 지수·환율 차트로 — 표와 같은 .ticker-link 위임을 탄다.
+for (const ticker of ['SP500', 'NASDAQ', 'KOSPI', 'USDKRW', 'EURKRW', 'JPYKRW']) {
+  assert.ok(page.includes(`data-chart-ticker="${ticker}"`), `hero 링크 없음: ${ticker}`);
+}
+assert.equal((page.match(/class="ticker-link hero-index-item"/g) || []).length, 6);
+assert.equal((page.match(/class="hero-summary-dot"/g) || []).length, 3);
 console.log('Hero shared sizing and inactive-page rendering checks passed.');

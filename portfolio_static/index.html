@@ -121,6 +121,7 @@
       <section class="section hero-strip" id="heroStrip" aria-label="계좌·주요 지수·환율 요약">
         <div class="hero-page-shell" id="heroPageShell">
           <div class="hero-main hero-summary-page" id="heroPortfolioPage">
+            <span class="hero-index-name">총 평가액</span>
             <div class="hero-value-row">
               <strong id="heroValue" aria-label="총 평가액">-</strong>
               <span class="hero-change flat" id="heroChange">-</span>
@@ -128,42 +129,59 @@
           </div>
           <div class="hero-summary-page hero-index-page hidden" id="heroIndexPage">
             <div class="hero-index-grid">
-              <div class="hero-index-item" data-hero-index="SP500">
+              <a class="ticker-link hero-index-item" data-hero-index="SP500" data-chart-ticker="SP500" href="#chart=SP500" title="S&amp;P 500 차트 보기">
                 <span class="hero-index-name">S&amp;P 500</span>
-                <strong class="hero-index-value">-</strong>
-                <span class="hero-index-change pct-chip flat">-</span>
-              </div>
-              <div class="hero-index-item" data-hero-index="NASDAQ">
+                <span class="hero-index-line">
+                  <strong class="hero-index-value">-</strong>
+                  <span class="hero-index-change pct-chip flat">-</span>
+                </span>
+              </a>
+              <a class="ticker-link hero-index-item" data-hero-index="NASDAQ" data-chart-ticker="NASDAQ" href="#chart=NASDAQ" title="나스닥 종합 차트 보기">
                 <span class="hero-index-name">나스닥 종합</span>
-                <strong class="hero-index-value">-</strong>
-                <span class="hero-index-change pct-chip flat">-</span>
-              </div>
-              <div class="hero-index-item" data-hero-index="KOSPI">
+                <span class="hero-index-line">
+                  <strong class="hero-index-value">-</strong>
+                  <span class="hero-index-change pct-chip flat">-</span>
+                </span>
+              </a>
+              <a class="ticker-link hero-index-item" data-hero-index="KOSPI" data-chart-ticker="KOSPI" href="#chart=KOSPI" title="코스피 차트 보기">
                 <span class="hero-index-name">코스피</span>
-                <strong class="hero-index-value">-</strong>
-                <span class="hero-index-change pct-chip flat">-</span>
-              </div>
+                <span class="hero-index-line">
+                  <strong class="hero-index-value">-</strong>
+                  <span class="hero-index-change pct-chip flat">-</span>
+                </span>
+              </a>
             </div>
           </div>
           <div class="hero-summary-page hero-fx-page hidden" id="heroFxPage">
             <div class="hero-index-grid">
-              <div class="hero-index-item" data-hero-fx="USD">
+              <a class="ticker-link hero-index-item" data-hero-fx="USD" data-chart-ticker="USDKRW" href="#chart=USDKRW" title="달러/원 차트 보기">
                 <span class="hero-index-name">달러/원</span>
-                <strong class="hero-index-value">-</strong>
-                <span class="hero-index-change pct-chip flat">-</span>
-              </div>
-              <div class="hero-index-item" data-hero-fx="EUR">
+                <span class="hero-index-line">
+                  <strong class="hero-index-value">-</strong>
+                  <span class="hero-index-change pct-chip flat">-</span>
+                </span>
+              </a>
+              <a class="ticker-link hero-index-item" data-hero-fx="EUR" data-chart-ticker="EURKRW" href="#chart=EURKRW" title="유로/원 차트 보기">
                 <span class="hero-index-name">유로/원</span>
-                <strong class="hero-index-value">-</strong>
-                <span class="hero-index-change pct-chip flat">-</span>
-              </div>
-              <div class="hero-index-item" data-hero-fx="JPY">
+                <span class="hero-index-line">
+                  <strong class="hero-index-value">-</strong>
+                  <span class="hero-index-change pct-chip flat">-</span>
+                </span>
+              </a>
+              <a class="ticker-link hero-index-item" data-hero-fx="JPY" data-chart-ticker="JPYKRW" href="#chart=JPYKRW" title="엔화/원 차트 보기">
                 <span class="hero-index-name">엔화/원</span>
-                <strong class="hero-index-value">-</strong>
-                <span class="hero-index-change pct-chip flat">-</span>
-              </div>
+                <span class="hero-index-line">
+                  <strong class="hero-index-value">-</strong>
+                  <span class="hero-index-change pct-chip flat">-</span>
+                </span>
+              </a>
             </div>
           </div>
+        </div>
+        <div class="hero-summary-dots" id="heroDots" role="group" aria-label="요약 전환">
+          <button class="hero-summary-dot" type="button" data-hero-page="portfolio" aria-label="계좌 요약" title="계좌 요약"></button>
+          <button class="hero-summary-dot" type="button" data-hero-page="indexes" aria-label="주요 지수" title="주요 지수"></button>
+          <button class="hero-summary-dot" type="button" data-hero-page="fx" aria-label="환율" title="환율"></button>
         </div>
         <button class="hero-summary-nav" id="heroNext" type="button" aria-label="다음 요약" title="다음 요약">
           <span aria-hidden="true">›</span>

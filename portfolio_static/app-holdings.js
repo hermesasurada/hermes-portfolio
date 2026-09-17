@@ -575,6 +575,10 @@ function renderHeroSummaryPage() {
     nextButton.title = nextLabel;
     nextButton.setAttribute("aria-label", nextLabel);
   }
+  // 페이지 점 — 현재 면 표시. 세 면이 있다는 걸 알리고 바로 이동도 한다.
+  document.querySelectorAll("#heroDots .hero-summary-dot").forEach(dot => {
+    dot.setAttribute("aria-current", String(dot.dataset.heroPage === heroSummaryPage));
+  });
 
   // Keep inactive pages populated too: their real height reserves space
   // before the user switches, including wrapping and font changes.
@@ -616,6 +620,13 @@ function renderHeroSummaryPage() {
 
 function initHeroSummaryCarousel() {
   document.getElementById("heroNext")?.addEventListener("click", toggleHeroSummaryPage);
+  document.getElementById("heroDots")?.addEventListener("click", event => {
+    const page = event.target.closest?.(".hero-summary-dot")?.dataset.heroPage;
+    if (!page || page === heroSummaryPage) return;
+    heroSummaryPage = page;
+    storageSet(heroSummaryStorage.page, heroSummaryPage);
+    renderHeroSummaryPage();
+  });
 
   const shell = document.getElementById("heroPageShell");
   if (shell) {
