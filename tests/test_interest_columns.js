@@ -9,7 +9,7 @@ vm.runInContext(`
 `, context);
 // β·β″ 툴팁 문구는 format.js에 한 번만 정의돼 있다 — 컬럼 정의가 그걸 참조한다.
 const formatSource = fs.readFileSync(path.join(__dirname, "../portfolio_static/format.js"), "utf8");
-vm.runInContext(formatSource.slice(formatSource.indexOf("const BETA_TOOLTIP"),
+vm.runInContext(formatSource.slice(formatSource.indexOf("const BETA_BENCHMARK_NOTE"),
   formatSource.indexOf('].join("\\n");', formatSource.indexOf("const BETA_ADJ_TOOLTIP")) + 13), context);
 const source = fs.readFileSync(path.join(__dirname, "../portfolio_static/app-interest-columns.js"), "utf8");
 vm.runInContext(source, context);
