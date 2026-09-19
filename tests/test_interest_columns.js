@@ -7,10 +7,20 @@ const context = vm.createContext({ window: {}, Set, Map });
 vm.runInContext(`
   function esc(s) { return String(s).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;'); }
 `, context);
+// β·β″ 툴팁 문구는 format.js에 한 번만 정의돼 있다 — 컬럼 정의가 그걸 참조한다.
+const formatSource = fs.readFileSync(path.join(__dirname, "../portfolio_static/format.js"), "utf8");
+vm.runInContext(formatSource.slice(formatSource.indexOf("const BETA_TOOLTIP"),
+  formatSource.indexOf('].join("\\n");', formatSource.indexOf("const BETA_ADJ_TOOLTIP")) + 13), context);
 const source = fs.readFileSync(path.join(__dirname, "../portfolio_static/app-interest-columns.js"), "utf8");
 vm.runInContext(source, context);
 const run = code => vm.runInContext(code, context);
 assert.equal(run("INTEREST_TABLE_COLUMN_COUNT"), 61);
+// 헤더에 산식 툴팁이 붙어 있어야 한다(값만 보고는 무엇인지 알 수 없는 지표).
+for (const [key, needle] of [["beta", "공분산"], ["beta_adj", "표준편차"]]) {
+  const column = run(`INTEREST_COLUMNS.find(c => c.key === "${key}")`);
+  assert.ok(column.title && column.title.includes(needle), `${key} 툴팁 없음`);
+  assert.ok(column.title.includes("252거래일"), `${key} 툴팁에 계산 창이 없다`);
+}
 // MM/DD in Roboto Mono needs room for both group-boundary paddings.
 assert.equal(run("INTEREST_COLUMNS.find(c => c.key === 'next_earnings_date').width"), 60);
 assert.equal(run("new Set(INTEREST_COLUMNS.map(c => c.key)).size"), 61);

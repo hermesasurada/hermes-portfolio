@@ -250,6 +250,20 @@ function peText(v) {
 function betaText(v) {
   return v != null && Number.isFinite(Number(v)) ? Number(v).toFixed(2) : "-";
 }
+/* β·β″ 설명은 여기 한 곳에서만 쓴다 — 관심목록 헤더, 계좌표 헤더, 종목 상세 지표가
+   같은 문구를 공유한다. 산식의 단일 진실은 서버(technical_stats.py::beta_stats). */
+const BETA_TOOLTIP = [
+  "시장과 같이 움직인 정도 · 최근 252거래일(약 1년) 일간 수익률",
+  "공분산(종목, 지수) ÷ 지수 분산. 기준지수는 S&P 500(전 종목 공통)",
+  "1이면 지수와 같은 폭, 1.5면 1.5배, 0.5면 절반, 음수면 반대 방향",
+  "두 계열의 공통 거래일만 쓰고, 30일 미만이면 표시하지 않는다",
+].join("\n");
+const BETA_ADJ_TOOLTIP = [
+  "상관을 뺀 변동폭 배수 · 최근 252거래일(약 1년) 일간 수익률",
+  "종목 표준편차 ÷ 지수 표준편차. β = 상관계수 × β″ 라서 항상 |β| ≤ β″",
+  "기준지수는 S&P 500, 한국 종목만 KODEX 200TR(278530.KS)",
+  "지수와 따로 놀아 β가 낮아도 β″가 크면 그 자체로 많이 흔들리는 종목",
+].join("\n");
 /* 손익비 산식은 서버(portfolio_core/risk_reward.py)가 단일 진실 —
    /api/stats 응답의 score·basis(기준 기간)·quality(TR/P)를 표시만 한다.
    기본 케이스(5Y·총수익)는 라벨 생략, 폴백만 '3Y'·'5Y·P' 형태로 병기. */

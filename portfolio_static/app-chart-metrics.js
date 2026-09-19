@@ -126,8 +126,11 @@ function renderChartStats(payload) {
   if (!ticker) { el.innerHTML = ""; return; }
   const loaded = Boolean(statsData[ticker]);
   const rows = chartStatMetricRows(payload);
+  // 산식 설명이 있는 지표는 행 전체에 툴팁을 단다(헤더가 없는 패널이라 값 옆에 붙인다).
+  const metricTitles = { "β": BETA_TOOLTIP, "β″": BETA_ADJ_TOOLTIP };
   const row = ([, label, value], mobileOrder = 0) => `
-    <div class="cstat-row${label ? "" : " empty"}" style="--mobile-order:${mobileOrder}">
+    <div class="cstat-row${label ? "" : " empty"}" style="--mobile-order:${mobileOrder}"${
+      metricTitles[label] ? ` title="${esc(metricTitles[label])}"` : ""}>
       <span class="cstat-k">${esc(label)}</span>
       <span class="cstat-v">${value ?? ""}</span>
     </div>

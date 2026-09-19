@@ -52,6 +52,10 @@
 - 수집 스크립트는 `collector_lock`(flock) 필수. cron 겹침 방지.
 - DB 접근은 `with connect() as conn:` — connect()는 contextmanager로 close까지 보장(FD 누수 사고 이력).
 
+- **β·β″ 산식**(`technical_stats.py::beta_stats`, 최근 252거래일 일간 수익률, 공통 거래일만·30일 미만이면 결측):
+  `beta = cov(종목, 지수) / var(지수)`, `beta_adj(β″) = σ(종목) / σ(지수)`. 둘은 `β = 상관계수 × β″` 관계라 항상 `|β| ≤ β″`.
+  **β는 전 종목 S&P 500 기준**이고, **β″만 한국 종목에서 KODEX 200TR(278530.KS)** 를 쓴다(`beta_adj_benchmark`). 설명 문구는 `format.js`의 `BETA_TOOLTIP`/`BETA_ADJ_TOOLTIP` 한 곳에서 정의해 관심목록 헤더·계좌표 헤더(index.html 정적 title)·종목 상세 지표가 공유한다.
+
 ## 애널리스트 컨센서스 (외부 서비스 의존)
 - 관심목록 '컨센서스' 5컬럼 + 종목 상세화면 하단 블록은 **analyst-reports 서비스(8767)** 의 `/api/quote`에 의존. 대시보드 백엔드가 `127.0.0.1:8767`로 **프록시**(`/api/quote`)해 브라우저 CORS·IP 하드코딩을 없앤다 — 프런트는 `apiFetchQuotes`로 same-origin 호출.
 - 8767이 죽어도 프록시가 `{}`를 반환해 **컨센서스만 빠지고 대시보드는 정상**. 공용 로직은 `app-consensus.js`(로드 마커·부트 검사 목록에 포함).
