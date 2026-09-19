@@ -2702,14 +2702,20 @@ def test_beta_uses_252_common_trading_returns():
     assert beta_stats(stock[:39], market[:39]) == {'beta': None, 'beta_adj': None}
 
 
-def test_beta_adj_korean_benchmark_cache_routing():
+def test_beta_korean_benchmark_cache_routing():
+    """한국 종목은 β·β″를 모두 국내 지수(KODEX 200TR) 기준으로 낸다(2026-09-19).
+
+    분모가 같아야 'β = 상관계수 × β″'가 성립한다. 예전처럼 β만 S&P 500을 쓰면
+    삼성전자 상관이 0.12라 베타가 잡음이 되고 두 값을 나란히 읽을 수 없었다.
+    """
     from unittest.mock import patch
     import portfolio_core.technical_stats as technical
 
     for ticker in ("005930.KS", "0167Z0.KS", "278530.KS", "000660.KQ", " 005930.ks "):
-        assert technical.beta_adj_benchmark(ticker) == "278530.KS"
+        assert technical.beta_benchmark(ticker) == "278530.KS"
     for ticker in ("AAPL", "4063.T", "KOSPI", "BTCKRW"):
-        assert technical.beta_adj_benchmark(ticker) == "SP500"
+        assert technical.beta_benchmark(ticker) == "SP500"
+    assert technical.beta_adj_benchmark is technical.beta_benchmark   # 예전 이름 유지
 
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
@@ -2737,17 +2743,21 @@ def test_beta_adj_korean_benchmark_cache_routing():
             assert technical.refresh_technical_stats_cache(["005930.KS", "AAPL"]) == 2
             cached = technical.load_technical_stats_cache(conn, ["005930.KS", "AAPL"])
             assert cached["005930.KS"]["beta_adj"] == 1.5
-            assert cached["005930.KS"]["beta_adj_benchmark"] == "278530.KS"
+            assert cached["005930.KS"]["beta_benchmark"] == "278530.KS"
             assert cached["AAPL"]["beta_adj"] == 3.0
-            assert cached["AAPL"]["beta_adj_benchmark"] == "SP500"
-            assert cached["005930.KS"]["beta"] == cached["AAPL"]["beta"] == 3.0
+            assert cached["AAPL"]["beta_benchmark"] == "SP500"
+            # β도 국내 기준으로 바뀐다 — 예전에는 둘 다 S&P 500 기준 3.0이었다.
+            assert cached["005930.KS"]["beta"] == 1.5
+            assert cached["AAPL"]["beta"] == 3.0
             technical.refresh_technical_stats_cache(["278530.KS"])
             assert technical.load_technical_stats_cache(conn, ["278530.KS"])["278530.KS"]["beta_adj"] == 1.0
             conn.execute("DELETE FROM daily_prices WHERE ticker = '278530.KS'")
             technical.refresh_technical_stats_cache(["005930.KS"])
             missing = technical.load_technical_stats_cache(conn, ["005930.KS"])["005930.KS"]
+            # 국내 기준 이력이 없으면 둘 다 결측 — S&P 500 값으로 대체하면
+            # 툴팁이 말하는 기준과 실제가 달라지고, 통일하려던 취지가 깨진다.
             assert missing["beta_adj"] is None
-            assert missing["beta"] == 3.0
+            assert missing["beta"] is None
     finally:
         conn.close()
 

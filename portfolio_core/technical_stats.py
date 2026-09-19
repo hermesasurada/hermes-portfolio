@@ -37,8 +37,19 @@ BETA_ADJ_KR_BENCHMARK = "278530.KS"
 BETA_WINDOW = 252
 
 
-def beta_adj_benchmark(ticker: str) -> str:
+def beta_benchmark(ticker: str) -> str:
+    """β·β″ 공통 기준지수. 한국 종목은 국내 지수(KODEX 200TR)를 쓴다.
+
+    2026-09-19 사용자 지시로 β까지 통일했다. 그전에는 β만 S&P 500이라
+    삼성전자 상관이 0.12로 베타가 사실상 잡음이었고(한국장이 먼저 닫혀
+    같은 날짜의 두 수익률이 다른 정보를 담는다), β와 β″의 분모가 달라
+    'β = 상관계수 × β″' 관계도 깨졌다. 같은 지수로 맞추면 둘 다 성립한다.
+    """
     return BETA_ADJ_KR_BENCHMARK if is_korean_stock_ticker(ticker.strip().upper()) else BETA_BENCHMARK
+
+
+# 예전 이름 — 외부에서 참조하던 코드가 있으면 그대로 동작하게 남긴다.
+beta_adj_benchmark = beta_benchmark
 
 # 손익비 점수용 비겹침 창. (key, 필요 이력 거래일, 슬라이스 끝 오프셋)
 # 5y = 3~5년 전(returns[-1260:-756]), 3y = 1~3년 전, 1y = 최근 1년.
@@ -299,8 +310,10 @@ def calculate_technical_stats(
     )
     betas = beta_stats(rows, benchmark_rows or [])
     if beta_adj_benchmark_rows is not None:
-        # β의 기존 계산/원천값은 유지한다. 국내 기준 이력이 없으면 β″도 결측.
-        betas["beta_adj"] = beta_stats(rows, beta_adj_benchmark_rows)["beta_adj"]
+        # 한국 종목은 β·β″를 모두 국내 지수 기준으로 낸다 — 분모가 같아야
+        # 'β = 상관계수 × β″'가 성립하고 두 값을 나란히 읽을 수 있다.
+        # 국내 기준 이력이 없으면 둘 다 결측(S&P 500 값으로 섞지 않는다).
+        betas = beta_stats(rows, beta_adj_benchmark_rows)
     return {
         "rsi": {
             "day": latest_daily_rsi if daily_rsi is not None else rsi_value(daily),
@@ -409,7 +422,7 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
     with connect() as conn:
         ensure_technical_stats_cache_table(conn)
         query_tickers = sorted(set(clean_tickers) | {BETA_BENCHMARK} | {
-            beta_adj_benchmark(ticker) for ticker in clean_tickers
+            beta_benchmark(ticker) for ticker in clean_tickers
         })
         grouped: dict[str, list[sqlite3.Row]] = {ticker: [] for ticker in query_tickers}
         cutoff = (datetime.now(KST).date() - timedelta(days=TECHNICAL_LOOKBACK_DAYS)).isoformat()
@@ -492,12 +505,13 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
         for ticker in clean_tickers:
             price_rows = grouped.get(ticker, [])
             daily_rsi = rsi_series([float(row["close"]) for row in price_rows])
-            adj_benchmark = beta_adj_benchmark(ticker)
+            adj_benchmark = beta_benchmark(ticker)
             payload = calculate_technical_stats(
                 price_rows, daily_rsi, grouped.get(BETA_BENCHMARK, []),
                 grouped.get(adj_benchmark, []) if adj_benchmark != BETA_BENCHMARK else None,
             )
-            payload["beta_adj_benchmark"] = adj_benchmark
+            payload["beta_benchmark"] = adj_benchmark
+            payload["beta_adj_benchmark"] = adj_benchmark   # 예전 키 유지
             payload["asset_class"] = score_asset_kind(ticker, name_by_ticker.get(ticker) or "")
             payload["risk_reward"] = total_return_periods(
                 price_rows,
