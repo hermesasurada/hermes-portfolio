@@ -816,7 +816,14 @@ function chartCandleExtremes(points) {
 
 // 툴팁 한 줄은 문자열(매매 마커) 또는 [라벨, 값] 쌍의 배열이다. 쌍으로 주면
 // 라벨은 흐리게, 값은 고정폭으로 그려 항목 경계가 눈에 들어온다.
-function chartPointTooltipLines(point, payload) {
+// 한 봉의 등락 — 직전 봉 종가 대비. 주·월 간격이면 그 간격의 직전 봉이 기준이 된다.
+function chartPointChangePct(point, previous) {
+  const current = Number(point?.close);
+  const base = Number(previous?.close);
+  if (!Number.isFinite(current) || !Number.isFinite(base) || base === 0) return null;
+  return (current - base) / base * 100;
+}
+function chartPointTooltipLines(point, payload, previous = null) {
   const money = value => chartMoney(value, payload.currency, payload.ticker);
   const lines = [chartFullDateLabel(point.date)];
   const candle = chartType === "candle" ? chartCandleValues(point) : null;
@@ -830,6 +837,9 @@ function chartPointTooltipLines(point, payload) {
   } else {
     lines.push([["가격", money(Number(point.close))]]);
   }
+  // 표의 등락 칩과 같은 표기(changePercentParts) — 첫 봉은 기준이 없어 생략한다.
+  const change = changePercentParts(chartPointChangePct(point, previous));
+  if (change) lines.push([["등락", `${change.arrow}${change.text}`, change.cls]]);
   const rsiValue = Number(point.rsi);
   if (Number.isFinite(rsiValue)) lines.push([["RSI", rsiValue.toFixed(1)]]);
   const entryValue = point.entry_score == null ? NaN : Number(point.entry_score);
@@ -1086,9 +1096,10 @@ function bindChartInteractions(points, payload, geometry) {
       span.setAttribute("dy", index === 0 ? "0" : index === 1 ? "1.6em" : "1.4em");
       if (index === 0) span.classList.add("chart-tooltip-date");
       if (Array.isArray(line)) {
-        line.forEach(([label, value], segment) => {
+        line.forEach(([label, value, valueClass], segment) => {
           span.appendChild(tooltipSpan("chart-tooltip-label", label, segment ? 12 : 0));
-          if (value != null) span.appendChild(tooltipSpan("chart-tooltip-num", String(value), 4));
+          // 세 번째 요소는 등락 방향 색(up/down/flat) — 표의 등락 칩과 같은 토큰을 쓴다.
+          if (value != null) span.appendChild(tooltipSpan(`chart-tooltip-num${valueClass ? ` ${valueClass}` : ""}`, String(value), 4));
         });
       } else {
         appendPlainTooltipLine(span, line);
@@ -1158,7 +1169,7 @@ function bindChartInteractions(points, payload, geometry) {
     const y = geometry.yFor(Number(point.close));
     const rsiValue = Number(point.rsi);
     const hoverRsiDot = document.getElementById("chartHoverRsiDot");
-    const tooltipLines = chartPointTooltipLines(point, payload);
+    const tooltipLines = chartPointTooltipLines(point, payload, points[index - 1] || null);
     const tooltipX = x > geometry.width - 190 ? x - 160 : x + 12;
     const tooltipY = y < geometry.pad.top + geometry.plotH / 2 ? y + 38 : y - (tooltipLines.length > 3 ? 76 : 60);
     hoverGroup.classList.remove("hidden");

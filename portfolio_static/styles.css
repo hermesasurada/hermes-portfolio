@@ -3754,6 +3754,10 @@ th.pc-frozen-edge {
 }
 /* 첫 줄(날짜)은 머리글이라 흐린 색을 유지한다 — 고정폭만 물려받는다 */
 .chart-tooltip-date .chart-tooltip-num { fill: var(--muted); }
+/* 등락 값만 방향 색을 쓴다 — 표의 등락 칩과 같은 토큰(상승 빨강·하락 파랑) */
+.chart-tooltip-num.up { fill: var(--up); }
+.chart-tooltip-num.down { fill: var(--down); }
+.chart-tooltip-num.flat { fill: var(--muted); }
 
 /* ── 성과·비교 차트 (범례·지수 토글) ───────────────────────────────────── */
 /* 범례는 차트(플롯) 영역 밖 — 캔버스 위 별도 줄. 위아래 여백을 같게 둔다

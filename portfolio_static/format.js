@@ -117,11 +117,20 @@ function valueMarkup(row) {
   if (row.currency === "KRW" || !Number.isFinite(row.value_krw)) return local;
   return `<span class="price-cell"><span>${local}</span><span class="krw-sub">(${krw(row.value_krw)})</span></span>`;
 }
+// 등락 표기의 단일 정의 — 표의 등락 칩과 차트 툴팁이 같은 화살표·자릿수를 쓴다.
+// 마크업을 못 쓰는 SVG 툴팁은 parts만 받아 tspan으로 조립한다.
+function changePercentParts(pct) {
+  if (!Number.isFinite(pct)) return null;
+  return {
+    cls: pct > 0 ? "up" : pct < 0 ? "down" : "flat",
+    arrow: pct > 0 ? "▲" : pct < 0 ? "▼" : "→",
+    text: `${fmt2.format(Math.abs(pct))}%`,
+  };
+}
 function changePercentText(pct, chip = false) {
-  if (!Number.isFinite(pct)) return "-";
-  const cls = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
-  const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "→";
-  return `<span class="change-cell ${chip ? "pct-chip " : ""}${cls}"><span aria-hidden="true">${arrow}</span>${fmt2.format(Math.abs(pct))}%</span>`;
+  const parts = changePercentParts(pct);
+  if (!parts) return "-";
+  return `<span class="change-cell ${chip ? "pct-chip " : ""}${parts.cls}"><span aria-hidden="true">${parts.arrow}</span>${parts.text}</span>`;
 }
 // 세션 배지 툴팁 — 휴장('휴')과 장 종료·개장 전('종')을 같은 문구 규칙으로.
 // 차트 시세 표기(app-line-chart.js)도 이 함수를 공유한다.
@@ -160,7 +169,12 @@ function skeletonRows(colspan, rows = 8) {
 function extendedChangeText(row) {
   return changePercentText(row.extended_change_pct);
 }
-function changeKrwText(v) {
+// 휴장이라 체결가가 없으면 등락금액은 '없음(-)'이 아니라 확정된 0이다.
+// 환율 적용 중이라면 그날 환율이 만든 변동분이 남으므로 그건 평소대로 표기한다.
+function changeKrwText(v, { zeroWhenFlat = false } = {}) {
+  if (zeroWhenFlat && Number.isFinite(v) && Math.abs(v) <= 10000) {
+    return '<span class="change-cell flat"><span aria-hidden="true">\u2192</span>0</span>';
+  }
   if (!Number.isFinite(v) || Math.abs(v) <= 10000) return "-";
   const cls = v > 0 ? "up" : v < 0 ? "down" : "flat";
   const arrow = v > 0 ? "▲" : v < 0 ? "▼" : "→";

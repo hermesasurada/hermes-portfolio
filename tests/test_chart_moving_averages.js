@@ -13,6 +13,10 @@ const ctx = vm.createContext({window: {addEventListener() {}}, document: {getEle
   detailStorage: {chartMovingAveragePeriods: 'ma'}, storageSet(key, value) {ctx.saved = [key, value];},
   unitMoney: value => String(value), chartFullDateLabel: value => value,
 });
+// 등락 표기는 표와 같은 format.js 정의를 그대로 쓴다 — 스텁을 두면 형식이 갈린다.
+const format = fs.readFileSync('portfolio_static/format.js', 'utf8');
+vm.runInContext(format.slice(0, format.indexOf('\n', format.indexOf('const fmt2'))), ctx);
+vm.runInContext(format.slice(format.indexOf('function changePercentParts('), format.indexOf('function changePercentText(')), ctx);
 for (const file of ['app-chart-scale.js', 'app-line-chart.js'])
   vm.runInContext(fs.readFileSync(`portfolio_static/${file}`, 'utf8'), ctx);
 const points = [
@@ -103,3 +107,17 @@ for (const compare of [true, false]) {
   assert.equal(elements.chartMaCaption.classList.hidden, true);
 }
 console.log('chart moving averages UI ok');
+
+// 툴팁 등락 — 직전 봉 종가 대비, 표의 등락 칩과 같은 표기(화살표+소수 2자리+%)
+// vm 컨텍스트가 만든 배열이라 realm이 달라 deepStrictEqual이 못 쓴다 — JSON으로 비교한다.
+const changeLine = (point, previous) => JSON.stringify(
+  ctx.chartPointTooltipLines(point, {}, previous).find(line => Array.isArray(line) && line[0]?.[0] === '등락'));
+assert.equal(changeLine(points[1], points[0]), JSON.stringify([['등락', '▲20%', 'up']]));
+assert.equal(changeLine({date: '2026-08-05', close: 90}, {close: 100}), JSON.stringify([['등락', '▼10%', 'down']]));
+assert.equal(changeLine({date: '2026-08-05', close: 100}, {close: 100}), JSON.stringify([['등락', '→0%', 'flat']]));
+// 첫 봉이나 기준가가 없으면 등락 줄을 만들지 않는다
+for (const previous of [null, undefined, {close: 0}, {close: null}]) {
+  assert.equal(ctx.chartPointTooltipLines(points[1], {}, previous).some(line => Array.isArray(line) && line[0]?.[0] === '등락'), false);
+}
+console.log('Chart tooltip change line: shared list formatting, direction class and missing-base skip OK');
+

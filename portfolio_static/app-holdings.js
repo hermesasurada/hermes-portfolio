@@ -173,13 +173,15 @@ function holdingChangeBasePrice(row) {
   }
   return optionalNumber(row.regular_previous_price) ?? optionalNumber(row.previous_price);
 }
+function isHolidayPreviousSession(row) {
+  return row?.change_session_note?.kind === "holiday_previous_session";
+}
 function holdingChangeKrw(row, fxAdjusted = fxAdjustedEnabled()) {
   const qty = optionalNumber(row.qty);
   const currentPrice = optionalNumber(row.current_price);
   // 휴장일에는 신규 체결가가 없으므로 현지통화 가격 손익은 0이다.
   // 환율 적용 시에만 같은 수량·가격에 대한 당일 환율 변동분을 남긴다.
-  const isHolidayPreviousSession = row?.change_session_note?.kind === "holiday_previous_session";
-  const previousPrice = isHolidayPreviousSession ? currentPrice : holdingChangeBasePrice(row);
+  const previousPrice = isHolidayPreviousSession(row) ? currentPrice : holdingChangeBasePrice(row);
   if (
     qty === null ||
     currentPrice === null ||
@@ -1174,7 +1176,7 @@ function renderTable() {
       <td class="extended-change-col ${hideExtendedColumn ? "hidden" : ""}">${extendedChangeText(r) || "-"}</td>
       <td class="price-cell-td${pulse}">${currentPriceMarkup(r)}</td>
       <td>${noPosition ? "-" : fmt2.format(r.qty)}</td>
-      <td>${noPosition ? "-" : changeKrwText(r.change_krw)}</td>
+      <td>${noPosition ? "-" : changeKrwText(r.change_krw, { zeroWhenFlat: isHolidayPreviousSession(r) })}</td>
       <td>${noPosition ? "-" : valueMarkup(r)}</td>
       <td>${noPosition ? "-" : weightText(r.weight_pct)}</td>
       <td>${Number(r.dividend_yield) > 0
