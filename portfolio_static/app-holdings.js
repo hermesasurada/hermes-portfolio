@@ -138,6 +138,11 @@ function tradeTimingSortValue(timing) {
   if (rank >= 4) return rank + squash(timing.buy_r) * 0.98 + 0.01;
   return rank + 0.5;
 }
+// 연장 정렬은 실제 연장가가 온 종목과 그렇지 않은 종목을 먼저 두 묶음으로 나눈다.
+// listSortValue는 연장가가 없으면 정규장 등락으로 대신하므로 그 값만으로는 구분되지 않는다.
+function hasExtendedQuote(row) {
+  return optionalNumber(row?.extended_change_pct) !== null;
+}
 function listSortValue(row, key) {
   if (key === "extended_change_pct") {
     // The extended column is a percentage, not a currency-denominated unit price.
@@ -877,6 +882,11 @@ function sortRows(rows, tab = activeDetailTab) {
   const state = sortState[tab] || sortState.detail;
   rows.sort((a, b) => {
     const av = listSortValue(a, state.key), bv = listSortValue(b, state.key);
+    // 연장가가 있는 종목끼리 먼저 정렬하고, 없는 종목은 그 뒤에서 자기들끼리 정렬한다.
+    if (state.key === "extended_change_pct") {
+      const aHas = hasExtendedQuote(a), bHas = hasExtendedQuote(b);
+      if (aHas !== bHas) return aHas ? -1 : 1;
+    }
     if (["extended_change_pct", "risk_reward_score", "entry_risk_reward", "trade_timing", "ma20_pct", "ma50_pct", "ma200_pct"].includes(state.key)) {
       const aMissing = av == null || !Number.isFinite(Number(av));
       const bMissing = bv == null || !Number.isFinite(Number(bv));

@@ -410,6 +410,11 @@ function sortInterestRows(rows, group = activeInterestGroup()) {
   const { key, dir } = interestSortState;
   rows.sort((a, b) => {
     const av = listSortValue(a, key), bv = listSortValue(b, key);
+    // 계좌표와 같은 관례 — 연장가 보유분을 먼저 묶고 나머지를 뒤에서 정렬한다.
+    if (key === "extended_change_pct") {
+      const aHas = hasExtendedQuote(a), bHas = hasExtendedQuote(b);
+      if (aHas !== bHas) return aHas ? -1 : 1;
+    }
     if (key === "extended_change_pct" || key === "next_earnings_date" || key === "risk_reward_score" || key === "entry_risk_reward" || key === "trade_timing") {
       const aMissing = key === "next_earnings_date"
         ? !av
