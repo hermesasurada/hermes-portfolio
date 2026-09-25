@@ -764,7 +764,10 @@ main {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
 }
-.hero-index-item {
+/* 칸은 <a class="ticker-link">라 뒤에 선언된 .ticker-link { padding:0; border:0; width:fit-content }가
+   같은 특이도로 이겼다(2026-09-17 링크화 이후 칸 사이 선·여백이 사라지고 칸이 글자 폭으로 줄었다).
+   그리드 부모를 붙여 특이도를 올린다 — 980px 블록도 같은 선택자를 써야 모바일 규칙이 이긴다. */
+.hero-index-grid > .hero-index-item {
   display: grid;
   gap: 2px;
   align-content: center;
@@ -787,11 +790,11 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
   gap: 8px;
   min-width: 0;
 }
-.hero-index-item:first-child {
+.hero-index-grid > .hero-index-item:first-child {
   padding-left: 0;
   border-left: 0;
 }
-.hero-index-item:last-child { padding-right: 0; }
+.hero-index-grid > .hero-index-item:last-child { padding-right: 0; }
 .hero-index-name {
   color: var(--muted);
   font-size: var(--fs-xs);
@@ -826,6 +829,60 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
 .hero-index-change.up { color: var(--up); }
 .hero-index-change.down { color: var(--down); }
 .hero-index-change.flat { color: var(--muted); }
+
+/* ── 합친 전광판(PC) — 세 면을 한 줄에 ─────────────────────────────────
+   일곱 칸이 한 줄에 들어가면 app-holdings.js의 syncHeroLayout이 .hero-combined를 붙인다
+   (2026-09-26 사용자 지시). 계좌 요약 | 지수 3칸 | 환율 3칸을 나란히 두고,
+   넘길 면이 없으니 점·다음 버튼·잡기 커서는 걷어낸다. 모자라면 클래스가 빠져
+   기존 캐러셀 규칙이 그대로 돌아온다. */
+.hero-strip.hero-combined {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 10px 24px;
+}
+.hero-strip.hero-combined .hero-summary-dots,
+.hero-strip.hero-combined .hero-summary-nav { display: none; }
+/* 칸은 내용 폭 아래로 줄지 않고(max-content) 남는 폭만 균등하게 나눈다(1fr).
+   균등 분할이면 가장 긴 값(나스닥 등)에 모든 칸이 맞춰져 폭을 낭비하고 말줄임이 생긴다.
+   줄지 않으니 모자랄 때는 가로로 넘치고, JS는 그 넘침으로 캐러셀 복귀를 판정한다. */
+.hero-strip.hero-combined .hero-page-shell {
+  grid-template-columns: max-content minmax(max-content, 1fr) minmax(max-content, 1fr);
+  cursor: default;
+  user-select: auto;
+}
+.hero-strip.hero-combined .hero-index-grid {
+  grid-template-columns: repeat(3, minmax(max-content, 1fr));
+}
+.hero-strip.hero-combined .hero-value-row { flex-wrap: nowrap; }
+/* 캐러셀은 세 면을 한 칸(1/1)에 겹쳐 높이를 맞췄다 — 여기서는 각자 제 열로 흘린다. */
+/* width:100%(캐러셀용)를 남기면 면의 margin-left가 트랙 밖으로 밀려 늘 넘친다 — auto로 트랙 안에 흡수. */
+.hero-strip.hero-combined .hero-page-shell > .hero-summary-page { grid-area: auto; width: auto; }
+/* 면 사이 구분선. 칸 사이 선(.hero-index-item)과 같은 색이되 여백을 더 줘 묶음이 읽히게. */
+.hero-strip.hero-combined .hero-index-page,
+.hero-strip.hero-combined .hero-fx-page {
+  margin-left: 14px;
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+}
+/* 여섯 칸이 전광판 폭을 나누므로 칸 안 배치를 바꾼다: 등락 칩을 값 옆이 아니라 이름 옆(윗줄)에
+   둔다. 칸 폭이 '값+칩'에서 'max(이름+칩, 값)'으로 줄어 값 글자를 줄이지 않고도 1920 화면
+   (전광판 약 1370px)에 여유 있게 들어간다. .hero-index-line을 걷어내 세 요소를 칸의 직계로 만든다
+   (좁은 화면 규칙과 같은 방식). 크기·색·칩 모양은 그대로라 디자인 언어는 유지된다. */
+.hero-strip.hero-combined .hero-index-grid > .hero-index-item {
+  grid-template-columns: auto auto;
+  grid-template-areas: "name chip" "value value";
+  justify-content: start;
+  align-items: center;
+  column-gap: 6px;
+  row-gap: 2px;
+  padding: 0 12px;
+}
+.hero-strip.hero-combined .hero-index-grid > .hero-index-item:first-child { padding-left: 0; }
+.hero-strip.hero-combined .hero-index-grid > .hero-index-item:last-child { padding-right: 0; }
+/* 칸 안으로 한정한다 — 계좌 요약의 '총 평가액' 라벨도 .hero-index-name이라 그대로 두면 끌려간다. */
+.hero-strip.hero-combined .hero-index-item .hero-index-line { display: contents; }
+.hero-strip.hero-combined .hero-index-item .hero-index-name { grid-area: name; }
+.hero-strip.hero-combined .hero-index-item .hero-index-change.pct-chip { grid-area: chip; justify-self: start; }
+.hero-strip.hero-combined .hero-index-item .hero-index-value { grid-area: value; }
 
 /* ── 레이아웃 · 계좌 패널 · 거래내역 패널 ────────────────────────────────── */
 .layout {
@@ -6220,19 +6277,21 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   /* 좁은 화면: 칸이 86px 남짓이라 값과 등락칩을 한 줄에 못 넣는다(겹침).
      이름·값·등락을 각자 한 줄씩 쌓는다. .hero-index-line은 display:contents로
      걷어내 세 요소가 이 컬럼의 직계가 되게 한다. */
-  .hero-index-item {
+  .hero-index-grid > .hero-index-item {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 1px;
     padding: 0 clamp(7px, 2.6vw, 10px);
+    /* 좁은 칸에서는 선 없이 여백만으로 나눈다 — 링크화 이후 실제로 보여 온 모습 그대로. */
+    border-left: 0;
   }
   .hero-index-line { display: contents; }
   .hero-index-name,
   .hero-index-value,
   .hero-index-change.pct-chip { max-width: 100%; }
-  .hero-index-item:first-child { padding-left: 0; }
-  .hero-index-item:last-child { padding-right: 0; }
+  .hero-index-grid > .hero-index-item:first-child { padding-left: 0; }
+  .hero-index-grid > .hero-index-item:last-child { padding-right: 0; }
   .hero-index-value {
     font-size: clamp(14px, 4.1vw, 16px);
     text-align: left;

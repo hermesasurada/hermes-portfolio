@@ -557,20 +557,49 @@ const heroSummaryPages = ["portfolio", "indexes", "fx"];
 let heroSummaryPage = heroSummaryPages.includes(storageGet(heroSummaryStorage.page))
   ? storageGet(heroSummaryStorage.page) : "portfolio";
 
+// 전광판에 일곱 칸(계좌 요약 · 지수 3 · 환율 3)이 한 줄로 들어가면 세 면을 모두 펼친다
+// (2026-09-26 사용자 지시). 고정 폭이 아니라 '실제로 들어가는가'로 판정한다 — 합친 모드의
+// 칸은 내용 폭 아래로 줄지 않으므로(minmax(max-content, 1fr)) 모자라면 가로로 넘친다.
+// 값 자릿수·글꼴·사이드바 유무가 달라도 같은 기준이 맞는다. 모자라면 기존 캐러셀.
+function heroCombined() {
+  return Boolean(document.getElementById("heroStrip")?.classList.contains("hero-combined"));
+}
+function heroFitsCombined(strip) {
+  const shell = document.getElementById("heroPageShell");
+  if (!shell) return false;
+  const had = strip.classList.contains("hero-combined");
+  strip.classList.add("hero-combined");
+  // 같은 프레임 안의 동기 측정이라 잠깐 붙였다 떼도 화면에 깜빡이지 않는다.
+  const fits = shell.scrollWidth <= shell.clientWidth + 1;
+  if (!had) strip.classList.remove("hero-combined");
+  return fits;
+}
+function syncHeroLayout() {
+  const strip = document.getElementById("heroStrip");
+  if (!strip) return;
+  const combined = heroFitsCombined(strip);
+  if (strip.classList.contains("hero-combined") === combined) return;
+  strip.classList.toggle("hero-combined", combined);
+  applyHeroPageVisibility();
+}
+
 function toggleHeroSummaryPage() {
+  if (heroCombined()) return; // 한 줄에 다 보이면 넘길 면이 없다
   heroSummaryPage = heroSummaryPages[(heroSummaryPages.indexOf(heroSummaryPage) + 1) % heroSummaryPages.length];
   storageSet(heroSummaryStorage.page, heroSummaryPage);
   renderHeroSummaryPage();
 }
 
-function renderHeroSummaryPage() {
+function applyHeroPageVisibility() {
   const portfolioPage = document.getElementById("heroPortfolioPage");
   const indexPage = document.getElementById("heroIndexPage");
   if (!portfolioPage || !indexPage) return;
   const fxPage = document.getElementById("heroFxPage");
+  const combined = heroCombined();
   [["portfolio", portfolioPage], ["indexes", indexPage], ["fx", fxPage]].forEach(([key, page]) => {
     if (!page) return;
-    const hidden = heroSummaryPage !== key;
+    // 합친 모드에서 숨김이 남으면 inert가 지수·환율 링크 클릭까지 막는다.
+    const hidden = !combined && heroSummaryPage !== key;
     page.classList.toggle("hidden", hidden);
     page.setAttribute("aria-hidden", String(hidden));
     page.inert = hidden;
@@ -586,6 +615,11 @@ function renderHeroSummaryPage() {
   document.querySelectorAll("#heroDots .hero-summary-dot").forEach(dot => {
     dot.setAttribute("aria-current", String(dot.dataset.heroPage === heroSummaryPage));
   });
+}
+
+function renderHeroSummaryPage() {
+  if (!document.getElementById("heroPortfolioPage") || !document.getElementById("heroIndexPage")) return;
+  applyHeroPageVisibility();
 
   // Keep inactive pages populated too: their real height reserves space
   // before the user switches, including wrapping and font changes.
@@ -623,6 +657,7 @@ function renderHeroSummaryPage() {
     changeEl.textContent = Number.isFinite(price) && price > 0 && Number.isFinite(changePct)
       ? `${arrow} ${fmt2.format(Math.abs(changePct))}%` : "-";
   });
+  syncHeroLayout();
 }
 
 function initHeroSummaryCarousel() {
@@ -653,6 +688,7 @@ function initHeroSummaryCarousel() {
     // 포인터가 판 밖에서 떨어져도 한 번의 스와이프로 끝나도록 window에서 받는다.
     window.addEventListener("pointerup", event => {
       if (!dragStart || dragStart.pointerId !== event.pointerId) return;
+      if (heroCombined()) { clearDrag(); return; }
       const deltaX = event.clientX - dragStart.x;
       const deltaY = event.clientY - dragStart.y;
       clearDrag();
@@ -680,7 +716,8 @@ function initHeroSummaryCarousel() {
     let wheelResetTimer = null;
     shell.addEventListener("wheel", event => {
       const horizontal = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
-      if (!horizontal) return;
+      // 합친 모드에서 가로 휠을 막으면 PC 트랙패드의 가로 스크롤만 먹는다.
+      if (!horizontal || heroCombined()) return;
       event.preventDefault();
       window.clearTimeout(wheelResetTimer);
       if (!wheelLocked) {
@@ -695,6 +732,11 @@ function initHeroSummaryCarousel() {
         wheelLocked = false;
       }, 180);
     }, { passive: false });
+  }
+  const strip = document.getElementById("heroStrip");
+  if (strip && typeof ResizeObserver === "function") {
+    // 전광판 폭은 부모가 정하고 모드 전환은 높이만 바꾸므로 판정이 되돌아 흔들리지 않는다.
+    new ResizeObserver(syncHeroLayout).observe(strip);
   }
   renderHeroSummaryPage();
 }
