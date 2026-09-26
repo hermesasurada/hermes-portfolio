@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import json
 
 from .db import connect
 from .paths import KST
@@ -11,11 +12,9 @@ INITIAL_GROUPS = (
     ("주요 지수", 10),
     ("환율", 20),
     ("디지털자산", 30),
-    ("한국 개별주", 40),
-    ("한국 ETF", 50),
-    ("미국 개별주", 60),
-    ("미국 ETF", 70),
-    ("일본 종목", 80),
+    ("한국", 40),
+    ("미국", 60),
+    ("일본", 80),
     ("유럽 종목", 90),
     ("기타 해외", 100),
 )
@@ -39,7 +38,6 @@ SPECIAL_GROUP_BY_CATEGORY = {
 def initial_group_name(ticker: str, name: str, category: str | None, currency: str | None) -> str:
     category = str(category or "").lower()
     currency = str(currency or ticker_currency(ticker)).upper()
-    kind = asset_class(ticker, name)
     if category == "index":
         return "주요 지수"
     if category == "fx":
@@ -47,13 +45,13 @@ def initial_group_name(ticker: str, name: str, category: str | None, currency: s
     if category == "crypto":
         return "디지털자산"
     if category == "kr" or ticker.endswith((".KS", ".KQ")):
-        return "한국 ETF" if kind == "etf" else "한국 개별주"
+        return "한국"
     if currency == "JPY":
-        return "일본 종목"
+        return "일본"
     if currency == "EUR":
         return "유럽 종목"
     if currency == "USD":
-        return "미국 ETF" if kind == "etf" else "미국 개별주"
+        return "미국"
     return "기타 해외"
 
 
@@ -186,9 +184,68 @@ def seed_initial_interest_watchlists(conn) -> None:
     )
 
 
+COUNTRY_MERGE_KEY = "country_lists_merged_v1"
+
+
+def merge_country_interest_groups(conn) -> dict:
+    """Explicit one-time maintenance, never triggered by a page read.
+
+    Caller owns the transaction. Retain the first group's ID/order, append each
+    original list in order, deduplicate tickers and retain the original snapshot.
+    """
+    saved = conn.execute("SELECT value FROM interest_watchlist_settings WHERE key = ?", (COUNTRY_MERGE_KEY,)).fetchone()
+    if saved:
+        return json.loads(saved["value"])
+    groups = [dict(r) for r in conn.execute("SELECT * FROM interest_watchlist_groups ORDER BY sort_order, id")]
+    items = [dict(r) for r in conn.execute("SELECT * FROM interest_watchlist_items ORDER BY sort_order, ticker")]
+    result = {"aliases": {}, "asset_types": {}, "original_groups": [], "original_items": [], "merged_at": now_text()}
+    # Keep explicit existing ETF membership even when display names omit ETF.
+    etf_ids = {g["id"] for g in groups if "ETF" in g["name"].upper()}
+    result["asset_types"] = {i["ticker"]: "etf" for i in items if i["group_id"] in etf_ids}
+    for country in ("미국", "한국", "일본"):
+        names = {country, f"{country} 개별주", f"{country} ETF", f"{country} 종목"}
+        selected = [g for g in groups if g["name"] in names]
+        if not selected:
+            continue
+        target = next((g for g in selected if g["name"] == country), selected[0])
+        ids = {g["id"] for g in selected}
+        original = [i for i in items if i["group_id"] in ids]
+        result["original_groups"].extend(selected)
+        result["original_items"].extend(original)
+        ordered = {}
+        for group in selected:
+            for item in original:
+                if item["group_id"] == group["id"]:
+                    ordered.setdefault(item["ticker"], item)
+        for gid in ids:
+            conn.execute("DELETE FROM interest_watchlist_items WHERE group_id = ?", (gid,))
+            if gid != target["id"]:
+                conn.execute("DELETE FROM interest_watchlist_groups WHERE id = ?", (gid,))
+                result["aliases"][str(gid)] = target["id"]
+        conn.execute("UPDATE interest_watchlist_groups SET name = ?, sort_order = ? WHERE id = ?",
+                     (country, selected[0]["sort_order"], target["id"]))
+        for order, item in enumerate(ordered.values(), 1):
+            conn.execute("INSERT INTO interest_watchlist_items (group_id, ticker, sort_order, created_at) VALUES (?, ?, ?, ?)",
+                         (target["id"], item["ticker"], order * 10, item["created_at"]))
+    conn.execute("INSERT INTO interest_watchlist_settings (key, value) VALUES (?, ?)",
+                 (COUNTRY_MERGE_KEY, json.dumps(result, ensure_ascii=False)))
+    return result
+
+
+def watchlist_asset_types(migration: dict) -> dict:
+    stock_groups = {g["id"] for g in migration.get("original_groups", []) if g["name"].endswith(" 개별주")}
+    types = {i["ticker"]: "stock" for i in migration.get("original_items", []) if i["group_id"] in stock_groups}
+    # Explicit ETF membership takes precedence over accidental duplicate entries.
+    types.update(migration.get("asset_types", {}))
+    return types
+
+
 def load_interest_watchlists() -> dict:
     with connect() as conn:
         seed_initial_interest_watchlists(conn)
+        migration = conn.execute("SELECT value FROM interest_watchlist_settings WHERE key = ?", (COUNTRY_MERGE_KEY,)).fetchone()
+        migration = json.loads(migration["value"]) if migration else {}
+        asset_types = watchlist_asset_types(migration)
         groups = conn.execute(
             """
             SELECT id, name
@@ -201,6 +258,7 @@ def load_interest_watchlists() -> dict:
             SELECT
                 i.group_id,
                 i.ticker,
+                t.name AS original_name,
                 COALESCE(NULLIF(t.display_name, ''), t.name, i.ticker) AS name,
                 COALESCE(t.currency, '') AS currency,
                 COALESCE(t.category, '') AS category
@@ -214,6 +272,7 @@ def load_interest_watchlists() -> dict:
             """
             SELECT
                 t.ticker,
+                t.name AS original_name,
                 COALESCE(NULLIF(t.display_name, ''), t.name, t.ticker) AS name,
                 COALESCE(t.currency, '') AS currency,
                 COALESCE(t.category, '') AS category
@@ -235,6 +294,7 @@ def load_interest_watchlists() -> dict:
                 "name": row["name"],
                 "currency": row["currency"] or ticker_currency(row["ticker"]),
                 "category": row["category"] or None,
+                "asset_class": asset_types.get(row["ticker"]) or asset_class(row["ticker"], row["original_name"] or row["name"]),
             }
         )
     result_groups = [
@@ -257,12 +317,13 @@ def load_interest_watchlists() -> dict:
                     "name": row["name"],
                     "currency": row["currency"] or ticker_currency(row["ticker"]),
                     "category": row["category"] or None,
+                    "asset_class": asset_types.get(row["ticker"]) or asset_class(row["ticker"], row["original_name"] or row["name"]),
                 }
                 for row in others
             ],
         }
     )
-    return {"groups": result_groups}
+    return {"groups": result_groups, "group_aliases": migration.get("aliases", {})}
 
 
 def create_interest_group(payload: dict) -> dict:

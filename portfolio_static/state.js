@@ -9,6 +9,7 @@ const detailStorage = {
   visibleRows: "portfolio.detail.visibleRows",
   fxAdjusted: "portfolio.detail.fxAdjusted",
   interestHeldOnly: "portfolio.detail.interestHeldOnly",
+  interestAssetType: "portfolio.detail.interestAssetType",
   currencyFilter: "portfolio.detail.currencyFilter",
   chartInterval: "portfolio.chart.interval",
   chartType: "portfolio.chart.type",

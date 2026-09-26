@@ -444,6 +444,7 @@ document.getElementById("interestHeldToggle").addEventListener("change", () => {
   render();
 });
 initListVisibleRowsControl();
+initInterestAssetTypeControl();
 document.getElementById("nameFilter").addEventListener("input", () => {
   syncFilterToggleControls();
   render();

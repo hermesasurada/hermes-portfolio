@@ -9,6 +9,42 @@ let draggedInterestGroupId = null;
 let interestDropTargetId = null;
 let interestDropAfter = false;
 const interestSortState = { key: "display_change_pct", dir: -1, manual: false };
+let interestAssetType = "all";
+const interestAssetTypes = ["all", "etf", "stock"];
+const interestAssetTypeLabels = { all: "전체", etf: "ETF", stock: "개별주" };
+
+function interestAssetFilterAvailable() {
+  const items = activeInterestGroup()?.items || [];
+  return !items.length || items.some(item => !["index", "fx", "crypto"].includes(item.category));
+}
+
+function matchesInterestAssetType(row) {
+  if (!interestAssetFilterAvailable() || interestAssetType === "all") return true;
+  if (["index", "fx", "crypto"].includes(row.category)) return false;
+  return (row.assetClass || row.asset_class) === interestAssetType;
+}
+
+function syncInterestAssetTypeControl() {
+  const button = document.getElementById("interestAssetTypeToggle");
+  if (!button) return;
+  button.textContent = interestAssetTypeLabels[interestAssetType];
+  button.setAttribute("aria-label", `종목 유형: ${button.textContent}. 클릭하면 다음 유형`);
+  button.classList.toggle("active", interestAssetType !== "all");
+}
+
+function cycleInterestAssetType() {
+  interestAssetType = interestAssetTypes[(interestAssetTypes.indexOf(interestAssetType) + 1) % interestAssetTypes.length];
+  storageSet(detailStorage.interestAssetType, interestAssetType);
+  syncInterestAssetTypeControl();
+  render();
+}
+
+function initInterestAssetTypeControl() {
+  const saved = storageGet(detailStorage.interestAssetType);
+  interestAssetType = interestAssetTypes.includes(saved) ? saved : "all";
+  syncInterestAssetTypeControl();
+  document.getElementById("interestAssetTypeToggle")?.addEventListener("click", cycleInterestAssetType);
+}
 
 function interestModeActive() {
   return activeSidebarTab === "interest" && activeInterestGroupId != null;
@@ -176,6 +212,12 @@ function normalizeActiveInterestGroup() {
 
 function applyInterestWatchlistPayload(payload) {
   interestWatchlists = payload.groups || [];
+  const aliases = payload.group_aliases || {};
+  const selected = activeInterestGroupId ?? storageGet(sidebarStorage.interestGroupId);
+  if (selected != null && aliases[selected] != null) {
+    activeInterestGroupId = Number(aliases[selected]);
+    storageSet(sidebarStorage.interestGroupId, String(activeInterestGroupId));
+  }
   interestWatchlistsLoaded = true;
   normalizeActiveInterestGroup();
   renderInterestWatchlists();
@@ -387,10 +429,12 @@ function interestBaseRows(options = {}) {
       }, null);
       return {
         ...row,
+        assetClass: item.asset_class || row.assetClass,
         display_change_pct: holdingChangePct(row),
         current_price_krw: holdingUnitKrw(row),
       };
     })
+    .filter(row => matchesInterestAssetType(row))
     .filter(row => currencyFilter === "all" || row.currency === currencyFilter);
 }
 
@@ -630,6 +674,7 @@ function renderInterestMainTable() {
     interestVirtual = null;
     body.innerHTML = interestEmptyRow(nameFilterValue()
       ? "명칭 검색 결과가 없습니다."
+      : interestAssetType !== "all" && interestAssetFilterAvailable() ? "선택한 유형에 해당하는 종목이 없습니다."
       : group.fixed ? "모든 수집 종목이 관심그룹에 분류되어 있습니다." : "이 그룹에 등록된 종목이 없습니다.");
   }
   // 이름 열 폭은 DOM이 아니라 행 데이터 전체로 잰다 — 창 렌더링이라 DOM엔 일부 행만 있다.
