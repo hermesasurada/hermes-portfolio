@@ -45,12 +45,31 @@ assert.equal(mobile.vars['--list-rows-max-height'], '516px');
 const interest = makeWrap(47.5, 70);
 run([interest]);
 assert.equal(interest.vars['--list-rows-max-height'], '642px');
-// 화면이 낮으면 뷰포트가 상한 — 표가 화면 밖으로 밀리지 않는다.
+// A short viewport does not silently override the requested number of rows.
 ctx.window.innerHeight = 500;
 const short = makeWrap(47.5, 48);
 run([short]);
-assert.equal(short.vars['--list-rows-max-height'], '310px');   // 500 - 190
+assert.equal(short.vars['--list-rows-max-height'], '620px');
 ctx.window.innerHeight = 900;
+ctx.setListVisibleRows(20);
+run([pc, mobile]);
+assert.equal(pc.vars['--list-rows-max-height'], '1000px');
+assert.equal(mobile.vars['--list-rows-max-height'], '836px');
+assert.equal(ctx.localStorage.getItem('portfolio.detail.visibleRows'), '20');
+assert.equal(ctx.document.getElementById('visibleRowsInput').value, '20');
+const restored = h.createContext();
+restored.localStorage.setItem('portfolio.detail.visibleRows', ctx.localStorage.getItem('portfolio.detail.visibleRows'));
+h.loadScripts(restored);
+assert.equal(h.evaluate(restored, 'selectedListVisibleRows'), 20);
+assert.equal(restored.document.getElementById('visibleRowsInput').value, '20');
+assert.equal(ctx.normalizeVisibleRows(null), 12);
+assert.equal(ctx.normalizeVisibleRows('bad'), 12);
+assert.equal(ctx.normalizeVisibleRows(''), 12);
+assert.equal(ctx.normalizeVisibleRows(0), 1);
+assert.equal(ctx.normalizeVisibleRows(1000), 100);
+ctx.setListVisibleRows('');
+assert.equal(h.evaluate(ctx, 'selectedListVisibleRows'), 20);
+ctx.setListVisibleRows(12);
 // 숨은 표는 건드리지 않는다(높이 0으로 굳는 것 방지).
 const hidden = makeWrap(47.5, 48, { visible: false });
 run([hidden]);
@@ -62,4 +81,4 @@ for (const file of ['app-tabs.js', 'app-interest-watchlists.js']) {
   assert.ok(fs.readFileSync(path.join(root, file), 'utf8').includes('scheduleTableViewportRows()'),
     `${file}에서 표를 그린 뒤 10행 뷰포트를 잡지 않는다`);
 }
-console.log('table viewport: 12 rows from measured heights, viewport cap and hidden-table guard ok');
+console.log('table viewport: configurable rows, persistence, validation and hidden-table guard ok');

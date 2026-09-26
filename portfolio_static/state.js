@@ -6,6 +6,7 @@ const usPriceStorage = {
   extended: "portfolio.usPrice.extendedHours"
 };
 const detailStorage = {
+  visibleRows: "portfolio.detail.visibleRows",
   fxAdjusted: "portfolio.detail.fxAdjusted",
   interestHeldOnly: "portfolio.detail.interestHeldOnly",
   currencyFilter: "portfolio.detail.currencyFilter",

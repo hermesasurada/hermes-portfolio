@@ -91,7 +91,13 @@ wrap.clientHeight = 564;
   assert.equal(wrap.scrollTop, 0);
 }
 
-// 작은 그룹은 창 렌더링 없이 전부 그린다
+// 표시 행 수를 늘리면 가상 렌더링 구간도 함께 확장한다.
+ctx.setListVisibleRows(50);
+wrap.scrollTop = 0;
+setView(); render(true);
+assert.ok(drawnTickers().length >= 50, 'Requested rows must all be rendered after expanding viewport');
+ctx.setListVisibleRows(12);
+// 작은 그룹은 창 렌더링 없이 전부 그린다.
 ctx.__small = rows.slice(0, 40);
 h.evaluate(ctx, 'interestVirtual = {...__view, rows: __small}');
 render(true);

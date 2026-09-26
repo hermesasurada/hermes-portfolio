@@ -443,6 +443,7 @@ document.getElementById("interestHeldToggle").addEventListener("change", () => {
   syncFilterToggleControls();
   render();
 });
+initListVisibleRowsControl();
 document.getElementById("nameFilter").addEventListener("input", () => {
   syncFilterToggleControls();
   render();

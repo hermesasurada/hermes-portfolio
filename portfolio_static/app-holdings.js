@@ -1018,6 +1018,7 @@ function syncDetailTabs() {
   );
   document.getElementById("currencyFilterControl")?.classList.toggle("hidden", showingChart || showingFxInterest);
   document.getElementById("rowCount")?.classList.toggle("hidden", showingChart);
+  document.getElementById("visibleRowsControl")?.classList.toggle("hidden", showingChart);
   // '보유종목만' 필터는 관심목록 페이지에서만 노출(환율 그룹 제외 — FX는 보유개념 없음)
   document.getElementById("interestHeldControl")?.classList.toggle("hidden", !showingInterest || showingFxInterest);
   const sectorControl = document.getElementById("interestSectorControl");
@@ -1062,6 +1063,34 @@ let frozenColumnsFrame = 0;
 // 행 높이는 변수(--list-row-height)가 최소값일 뿐 내용에 따라 더 커져서(PC 45 → 47.5)
 // CSS 계산식으로는 어긋난다 — 그려진 뒤 실측해서 맞춘다.
 const LIST_VISIBLE_ROWS = 12;
+function normalizeVisibleRows(value, fallback = LIST_VISIBLE_ROWS) {
+  if (value == null || String(value).trim() === "" || !Number.isFinite(Number(value))) return fallback;
+  return Math.max(1, Math.min(100, Math.round(Number(value))));
+}
+let selectedListVisibleRows = LIST_VISIBLE_ROWS;
+
+function setListVisibleRows(value) {
+  selectedListVisibleRows = normalizeVisibleRows(value, selectedListVisibleRows);
+  storageSet(detailStorage.visibleRows, String(selectedListVisibleRows));
+  const input = document.getElementById("visibleRowsInput");
+  if (input) input.value = String(selectedListVisibleRows);
+  syncTableViewportRows();
+  if (typeof interestVirtual !== "undefined" && interestVirtual && interestModeActive()) {
+    renderInterestRowsWindow(true);
+    syncTableViewportRows();
+  }
+}
+
+function initListVisibleRowsControl() {
+  selectedListVisibleRows = normalizeVisibleRows(storageGet(detailStorage.visibleRows));
+  const input = document.getElementById("visibleRowsInput");
+  if (!input) return;
+  input.value = String(selectedListVisibleRows);
+  input.addEventListener("change", () => setListVisibleRows(input.value));
+  input.addEventListener("keydown", event => {
+    if (event.key === "Enter") { event.preventDefault(); input.blur(); }
+  });
+}
 
 function syncTableViewportRows() {
   document.querySelectorAll(".holdings-section .table-wrap").forEach(wrap => {
@@ -1073,10 +1102,9 @@ function syncTableViewportRows() {
     const rowHeight = row.getBoundingClientRect().height;
     if (!rowHeight) return;
     const headHeight = head ? head.getBoundingClientRect().height : 0;
-    // 화면이 낮으면 뷰포트가 상한 — 표가 화면 밖으로 밀리지 않게.
-    const viewportCap = window.innerHeight - 190;
-    const wanted = headHeight + rowHeight * LIST_VISIBLE_ROWS + 2;
-    wrap.style.setProperty("--list-rows-max-height", `${Math.round(Math.min(wanted, viewportCap))}px`);
+    // Honor the requested row count even when the page itself needs vertical scrolling.
+    const wanted = headHeight + rowHeight * selectedListVisibleRows + 2;
+    wrap.style.setProperty("--list-rows-max-height", `${Math.round(wanted)}px`);
   });
 }
 

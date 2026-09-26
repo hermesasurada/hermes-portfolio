@@ -525,8 +525,8 @@ function renderInterestRowsWindow(force = false) {
     const headHeight = wrap.querySelector("thead")?.offsetHeight || 0;
     const viewTop = Math.max(0, wrap.scrollTop - headHeight);
     // 표가 막 다시 보인 직후엔 높이(--list-rows-max-height)가 아직 안 잡혀 clientHeight가 작다 —
-    // 표는 최대 LIST_VISIBLE_ROWS행을 보이므로 그만큼은 늘 그린다.
-    const viewHeight = Math.max(wrap.clientHeight, rowHeight * LIST_VISIBLE_ROWS);
+    // 사용자가 지정한 행 수만큼은 늘 그린다.
+    const viewHeight = Math.max(wrap.clientHeight, rowHeight * selectedListVisibleRows);
     // 스크롤 위치가 목록 끝보다 아래일 수 있다(필터로 목록이 줄었는데 브라우저가 아직 스크롤을
     // 되돌리기 전). 보이는 첫 행을 '마지막 한 화면의 첫 행' 이하로 묶어 구간이 뒤집히지 않게 한다 —
     // 안 그러면 시작 188 / 끝 80처럼 행 없이 빈 영역만 그렸다(Astra 리뷰 2026-09-26).

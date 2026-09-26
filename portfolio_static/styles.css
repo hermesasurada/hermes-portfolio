@@ -576,6 +576,19 @@ textarea {
   font-size: 10.5px;
   font-weight: 750;
 }
+.visible-rows-control input {
+  width: 48px;
+  min-width: 0;
+  height: 20px;
+  padding: 0 3px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+}
 .name-filter-control input:focus {
   outline: 0;
 }
