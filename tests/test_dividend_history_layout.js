@@ -6,24 +6,25 @@ const root = path.join(__dirname, '../portfolio_static');
 const source = fs.readFileSync(path.join(root, 'app-tabs.js'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 const elements = {};
-const context = vm.createContext({
-  document: {getElementById: id => elements[id] ||= {querySelector: () => null}},
+const h = require('./harness');
+const context = h.loadScripts(h.createContext());
+context.document.getElementById = id => elements[id] ||= {querySelector: () => null};
+// 구조만 본다 — 숫자·날짜 서식은 문자열 그대로 흘려 표 모양에만 집중한다.
+Object.assign(context, {
   esc: String,
-  fmt: new Intl.NumberFormat('en-US'),
   initDividendHistoryCollapsedYears: () => {},
   dividendHistoryYearCollapsible: row => row.payments_detail.length > 1,
-  collapsedDividendHistoryYears: new Set(),
   dividendHistoryPercent: String,
   dividendMoneyText: String,
   dividendAmountText: String,
   shortDateText: String,
 });
-vm.runInContext(source.slice(source.indexOf('function renderDividendHistory('),
-  source.indexOf('async function openDividendHistory(')), context);
+const collapsedYears = () => h.evaluate(context, 'collapsedDividendHistoryYears');
+h.evaluate(context, 'collapsedDividendHistoryYears = new Set()');
 for (const frequency of [1, 2, 4, 12]) {
  for (const collapsed of [false, true]) {
-  context.collapsedDividendHistoryYears.clear();
-  if (collapsed) context.collapsedDividendHistoryYears.add('2026');
+  collapsedYears().clear();
+  if (collapsed) collapsedYears().add('2026');
   context.renderDividendHistory({ticker: 'TEST', summary: {frequency}, rows: [{
     year: 2026, current_ytd: true, amount: 12345.6789, payments: 1, expected_payments: frequency,
     payments_detail: [

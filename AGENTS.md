@@ -7,6 +7,13 @@
 - Static frontend changes are served with `no-store` and need only a refresh. Python backend changes require `launchctl kickstart -k gui/$(id -u)/com.yhandhs.portfolio-web`.
 - Verify the live service at `http://localhost:8765`, not through its Tailscale address.
 
+## Tests
+
+- Run all frontend tests with `for f in tests/test_*.js; do node "$f"; done` and backend tests with `python3 tests/test_portfolio_core.py`.
+- Frontend tests load whole scripts through `tests/harness.js` (`createContext` + `loadScripts`, in `index.html` order). Never slice source text by `indexOf('function …')` and run the fragment; `tests/test_harness.js` fails on that pattern. Slicing source only to inspect text is fine.
+- Script-scope `let`/`const` state (e.g. `sortState`, `data`, `chartRange`) is not a context property: read/write it with `h.evaluate(ctx, '…')`. Top-level `function` declarations are context properties and can be stubbed by assigning `ctx.name`.
+- The harness `fetch` never settles so bootstrap requests cannot fire later; stub `ctx.fetch` when a test needs a response. Compare vm-created objects via `h.plain()`/JSON, not `deepStrictEqual` (different realm).
+
 ## UI invariants
 
 - Korean market colors are mandatory: gains are red (`--up`) and losses are blue (`--down`).

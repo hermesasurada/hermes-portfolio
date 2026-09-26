@@ -1,13 +1,8 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const vm = require('node:vm');
-const ctx = vm.createContext({window:{}, sortState:{detail:{key:'extended_change_pct',dir:-1}},
-  activeDetailTab:'detail', interestSortState:{key:'extended_change_pct',dir:-1,manual:false}});
-const holdings = fs.readFileSync('portfolio_static/app-holdings.js','utf8');
-vm.runInContext(holdings.slice(holdings.indexOf('function optionalNumber('), holdings.indexOf('function holdingChangeBasePrice(')), ctx);
-vm.runInContext(holdings.slice(holdings.indexOf('function sortRows('), holdings.indexOf('function syncFilterToggleControls(')), ctx);
-const interest = fs.readFileSync('portfolio_static/app-interest-watchlists.js','utf8');
-vm.runInContext(interest.slice(interest.indexOf('function sortInterestRows('), interest.indexOf('function syncInterestDefaultSortForGroup(')), ctx);
+const h = require('./harness');
+const ctx = h.loadScripts(h.createContext());
+const setDir = dir => h.evaluate(ctx, `sortState.detail = {key:'extended_change_pct',dir:${dir}}; activeDetailTab = 'detail';
+  Object.assign(interestSortState, {key:'extended_change_pct',dir:${dir},manual:false});`);
 const rows = [
   {ticker:'missing',extended_change_pct:null,display_change_pct:null},
   {ticker:'US',currency:'USD',extended_change_pct:2,regular_change_pct:10},
@@ -26,9 +21,9 @@ const expectedByDir = {
 };
 const withExtended = new Set(['US','zero']);
 for (const dir of [-1,1]) {
-  ctx.sortState.detail.dir = ctx.interestSortState.dir = dir;
+  setDir(dir);
   const expected = expectedByDir[String(dir)];
-  const sorted = Array.from(ctx.sortRows(rows.slice()),r=>r.ticker);
+  const sorted = ctx.sortRows(rows.slice()).map(r=>r.ticker);
   assert.deepEqual(sorted, expected);
   // 두 묶음이 섞이지 않는다 — 연장가 보유분이 앞쪽에 연속으로 온다.
   assert.deepEqual(sorted.slice(0, withExtended.size).sort(), [...withExtended].sort());

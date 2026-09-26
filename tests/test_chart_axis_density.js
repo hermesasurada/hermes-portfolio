@@ -7,10 +7,8 @@ const vm = require('node:vm');
 const path = require('node:path');
 const read = file => fs.readFileSync(path.join(__dirname, '../portfolio_static', file), 'utf8');
 
-const ctx = vm.createContext({ window: {} });
-const scaleSource = read('app-chart-scale.js');
-vm.runInContext(scaleSource.slice(scaleSource.indexOf('function niceChartStep('),
-  scaleSource.indexOf('// RSI는 이론상')), ctx);
+const h = require('./harness');
+const ctx = h.loadScripts(h.createContext());
 
 const series = (lo, hi, n = 120) =>
   Array.from({ length: n }, (_, i) => lo + (hi - lo) * (0.5 - Math.cos(i / 7) / 2));

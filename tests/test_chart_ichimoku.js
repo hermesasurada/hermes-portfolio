@@ -39,12 +39,9 @@ for (const expected of [81, 61, 102]) {
 }
 // 양운↔음운이 바뀌는 자리에서 두 구름이 교차점을 공유해야 한 봉짜리 세로 틈이 안 생긴다.
 {
-  const cloudCtx = vm.createContext({});
-  vm.runInContext('function chartNumericValue(p, k) { return p[k] == null ? null : Number(p[k]); }', cloudCtx);
-  vm.runInContext('function straightLinePath(list) { return "M" + list.map(i => i.x.toFixed(2) + "," + i.y.toFixed(2)).join(" L"); }', cloudCtx);
-  const source = fs.readFileSync('portfolio_static/app-line-chart.js', 'utf8');
-  vm.runInContext(source.slice(source.indexOf('function ichimokuCloudPaths('),
-    source.indexOf('function rsiThresholdAreaPaths(')), cloudCtx);
+  // 실제 chartNumericValue·straightLinePath를 그대로 쓴다(예전엔 가짜로 대신해 실제와 어긋날 수 있었다).
+  const h = require('./harness');
+  const cloudCtx = h.loadScripts(h.createContext());
   cloudCtx.rows = [{ichi_span_a: 10, ichi_span_b: 5}, {ichi_span_a: 9, ichi_span_b: 6},
     {ichi_span_a: 4, ichi_span_b: 7}, {ichi_span_a: 3, ichi_span_b: 8}, {ichi_span_a: 9, ichi_span_b: 8}];
   const areas = vm.runInContext('ichimokuCloudPaths(rows, i => i * 10, v => 100 - v)', cloudCtx);

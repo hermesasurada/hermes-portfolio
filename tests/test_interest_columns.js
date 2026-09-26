@@ -2,18 +2,10 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const vm = require("node:vm");
-const context = vm.createContext({ window: {}, Set, Map });
-vm.runInContext(`
-  function esc(s) { return String(s).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;'); }
-`, context);
-// β·β″ 툴팁 문구는 format.js에 한 번만 정의돼 있다 — 컬럼 정의가 그걸 참조한다.
-const formatSource = fs.readFileSync(path.join(__dirname, "../portfolio_static/format.js"), "utf8");
-vm.runInContext(formatSource.slice(formatSource.indexOf("const BETA_BENCHMARK_NOTE"),
-  formatSource.indexOf('].join("\\n");', formatSource.indexOf("const BETA_ADJ_TOOLTIP")) + 13), context);
-const source = fs.readFileSync(path.join(__dirname, "../portfolio_static/app-interest-columns.js"), "utf8");
-vm.runInContext(source, context);
-const run = code => vm.runInContext(code, context);
+const h = require("./harness");
+// β·β″ 툴팁 문구는 format.js에 한 번만 정의돼 있다 — 컬럼 정의가 그걸 참조한다(전체 로드로 함께 들어온다).
+const context = h.loadScripts(h.createContext());
+const run = code => h.evaluate(context, code);
 assert.equal(run("INTEREST_TABLE_COLUMN_COUNT"), 61);
 // 헤더에 산식 툴팁이 붙어 있어야 한다(값만 보고는 무엇인지 알 수 없는 지표).
 for (const [key, needle] of [["beta", "공분산"], ["beta_adj", "표준편차"]]) {
@@ -43,7 +35,7 @@ assert.match(few, /colspan="2" class="group-start" data-interest-group-head="mom
 assert.doesNotMatch(few, /data-interest-col="17"/);
 assert.match(few, /data-interest-col="18"/);
 assert.equal((run("interestEmptyRow('none', INTEREST_COLUMNS)").match(/<td /g) || []).length, 61);
-assert.match(run("interestEmptyRow('<unsafe>', visibleInterestColumns([]))"), /&lt;unsafe>/);
+assert.match(run("interestEmptyRow('<unsafe>', visibleInterestColumns([]))"), /&lt;unsafe&gt;/);
 run(`
   const testCol = { innerHTML: '' }, testHead = { innerHTML: '' };
   const vars = {};
@@ -86,11 +78,7 @@ for (const period of [20, 50, 200]) {
   assert.ok(read('app-holdings.js').includes(`signedPercentText(r.${key}, 1)`));
 }
 // Exercise the real comparator: absent SMA stays last for both sort directions.
-const holdings = read('app-holdings.js');
-vm.runInContext(holdings.slice(holdings.indexOf('function tradeTimingSortValue('), holdings.indexOf('function holdingChangeBasePrice(')), context);
-const sortFunction = holdings.slice(holdings.indexOf('function sortRows('), holdings.indexOf('function syncFilterToggleControls('));
-run(`const sortState = {detail:{key:'ma200_pct',dir:1}}; const activeDetailTab='detail';`);
-vm.runInContext(sortFunction, context);
+run(`sortState.detail = {key:'ma200_pct',dir:1}; activeDetailTab = 'detail';`);
 for (const dir of [1,-1]) {
   assert.equal(run(`sortState.detail.dir=${dir}; sortRows([{ma200_pct:null},{ma200_pct:0},{ma200_pct:-5},{ma200_pct:10}], 'detail').map(r=>r.ma200_pct).join(',')`), dir === 1 ? '-5,0,10,' : '10,0,-5,');
 }

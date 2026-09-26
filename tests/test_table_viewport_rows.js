@@ -12,10 +12,10 @@ const css = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
 assert.match(css, /max-height: var\(--list-rows-max-height, calc\(100vh - 190px\)\);/);
 assert.doesNotMatch(css, /--list-visible-rows/);
 
-const ctx = vm.createContext({ window: { innerHeight: 900 } });
-vm.runInContext(holdings.slice(holdings.indexOf('const LIST_VISIBLE_ROWS'),
-  holdings.indexOf('function schedulePcFrozenColumns(')), ctx);
-assert.equal(vm.runInContext('LIST_VISIBLE_ROWS', ctx), 12);
+const h = require('./harness');
+const ctx = h.loadScripts(h.createContext());
+ctx.window.innerHeight = 900;
+assert.equal(h.evaluate(ctx, 'LIST_VISIBLE_ROWS'), 12);
 
 const makeWrap = (rowHeight, headHeight, { visible = true } = {}) => {
   const vars = {};
@@ -29,8 +29,8 @@ const makeWrap = (rowHeight, headHeight, { visible = true } = {}) => {
   };
 };
 const run = wraps => {
-  ctx.document = { querySelectorAll: () => wraps };
-  vm.runInContext('syncTableViewportRows()', ctx);
+  ctx.document.querySelectorAll = () => wraps;
+  h.evaluate(ctx, 'syncTableViewportRows()');
 };
 
 // PC: 헤더 48 + 47.5 × 12 + 2 = 620 (변수식 45 × 12면 588이라 11.4행이 된다)

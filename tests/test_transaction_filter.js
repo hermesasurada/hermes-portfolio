@@ -5,15 +5,11 @@ const vm = require('node:vm');
 const read = file => fs.readFileSync(path.join(__dirname, '../portfolio_static', file), 'utf8');
 let query = '';
 const body = { innerHTML: '' };
-const context = vm.createContext({
-  window: {}, transactionRows: [], showHiddenTransactions: false,
-  transactionPage: 3, transactionPageSize: 20, editingTxId: null,
-  document: { getElementById: id => id === 'transactionNameFilter' ? {value: query} : body },
-});
-const holdings = read('app-holdings.js');
-vm.runInContext(holdings.slice(holdings.indexOf('function normalizeListName('), holdings.indexOf('function holdingChangePct(')), context);
-vm.runInContext(read('app-transactions.js'), context);
-const run = code => vm.runInContext(code, context);
+const h = require('./harness');
+const context = h.loadScripts(h.createContext());
+context.document.getElementById = id => id === 'transactionNameFilter' ? {value: query} : body;
+const run = code => h.evaluate(context, code);
+run('transactionRows = []; showHiddenTransactions = false; transactionPage = 3; editingTxId = null;');
 run(`transactionRows = [
   {id: 1, ticker: 'AAPL', name: 'Apple', hidden: 0},
   {id: 2, ticker: 'MSFT', name: 'Microsoft', hidden: 1},
@@ -37,6 +33,7 @@ query = '   ';
 assert.equal(run("visibleTransactionRows().length"), 5);
 run('showHiddenTransactions = false');
 assert.equal(run("visibleTransactionRows().length"), 4);
+const chart = read('app-line-chart.js');
 run(`
   let balanceInputCount = 0, pagerCount = 0;
   txEndingBalances = rows => { balanceInputCount = rows.length; return new Map(); };
@@ -73,11 +70,9 @@ assert.match(mobileCss, /\.transaction-panel > \.toolbar \.title-tools \{[^}]*wi
 assert.match(mobileCss, /\.transaction-panel #tradeScope \{ display: none; \}/);
 assert.match(mobileCss, /\.transaction-panel \.transaction-actions \{[^}]*min-width: 0;[^}]*flex-wrap: nowrap/);
 assert.match(mobileCss, /\.transaction-panel \.transaction-name-filter input \{[^}]*width: 100%/);
-const chart = read('app-line-chart.js');
-vm.runInContext(chart.slice(chart.indexOf('function applyTickerDisplayNameLocally('), chart.indexOf('async function saveChartDisplayName(')), context);
 run(`
-  let data = {tickers: [{ticker: 'AAA', name: 'Old'}], members: []};
-  let chartPayload = null, chartComparePayloads = [];
+  data = {tickers: [{ticker: 'AAA', name: 'Old'}], members: []};
+  chartPayload = null; chartComparePayloads = [];
   transactionRows = [
     {id: 1, account_id: 1, ticker: 'AAA', name: 'Old', qty: 2, price: 100},
     {id: 2, account_id: 2, ticker: 'aaa', name: 'Old', hidden: 1},

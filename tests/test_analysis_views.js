@@ -5,11 +5,10 @@ const vm = require('node:vm');
 const root = path.join(__dirname, '../portfolio_static');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 const esc = s => String(s).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
-const ctx = vm.createContext({window: {}, storageGet: () => null, esc,
-  performanceIndexes: {SP500:true},
-  performanceFixedFx: true,
-});
-vm.runInContext(read('app-calendar.js'), ctx);
+const h = require('./harness');
+const ctx = h.loadScripts(h.createContext());
+Object.assign(ctx, {storageGet: () => null, esc});
+h.evaluate(ctx, 'performanceIndexes = {SP500:true}; performanceFixedFx = true;');
 for (const mobile of [false, true]) {
   for (const saved of ['grid', 'list']) {
     assert.equal(ctx.initialScheduleView(saved, mobile), saved);
@@ -17,7 +16,6 @@ for (const mobile of [false, true]) {
 }
 assert.equal(ctx.initialScheduleView(null, true), 'list');
 assert.equal(ctx.initialScheduleView(null, false), 'grid');
-vm.runInContext(read('app-charts.js'), ctx);
 const series = [{key:'portfolio', primary:true, name:'선택 <계좌>', color:'var(--brand)', points:[{date:'2026-01-02'}, {date:'2026-09-04'}]}];
 const legend = ctx.renderPerformanceLegend(series);
 // 범례는 두 줄뿐 — 고정환율 칩은 계좌 줄에 얹고 별도 '환율' 줄은 두지 않는다.
@@ -43,19 +41,18 @@ function node(key) {
 const buttons = [node('portfolio'), node('account-1')];
 const lines = [node('portfolio'), node('account-1'), node('SP500')];
 ctx.document = {querySelectorAll: s => s === '[data-perf-focus]' ? buttons : lines};
-vm.runInContext('performanceFocusKey = "account-1"; applyPerformanceFocus()', ctx);
+h.evaluate(ctx, 'performanceFocusKey = "account-1"; applyPerformanceFocus()');
 assert.equal(buttons[1].attrs['aria-pressed'], 'true');
 assert.equal(lines[1].classList['perf-focused'], true);
 assert.equal(lines[0].classList['perf-dimmed'], true);
 assert.equal(lines[2].classList['perf-dimmed'], true);
-vm.runInContext('performanceFocusKey = null; applyPerformanceFocus()', ctx);
+h.evaluate(ctx, 'performanceFocusKey = null; applyPerformanceFocus()');
 assert.ok(lines.every(l => !l.classList['perf-dimmed'] && !l.classList['perf-focused']));
 const controls = {style:{top:'50px', right:'70px'}};
 ctx.document = {getElementById: () => controls};
 const source = read('app-line-chart.js');
-vm.runInContext(source.slice(source.indexOf('function syncChartOverlayPosition()'), source.indexOf('function syncChartBottomControls(')), ctx);
 ctx.syncChartOverlayPosition();
-assert.deepEqual(controls.style, {top:'', right:''});
+assert.equal(JSON.stringify(controls.style), JSON.stringify({top:'', right:''}));
 assert.match(source, /const headroomPx = 16;/);
 const css = read('styles.css');
 assert.match(css, /\.schedule-calendar \{ min-width: 700px; \}/);

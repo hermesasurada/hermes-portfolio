@@ -6,21 +6,17 @@ const vm = require('node:vm');
 const path = require('node:path');
 const read = file => fs.readFileSync(path.join(__dirname, '../portfolio_static', file), 'utf8');
 
-const ctx = vm.createContext({
-  window: {}, document: { getElementById: () => null, querySelectorAll: () => [] },
-  chartRange: 'all', DEFAULT_CHART_RANGE: '1y',
+const h = require('./harness');
+const src = read('app-charts.js');
+const ctx = h.loadScripts(h.createContext());
+h.evaluate(ctx, "chartRange = 'all'; performanceIndexes = {}; performanceFixedFx = true;");
+Object.assign(ctx, {
   chartRangeBounds: () => null,
   filterChartPoints: points => points,
   performanceDetailEnabled: () => true,
-  performanceIndexes: {},
-  performanceFixedFx: true,
-  chartCompareColors: ['#111', '#222', '#333'],
   esc: s => String(s),
 });
-const src = read('app-charts.js');
-const slice = (from, to) => src.slice(src.indexOf(from), src.indexOf(to));
-vm.runInContext(slice('const PERF_INDEX_META', 'function performanceOverview('), ctx);
-vm.runInContext(slice('function performanceOverview(', 'function bindPerformanceHover('), ctx);
+const setFixedFx = on => h.evaluate(ctx, `performanceFixedFx = ${on}`);
 
 const days = ['2026-01-02', '2026-01-03', '2026-01-04'];
 const exposed = days.map((date, i) => ({ date, value: 1000 + i, twr: 1 + i * 0.01, twr_fixed: 1 + i * 0.02 }));
@@ -50,12 +46,12 @@ assert.match(legend, /perf-fx-toggle active/);
 assert.doesNotMatch(legend, /data-perf-focus="portfolio-fixed"/);
 
 // 칩을 끄면 점선이 전부 사라지고 칩은 꺼짐 표시
-ctx.performanceFixedFx = false;
+setFixedFx(false);
 series = vm.runInContext('performanceSeries(payload)', ctx);
 assert.deepEqual([...series.map(s => s.key)], ['portfolio', 'account-1', 'account-2']);
 legend = vm.runInContext('renderPerformanceLegend(performanceSeries(payload))', ctx);
 assert.match(legend, /perf-fx-toggle" [^>]*aria-pressed="false"/);
-ctx.performanceFixedFx = true;
+setFixedFx(true);
 
 // 원화 계좌만 선택 → 고정환율 선 없음, 칩은 켜져 있지만 unavailable
 ctx.payload = { points: krwOnly, account_series: [], indexes: {} };

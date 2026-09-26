@@ -3,17 +3,15 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const read = file => fs.readFileSync(path.join(__dirname, '../portfolio_static', file), 'utf8');
-const context = vm.createContext({});
-const run = code => vm.runInContext(code, context);
-run(`function esc(s) { return String(s).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;'); }`);
-const format = read('format.js');
-run(format.slice(format.indexOf('function tradeTimingMarkup('), format.indexOf('function indicatorToneAttr(')));
+const h = require('./harness');
+const context = h.loadScripts(h.createContext());
+const run = code => h.evaluate(context, code);
 assert.equal(run('tradeTimingMarkup(null)'), '-');
 assert.equal(run('tradeTimingMarkup({state:"invalid"})'), '-');
 assert.match(run('tradeTimingMarkup({state:"watch",buy_r:1.49})'), /1.49R/);
 assert.match(run('tradeTimingMarkup({state:"sell",sell_atr:3.2})'), /3.20ATR/);
 assert.doesNotMatch(run('tradeTimingMarkup({state:"wait",buy_r:5})'), /5.00R/);
-assert.match(run('tradeTimingMarkup({state:"buy",buy_r:2,as_of:"<unsafe>"})'), /&lt;unsafe>/);
+assert.match(run('tradeTimingMarkup({state:"buy",buy_r:2,as_of:"<unsafe>"})'), /&lt;unsafe&gt;/);
 assert.match(run('tradeTimingMarkup({state:"buy",buy_r:2,provisional:true})'), /연장가격 잠정/);
 assert.match(run('tradeTimingMarkup({state:"buy",buy_r:2})'), />매수<\/span>/);
 assert.match(run('tradeTimingMarkup({state:"sell",sell_atr:3.2})'), />매도<\/span>/);
@@ -22,20 +20,15 @@ assert.match(read('styles.css'), /\.trade-timing-ref \{[^}]*flex-direction: colu
 // 폭은 --col-scale 배율을 타되 기본값(데스크톱)은 원래 76px 그대로다.
 assert.match(read('styles.css'), /#detailTableWrap \.trade-timing-col \{ min-width: calc\(76px \* var\(--col-scale, 1\)\); width: calc\(76px \* var\(--col-scale, 1\)\);/);
 assert.match(read('app-interest-columns.js'), /key: "trade_timing", width: 76/);
-const holdings = read('app-holdings.js');
-run(holdings.slice(holdings.indexOf('function tradeTimingSortValue('), holdings.indexOf('function holdingChangeBasePrice(')));
-run(holdings.slice(holdings.indexOf('function sortRows('), holdings.indexOf('function syncFilterToggleControls(')));
-run(`const sortState={detail:{key:'trade_timing',dir:-1}}; const activeDetailTab='detail';
- const samples=[{}, {trade_timing:{state:'sell',sell_atr:10}}, {trade_timing:{state:'buy',buy_r:1.6}}, {trade_timing:{state:'wait'}}];`);
+run(`sortState.detail = {key:'trade_timing',dir:-1}; activeDetailTab = 'detail';
+ var samples=[{}, {trade_timing:{state:'sell',sell_atr:10}}, {trade_timing:{state:'buy',buy_r:1.6}}, {trade_timing:{state:'wait'}}];`);
 assert.equal(run("sortRows(samples.slice()).map(r=>r.trade_timing?.state||'missing').join(',')"), 'buy,wait,sell,missing');
 run('sortState.detail.dir=1');
 assert.equal(run("sortRows(samples.slice()).map(r=>r.trade_timing?.state||'missing').join(',')"), 'sell,wait,buy,missing');
 assert.match(read('app.js'), /detailSortKeys.add\("trade_timing"\)/);
 assert.match(read('app-tabs.js'), /trade_timing: stats.trade_timing/);
 // The watchlist comparator uses the same state values and keeps missing last.
-const watch = read('app-interest-watchlists.js');
-run("const interestSortState={key:'trade_timing',dir:-1};");
-run(watch.slice(watch.indexOf('function sortInterestRows('), watch.indexOf('function syncInterestDefaultSortForGroup(')));
+run("Object.assign(interestSortState, {key:'trade_timing',dir:-1,manual:false});");
 assert.equal(run("const w=samples.slice(); sortInterestRows(w, {}); w.map(r=>r.trade_timing?.state||'missing').join(',')"), 'buy,wait,sell,missing');
 console.log('Trade timing rendering, distinct units, escaping, account/watchlist sorting and missing values OK');
 

@@ -9,7 +9,6 @@ const holdings = read('app-holdings.js');
 assert.doesNotMatch(source + holdings, /usPriceTimer|scheduleUsPriceRefresh/);
 assert.equal((source.match(/setInterval\(/g) || []).length, 1);
 assert.doesNotMatch(holdings, /setInterval\(/);
-const extract = (start, end) => source.slice(source.indexOf(start), source.indexOf(end));
 const timers = new Map();
 let nextId = 0;
 let mode = 'off';
@@ -18,8 +17,11 @@ let merges = 0;
 let renders = 0;
 let resolveFetch;
 let defer = false;
-const context = vm.createContext({
-  autoRefreshTimer: null, loadInFlight: null, transactionsExpanded: false,
+const h = require('./harness');
+const context = h.loadScripts(h.createContext());
+// 로드 때 app.js 부트스트랩이 걸어 둔 타이머·진행 중 요청을 지우고 깨끗한 상태에서 시작한다.
+h.evaluate(context, 'autoRefreshTimer = null; loadInFlight = null; transactionsExpanded = false;');
+Object.assign(context, {
   setInterval: (fn, ms) => { const id = nextId++; timers.set(id, {fn, ms}); return id; },
   clearInterval: id => timers.delete(id), autoRefreshMode: () => mode,
   apiFetchPortfolio: () => { calls++; return defer ? new Promise(r => { resolveFetch = r; }) : Promise.resolve({}); },
@@ -27,9 +29,7 @@ const context = vm.createContext({
   mergePortfolioRefresh: () => merges++, renderPortfolioRefresh: () => renders++,
   showTradeStatus: () => assert.fail('unexpected error'),
 });
-vm.runInContext(extract('async function refreshPortfolio(', '\nasync function load()'), context);
-vm.runInContext(extract('function scheduleAutoRefresh()', '\nfunction initAutoRefreshControls()'), context);
-const run = code => vm.runInContext(code, context);
+const run = code => h.evaluate(context, code);
 const flush = () => new Promise(r => setImmediate(r));
 (async () => {
   run('scheduleAutoRefresh()');

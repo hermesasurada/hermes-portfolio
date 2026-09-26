@@ -6,19 +6,17 @@ function element(id) {
   return elements[id] ||= {classList: {toggle(key, value) {this[key] = value;}}, attrs: {},
     setAttribute(key, value) {this.attrs[key] = value;}, addEventListener(_, callback) {this.click = callback;}};
 }
-const ctx = vm.createContext({window: {addEventListener() {}}, document: {getElementById: element},
-  chartMovingAveragePeriods: {20:true,50:true,200:true}, chartShowBollinger: false, chartShowIchimoku: false,
-  chartType: 'line', chartInterval: 'day', chartComparePayloads: [], chartTicker: 'ASML',
-  performanceChartOpen: false, chartSmoothLines: false, chartLogScale: false, chartPayload: null,
-  detailStorage: {chartMovingAveragePeriods: 'ma'}, storageSet(key, value) {ctx.saved = [key, value];},
-  unitMoney: value => String(value), chartFullDateLabel: value => value,
-});
-// 등락 표기는 표와 같은 format.js 정의를 그대로 쓴다 — 스텁을 두면 형식이 갈린다.
-const format = fs.readFileSync('portfolio_static/format.js', 'utf8');
-vm.runInContext(format.slice(0, format.indexOf('\n', format.indexOf('const fmt2'))), ctx);
-vm.runInContext(format.slice(format.indexOf('function changePercentParts('), format.indexOf('function changePercentText(')), ctx);
-for (const file of ['app-chart-scale.js', 'app-line-chart.js'])
-  vm.runInContext(fs.readFileSync(`portfolio_static/${file}`, 'utf8'), ctx);
+const h = require('./harness');
+const ctx = h.loadScripts(h.createContext());
+ctx.document.getElementById = element;
+// 스크립트 스코프(let/const) 상태는 ctx 속성이 아니다 — 평가로 읽고 쓴다.
+const get = name => h.evaluate(ctx, name);
+const set = (name, value) => { ctx.__value = value; h.evaluate(ctx, `${name} = __value`); };
+const maKey = get('detailStorage.chartMovingAveragePeriods');
+ctx.storageSet = (key, value) => { ctx.saved = [key, value]; };
+h.evaluate(ctx, "chartMovingAveragePeriods = {20:true,50:true,200:true}; chartShowBollinger = false; chartShowIchimoku = false;"
+  + " chartType = 'line'; chartInterval = 'day'; chartComparePayloads = []; chartTicker = 'ASML'; performanceChartOpen = false;"
+  + " chartSmoothLines = false; chartLogScale = false; chartPayload = null;");
 const points = [
   {date: '2026-08-03', close: 100, sma_20: 90, sma_50: 80, sma_200: 70},
   {date: '2026-08-04', close: 120, sma_20: 91, sma_50: 81, sma_200: 71},
@@ -34,8 +32,8 @@ assert.match(JSON.stringify(ctx.chartPointTooltipLines(points[1], {})), /MA 200/
 assert.doesNotMatch(JSON.stringify(ctx.chartPointTooltipLines({date:'2026-08-03',close:5}, {})), /MA /);
 ctx.initChartDisplayControls();
 elements.chartMa20Toggle.click();
-assert.equal(ctx.chartMovingAveragePeriods[20], false);
-assert.deepEqual(ctx.saved, ['ma.20', 'false']);
+assert.equal(get('chartMovingAveragePeriods')[20], false);
+assert.equal(JSON.stringify(ctx.saved), JSON.stringify([`${maKey}.20`, 'false']));
 assert.deepEqual(Array.from(ctx.chartOverlayScaleValues(points)), [90, 80, 70, 91, 81, 71]);
 assert.doesNotMatch(JSON.stringify(ctx.chartPointTooltipLines(points[1], {})), /MA 20"/);
 assert.match(JSON.stringify(ctx.chartPointTooltipLines(points[1], {})), /MA 200/);
@@ -49,17 +47,17 @@ const overlayPoints = [{close:100,sma_20:90,sma_50:80,sma_200:50,
 const expectedValues = [90,80,50,150,100,60,110,95,180,40];
 const expectedScale = ctx.tightLowerChartScale([100,110,...expectedValues]);
 for (let mask = 0; mask < 32; mask++) {
-  ctx.chartMovingAveragePeriods = {20:Boolean(mask & 1),50:Boolean(mask & 2),200:Boolean(mask & 4)};
-  ctx.chartShowBollinger = Boolean(mask & 8);
-  ctx.chartShowIchimoku = Boolean(mask & 16);
+  set('chartMovingAveragePeriods', {20:Boolean(mask & 1),50:Boolean(mask & 2),200:Boolean(mask & 4)});
+  set('chartShowBollinger', Boolean(mask & 8));
+  set('chartShowIchimoku', Boolean(mask & 16));
   const values = ctx.chartOverlayScaleValues(overlayPoints);
   assert.deepEqual(Array.from(values), expectedValues);
   assert.deepEqual(ctx.tightLowerChartScale([100,110,...values]), expectedScale);
   assert.deepEqual(ctx.logChartScale([100,110,...values]), ctx.logChartScale([100,110,...expectedValues]));
 }
-ctx.chartMovingAveragePeriods = {20:false,50:false,200:false};
-ctx.chartShowBollinger = false;
-ctx.chartShowIchimoku = false;
+set('chartMovingAveragePeriods', {20:false,50:false,200:false});
+set('chartShowBollinger', false);
+set('chartShowIchimoku', false);
 assert.match(fs.readFileSync('portfolio_static/app-line-chart.js', 'utf8'), /const markerValues = allChartTransactions\.map/);
 elements.chartMa20Toggle.click();
 assert.equal(elements.chartMa20Toggle.attrs['aria-pressed'], 'true');
@@ -68,13 +66,13 @@ assert.equal(elements.chartMa50Toggle.attrs['aria-pressed'], 'false');
 const app = fs.readFileSync('portfolio_static/app.js', 'utf8');
 const restore = app.match(/Object.keys\(chartMovingAveragePeriods\).forEach\(period => \{[\s\S]*?\n\}\);/)[0];
 for (const legacy of [null, 'true', 'false']) {
-  const saved = {'old':legacy, 'ma.50':'false', 'ma.200':'true'};
-  ctx.detailStorage.chartShowMovingAverages = 'old';
+  const saved = {'old':legacy, [`${maKey}.50`]:'false', [`${maKey}.200`]:'true'};
+  h.evaluate(ctx, "detailStorage.chartShowMovingAverages = 'old'");
   ctx.storageGet = key => saved[key] ?? null;
-  vm.runInContext(restore, ctx);
-  assert.equal(ctx.chartMovingAveragePeriods[20], legacy !== 'false');
-  assert.equal(ctx.chartMovingAveragePeriods[50], false);
-  assert.equal(ctx.chartMovingAveragePeriods[200], true);
+  h.evaluate(ctx, restore);
+  assert.equal(get('chartMovingAveragePeriods')[20], legacy !== 'false');
+  assert.equal(get('chartMovingAveragePeriods')[50], false);
+  assert.equal(get('chartMovingAveragePeriods')[200], true);
 }
 const html = fs.readFileSync('portfolio_static/index.html', 'utf8');
 assert.match(html, /id="chartBollingerToggle"[^>]*>BB<\/button>\s*<button[^>]*id="chartIchimokuToggle"/);
@@ -83,9 +81,9 @@ for (const period of [20,50,200]) assert.match(html, new RegExp(`id="chartMa${pe
 assert.match(html, /id="chartMaCaption">이동평균선/);
 assert.match(html, /id="chartUnitControls"[\s\S]*?chart-control-label">단위/);
 ctx.availableChartRangeChoices = () => [{key:'6m',label:'6M'}];
-ctx.chartRange = '6m';
-ctx.chartShowBuys = true;
-ctx.chartShowSells = false;
+set('chartRange', '6m');
+set('chartShowBuys', true);
+set('chartShowSells', false);
 const controls = ctx.renderChartRangeButtons();
 assert.match(controls, /chart-control-label">기간/);
 assert.match(controls, /chart-control-label">거래/);
@@ -95,13 +93,13 @@ assert.match(controls, /data-marker-toggle="buy"[^>]*aria-pressed="true"/);
 assert.match(controls, /data-marker-toggle="sell"[^>]*aria-pressed="false"/);
 ctx.syncChartIntervalControl();
 assert.equal(elements.chartUnitControls.classList.hidden, false);
-ctx.performanceChartOpen = true;
+set('performanceChartOpen', true);
 ctx.syncChartIntervalControl();
 assert.equal(elements.chartUnitControls.classList.hidden, true);
 assert.doesNotMatch(ctx.renderChartRangeButtons(), /chart-marker-full/);
 for (const compare of [true, false]) {
-  ctx.chartComparePayloads = compare ? [{}] : [];
-  ctx.performanceChartOpen = !compare;
+  set('chartComparePayloads', compare ? [{}] : []);
+  set('performanceChartOpen', !compare);
   ctx.syncChartDisplayControls();
   for (const period of [20,50,200]) assert.equal(elements[`chartMa${period}Toggle`].classList.hidden, true);
   assert.equal(elements.chartMaCaption.classList.hidden, true);

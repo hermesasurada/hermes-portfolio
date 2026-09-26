@@ -1,14 +1,7 @@
 // 휴장 행의 등락금액 표기 — '-'가 아니라 확정된 0
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const vm = require('node:vm');
-const ctx = vm.createContext({window: {}});
-const format = fs.readFileSync('portfolio_static/format.js', 'utf8');
-vm.runInContext(format.slice(0, format.indexOf('\n', format.indexOf('const fmt2'))), ctx);
-vm.runInContext(format.slice(format.indexOf('function krwRoundedMan('), format.indexOf('function money(')), ctx);
-vm.runInContext(format.slice(format.indexOf('function changeKrwText('), format.indexOf('function weightText(')), ctx);
-const holdings = fs.readFileSync('portfolio_static/app-holdings.js', 'utf8');
-vm.runInContext(holdings.slice(holdings.indexOf('function isHolidayPreviousSession('), holdings.indexOf('function holdingUnitKrw(')), ctx);
+const h = require('./harness');
+const ctx = h.loadScripts(h.createContext());
 
 assert.equal(ctx.isHolidayPreviousSession({change_session_note: {kind: 'holiday_previous_session'}}), true);
 assert.equal(ctx.isHolidayPreviousSession({change_session_note: {kind: 'session_closed'}}), false);

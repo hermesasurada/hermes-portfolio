@@ -6,10 +6,9 @@ const vm = require('node:vm');
 const path = require('node:path');
 const src = fs.readFileSync(path.join(__dirname, '../portfolio_static/app-line-chart.js'), 'utf8');
 
-const ctx = vm.createContext({ window: {} });
-vm.runInContext(src.slice(src.indexOf('function chartOverlaysApply('),
-  src.indexOf('function syncChartDisplayControls(')), ctx);
-const applies = vm.runInContext('chartOverlaysApply', ctx);
+const h = require('./harness');
+const ctx = h.loadScripts(h.createContext());
+const applies = ctx.chartOverlaysApply;
 assert.equal(applies({ category: 'fx' }), false);
 assert.equal(applies({ category: 'stock' }), true);
 assert.equal(applies({ category: 'index' }), true);

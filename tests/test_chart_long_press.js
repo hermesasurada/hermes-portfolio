@@ -1,19 +1,17 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const vm = require('node:vm');
-const source = fs.readFileSync('portfolio_static/app-line-chart.js', 'utf8');
+const h = require('./harness');
+const source = h.readStatic('app-line-chart.js');
 let now = 0, nextId = 0;
 const timers = new Map();
 const dismissListeners = new Set();
-const ctx = vm.createContext({Date: {now: () => now},
-  document: {
-    addEventListener: (_, fn) => dismissListeners.add(fn),
-    removeEventListener: (_, fn) => dismissListeners.delete(fn),
-  },
-  setTimeout: (fn, delay) => {timers.set(++nextId, {fn, at: now + delay}); return nextId;},
-  clearTimeout: id => timers.delete(id),
-});
-vm.runInContext(source.slice(source.indexOf('function bindChartLongPress('), source.indexOf('function bindChartInteractions(')), ctx);
+const ctx = h.loadScripts(h.createContext());
+// 문서 리스너·시계·타이머는 로드가 끝난 뒤에 바꾼다 — 로드 중 app.js가 거는 문서 위임
+// 리스너까지 잡히면 바깥 터치 흉내가 앱 핸들러를 부른다. 로드 중에는 다른 파일이 진짜 Date를 쓴다.
+ctx.document.addEventListener = (_, fn) => dismissListeners.add(fn);
+ctx.document.removeEventListener = (_, fn) => dismissListeners.delete(fn);
+ctx.Date = {now: () => now};
+ctx.setTimeout = (fn, delay) => {timers.set(++nextId, {fn, at: now + delay}); return nextId;};
+ctx.clearTimeout = id => timers.delete(id);
 const handlers = {};
 const target = {isConnected: true, addEventListener: (name, fn) => handlers[name] = fn};
 let shown = 0, visible = false;
