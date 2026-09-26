@@ -13,12 +13,18 @@ from urllib.parse import quote
 from .extended_quote_store import restore_extended_quotes, save_extended_quotes
 from .db import connect
 from .market_calendar import us_equity_market_status
+from .single_flight import SingleFlight
 from .paths import US_EASTERN
 from .tickers import is_us_stock_ticker, ticker_currency
 
 # 배치 1회로 전 종목 시세를 받으므로(크럼 인증) 짧게 잡아도 외부 요청은 분당 1회 수준.
 US_LIVE_CACHE_SECONDS = 60
 SHARED_LIVE_CACHE_SECONDS = 90
+# 캐시가 만료돼도 이 시간 안이면 그 값을 바로 쓰고 갱신은 백그라운드로 넘긴다(stale-while-revalidate).
+# 예전엔 만료될 때마다 요청 안에서 Yahoo를 기다려 /api/portfolio가 ~1.1초 걸렸다(평소 30ms).
+# 1분 자동 갱신이면 거의 매번 만료 상태였다. 이보다 오래 묵었으면 예전처럼 기다려 받는다.
+US_LIVE_MAX_STALE_SECONDS = 600
+US_LIVE_REFRESH = SingleFlight("us-live")
 US_LIVE_QUOTE_CACHE: dict[tuple[str, str], dict] = {}
 US_LIVE_QUOTE_LOCK = threading.Lock()
 US_LIVE_FALLBACK_IN_FLIGHT: set[tuple[str, str]] = set()
@@ -259,43 +265,36 @@ def fetch_us_live_fallback_worker(symbols: list[str], mode: str, include_extende
                 US_LIVE_FALLBACK_IN_FLIGHT.discard((symbol, mode))
 
 
-def fetch_us_live_quotes(symbols: list[str], include_extended: bool, regular_hours: bool) -> dict[str, dict]:
+def _fetch_us_live_quotes_now(
+    symbols: list[str],
+    include_extended: bool,
+    regular_hours: bool,
+    stale: dict[str, dict] | None = None,
+) -> dict[str, dict]:
+    """공유 DB 시세 → Yahoo 배치 → yfinance 폴백 순으로 지금 받아 캐시에 넣는다."""
     mode = "regular" if regular_hours else "extended"
     now_ts = datetime.now().timestamp()
     fresh: dict[str, dict] = {}
-    stale: dict[str, dict] = {}
-    missing: list[str] = []
-    with US_LIVE_QUOTE_LOCK:
-        for symbol in symbols:
-            cache_key = (symbol, mode)
-            cached = US_LIVE_QUOTE_CACHE.get(cache_key)
-            if cached and now_ts - cached.get("fetched_ts", 0) < US_LIVE_CACHE_SECONDS:
-                fresh[symbol] = cached
-            else:
-                if cached:
-                    stale[symbol] = cached
-                missing.append(symbol)
-
-    if missing:
-        shared_rows = load_shared_quote_rows(missing)
-        still_missing: list[str] = []
-        for symbol in missing:
-            quote_row = shared_rows.get(symbol.upper())
-            if not quote_row:
-                still_missing.append(symbol)
-                continue
-            item = live_quote_item_from_row(
-                quote_row,
-                include_extended,
-                regular_hours,
-                float(quote_row.get("_shared_fetched_ts") or now_ts),
-            )
-            if not item:
-                still_missing.append(symbol)
-                continue
-            cache_us_live_quote(symbol, mode, item)
-            fresh[symbol] = item
-        missing = still_missing
+    missing = list(symbols)
+    shared_rows = load_shared_quote_rows(missing)
+    still_missing: list[str] = []
+    for symbol in missing:
+        quote_row = shared_rows.get(symbol.upper())
+        if not quote_row:
+            still_missing.append(symbol)
+            continue
+        item = live_quote_item_from_row(
+            quote_row,
+            include_extended,
+            regular_hours,
+            float(quote_row.get("_shared_fetched_ts") or now_ts),
+        )
+        if not item:
+            still_missing.append(symbol)
+            continue
+        cache_us_live_quote(symbol, mode, item)
+        fresh[symbol] = item
+    missing = still_missing
 
     if missing:
         try:
@@ -316,8 +315,40 @@ def fetch_us_live_quotes(symbols: list[str], include_extended: bool, regular_hou
                 len(missing),
                 exc,
             )
-            fresh.update(stale)
+            fresh.update({symbol: item for symbol, item in (stale or {}).items() if symbol in missing})
             schedule_us_live_fallback(missing, mode, include_extended, regular_hours)
+    return fresh
+
+
+def fetch_us_live_quotes(symbols: list[str], include_extended: bool, regular_hours: bool) -> dict[str, dict]:
+    mode = "regular" if regular_hours else "extended"
+    now_ts = datetime.now().timestamp()
+    fresh: dict[str, dict] = {}
+    stale: dict[str, dict] = {}
+    refresh_later: list[str] = []
+    missing: list[str] = []
+    with US_LIVE_QUOTE_LOCK:
+        for symbol in symbols:
+            cached = US_LIVE_QUOTE_CACHE.get((symbol, mode))
+            age = now_ts - cached.get("fetched_ts", 0) if cached else None
+            if cached and age < US_LIVE_CACHE_SECONDS:
+                fresh[symbol] = cached
+            elif cached and age < US_LIVE_MAX_STALE_SECONDS:
+                # 조금 묵었다 — 지금은 이 값을 쓰고 갱신은 뒤에서(요청을 기다리게 하지 않는다).
+                fresh[symbol] = cached
+                refresh_later.append(symbol)
+            else:
+                if cached:
+                    stale[symbol] = cached
+                missing.append(symbol)
+
+    if refresh_later:
+        US_LIVE_REFRESH.run(
+            [(symbol, mode) for symbol in refresh_later],
+            lambda keys: _fetch_us_live_quotes_now([symbol for symbol, _ in keys], include_extended, regular_hours),
+        )
+    if missing:
+        fresh.update(_fetch_us_live_quotes_now(missing, include_extended, regular_hours, stale))
     return fresh
 
 

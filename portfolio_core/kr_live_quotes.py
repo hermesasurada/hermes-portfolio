@@ -26,6 +26,7 @@ from datetime import datetime
 from .extended_quote_store import restore_extended_quotes, save_extended_quotes
 from .market_calendar import korea_equity_calendar_day
 from .paths import KST
+from .single_flight import SingleFlight
 from .tickers import asset_class, is_korean_stock_ticker, kr_ticker_code
 
 NXT_DETAIL_URL = "https://stock.naver.com/api/domestic/detail/{code}/detail?codeType=NXT"
@@ -33,6 +34,8 @@ NXT_HEADERS = {"User-Agent": "Mozilla/5.0", "Referer": "https://m.stock.naver.co
 NXT_TIMEOUT = 8
 NXT_MAX_WORKERS = 8
 NXT_CACHE_SECONDS = 30
+# 이 시간 안의 묵은 값은 바로 쓰고 갱신은 백그라운드로(us_live_quotes와 같은 방식).
+NXT_MAX_STALE_SECONDS = 300
 
 # 세션 경계(KST 분). 프리·애프터만 '연장'이고 메인은 KRX와 병행이라 제외한다.
 NXT_PRE_OPEN = 8 * 60
@@ -43,6 +46,7 @@ NXT_AFTER_CLOSE = 20 * 60
 # 미상장(404) 종목은 되묻지 않는다. 상장 종목 편입은 드물어 프로세스 수명 캐시로 충분.
 _UNLISTED: set[str] = set()
 _QUOTE_CACHE: dict[str, tuple[float, dict]] = {}
+NXT_REFRESH = SingleFlight("kr-nxt")
 _CACHE_LOCK = threading.Lock()
 
 
@@ -94,24 +98,11 @@ def _number(value) -> float | None:
         return None
 
 
-def fetch_nxt_quotes(tickers: list[str], now_ts: float | None = None) -> dict[str, dict]:
-    """{ticker: {price, market_state, trade_time}} — 미상장·실패 종목은 빠진다."""
-    now_ts = now_ts if now_ts is not None else datetime.now(KST).timestamp()
-    targets: list[tuple[str, str]] = []
+def _fetch_nxt_now(targets: list[tuple[str, str]], now_ts: float) -> dict[str, dict]:
+    """(ticker, code) 목록을 지금 받아 캐시에 넣는다."""
     result: dict[str, dict] = {}
-    for ticker in tickers:
-        code = kr_ticker_code(ticker)
-        if not code or code in _UNLISTED:
-            continue
-        with _CACHE_LOCK:
-            cached = _QUOTE_CACHE.get(ticker)
-        if cached and now_ts - cached[0] < NXT_CACHE_SECONDS:
-            result[ticker] = cached[1]
-            continue
-        targets.append((ticker, code))
     if not targets:
         return result
-
     with ThreadPoolExecutor(max_workers=min(NXT_MAX_WORKERS, len(targets))) as pool:
         payloads = list(pool.map(lambda item: _fetch_one(item[1]), targets))
     for (ticker, _code), payload in zip(targets, payloads):
@@ -133,6 +124,35 @@ def fetch_nxt_quotes(tickers: list[str], now_ts: float | None = None) -> dict[st
         with _CACHE_LOCK:
             _QUOTE_CACHE[ticker] = (now_ts, item)
         result[ticker] = item
+    return result
+
+
+def fetch_nxt_quotes(tickers: list[str], now_ts: float | None = None) -> dict[str, dict]:
+    """{ticker: {price, market_state, trade_time}} — 미상장·실패 종목은 빠진다.
+
+    캐시가 만료돼도 NXT_MAX_STALE_SECONDS 안이면 그 값을 바로 쓰고 갱신은 백그라운드로 넘긴다
+    (미국 시세와 같은 stale-while-revalidate). 30초마다 요청이 종목별 조회를 기다리지 않게."""
+    now_ts = now_ts if now_ts is not None else datetime.now(KST).timestamp()
+    targets: list[tuple[str, str]] = []
+    refresh_later: list[tuple[str, str]] = []
+    result: dict[str, dict] = {}
+    for ticker in tickers:
+        code = kr_ticker_code(ticker)
+        if not code or code in _UNLISTED:
+            continue
+        with _CACHE_LOCK:
+            cached = _QUOTE_CACHE.get(ticker)
+        age = now_ts - cached[0] if cached else None
+        if cached and age < NXT_CACHE_SECONDS:
+            result[ticker] = cached[1]
+        elif cached and age < NXT_MAX_STALE_SECONDS:
+            result[ticker] = cached[1]
+            refresh_later.append((ticker, code))
+        else:
+            targets.append((ticker, code))
+    if refresh_later:
+        NXT_REFRESH.run(refresh_later, lambda items: _fetch_nxt_now(items, datetime.now(KST).timestamp()))
+    result.update(_fetch_nxt_now(targets, now_ts))
     return result
 
 

@@ -2127,6 +2127,95 @@ def test_fetch_us_live_quotes_uses_stale_cache_when_batch_fails():
         price_module.US_LIVE_QUOTE_CACHE.update(original_cache)
 
 
+def test_us_live_quotes_serve_slightly_stale_cache_and_refresh_in_background():
+    """캐시가 만료돼도 10분 안이면 요청은 기다리지 않는다 — 갱신은 백그라운드에서 한 번만."""
+    import time
+    import portfolio_core.us_live_quotes as m
+
+    originals = (m.yahoo_quote_batch, m.load_shared_quote_rows, dict(m.US_LIVE_QUOTE_CACHE), m.schedule_us_live_fallback)
+    now = time.time()
+    batch_calls = []
+    try:
+        m.US_LIVE_QUOTE_CACHE.clear()
+        m.US_LIVE_QUOTE_CACHE[("AAPL", "regular")] = {"price": 100.0, "fetched_ts": now - 120}   # 조금 묵음
+        m.US_LIVE_QUOTE_CACHE[("MSFT", "regular")] = {"price": 200.0, "fetched_ts": now - 3600}  # 너무 묵음
+        m.load_shared_quote_rows = lambda symbols: {}
+        m.schedule_us_live_fallback = lambda *args: None
+
+        def batch(symbols):
+            batch_calls.append(sorted(symbols))
+            time.sleep(0.05)
+            return {s: {"symbol": s, "regularMarketPrice": 999.0, "marketState": "REGULAR"} for s in symbols}
+
+        m.yahoo_quote_batch = batch
+        result = m.fetch_us_live_quotes(["AAPL", "MSFT"], include_extended=False, regular_hours=True)
+        # 조금 묵은 AAPL은 옛 값을 바로 쓰고, 너무 묵은 MSFT만 요청 안에서 받는다.
+        assert result["AAPL"]["price"] == 100.0
+        assert result["MSFT"]["price"] == 999.0  # 요청 안에서 받아 온 값(순서는 백그라운드와 겹칠 수 있다)
+        assert ["MSFT"] in batch_calls
+        # 같은 키로 다시 불러도 이미 도는 갱신을 또 시작하지 않는다(single-flight).
+        started = m.US_LIVE_REFRESH.run([("AAPL", "regular")], lambda keys: None)
+        assert started == [] or not m.US_LIVE_REFRESH.in_flight(("AAPL", "regular"))
+        m.US_LIVE_REFRESH.last_thread.join(timeout=5)
+        assert ["AAPL"] in batch_calls, batch_calls
+        assert m.US_LIVE_QUOTE_CACHE[("AAPL", "regular")]["price"] == 999.0
+        assert not m.US_LIVE_REFRESH.in_flight(("AAPL", "regular"))
+    finally:
+        m.yahoo_quote_batch, m.load_shared_quote_rows, cache, m.schedule_us_live_fallback = originals
+        m.US_LIVE_QUOTE_CACHE.clear()
+        m.US_LIVE_QUOTE_CACHE.update(cache)
+
+
+def test_nxt_quotes_serve_slightly_stale_cache_and_refresh_in_background():
+    import time
+    from datetime import datetime
+    import portfolio_core.kr_live_quotes as k
+
+    original_fetch = k._fetch_one
+    original_cache = dict(k._QUOTE_CACHE)
+    now = time.time()
+    today = datetime.now(k.KST).strftime("%Y%m%d")
+    calls = []
+    try:
+        k._QUOTE_CACHE.clear()
+        k._QUOTE_CACHE["005930.KS"] = (now - 60, {"price": 70000.0})    # 30초 캐시는 지났지만 5분 안
+        k._QUOTE_CACHE["000660.KS"] = (now - 900, {"price": 200000.0})  # 너무 묵음
+        k._fetch_one = lambda code: calls.append(code) or {"nowPrice": "1", "tradeTime": today + "120000"}
+        result = k.fetch_nxt_quotes(["005930.KS", "000660.KS"], now_ts=now)
+        assert result["005930.KS"]["price"] == 70000.0  # 옛 값을 바로
+        assert result["000660.KS"]["price"] == 1.0      # 너무 묵은 건 요청 안에서 받음
+        k.NXT_REFRESH.last_thread.join(timeout=5)
+        assert sorted(calls) == ["000660", "005930"]
+        assert k._QUOTE_CACHE["005930.KS"][1]["price"] == 1.0
+    finally:
+        k._fetch_one = original_fetch
+        k._QUOTE_CACHE.clear()
+        k._QUOTE_CACHE.update(original_cache)
+
+
+def test_single_flight_skips_keys_already_running():
+    import threading
+    from portfolio_core.single_flight import SingleFlight
+
+    gate = threading.Event()
+    seen = []
+    flight = SingleFlight("t")
+    first = flight.run(["a", "b", "a"], lambda keys: (seen.append(keys), gate.wait(5)))
+    assert first == ["a", "b"]
+    assert flight.run(["a"], lambda keys: seen.append(keys)) == []
+    assert flight.run(["a", "c"], lambda keys: seen.append(keys)) == ["c"]
+    gate.set()
+    flight.last_thread.join(timeout=5)
+    for t in threading.enumerate():
+        if t.name == "t-refresh":
+            t.join(timeout=5)
+    assert not flight.in_flight("a")
+    # 작업이 예외를 내도 키는 풀린다(다음 요청이 다시 시도할 수 있게)
+    flight.run(["z"], lambda keys: (_ for _ in ()).throw(RuntimeError("boom")))
+    flight.last_thread.join(timeout=5)
+    assert not flight.in_flight("z")
+
+
 # --- scope rules (single source shared by validation + API) -----------------
 def test_account_scope():
     assert account_scope("overseas") == "overseas"

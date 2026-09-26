@@ -63,6 +63,7 @@
 - `daily_prices.close` is the raw, dividend-unadjusted market close. Performance and technical indicators use price returns.
 - Split repair uses recorded `stock_splits` ratios and adjusts only the contiguous old-scale segment. Spike cleanup removes temporary spikes only; it must preserve real crashes and splits.
 - Use `prices.fx_rates()` as the single FX mapping source.
+- Live quotes use stale-while-revalidate: an expired cache entry younger than `US_LIVE_MAX_STALE_SECONDS` (600s) / `NXT_MAX_STALE_SECONDS` (300s) is returned immediately and refreshed once in the background via `portfolio_core/single_flight.py`; only older or missing entries are fetched inside the request. Never reintroduce synchronous external quote fetches for merely expired entries — each 60s expiry used to add ~1.1s to `/api/portfolio`. The very first request after a restart still fetches synchronously.
 - Collection scripts must hold `collector_lock`, and database access must use `with connect() as conn:` so connections are closed.
 - Ledger mutations and `account_value_snapshots` rebuilds belong in one `BEGIN IMMEDIATE` transaction and on the same connection. Reads must not rebuild snapshots.
 - Portfolio performance is time-weighted return. Cash flows and trade cash must remain in every account series so deposits and purchases are not counted as investment gains.
