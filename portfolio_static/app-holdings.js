@@ -922,27 +922,41 @@ function filteredRows(options = {}) {
   return rows;
 }
 
+// 값이 없으면 정렬 방향과 무관하게 맨 뒤로 보내는 키 — 계좌표·관심목록이 이 한 목록을 쓴다.
+// 예전엔 두 표가 목록을 따로 들고 있어 같은 열이 표마다 반대로 정렬됐다(이격 오름차순이
+// 관심목록에서만 빈 값을 맨 위로, 실적일 오름차순이 계좌표에서만 빈 값을 맨 위로).
+const MISSING_LAST_SORT_KEYS = new Set([
+  "extended_change_pct", "next_earnings_date", "risk_reward_score", "entry_risk_reward",
+  "trade_timing", "ma20_pct", "ma50_pct", "ma200_pct",
+]);
+function sortValueMissing(value, key) {
+  // 실적일은 날짜 문자열이라 빈 문자열·null이 곧 '없음'이다.
+  if (key === "next_earnings_date") return !value;
+  return value == null || !Number.isFinite(Number(value));
+}
+// 두 표가 공유하는 비교 함수 — 정렬 규칙은 여기 한 곳에만 둔다.
+function compareListRows(a, b, key, dir) {
+  const av = listSortValue(a, key), bv = listSortValue(b, key);
+  // 연장가가 있는 종목끼리 먼저 정렬하고, 없는 종목은 그 뒤에서 자기들끼리 정렬한다.
+  if (key === "extended_change_pct") {
+    const aHas = hasExtendedQuote(a), bHas = hasExtendedQuote(b);
+    if (aHas !== bHas) return aHas ? -1 : 1;
+  }
+  if (MISSING_LAST_SORT_KEYS.has(key)) {
+    const aMissing = sortValueMissing(av, key), bMissing = sortValueMissing(bv, key);
+    if (aMissing !== bMissing) return aMissing ? 1 : -1;
+  }
+  if (typeof av === "string" || typeof bv === "string") {
+    return String(av ?? "").localeCompare(String(bv ?? ""), "ko-KR", { numeric: true, sensitivity: "base" }) * dir;
+  }
+  const an = av != null && Number.isFinite(Number(av)) ? Number(av) : -Infinity;
+  const bn = bv != null && Number.isFinite(Number(bv)) ? Number(bv) : -Infinity;
+  return (an - bn) * dir;
+}
+
 function sortRows(rows, tab = activeDetailTab) {
   const state = sortState[tab] || sortState.detail;
-  rows.sort((a, b) => {
-    const av = listSortValue(a, state.key), bv = listSortValue(b, state.key);
-    // 연장가가 있는 종목끼리 먼저 정렬하고, 없는 종목은 그 뒤에서 자기들끼리 정렬한다.
-    if (state.key === "extended_change_pct") {
-      const aHas = hasExtendedQuote(a), bHas = hasExtendedQuote(b);
-      if (aHas !== bHas) return aHas ? -1 : 1;
-    }
-    if (["extended_change_pct", "risk_reward_score", "entry_risk_reward", "trade_timing", "ma20_pct", "ma50_pct", "ma200_pct"].includes(state.key)) {
-      const aMissing = av == null || !Number.isFinite(Number(av));
-      const bMissing = bv == null || !Number.isFinite(Number(bv));
-      if (aMissing !== bMissing) return aMissing ? 1 : -1;
-    }
-    if (typeof av === "string" || typeof bv === "string") {
-      return String(av ?? "").localeCompare(String(bv ?? ""), "ko-KR", { numeric: true, sensitivity: "base" }) * state.dir;
-    }
-    const an = av != null && Number.isFinite(Number(av)) ? Number(av) : -Infinity;
-    const bn = bv != null && Number.isFinite(Number(bv)) ? Number(bv) : -Infinity;
-    return (an - bn) * state.dir;
-  });
+  rows.sort((a, b) => compareListRows(a, b, state.key, state.dir));
   return rows;
 }
 

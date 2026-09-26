@@ -408,29 +408,8 @@ function sortInterestRows(rows, group = activeInterestGroup()) {
     return;
   }
   const { key, dir } = interestSortState;
-  rows.sort((a, b) => {
-    const av = listSortValue(a, key), bv = listSortValue(b, key);
-    // 계좌표와 같은 관례 — 연장가 보유분을 먼저 묶고 나머지를 뒤에서 정렬한다.
-    if (key === "extended_change_pct") {
-      const aHas = hasExtendedQuote(a), bHas = hasExtendedQuote(b);
-      if (aHas !== bHas) return aHas ? -1 : 1;
-    }
-    if (key === "extended_change_pct" || key === "next_earnings_date" || key === "risk_reward_score" || key === "entry_risk_reward" || key === "trade_timing") {
-      const aMissing = key === "next_earnings_date"
-        ? !av
-        : av == null || !Number.isFinite(Number(av));
-      const bMissing = key === "next_earnings_date"
-        ? !bv
-        : bv == null || !Number.isFinite(Number(bv));
-      if (aMissing !== bMissing) return aMissing ? 1 : -1;
-    }
-    if (typeof av === "string" || typeof bv === "string") {
-      return String(av ?? "").localeCompare(String(bv ?? ""), "ko-KR", { numeric: true, sensitivity: "base" }) * dir;
-    }
-    const an = av != null && Number.isFinite(Number(av)) ? Number(av) : -Infinity;
-    const bn = bv != null && Number.isFinite(Number(bv)) ? Number(bv) : -Infinity;
-    return (an - bn) * dir;
-  });
+  // 계좌표와 같은 비교 함수(app-holdings.js compareListRows) — 규칙을 따로 두지 않는다.
+  rows.sort((a, b) => compareListRows(a, b, key, dir));
 }
 
 function syncInterestDefaultSortForGroup(group = activeInterestGroup()) {
