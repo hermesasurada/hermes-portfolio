@@ -18,6 +18,7 @@ from urllib.request import Request, urlopen
 
 from portfolio_core.cash_flows import add_cash_flow, delete_cash_flow, list_cash_flows
 from portfolio_core.company_profiles import load_company_profile
+from portfolio_core.payload_compact import compact_chart_payload, compact_performance_payload
 from portfolio_core.charts import load_account_performance, load_price_chart
 from portfolio_core.performance_snapshots import load_account_snapshots, rebuild_account_snapshots
 from portfolio_core.constants import (
@@ -443,22 +444,23 @@ class Handler(BaseHTTPRequestHandler):
     def api_chart(self, query: dict[str, list[str]]) -> dict:
         ticker = (query.get("ticker") or [""])[0]
         us_extended = (query.get("us_extended") or ["0"])[0] in {"1", "true", "yes", "on"}
-        return load_price_chart(
+        # 화면 정밀도를 넘는 실수 자릿수는 응답 경계에서만 줄인다(payload_compact).
+        return compact_chart_payload(load_price_chart(
             ticker,
             us_extended=us_extended,
             range_key=(query.get("range") or [None])[0],
             start=(query.get("start") or [None])[0],
             end=(query.get("end") or [None])[0],
-        )
+        ))
 
     def api_account_performance(self, query: dict[str, list[str]]) -> dict:
-        return load_account_performance(
+        return compact_performance_payload(load_account_performance(
             self.query_values(query, "account_ids"),
             detail=(query.get("detail") or ["0"])[0] in {"1", "true", "yes", "on"},
             range_key=(query.get("range") or [None])[0],
             start=(query.get("start") or [None])[0],
             end=(query.get("end") or [None])[0],
-        )
+        ))
 
     def api_dividends(self, query: dict[str, list[str]]) -> dict:
         return load_dividends(self.query_values(query, "account_ids"))

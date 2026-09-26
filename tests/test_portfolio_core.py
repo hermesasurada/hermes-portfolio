@@ -2216,6 +2216,54 @@ def test_single_flight_skips_keys_already_running():
     assert not flight.in_flight("z")
 
 
+def test_payload_compact_rounds_only_beyond_display_precision():
+    import copy
+    import math
+    from portfolio_core.payload_compact import compact_chart_payload, compact_performance_payload, round_price
+
+    # 유효숫자 6자리, 정수부는 자르지 않고 소수는 최소 2자리
+    assert round_price(225.07123456789) == 225.071
+    assert round_price(0.8123456789012) == 0.812346
+    assert round_price(150123456.789) == 150123456.79      # BTC 원화가 — 정수부 보존
+    assert round_price(1357.263412) == 1357.26
+    assert round_price(8.612345678) == 8.61235
+    assert round_price(0.0) == 0.0 and round_price(7) == 7 and round_price(None) is None
+    assert math.isnan(round_price(float("nan")))
+
+    chart = {
+        "ticker": "NVDA", "current_price": 225.0712345678,
+        "points": [{"date": "2026-09-25", "close": 225.0700000001, "bb_lower": 210.82100592125224,
+                    "volume": 123456789.0, "rsi": 56.912345, "entry_score": 0.9, "live": True}],
+        "ichimoku_projection": {"day": [{"ichi_span_a": 215.37749862670898}]},
+        "transactions": [{"price": 176.9912345}],
+    }
+    original = copy.deepcopy(chart)
+    out = compact_chart_payload(chart)
+    assert chart == original, "원본을 바꾸면 안 된다(내부 캐시·다른 호출자가 원래 정밀도를 본다)"
+    point = out["points"][0]
+    assert point == {"date": "2026-09-25", "close": 225.07, "bb_lower": 210.821, "volume": 123456789,
+                     "rsi": 56.91, "entry_score": 0.9, "live": True}
+    assert isinstance(point["volume"], int)
+    # 코인 거래량처럼 소수인 값은 정수로 자르지 않는다
+    assert compact_chart_payload({"points": [{"volume": 108.5312345}]})["points"][0]["volume"] == 108.531
+    assert out["ichimoku_projection"]["day"][0]["ichi_span_a"] == 215.377
+    assert out["transactions"] == chart["transactions"] and out["current_price"] == chart["current_price"]
+
+    perf = {
+        "basis": "full",
+        "points": [{"date": "2026-09-26", "value": 2411661544.68, "flow": -1.2, "twr": 2.3093769336168073, "twr_fixed": None}],
+        "account_series": [{"id": "1", "name": "A", "points": [{"date": "d", "trade_cash": -1102088315.8, "twr": 1.0000000000001}]}],
+        "indexes": {"SP500": {"ticker": "SP500", "points": [{"date": "d", "value": 7743.41015625}]}},
+    }
+    perf_original = copy.deepcopy(perf)
+    compact = compact_performance_payload(perf)
+    assert perf == perf_original
+    assert compact["points"][0] == {"date": "2026-09-26", "value": 2411661545, "flow": -1, "twr": 2.30937693, "twr_fixed": None}
+    assert compact["account_series"][0]["points"][0] == {"date": "d", "trade_cash": -1102088316, "twr": 1.0}
+    assert compact["account_series"][0]["name"] == "A" and compact["basis"] == "full"
+    assert compact["indexes"]["SP500"]["points"][0]["value"] == 7743.41
+
+
 # --- scope rules (single source shared by validation + API) -----------------
 def test_account_scope():
     assert account_scope("overseas") == "overseas"
