@@ -17,6 +17,7 @@
 ## UI invariants
 
 - Korean market colors are mandatory: gains are red (`--up`) and losses are blue (`--down`).
+- `styles.css` must not contain dead declarations (same media context + same selector + same property redeclared later, so the earlier value never applies). Edit the declaration that actually wins instead of adding another override; `tests/test_css_dead_declarations.js` enforces this. Many base font weights were dead because the white-slate theme block near the end redefines them — change weights there.
 - Decide change direction only with `changeDirection(value)` in `format.js` (returns `{cls, arrow}`: `up/▲`, `down/▼`, `flat/→` for zero, missing or non-numeric). Do not write new `x > 0 ? "up" : …` or `"▲" : "▼"` ternaries; `tests/test_change_direction.js` fails on them. Thresholds, trade states and buy/sell labels are different semantics and stay separate.
 - Candlestick bodies have square corners, without SVG rx/ry rounding; preserve wick thickness and gain/loss colors.
 - Preserve original candle body widths; only cap widths when adjacent bodies would touch, allowing a minimal 0.2 screen-px gap after the 0.65px outline. Do not subtract a fixed width from every candle. Keep centers/wicks and chart bounds unchanged; clamp extremely dense bodies to positive widths.
