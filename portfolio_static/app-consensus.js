@@ -79,7 +79,7 @@ function consensusPriceText(value, currency) {
 function upsideText(value) {
   if (value == null || !Number.isFinite(Number(value))) return "-";
   const number = Number(value);
-  const cls = number > 0 ? "up" : number < 0 ? "down" : "flat";
+  const { cls } = changeDirection(number);
   const sign = number > 0 ? "+" : "";
   return `<span class="${cls}">${sign}${number.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}%</span>`;
 }

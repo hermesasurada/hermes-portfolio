@@ -64,7 +64,7 @@ function cashFlowsAmountMarkup(entries) {
       maximumFractionDigits: digits,
     }).format(Math.abs(currency === "KRW" ? amount / 10000 : amount));
     const sign = amount > 0 ? "+" : amount < 0 ? "−" : "";
-    const cls = amount > 0 ? "up" : amount < 0 ? "down" : "flat";
+    const { cls } = changeDirection(amount);
     return `<span class="cash-flows-amount ${cls}">${sign}${text}${currency === "KRW" ? "" : `<small>${esc(currency)}</small>`}</span>`;
   }).join("");
 }

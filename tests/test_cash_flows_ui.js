@@ -4,6 +4,12 @@ const path = require("node:path");
 const vm = require("node:vm");
 const context = vm.createContext({ window: {}, Intl });
 vm.runInContext(`function esc(s) { return String(s).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;'); }`, context);
+// 등락 방향 등 공용 서식은 실제 format.js를 쓴다 — 테스트가 심어 둔 스텁은 그 뒤에 다시 덮는다.
+{
+  const stubs = { ...context };
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../portfolio_static/format.js'), 'utf8'), context);
+  Object.assign(context, stubs);
+}
 vm.runInContext(fs.readFileSync(path.join(__dirname, "../portfolio_static/app-cash-flows.js"), "utf8"), context);
 const run = code => vm.runInContext(code, context);
 assert.equal(run("cashFlowEntryPayload({accountId:'1',date:'2026-09-11',side:'deposit',amount:'6.2'}).amount"), 62000);

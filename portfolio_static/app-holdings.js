@@ -208,8 +208,7 @@ function accountChangeMarkup(stats) {
   if (!stats || !Number.isFinite(stats.change_krw) || !Number.isFinite(stats.previous_krw) || stats.previous_krw === 0) return "";
   const change = stats.change_krw;
   const pct = change / stats.previous_krw * 100;
-  const cls = change > 0 ? "up" : change < 0 ? "down" : "flat";
-  const arrow = change > 0 ? "▲" : change < 0 ? "▼" : "→";
+  const { cls, arrow } = changeDirection(change);
   return `<span class="account-change ${cls}" title="전일 대비"><span aria-hidden="true">${arrow}</span>${krwShort(Math.abs(change))} · ${fmt2.format(Math.abs(pct))}%</span>`;
 }
 function normalizeSelection(accounts) {
@@ -633,8 +632,7 @@ function renderHeroSummaryPage() {
     const priceFormatter = ticker === "SP500" || ticker === "NASDAQ" ? fmt1 : fmt2;
     if (valueEl) valueEl.textContent = Number.isFinite(price) ? priceFormatter.format(price) : "조회불가";
     if (!changeEl) return;
-    const cls = changePct > 0 ? "up" : changePct < 0 ? "down" : "flat";
-    const arrow = changePct > 0 ? "▲" : changePct < 0 ? "▼" : "→";
+    const { cls, arrow } = changeDirection(changePct);
     changeEl.className = `hero-index-change pct-chip ${cls}`;
     changeEl.textContent = Number.isFinite(changePct)
       ? `${arrow} ${fmt2.format(Math.abs(changePct))}%`
@@ -651,8 +649,7 @@ function renderHeroSummaryPage() {
     if (valueEl) valueEl.textContent = Number.isFinite(price) && price > 0 ? fmt2.format(price) : "조회불가";
     item.title = `1 ${currency} 기준 원화${data?.fx_updated ? ` · ${data.fx_updated} 갱신` : ""}`;
     if (!changeEl) return;
-    const cls = changePct > 0 ? "up" : changePct < 0 ? "down" : "flat";
-    const arrow = changePct > 0 ? "▲" : changePct < 0 ? "▼" : "→";
+    const { cls, arrow } = changeDirection(changePct);
     changeEl.className = `hero-index-change pct-chip ${cls}`;
     changeEl.textContent = Number.isFinite(price) && price > 0 && Number.isFinite(changePct)
       ? `${arrow} ${fmt2.format(Math.abs(changePct))}%` : "-";
@@ -768,8 +765,7 @@ function updateHeroSummary(byAccount, totalStats, accounts) {
   valueEl.textContent = krw(value);
   const previous = value - change;
   const pct = previous > 0 ? (change / previous) * 100 : null;
-  const cls = change > 0 ? "up" : change < 0 ? "down" : "flat";
-  const arrow = change > 0 ? "▲" : change < 0 ? "▼" : "→";
+  const { cls, arrow } = changeDirection(change);
   changeEl.className = `hero-change ${cls}`;
   changeEl.textContent = `${arrow} ${krw(Math.abs(change))}${
     pct == null ? "" : ` · ${pct > 0 ? "+" : pct < 0 ? "−" : ""}${fmt2.format(Math.abs(pct))}%`

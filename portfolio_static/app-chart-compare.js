@@ -247,7 +247,7 @@ function bindCompareHover(series, geometry) {
       const logoHtml = logo && logo.url
         ? `<img class="ct-logo${logo.dark ? " dark-logo" : ""}" src="${esc(logo.url)}" alt="">`
         : `<span class="ct-logo ct-logo-dot" style="background:${item.color}"></span>`;
-      const pctCls = point.close > 0 ? "up" : point.close < 0 ? "down" : "flat";
+      const pctCls = changeDirection(point.close).cls;
       return `<div class="ct-row">
         ${logoHtml}
         <span class="ct-name" style="color:${item.color}">${esc(item.ticker || item.name)}</span>

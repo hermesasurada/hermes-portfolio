@@ -35,6 +35,12 @@ const context = vm.createContext({
   fmt2: new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
   esc: s => String(s).replaceAll('<', '&lt;'),
 });
+// 등락 방향 등 공용 서식은 실제 format.js를 쓴다 — 테스트가 심어 둔 스텁은 그 뒤에 다시 덮는다.
+{
+  const stubs = { ...context };
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../portfolio_static/format.js'), 'utf8'), context);
+  Object.assign(context, stubs);
+}
 vm.runInContext(fs.readFileSync(path.join(root, 'app-holdings.js'), 'utf8'), context);
 context.findTickerMeta = () => ({ current_price: 6000.12, change_pct: 1.23 });
 vm.runInContext('renderHeroSummaryPage()', context);
@@ -69,7 +75,7 @@ context.findTickerMeta = () => null;
 context.renderHeroSummaryPage();
 assert.deepEqual(fxItems.map(item => item.value.textContent), ['조회불가','조회불가','조회불가']);
 assert.equal(fxItems[0].change.textContent, '-');
-for (const [pct, text, cls] of [[1.23, '▲ 1.23%', 'up'], [-1.23, '▼ 1.23%', 'down'], [0, '→ 0.00%', 'flat']]) {
+for (const [pct, text, cls] of [[1.23, '▲ 1.23%', 'up'], [-1.23, '▼ 1.23%', 'down'], [0, '→ 0%', 'flat']]) {
   context.findTickerMeta = () => ({ current_price: 6000, change_pct: pct });
   vm.runInContext('renderHeroSummaryPage()', context);
   assert.equal(change.textContent, text);

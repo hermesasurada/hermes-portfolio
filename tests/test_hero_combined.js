@@ -46,6 +46,12 @@ const context = vm.createContext({
   findTickerMeta: () => null,
   fmt1: new Intl.NumberFormat('en-US'), fmt2: new Intl.NumberFormat('en-US'),
 });
+// 등락 방향 등 공용 서식은 실제 format.js를 쓴다 — 테스트가 심어 둔 스텁은 그 뒤에 다시 덮는다.
+{
+  const stubs = { ...context };
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../portfolio_static/format.js'), 'utf8'), context);
+  Object.assign(context, stubs);
+}
 vm.runInContext(fs.readFileSync(path.join(root, 'app-holdings.js'), 'utf8'), context);
 const hidden = () => Object.values(pages).map(p => p.classList.contains('hidden'));
 const inert = () => Object.values(pages).map(p => Boolean(p.inert));

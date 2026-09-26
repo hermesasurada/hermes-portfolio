@@ -227,7 +227,7 @@ function bindPerformanceHover(series, geometry) {
     const rows = series.map(item => {
       const point = nearestChartPoint(item.points, targetTime);
       if (!point) return "";
-      const cls = point.close > 0 ? "up" : point.close < 0 ? "down" : "flat";
+      const { cls } = changeDirection(point.close);
       const value = item.amount ? performanceValueText(point) : "";
       const nameHtml = item.fixed
         ? `<span class="ct-name perf-fixed-name" style="color:${item.color}">${esc(item.name.replace(/ · 고정환율$/, ""))}<small>고정환율</small></span>`

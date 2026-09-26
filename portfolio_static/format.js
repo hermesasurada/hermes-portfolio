@@ -117,15 +117,19 @@ function valueMarkup(row) {
   if (row.currency === "KRW" || !Number.isFinite(row.value_krw)) return local;
   return `<span class="price-cell"><span>${local}</span><span class="krw-sub">(${krw(row.value_krw)})</span></span>`;
 }
-// 등락 표기의 단일 정의 — 표의 등락 칩과 차트 툴팁이 같은 화살표·자릿수를 쓴다.
+// 등락 방향의 단일 정의 — 부호로 방향 클래스(up/down/flat)와 화살표(▲/▼/→)를 정한다.
+// 0·빈 값·숫자 아님은 모두 보합(flat/→). 색은 CSS 토큰(--up 빨강·--down 파랑)이 맡는다.
+// 표·전광판·차트·배당 이력 등 등락을 그리는 모든 곳이 이걸 부른다 — 따로 삼항식을 쓰지 말 것.
+function changeDirection(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number === 0) return { cls: "flat", arrow: "→" };
+  return number > 0 ? { cls: "up", arrow: "▲" } : { cls: "down", arrow: "▼" };
+}
+// 등락률 표기 — 표의 등락 칩과 차트 툴팁이 같은 화살표·자릿수를 쓴다.
 // 마크업을 못 쓰는 SVG 툴팁은 parts만 받아 tspan으로 조립한다.
 function changePercentParts(pct) {
   if (!Number.isFinite(pct)) return null;
-  return {
-    cls: pct > 0 ? "up" : pct < 0 ? "down" : "flat",
-    arrow: pct > 0 ? "▲" : pct < 0 ? "▼" : "→",
-    text: `${fmt2.format(Math.abs(pct))}%`,
-  };
+  return { ...changeDirection(pct), text: `${fmt2.format(Math.abs(pct))}%` };
 }
 function changePercentText(pct, chip = false) {
   const parts = changePercentParts(pct);
@@ -176,8 +180,7 @@ function changeKrwText(v, { zeroWhenFlat = false } = {}) {
     return '<span class="change-cell flat"><span aria-hidden="true">\u2192</span>0</span>';
   }
   if (!Number.isFinite(v) || Math.abs(v) <= 10000) return "-";
-  const cls = v > 0 ? "up" : v < 0 ? "down" : "flat";
-  const arrow = v > 0 ? "▲" : v < 0 ? "▼" : "→";
+  const { cls, arrow } = changeDirection(v);
   return `<span class="change-cell ${cls}"><span aria-hidden="true">${arrow}</span>${krwRoundedMan(Math.abs(v))}</span>`;
 }
 function weightText(pct) {
@@ -203,8 +206,7 @@ function signedPercentText(v, digits = 2) {
   if (v == null) return "-";
   const n = Number(v);
   if (!Number.isFinite(n)) return "-";
-  const cls = n > 0 ? "up" : n < 0 ? "down" : "flat";
-  const arrow = n > 0 ? "▲" : n < 0 ? "▼" : "→";
+  const { cls, arrow } = changeDirection(n);
   return `<span class="${cls}"><span aria-hidden="true">${arrow}</span>${Math.abs(n).toLocaleString("ko-KR", { maximumFractionDigits: digits })}%</span>`;
 }
 function fractionPercentText(v, digits = 1) {
@@ -286,7 +288,7 @@ const BETA_ADJ_TOOLTIP = [
 function riskRewardScoreText(v, basis, quality) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "-";
-  const cls = n > 0 ? "up" : n < 0 ? "down" : "flat";
+  const { cls } = changeDirection(n);
   const sign = n > 0 ? "+" : "";
   let mark = "";
   if (basis && (basis !== "5y" || quality === "P")) {

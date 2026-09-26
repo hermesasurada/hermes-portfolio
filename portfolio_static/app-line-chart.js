@@ -558,9 +558,7 @@ function chartPriceChangeMetric(price, previous, change, changePct) {
 }
 
 function chartPriceClass(change) {
-  const number = Number(change);
-  if (!Number.isFinite(number)) return "flat";
-  return number > 0 ? "up" : number < 0 ? "down" : "flat";
+  return changeDirection(change).cls;
 }
 
 function chartPriceDirectionSymbol(cls) {
@@ -1217,8 +1215,7 @@ function bindChartInteractions(points, payload, geometry) {
     const endPrice = Number(end.close);
     const change = endPrice - startPrice;
     const changePct = startPrice ? change / startPrice * 100 : 0;
-    const cls = change > 0 ? "up" : change < 0 ? "down" : "flat";
-    const arrow = change > 0 ? "▲" : change < 0 ? "▼" : "→";
+    const { cls, arrow } = changeDirection(change);
     const x1 = geometry.xFor(startIndex);
     const x2 = geometry.xFor(endIndex);
 
@@ -1427,7 +1424,7 @@ function renderLineChart(payload) {
     const closeY = yFor(candle.close);
     const bodyY = Math.min(openY, closeY);
     const bodyH = Math.max(1.15, Math.abs(closeY - openY));
-    const cls = candle.close > candle.open ? "up" : candle.close < candle.open ? "down" : "flat";
+    const { cls } = changeDirection(candle.close - candle.open);
     return `
       <g class="chart-candle ${cls}">
         <line class="chart-candle-wick" x1="${x.toFixed(2)}" x2="${x.toFixed(2)}" y1="${yFor(candle.high).toFixed(2)}" y2="${yFor(candle.low).toFixed(2)}"></line>

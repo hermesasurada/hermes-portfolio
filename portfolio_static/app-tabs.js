@@ -264,8 +264,7 @@ function renderDividendTable() {
 function dividendHistoryPercent(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return "-";
-  const cls = number > 0 ? "up" : number < 0 ? "down" : "flat";
-  const arrow = number > 0 ? "▲" : number < 0 ? "▼" : "→";
+  const { cls, arrow } = changeDirection(number);
   return `<span class="${cls}"><span aria-hidden="true">${arrow}</span>${fmt1.format(Math.abs(number))}%</span>`;
 }
 

@@ -254,8 +254,7 @@ function chartPctMetric(value, neutral = "0.0%", neutralCls = "flat") {
   if (!Number.isFinite(number)) return { text: "-", cls: "flat" };
   // 소수 한 자리로 보여주므로 0.05% 미만은 사실상 0 — 중립 라벨(ATH/ATL)로 흡수한다
   if (Math.abs(number) < 0.05) return { text: neutral, cls: neutralCls };
-  const cls = number > 0 ? "up" : "down";
-  const arrow = number > 0 ? "▲" : "▼";
+  const { cls, arrow } = changeDirection(number); // 0은 위에서 중립으로 걸렀다
   return { text: `${arrow} ${fmt1.format(Math.abs(number))}%`, cls };
 }
 
