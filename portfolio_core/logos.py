@@ -1,15 +1,26 @@
 from __future__ import annotations
 
 import hashlib
+import datetime
 import json
 import struct
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
 from .paths import LOGO_DIR
+from .constants import FX_TICKERS, KOREAN_ETF_BRANDS, MARKET_INDEXES
 from .tickers import normalize_yfinance_symbol
+from .logo_assets import MAX_BYTES, download, needs_dark_filter, official_icon, validate_asset
+
+OFFICIAL_SOURCES = json.loads(Path(__file__).with_name("logo_sources.json").read_text())
+SVG_PREFERRED_LOGOS = frozenset({
+    "SPCX", "018260.KS", "042660.KS", "108490.KQ", "175330.KS", "263750.KQ",
+    "298040.KS", "079550.KS", "010120.KS", "HWM", "MEDP", "FSLR", "688836.SS",
+    *FX_TICKERS, *MARKET_INDEXES, *KOREAN_ETF_BRANDS,
+})
 
 FMP_LOGO_URL = "https://financialmodelingprep.com/image-stock/{ticker}.png"
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
@@ -64,6 +75,7 @@ def logo_stem(ticker: str) -> str:
 DARK_LOGO_PATH = LOGO_DIR.parent / "logo_dark.json"
 # 파일 mtime이 바뀌면 자동 재로드 — detect_dark_logos.py 실행 후 서버 재시작 불필요.
 _dark_logo_cache: tuple[float, set[str]] | None = None
+_appearance_cache: dict[str, tuple[float, bool]] = {}
 
 
 def dark_logo_stems() -> set[str]:
@@ -80,12 +92,24 @@ def dark_logo_stems() -> set[str]:
 
 
 def is_dark_logo(ticker: str) -> bool:
-    return logo_stem(ticker) in dark_logo_stems()
+    now = time.monotonic()
+    cached = _appearance_cache.get(ticker)
+    if cached and now - cached[0] < 60:
+        return cached[1]
+    dark = logo_stem(ticker) in dark_logo_stems()
+    try:
+        meta = json.loads((LOGO_DIR / f"{logo_stem(ticker)}.source.json").read_text())
+        if isinstance(meta.get("dark"), bool):
+            dark = meta["dark"]
+    except (OSError, ValueError):
+        pass
+    _appearance_cache[ticker] = (now, dark)
+    return dark
 
 
 def existing_logo_path(ticker: str, logo_dir: Path = LOGO_DIR) -> Path | None:
     stem = logo_stem(ticker)
-    for ext in ("png", "svg"):
+    for ext in (("svg", "png") if ticker in SVG_PREFERRED_LOGOS else ("png", "svg")):
         path = logo_dir / f"{stem}.{ext}"
         if path.exists():
             return path
@@ -94,8 +118,7 @@ def existing_logo_path(ticker: str, logo_dir: Path = LOGO_DIR) -> Path | None:
 
 def candidate_symbols(ticker: str) -> list[str]:
     candidates = [ticker]
-    if "." in ticker:
-        candidates.append(ticker.split(".", 1)[0])
+    # Never strip the exchange: 200A.T / 1489.T can become unrelated listings.
     if ticker == "BTC":
         candidates.extend(["BTCUSD", "BTC-USD"])
     return list(dict.fromkeys(candidates))
@@ -113,7 +136,7 @@ def fetch_logo(symbol: str, timeout: float = 8.0) -> tuple[bytes | None, str]:
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             content_type = response.headers.get("Content-Type", "")
-            body = response.read()
+            body = response.read(MAX_BYTES + 1)
     except urllib.error.HTTPError as exc:
         return None, f"HTTP {exc.code}"
     except urllib.error.URLError as exc:
@@ -121,6 +144,8 @@ def fetch_logo(symbol: str, timeout: float = 8.0) -> tuple[bytes | None, str]:
     except TimeoutError:
         return None, "timeout"
 
+    if len(body) > MAX_BYTES:
+        return None, "too large"
     if not content_type.lower().startswith("image/"):
         return None, f"not image: {content_type or 'unknown'}"
     if not body.startswith(PNG_MAGIC):
@@ -137,9 +162,10 @@ def copy_fallback_logo(ticker: str, logo_dir: Path = LOGO_DIR) -> dict | None:
     source_path = existing_logo_path(source_ticker, logo_dir)
     if not source_path:
         return None
-    out_path = logo_dir / f"{logo_stem(ticker)}{source_path.suffix}"
-    out_path.write_bytes(source_path.read_bytes())
-    return {"saved": True, "path": out_path.name, "source": f"copy:{source_ticker}"}
+    result = copy_ticker_logo(source_ticker, ticker, logo_dir)
+    if result:
+        result["source"] = f"copy:{source_ticker}"
+    return result
 
 
 def _png_dimensions(body: bytes | None) -> tuple[int, int] | None:
@@ -196,7 +222,8 @@ def _is_letter_placeholder(body: bytes | None) -> bool:
 def _http_get(url: str, timeout: float = 10.0) -> bytes | None:
     try:
         with urllib.request.urlopen(urllib.request.Request(url, headers=FAVICON_HEADERS), timeout=timeout) as resp:
-            return resp.read()
+            body = resp.read(MAX_BYTES + 1)
+            return body if len(body) <= MAX_BYTES else None
     except Exception:
         return None
 
@@ -215,16 +242,20 @@ def resolve_company_domain(ticker: str) -> str | None:
     return netloc.replace("www.", "").strip().lower() or None
 
 
+def _domain_icon_urls(domain):
+    return {
+        "icon.horse": f"https://icon.horse/icon/{domain}",
+        "gstatic": f"https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://{domain}&size=128",
+        "google": f"https://www.google.com/s2/favicons?domain={domain}&sz=128",
+    }
+
+
 def fetch_square_symbol(domain: str | None, timeout: float = 10.0) -> tuple[bytes | None, str]:
     """도메인 파비콘에서 정방형 심볼 로고 — icon.horse(고해상)→gstatic→google.
     icon.horse '아이콘 없음' 플레이스홀더는 스킵, 정방형 PNG만 채택(가장 큰 것 우선)."""
     if not domain:
         return None, "no domain"
-    sources = (
-        ("icon.horse", f"https://icon.horse/icon/{domain}", min(timeout, 12.0)),
-        ("gstatic", f"https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://{domain}&size=128", timeout),
-        ("google", f"https://www.google.com/s2/favicons?domain={domain}&sz=128", timeout),
-    )
+    sources = ((name, url, min(timeout, 12.0)) for name, url in _domain_icon_urls(domain).items())
     best: tuple[str, bytes, int] | None = None
     for name, url, source_timeout in sources:
         body = _http_get(url, timeout=source_timeout)
@@ -243,14 +274,36 @@ def fetch_square_symbol(domain: str | None, timeout: float = 10.0) -> tuple[byte
 
 
 def _write_logo_png(ticker: str, body: bytes, logo_dir: Path = LOGO_DIR) -> Path:
-    out_path = logo_dir / f"{logo_stem(ticker)}.png"
-    tmp_path = out_path.with_suffix(".png.tmp")
+    return _write_logo_asset(ticker, body, "png", logo_dir)
+
+
+def _write_logo_asset(ticker: str, body: bytes, ext: str, logo_dir: Path = LOGO_DIR) -> Path:
+    out_path = logo_dir / f"{logo_stem(ticker)}.{ext}"
+    tmp_path = out_path.with_suffix(f".{ext}.tmp")
     tmp_path.write_bytes(body)
     tmp_path.replace(out_path)
-    svg_path = logo_dir / f"{logo_stem(ticker)}.svg"   # 잔존 플레이스홀더 제거
-    if svg_path.exists():
-        svg_path.unlink()
+    # Do not leave stale provenance/appearance metadata when copying a manual logo.
+    out_path.with_suffix(".source.json").unlink(missing_ok=True)
+    _appearance_cache.pop(ticker, None)
+    for other_ext in ("png", "svg"):
+        other = out_path.with_suffix(f".{other_ext}")
+        if other != out_path and other.exists():
+            other.unlink()
     return out_path
+
+
+def _save_sourced_logo(ticker, body, ext, source, domain=None, url=None, reviewed=False):
+    path = _write_logo_asset(ticker, body, ext, LOGO_DIR)
+    meta = {"source": source, "domain": domain, "url": url,
+            "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "sha256": hashlib.sha256(body).hexdigest(), "reviewed": reviewed,
+            "needs_review": not reviewed, "dark": needs_dark_filter(body, ext)}
+    # Per-asset records avoid a shared JSON lost-update when hydration is concurrent.
+    target = path.with_suffix(".source.json")
+    tmp = target.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n")
+    tmp.replace(target)
+    return {"saved": True, "path": path.name, **meta}
 
 
 # 한국 ETF 운용사 브랜드 로고 — 대표 종목의 로고가 곧 브랜드 로고. 같은 브랜드의
@@ -285,7 +338,7 @@ def kr_etf_brand_source(ticker: str, name: str | None) -> str | None:
         return None
     upper_name = (name or "").strip().upper()
     for brand, source in KR_ETF_BRAND_SOURCES.items():
-        if upper_name.startswith(brand) and source.upper() != ticker.upper():
+        if upper_name.startswith(brand + " ") and source.upper() != ticker.upper():
             return source
     return None
 
@@ -294,12 +347,7 @@ def copy_ticker_logo(source_ticker: str, dest_ticker: str, logo_dir: Path = LOGO
     source_path = existing_logo_path(source_ticker, logo_dir)
     if not source_path:
         return None
-    out_path = logo_dir / f"{logo_stem(dest_ticker)}{source_path.suffix}"
-    out_path.write_bytes(source_path.read_bytes())
-    for ext in ("png", "svg"):           # 다른 확장자 잔존본 제거(대체)
-        other = logo_dir / f"{logo_stem(dest_ticker)}.{ext}"
-        if other != out_path and other.exists():
-            other.unlink()
+    out_path = _write_logo_asset(dest_ticker, source_path.read_bytes(), source_path.suffix[1:], logo_dir)
     return {"saved": True, "path": out_path.name, "source": f"brand:{source_ticker}"}
 
 
@@ -310,9 +358,13 @@ def cache_logo(ticker: str, name: str | None = None, domain: str | None = None, 
 
     LOGO_DIR.mkdir(parents=True, exist_ok=True)
     existing = existing_logo_path(ticker)
-    if keep_existing and existing:
+    # Legacy hand-authored SVGs have no provenance; auto-fetched SVGs may refresh.
+    preserve_curated = (existing and existing.suffix == ".svg"
+                        and not existing.with_suffix(".source.json").exists()
+                        and ticker not in OFFICIAL_SOURCES)
+    if (keep_existing or preserve_curated) and existing:
         existing_body = existing.read_bytes() if existing.suffix.lower() == ".png" else None
-        if existing_body is None or not _is_letter_placeholder(existing_body):
+        if existing_body is None or (validate_asset(existing_body) and not _is_letter_placeholder(existing_body)):
             return {"saved": False, "path": existing.name, "source": "existing"}
 
     # 0) 한국 ETF → 운용사 브랜드 로고 우선(개별 로고 대신 KODEX·TIGER·ACE·SOL 등).
@@ -327,28 +379,43 @@ def cache_logo(ticker: str, name: str | None = None, domain: str | None = None, 
     if fallback:
         return fallback
 
-    # 2) FMP — 정방형이면 그대로(깔끔한 심볼). 가로 워드마크면 보류.
+    # Reviewed source URLs are pinned too: a temporary failure must not restore
+    # a known wrong ticker-provider image.
+    pinned = OFFICIAL_SOURCES.get(ticker)
+    if pinned:
+        fetched = download(pinned["url"], timeout)
+        asset = validate_asset(fetched[0]) if fetched else None
+        if not asset:
+            return {"saved": False, "error": "reviewed official source unavailable"}
+        body, ext, _, _ = asset
+        return _save_sourced_logo(ticker, body, ext, pinned.get("source", "official-reviewed"), pinned["domain"], fetched[1], reviewed=True)
+
+    # 2) Company-declared icon first, not a ticker-only image provider.
+    domain = domain or resolve_company_domain(ticker)
+    official = official_icon(domain, timeout)
+    if official and not _is_letter_placeholder(official[0]):
+        body, ext, url = official
+        return _save_sourced_logo(ticker, body, ext, "official-icon", domain, url)
+
+    # 3) Domain-based providers are fallbacks, not verified corporate identities.
+    square_body, square_source = fetch_square_symbol(domain, timeout=timeout)
+    if square_body is not None and validate_asset(square_body):
+        url = _domain_icon_urls(domain).get(square_source.removeprefix("favicon:"))
+        return _save_sourced_logo(ticker, square_body, "png", square_source, domain, url)
+
+    # 4) Exact exchange-qualified ticker only. Shape is not identity verification.
     fmp_body = None
     last_status = "not tried"
     for symbol in candidate_symbols(ticker):
         body, status = fetch_logo(symbol, timeout=timeout)
         last_status = f"{symbol}: {status}"
-        if body is not None:
+        if body is not None and validate_asset(body) and not _is_letter_placeholder(body):
             fmp_body = body
             break
     if _is_square_logo(fmp_body, FMP_MAX_ASPECT):
-        out_path = _write_logo_png(ticker, fmp_body)
-        return {"saved": True, "path": out_path.name, "source": "fmp"}
-
-    # 3) FMP가 없거나 워드마크 → 기업 도메인 파비콘에서 정방형 심볼.
-    domain = domain or resolve_company_domain(ticker)
-    square_body, square_source = fetch_square_symbol(domain, timeout=timeout)
-    if square_body is not None:
-        out_path = _write_logo_png(ticker, square_body)
-        return {"saved": True, "path": out_path.name, "source": square_source, "domain": domain}
+        return _save_sourced_logo(ticker, fmp_body, "png", "fmp", domain, FMP_LOGO_URL.format(ticker=quote(symbol, safe=".:-")))
 
     # 4) 정방형을 못 구하면 FMP 워드마크라도 저장(초기자 플레이스홀더보다 낫다).
     if fmp_body is not None:
-        out_path = _write_logo_png(ticker, fmp_body)
-        return {"saved": True, "path": out_path.name, "source": "fmp-wordmark"}
+        return _save_sourced_logo(ticker, fmp_body, "png", "fmp-wordmark", domain, FMP_LOGO_URL.format(ticker=quote(symbol, safe=".:-")))
     return {"saved": False, "error": last_status}

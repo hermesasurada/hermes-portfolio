@@ -2449,7 +2449,8 @@ def test_logo_stem_and_candidates():
     assert logo_stem("005930.KS") == "005930_KS"
     assert logo_stem("AAPL") == "AAPL"
     assert candidate_symbols("BTC") == ["BTC", "BTCUSD", "BTC-USD"]
-    assert candidate_symbols("005930.KS") == ["005930.KS", "005930"]
+    assert candidate_symbols("005930.KS") == ["005930.KS"]
+    assert candidate_symbols("200A.T") == ["200A.T"]
 
 
 def test_square_logo_aspect_rejects_tall_and_wide_images():

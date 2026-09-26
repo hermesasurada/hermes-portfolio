@@ -31,7 +31,7 @@ from portfolio_core.constants import (
 from portfolio_core.db import connect, initialize_schema
 from portfolio_core.queries import load_collection_diagnostics, load_ticker_directory
 from portfolio_core.schedule import load_schedule
-from portfolio_core.logos import is_dark_logo
+from portfolio_core.logos import KR_ETF_BRAND_SOURCES, SVG_PREFERRED_LOGOS, is_dark_logo
 from portfolio_core.dividends import load_dividend_history, load_dividends
 from portfolio_core.interest_watchlists import (
     add_interest_item,
@@ -94,30 +94,6 @@ def logo_stem(ticker: str) -> str:
 # ticker on every request; new logos appear within the TTL window. (#7)
 _LOGO_URL_CACHE: dict[str, tuple[float, str | None]] = {}
 _LOGO_URL_TTL = 60.0
-SVG_PREFERRED_LOGOS = frozenset(
-    {
-        # FMP numeric ticker lookup can return unrelated overseas listings.
-        # These have local curated SVGs and should not be shadowed by PNG.
-        "SPCX",  # SpaceX
-        "018260.KS",  # 삼성SDS
-        "042660.KS",  # 한화오션
-        "108490.KQ",  # 로보티즈
-        "175330.KS",  # JB금융지주
-        "263750.KQ",  # 펄어비스
-        "298040.KS",  # 효성중공업
-        "079550.KS",  # LIG디펜스앤에어로스페이스
-        "010120.KS",  # LS ELECTRIC
-        "HWM",  # Howmet Aerospace
-        "MEDP",  # Medpace Holdings
-        "FSLR",  # First Solar
-        "688836.SS",  # Unitree — official square symbol SVG
-        *FX_TICKERS,
-        *MARKET_INDEXES,
-        *KOREAN_ETF_BRANDS,
-    }
-)
-
-
 def logo_url(ticker: str) -> str | None:
     now = time.time()
     cached = _LOGO_URL_CACHE.get(ticker)
@@ -142,8 +118,12 @@ def logo_hint(ticker: str, name: str) -> dict[str, str | bool | None]:
     if cls == "crypto":
         return {"kind": "crypto", "text": "₿", "url": logo_url(ticker), "dark": dark}
     for brand in KOREAN_ETF_BRANDS:
-        if ticker.endswith(KOREAN_SUFFIXES) and upper_name.startswith(brand):
-            return {"kind": "etf", "text": brand[:2], "url": logo_url(brand), "dark": is_dark_logo(brand)}
+        if ticker.endswith(KOREAN_SUFFIXES) and upper_name.startswith(brand + " "):
+            # SOL is also Solana's ticker. Never share its asset with SOL ETFs.
+            key = KR_ETF_BRAND_SOURCES.get(brand, brand) if brand == "SOL" else brand
+            if not logo_url(key):
+                key = ticker  # an unavailable brand must not hide a valid ticker logo
+            return {"kind": "etf", "text": brand[:2], "url": logo_url(key), "dark": is_dark_logo(key)}
     clean_ticker = ticker.replace(".KS", "").replace(".KQ", "")
     if ticker.endswith(LOCAL_MARKET_SUFFIXES):
         text = badge_text(ticker, name)

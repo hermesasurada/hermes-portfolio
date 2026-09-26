@@ -3,7 +3,7 @@
 
 과거엔 FMP fetch·폴백 맵을 이 파일이 독자 구현해 core(logos.py)와 drift가
 났었다(폴백 누락, 정방형 판정 없이 워드마크로 되덮는 위험). 이제 로고 획득
-정책(KR ETF 브랜드 → FMP 정방형 → 기업 파비콘 → FMP 워드마크 → 수동 폴백)은
+정책(수동 교정/브랜드 → 공식 홈페이지 → 도메인 파비콘 → 정확한 티커 보조 소스)은
 core 한 곳에만 있고, 여기는 대상 티커 순회 + 진행 출력만 한다.
 
 기본은 기존 로고 보존(core 기본값과 동일). 강제 재다운로드는 --force.
@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from portfolio_core.db import connect
+from portfolio_core.collect_common import collector_lock
 from portfolio_core.logos import cache_logo
 
 
@@ -46,7 +47,7 @@ def target_tickers(holdings_only: bool) -> list[tuple[str, str | None]]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--holdings-only", action="store_true", help="보유 종목만 (기본: 관심종목 포함 전 추적종목)")
-    parser.add_argument("--force", action="store_true", help="기존 로고도 다시 받는다 (기본: 있으면 보존)")
+    parser.add_argument("--force", action="store_true", help="기존 자동 수집 로고 재조회 (수동 교정 로고는 보존)")
     parser.add_argument("--ticker", action="append", help="특정 티커만. 반복 지정 가능.")
     parser.add_argument("--sleep", type=float, default=0.08)
     args = parser.parse_args()
@@ -75,4 +76,5 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    with collector_lock("logos") as acquired:
+        sys.exit(main() if acquired else 0)
