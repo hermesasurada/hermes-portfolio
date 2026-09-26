@@ -527,8 +527,12 @@ function renderInterestRowsWindow(force = false) {
     // 표가 막 다시 보인 직후엔 높이(--list-rows-max-height)가 아직 안 잡혀 clientHeight가 작다 —
     // 표는 최대 LIST_VISIBLE_ROWS행을 보이므로 그만큼은 늘 그린다.
     const viewHeight = Math.max(wrap.clientHeight, rowHeight * LIST_VISIBLE_ROWS);
-    const first = Math.floor(viewTop / rowHeight);
-    const last = Math.min(total, Math.ceil((viewTop + viewHeight) / rowHeight));
+    // 스크롤 위치가 목록 끝보다 아래일 수 있다(필터로 목록이 줄었는데 브라우저가 아직 스크롤을
+    // 되돌리기 전). 보이는 첫 행을 '마지막 한 화면의 첫 행' 이하로 묶어 구간이 뒤집히지 않게 한다 —
+    // 안 그러면 시작 188 / 끝 80처럼 행 없이 빈 영역만 그렸다(Astra 리뷰 2026-09-26).
+    const visibleRows = Math.ceil(viewHeight / rowHeight);
+    const first = Math.min(Math.floor(viewTop / rowHeight), Math.max(0, total - visibleRows));
+    const last = Math.min(total, first + visibleRows);
     const covered = body.childElementCount > 0
       && view.start <= Math.max(0, first - INTEREST_VIRTUAL_MARGIN)
       && view.end >= Math.min(total, last + INTEREST_VIRTUAL_MARGIN);
@@ -558,6 +562,18 @@ function renderInterestRowsWindow(force = false) {
       renderInterestRowsWindow(true);
     }
   }
+}
+
+// 목록 구성(그룹 + 종목 집합)이 바뀌면 — 그룹 전환·명칭 검색·섹터/통화/보유 필터 — 스크롤을 맨 위로.
+// 같은 목록의 재정렬·시세 갱신은 구성이 같으니 스크롤을 지킨다. 바뀌었으면 true.
+let interestListKey = "";
+function resetInterestScrollIfListChanged(group, rows) {
+  const key = `${group?.id ?? ""}|${rows.map(row => row.ticker).sort().join(",")}`;
+  if (key === interestListKey) return false;
+  interestListKey = key;
+  const wrap = document.getElementById("interestTableWrap");
+  if (wrap) wrap.scrollTop = 0;
+  return true;
 }
 
 function initialInterestRowHeight() {
@@ -603,6 +619,7 @@ function renderInterestMainTable() {
   const table = body.closest("table");
   const columns = visibleInterestColumns(rows, suppressIndexHighlight);
   renderInterestFrame(table, columns);
+  resetInterestScrollIfListChanged(group, rows);
   if (rows.length) {
     interestVirtual = {
       rows, columns, group, suppress: suppressIndexHighlight,

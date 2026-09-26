@@ -60,6 +60,37 @@ setView(); render(true);
 assert.ok(drawnTickers().length >= h.evaluate(ctx, 'LIST_VISIBLE_ROWS'));
 wrap.clientHeight = 564;
 
+// 필터로 목록이 줄었는데 스크롤 위치가 예전 목록 아래쪽에 남아 있어도 빈 화면이 되면 안 된다
+// (Astra 리뷰 2026-09-26: 200번째 행에서 80행으로 줄이면 시작 188 / 끝 80으로 행 0개 + 빈 영역 8,836px).
+{
+  const shrunk = rows.slice(0, 80);
+  wrap.scrollTop = 70 + 200 * 47;
+  setView({rows: shrunk});
+  render(true);
+  const v2 = view();
+  assert.ok(v2.start <= v2.end, `구간이 뒤집혔다: ${v2.start}-${v2.end}`);
+  assert.ok(drawnTickers().length >= h.evaluate(ctx, 'LIST_VISIBLE_ROWS'), `그린 행 ${drawnTickers().length}개`);
+  assert.equal(drawnTickers().at(-1), 'T79', '목록 끝까지 보여야 한다');
+  assert.equal(spacers().reduce((a, b) => a + b, 0) + (v2.end - v2.start) * 47, 80 * 47, '빈 행 + 그린 행 높이 = 전체 높이');
+  wrap.scrollTop = 0;
+}
+// 필터·그룹이 바뀌어 목록 구성이 달라지면 스크롤을 맨 위로 되돌린다(같은 목록의 재정렬·시세 갱신은 유지).
+{
+  wrap.scrollTop = 5000;
+  const group = {id: 7};
+  h.evaluate(ctx, 'interestListKey = ""');
+  assert.equal(ctx.resetInterestScrollIfListChanged(group, rows), true);
+  assert.equal(wrap.scrollTop, 0);
+  wrap.scrollTop = 5000;
+  assert.equal(ctx.resetInterestScrollIfListChanged(group, [...rows].reverse()), false, '재정렬은 같은 목록');
+  assert.equal(wrap.scrollTop, 5000);
+  assert.equal(ctx.resetInterestScrollIfListChanged(group, rows.slice(0, 80)), true, '필터로 줄어듦');
+  assert.equal(wrap.scrollTop, 0);
+  wrap.scrollTop = 5000;
+  assert.equal(ctx.resetInterestScrollIfListChanged({id: 8}, rows.slice(0, 80)), true, '같은 종목이라도 다른 그룹');
+  assert.equal(wrap.scrollTop, 0);
+}
+
 // 작은 그룹은 창 렌더링 없이 전부 그린다
 ctx.__small = rows.slice(0, 40);
 h.evaluate(ctx, 'interestVirtual = {...__view, rows: __small}');
