@@ -492,6 +492,80 @@ function scheduleInterestMainTable() {
   });
 }
 
+// 큰 그룹은 보이는 행(+앞뒤 여유분)만 DOM에 그리고 나머지 높이는 빈 행(spacer)으로 채운다.
+// 미국 개별주 258행 × 61열 = 셀 15,738개를 전부 만들면 그룹 전환 한 번에 ~370ms 멈췄다
+// (셀 HTML 105 · 파싱 32 · 이름열 측정 53 · 레이아웃 92ms, 2026-09-26 실측). 화면엔 12행뿐이다.
+// 작은 그룹(INTEREST_VIRTUAL_MIN_ROWS 이하)은 예전처럼 전부 그린다.
+const INTEREST_VIRTUAL_MIN_ROWS = 60;
+const INTEREST_VIRTUAL_OVERSCAN = 12;   // 보이는 범위 앞뒤로 더 그려 두는 행 수
+const INTEREST_VIRTUAL_MARGIN = 4;      // 그려 둔 가장자리까지 이만큼 남으면 다시 그린다
+let interestVirtual = null;             // {rows, columns, group, suppress, rowHeight, start, end}
+
+function interestRowHtml(row, view) {
+  return `<tr class="${view.suppress ? "" : tableRowClass(row)}">${interestRowCells(row, view.group, view.columns)}</tr>`;
+}
+
+function interestSpacerRow(height, colspan) {
+  return height > 0
+    ? `<tr class="virtual-spacer" aria-hidden="true"><td colspan="${colspan}" style="height:${height}px"></td></tr>`
+    : "";
+}
+
+// 스크롤 위치에 맞춰 그릴 구간만 다시 그린다. force가 아니면 보이는 범위가 그려 둔 구간 안쪽에
+// 여유 있게 들어 있을 때는 아무것도 하지 않는다(스크롤 이벤트마다 부르므로 싸야 한다).
+function renderInterestRowsWindow(force = false) {
+  const view = interestVirtual;
+  const body = document.getElementById("interestRows");
+  const wrap = document.getElementById("interestTableWrap");
+  if (!view || !body || !wrap) return;
+  const total = view.rows.length;
+  let start = 0, end = total;
+  if (total > INTEREST_VIRTUAL_MIN_ROWS) {
+    const rowHeight = view.rowHeight;
+    const headHeight = wrap.querySelector("thead")?.offsetHeight || 0;
+    const viewTop = Math.max(0, wrap.scrollTop - headHeight);
+    // 표가 막 다시 보인 직후엔 높이(--list-rows-max-height)가 아직 안 잡혀 clientHeight가 작다 —
+    // 표는 최대 LIST_VISIBLE_ROWS행을 보이므로 그만큼은 늘 그린다.
+    const viewHeight = Math.max(wrap.clientHeight, rowHeight * LIST_VISIBLE_ROWS);
+    const first = Math.floor(viewTop / rowHeight);
+    const last = Math.min(total, Math.ceil((viewTop + viewHeight) / rowHeight));
+    const covered = body.childElementCount > 0
+      && view.start <= Math.max(0, first - INTEREST_VIRTUAL_MARGIN)
+      && view.end >= Math.min(total, last + INTEREST_VIRTUAL_MARGIN);
+    if (!force && covered) return;
+    start = Math.max(0, first - INTEREST_VIRTUAL_OVERSCAN);
+    end = Math.min(total, last + INTEREST_VIRTUAL_OVERSCAN);
+  } else if (!force && body.childElementCount > 0 && view.start === 0 && view.end === total) {
+    return;
+  }
+  view.start = start;
+  view.end = end;
+  const colspan = view.columns.length;
+  body.innerHTML = interestSpacerRow(start * view.rowHeight, colspan)
+    + view.rows.slice(start, end).map(row => interestRowHtml(row, view)).join("")
+    + interestSpacerRow((total - end) * view.rowHeight, colspan);
+  // 행 높이는 CSS 변수(최소값)가 아니라 실제로 그려진 행들의 평균으로 잰다 — 표 테두리가 겹치는
+  // 방식(border-collapse) 탓에 빈 행 바로 다음 행 하나만 재면 0.5px씩 어긋나고, 그 오차가 행 수만큼
+  // 쌓여 스크롤 위치와 보이는 행이 밀린다. 어긋나 있었으면 빈 행 높이를 바로잡아 한 번 더 그린다.
+  if (total > INTEREST_VIRTUAL_MIN_ROWS && end - start > 1) {
+    const drawn = body.querySelectorAll("tr:not(.virtual-spacer)");
+    const span = drawn.length > 1
+      ? drawn[drawn.length - 1].getBoundingClientRect().bottom - drawn[0].getBoundingClientRect().top
+      : 0;
+    const measured = drawn.length > 1 ? span / drawn.length : 0;
+    if (measured > 0 && Math.abs(measured - view.rowHeight) > 0.25) {
+      view.rowHeight = measured;
+      renderInterestRowsWindow(true);
+    }
+  }
+}
+
+function initialInterestRowHeight() {
+  const table = document.querySelector("#interestTableWrap table");
+  const value = table ? parseFloat(getComputedStyle(table).getPropertyValue("--list-row-height")) : NaN;
+  return interestVirtual?.rowHeight || (Number.isFinite(value) && value > 0 ? value : 45);
+}
+
 function renderInterestMainTable() {
   cancelAnimationFrame(interestRenderFrame);
   interestRenderFrame = 0;
@@ -500,6 +574,7 @@ function renderInterestMainTable() {
   if (!body) return;
   if (!group) {
     renderInterestFrame(body.closest("table"), visibleInterestColumns([]));
+    interestVirtual = null;
     body.innerHTML = interestEmptyRow("선택할 관심그룹이 없습니다.");
     return;
   }
@@ -528,12 +603,20 @@ function renderInterestMainTable() {
   const table = body.closest("table");
   const columns = visibleInterestColumns(rows, suppressIndexHighlight);
   renderInterestFrame(table, columns);
-  body.innerHTML = rows.length ? rows.map(r => `
-    <tr class="${suppressIndexHighlight ? "" : tableRowClass(r)}">${interestRowCells(r, group, columns)}</tr>
-  `).join("") : interestEmptyRow(nameFilterValue()
-    ? "명칭 검색 결과가 없습니다."
-    : group.fixed ? "모든 수집 종목이 관심그룹에 분류되어 있습니다." : "이 그룹에 등록된 종목이 없습니다.");
-  const nameWidth = syncTickerNameColumnWidth(table);
+  if (rows.length) {
+    interestVirtual = {
+      rows, columns, group, suppress: suppressIndexHighlight,
+      rowHeight: initialInterestRowHeight(), start: 0, end: 0,
+    };
+    renderInterestRowsWindow(true);
+  } else {
+    interestVirtual = null;
+    body.innerHTML = interestEmptyRow(nameFilterValue()
+      ? "명칭 검색 결과가 없습니다."
+      : group.fixed ? "모든 수집 종목이 관심그룹에 분류되어 있습니다." : "이 그룹에 등록된 종목이 없습니다.");
+  }
+  // 이름 열 폭은 DOM이 아니라 행 데이터 전체로 잰다 — 창 렌더링이라 DOM엔 일부 행만 있다.
+  const nameWidth = syncTickerNameColumnWidth(table, { rows });
   // 표 전체 폭도 colgroup과 같은 --col-scale을 타야 한다. 여기만 원래 합을 쓰면
   // fixed 레이아웃이 남는 폭을 열마다 비례 배분해 축소가 통째로 무효가 된다.
   // 종목명 열은 내용 폭으로 측정된 값이라 배율에서 제외한다.
@@ -590,6 +673,11 @@ function setMobileFiltersExpanded(expanded) {
 
 function initInterestWatchlists() {
   initInterestSectorFilter();
+  // 창 렌더링: 스크롤할 때 그려 둔 구간을 벗어나면 그 자리 행을 다시 그린다. 한 번만 바인딩.
+  // rAF에 미루지 않는다 — 판정이 싸고, rAF가 멈추는 환경(미리보기 패널)에서도 동작해야 한다.
+  document.getElementById("interestTableWrap")?.addEventListener("scroll", () => {
+    if (interestVirtual && interestModeActive()) renderInterestRowsWindow();
+  }, { passive: true });
   document.getElementById("mobileFiltersToggle")?.addEventListener("click", () => {
     const button = document.getElementById("mobileFiltersToggle");
     setMobileFiltersExpanded(button.getAttribute("aria-expanded") !== "true");

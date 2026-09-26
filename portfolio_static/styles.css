@@ -1261,6 +1261,15 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
 .interest-main-status.error {
   color: var(--sell);
 }
+/* 관심목록 창 렌더링의 빈 행 — 그리지 않은 행들의 높이만 차지한다. 보이지도, 반응하지도 않게
+   (패딩·선·배경 없음, hover·클릭 통과). app-interest-watchlists.js renderInterestRowsWindow. */
+.interest-detail-list tr.virtual-spacer,
+.interest-detail-list tr.virtual-spacer td {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
 #interestTableWrap {
   overflow: auto;
   isolation: isolate;

@@ -1070,7 +1070,8 @@ const LIST_VISIBLE_ROWS = 12;
 function syncTableViewportRows() {
   document.querySelectorAll(".holdings-section .table-wrap").forEach(wrap => {
     const body = wrap.querySelector("tbody");
-    const row = body?.querySelector("tr");
+    // 관심목록 창 렌더링의 빈 행(spacer)은 높이가 수천 px라 건너뛴다.
+    const row = body?.querySelector("tr:not(.virtual-spacer)");
     if (!row || !wrap.offsetParent) return;
     const head = wrap.querySelector("thead");
     const rowHeight = row.getBoundingClientRect().height;
@@ -1102,25 +1103,31 @@ document.fonts?.addEventListener("loadingdone", () => {
   });
 });
 
-function syncTickerNameColumnWidth(table, { min = 108, max = 180 } = {}) {
+// rows를 주면 DOM 대신 행 데이터(name·ticker) 전체로 잰다 — 관심목록은 보이는 행만 DOM에 있어서
+// DOM으로 재면 스크롤할 때마다 폭이 흔들린다. 글꼴은 그려진 첫 요소에서 한 번 읽는다.
+function syncTickerNameColumnWidth(table, { min = 108, max = 180, rows = null } = {}) {
   if (!table) return min;
   if (window.matchMedia?.("(max-width: 980px)").matches) {
     min = Math.min(min, 96);
     max = Math.min(max, 132);
   }
-  const texts = Array.from(table.querySelectorAll("tbody .ticker-link .asset-name, tbody .ticker-link .ticker-symbol"));
+  const texts = rows
+    ? rows.flatMap(row => [["asset-name", row.name], ["ticker-symbol", row.ticker]])
+    : Array.from(table.querySelectorAll("tbody .ticker-link .asset-name, tbody .ticker-link .ticker-symbol"))
+      .map(element => [element.classList.contains("asset-name") ? "asset-name" : "ticker-symbol", element.textContent]);
   const canvas = syncTickerNameColumnWidth.canvas ||= document.createElement("canvas");
   const context = canvas.getContext("2d");
   const fonts = new Map();
-  const contentWidth = texts.reduce((width, element) => {
+  const contentWidth = texts.reduce((width, [kind, rawText]) => {
     if (!context) return width;
-    const kind = element.className;
     if (!fonts.has(kind)) {
-      const style = getComputedStyle(element);
+      const sample = table.querySelector(`tbody .ticker-link .${kind}`);
+      if (!sample) return width;
+      const style = getComputedStyle(sample);
       fonts.set(kind, `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`);
     }
     const font = fonts.get(kind);
-    const text = element.textContent || "";
+    const text = String(rawText ?? "");
     const key = `${font}\n${text}`;
     if (!tickerTextWidths.has(key)) {
       if (tickerTextWidths.size >= 4096) tickerTextWidths.clear();
