@@ -56,6 +56,8 @@
 - FX 환율은 `prices.fx_rates()` 단일 정본(FX_TICKERS 자동 파생) — 수동 dict 재구성 금지(CNY/TWD 누락 사고 이력).
 - 수집 스크립트는 `collector_lock`(flock) 필수. cron 겹침 방지.
 - **한국 휴장 달력(`korean_exchange_holidays`)이 틀리면 데이터가 오염된다.** `kr_market_date`는 휴장일이면 직전 거래일로 되감아 기록하므로, 개장일을 휴장으로 오판하면 그날 장중 시세가 **직전 거래일 행을 덮어쓴다**(2026-09-28 추석 대체공휴일 오판 — 9/23 한국 105종목·코스피 행이 오전 시세로 바뀜, FDR·야후 일봉으로 복구). 대체공휴일 규칙: 설날·추석은 **일요일** 또는 다른 공휴일과 겹칠 때만(토요일 제외), 어린이날·국경일(삼일절·광복절·개천절·한글날·제헌절 2027~)·부처님오신날·성탄절은 토·일·겹침 모두. 같은 날 공휴일 두 개(2025-05-05)도 대체 사유다. 테스트: `test_korean_substitute_holidays_follow_public_holiday_rules`.
+- **평일 09시 이전에는 한국 실시간 시세를 기록하지 않는다**(`fetch_naver_snapshots`). 09시 전 값은 `kr_market_date`가 전 거래일로 되감아 저장하는데, 코스피는 08~09시에 네이버가 **개장 전 예상지수**를 줘서 매일 아침 전날 종가가 다음 날 예상 시가로 덮어써졌다(2026-09-18·21·22 행, 09-28 발견). 개별 종목은 `nv`가 KRX 값이고 20시 FDR 일봉이 최근 30일을 다시 덮어 문제가 없었지만 같은 이유로 함께 막는다.
+- **코스피 일봉은 야후 ^KS11 우선**(`fetch_index_price`, 네이버 일봉과 값이 정확히 같음). FDR 'KS11'은 2026-09-17 이후 갱신이 멈췄고 마지막 행도 장중 값이었다. 백필(`history_start`)만 FDR. 2026-09-28에 최근 400거래일을 네이버 일봉(`fchart.stock.naver.com/sise.nhn?symbol=KOSPI&timeframe=day`)과 대조해 6/29(평평한 봉)·9/17·18·21·22를 복구, 이후 불일치 0.
 - DB 접근은 `with connect() as conn:` — connect()는 contextmanager로 close까지 보장(FD 누수 사고 이력).
 
 - **β·β″ 산식**(`technical_stats.py::beta_stats`, 최근 252거래일 일간 수익률, 공통 거래일만·30일 미만이면 결측):

@@ -2290,6 +2290,49 @@ def test_korean_substitute_holidays_follow_public_holiday_rules():
         assert status(y, m, d) == "open", (y, m, d)
 
 
+def test_naver_snapshots_skip_pre_open_writes():
+    """평일 09시 이전 값은 전 거래일로 되감겨 저장되는데, 코스피는 이 시간에 개장 전 예상지수라
+    전날 종가를 덮어썼다 — 개장 전에는 아무것도 기록하지 않는다."""
+    from datetime import datetime as real_datetime
+    import portfolio_core.snapshot_collector as sc
+
+    calls = []
+    original_dt, original_rt = sc.datetime, sc.naver_realtime
+
+    def at(hour, weekday_date):
+        class FakeDatetime(real_datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return real_datetime(*weekday_date, hour, 30, tzinfo=tz)
+        return FakeDatetime
+
+    try:
+        sc.naver_realtime = lambda query: calls.append(query) or {"result": {"time": None, "areas": []}}
+        watch = {"kr": ["005930.KS"], "index": ["KOSPI"]}
+        sc.datetime = at(8, (2026, 9, 29))          # 화요일 08:30
+        assert sc.fetch_naver_snapshots(watch) == ([], [])
+        assert calls == [], "개장 전에는 네이버를 부르지도 않는다"
+        sc.datetime = at(10, (2026, 9, 29))         # 장중
+        sc.fetch_naver_snapshots(watch)
+        assert any("SERVICE_INDEX:KOSPI" in q for q in calls) and any("SERVICE_ITEM" in q for q in calls)
+    finally:
+        sc.datetime, sc.naver_realtime = original_dt, original_rt
+
+
+def test_kospi_daily_prefers_yahoo_over_stale_fdr():
+    import portfolio_core.collectors as col
+
+    original = col.fetch_yahoo_price
+    recent = [{"date": "2026-09-22", "open": 7161.61, "high": 7171.44, "low": 6986.27, "close": 7017.91},
+              {"date": "2026-09-23", "open": 7153.99, "high": 7153.99, "low": 7014.98, "close": 7080.92}]
+    try:
+        col.fetch_yahoo_price = lambda *a, **k: col.CollectedPrice("KOSPI", 7080.92, "KRW", "yf", "2026-09-23", recent)
+        got = col.fetch_index_price("KOSPI")
+        assert got.source == "yf-index" and got.price_date == "2026-09-23" and got.recent == recent
+    finally:
+        col.fetch_yahoo_price = original
+
+
 # --- scope rules (single source shared by validation + API) -----------------
 def test_account_scope():
     assert account_scope("overseas") == "overseas"

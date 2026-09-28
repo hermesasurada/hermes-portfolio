@@ -376,6 +376,16 @@ def fetch_index_price(label: str, history_start: str | None = None) -> Collected
     if not meta:
         return None
     if label == "KOSPI":
+        # 야후 ^KS11을 먼저 쓴다 — 네이버 일봉과 값이 정확히 같다. FDR 'KS11'은 2026-09-17 이후로
+        # 갱신이 멈췄고 그 마지막 행도 장중 값이라(6,724.34 vs 실제 6,715.41) 일봉 복구가 안 됐다.
+        # history_start(백필)는 긴 기간이 필요해 FDR 경로를 유지한다.
+        if not history_start:
+            try:
+                yahoo = fetch_yahoo_price(YAHOO_INDEX_SYMBOL_OVERRIDES["KOSPI"], cache_ticker=label, currency=meta["currency"])
+            except Exception:
+                yahoo = None
+            if yahoo is not None and yahoo.recent and len(yahoo.recent) > 1:
+                return CollectedPrice(label, yahoo.price, meta["currency"], "yf-index", yahoo.price_date, yahoo.recent)
         from FinanceDataReader import DataReader as fdr
 
         try:

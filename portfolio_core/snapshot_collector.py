@@ -259,12 +259,18 @@ def naver_realtime(query: str) -> dict:
 
 
 def fetch_naver_snapshots(watch: dict[str, list[str]]) -> tuple[list[CollectedPrice], list[str]]:
-    ticker_by_code = {kr_ticker_code(ticker): ticker for ticker in watch.get("kr", [])}
     now_kst = datetime.now(KST)
+    # 평일 09시 이전(개장 전)에는 기록하지 않는다. 이 시간의 값은 kr_market_date가 '전 거래일'로
+    # 되감아 저장하는데, 코스피는 08~09시에 네이버가 개장 전 예상지수를 줘서 매일 아침 전날 종가를
+    # 다음 날 예상 시가로 덮어썼다(2026-09-18·21·22 행, 2026-09-28 확인). 개장 전엔 새 체결이 없으니
+    # 전날 종가는 이미 DB에 있고 잃는 것이 없다. NXT 프리마켓 표시는 kr_live_quotes가 따로 맡는다.
+    if now_kst.weekday() < 5 and now_kst.hour < 9:
+        return [], []
+    ticker_by_code = {kr_ticker_code(ticker): ticker for ticker in watch.get("kr", [])}
     wants_kospi = (
         "KOSPI" in watch.get("index", [])
         and now_kst.weekday() < 5
-        and 8 <= now_kst.hour <= 18
+        and 9 <= now_kst.hour <= 18
     )
     if not ticker_by_code and not wants_kospi:
         return [], []
