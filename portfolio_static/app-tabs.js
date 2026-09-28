@@ -175,16 +175,18 @@ function renderDividendTable() {
     const value = String(row.pay_date || "").slice(0, 10);
     return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
   };
+  // 지급일이 오늘보다 앞선 행만 '지난 배당'이다. 오늘 지급분은 오늘 마커 아래(앞으로 올 쪽)에 둔다
+  // (2026-09-29 사용자 지시 — 9/29 지급 QLD가 마커 위에 붙어 있었다). 행 스타일도 같은 기준을 쓴다.
+  const isPastPayment = row => Boolean(payDateValue(row)) && payDateValue(row) < today;
   const dateSort = sortState.dividend?.key === "pay_date";
   const boundaryPaidState = (sortState.dividend?.dir || 1) < 0;
-  const hasPaid = rows.some(row => payDateValue(row) && payDateValue(row) <= today);
-  const hasUpcoming = rows.some(row => payDateValue(row) > today);
+  const hasPaid = rows.some(isPastPayment);
+  const hasUpcoming = rows.some(row => payDateValue(row) >= today);
   const groupedRows = groupedDividendRows(rows);
   if (dateSort && hasPaid && hasUpcoming) {
     const targetIndex = groupedRows.findIndex(item => {
       if (item.kind !== "row") return false;
-      const payDate = payDateValue(item.row);
-      return Boolean(payDate) && (payDate <= today) === boundaryPaidState;
+      return Boolean(payDateValue(item.row)) && isPastPayment(item.row) === boundaryPaidState;
     });
     if (targetIndex >= 0) {
       const target = groupedRows[targetIndex];
@@ -225,7 +227,7 @@ function renderDividendTable() {
     </tr>
   `;
     if (dividendMonthCollapsed(item.monthKey, today)) return "";
-    const paid = Boolean(payDateValue(item.row) && payDateValue(item.row) <= today);
+    const paid = isPastPayment(item.row);
     return `
     <tr class="${paid ? "dividend-paid-row" : "dividend-upcoming-row"}">
       <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
