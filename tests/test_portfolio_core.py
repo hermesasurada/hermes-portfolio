@@ -2264,6 +2264,32 @@ def test_payload_compact_rounds_only_beyond_display_precision():
     assert compact["indexes"]["SP500"]["points"][0]["value"] == 7743.41
 
 
+def test_korean_substitute_holidays_follow_public_holiday_rules():
+    """설날·추석은 '일요일' 또는 다른 공휴일과 겹칠 때만, 그 밖의 공휴일은 토·일·겹침 모두 대체한다."""
+    from datetime import date
+    from portfolio_core.market_calendar import korea_equity_calendar_day, korean_exchange_holidays
+
+    status = lambda y, m, d: korea_equity_calendar_day(date(y, m, d))["status"]  # noqa: E731
+    # 2026 추석 9/24~26(목~토): 토요일은 설·추석 대체 사유가 아니다 → 9/28(월) 정상 개장
+    assert status(2026, 9, 24) == status(2026, 9, 25) == "closed"
+    assert status(2026, 9, 28) == "open"
+    # 설·추석이 일요일과 겹침 → 연휴 다음 첫 평일
+    assert status(2025, 10, 8) == "closed"   # 추석 10/5(일)~7
+    assert status(2027, 2, 9) == "closed"    # 설날 2/6~8, 2/7(일)
+    # 설·추석이 다른 공휴일과 겹침 → 연휴 다음 첫 평일(2028 추석 10/2~4 ∋ 개천절 10/3)
+    assert status(2028, 10, 5) == "closed"
+    # 같은 날 공휴일 둘(어린이날·부처님오신날) → 다음 평일
+    assert status(2025, 5, 6) == "closed"
+    assert "부처님오신날" in korean_exchange_holidays(2025)[date(2025, 5, 5)]
+    # 국경일·부처님오신날·성탄절·제헌절(2027~)은 토요일도 대체
+    for y, m, d in [(2025, 3, 3), (2026, 3, 2), (2026, 5, 25), (2026, 8, 17), (2026, 10, 5),
+                    (2027, 7, 19), (2027, 10, 11), (2027, 12, 27)]:
+        assert status(y, m, d) == "closed", (y, m, d)
+    # 대체 사유가 없는 평일은 열린다
+    for y, m, d in [(2026, 2, 19), (2026, 9, 29), (2026, 10, 2), (2028, 10, 6)]:
+        assert status(y, m, d) == "open", (y, m, d)
+
+
 # --- scope rules (single source shared by validation + API) -----------------
 def test_account_scope():
     assert account_scope("overseas") == "overseas"

@@ -212,36 +212,59 @@ KOREAN_LUNAR_HOLIDAYS: dict[int, dict[str, tuple[date, ...]]] = {
 }
 
 
+# 대체공휴일 규칙(관공서의 공휴일에 관한 규정 제3조).
+# 설날·추석 연휴는 '일요일' 또는 다른 공휴일과 겹칠 때만 연휴 다음 첫 평일로 미룬다 — 토요일은 해당 없다.
+# (2026 추석 9/24~26은 마지막 날이 토요일이라 대체공휴일이 없고 9/28은 정상 개장했다. 예전 코드는
+#  '주말과 겹치면'으로 잘못 두어 9/28을 휴장으로 판정했다.)
+# 어린이날·국경일·부처님오신날·성탄절은 토·일 또는 다른 공휴일과 겹치면 다음 첫 평일로 미룬다.
+KOREAN_LUNAR_BLOCK_HOLIDAYS = {"설날", "추석"}
+KOREAN_WEEKEND_SUBSTITUTE_HOLIDAYS = {"어린이날", "삼일절", "광복절", "개천절", "한글날", "제헌절", "부처님오신날", "성탄절"}
+
+
 def korean_exchange_holidays(year: int) -> dict[date, str]:
     """KRX·NXT 휴장일. 고정 공휴일 + 음력 공휴일 + 대체공휴일 + 연말 폐장일."""
-    holidays: dict[date, str] = {
-        date(year, 1, 1): "신정",
-        date(year, 3, 1): "삼일절",
-        date(year, 5, 5): "어린이날",
-        date(year, 6, 6): "현충일",
-        date(year, 8, 15): "광복절",
-        # 제헌절은 2008년 공휴일에서 빠졌다가 2026년부터 다시 휴장
-        # (실측: 2023~2025-07-17은 정상 거래, 2026-07-17은 국내 시세 0건).
-        **({date(year, 7, 17): "제헌절"} if year >= 2026 else {}),
-        date(year, 10, 3): "개천절",
-        date(year, 10, 9): "한글날",
-        date(year, 12, 25): "성탄절",
-        date(year, 12, 31): "연말 폐장",
-    }
-    for name, days in (KOREAN_LUNAR_HOLIDAYS.get(year) or {}).items():
-        for day in days:
-            holidays[day] = name
+    fixed = [
+        (date(year, 1, 1), "신정"),
+        (date(year, 3, 1), "삼일절"),
+        (date(year, 5, 5), "어린이날"),
+        (date(year, 6, 6), "현충일"),
+        (date(year, 8, 15), "광복절"),
+        (date(year, 10, 3), "개천절"),
+        (date(year, 10, 9), "한글날"),
+        (date(year, 12, 25), "성탄절"),
+    ]
+    # 제헌절은 2008년 공휴일에서 빠졌다가 2026년부터 다시 휴장
+    # (실측: 2023~2025-07-17은 정상 거래, 2026-07-17은 국내 시세 0건).
+    if year >= 2026:
+        fixed.append((date(year, 7, 17), "제헌절"))
+    lunar = KOREAN_LUNAR_HOLIDAYS.get(year) or {}
+    entries = fixed + [(day, name) for name, days in lunar.items() for day in days]
 
-    # 대체공휴일 — 설날·추석·어린이날은 주말과 겹치면 다음 평일로, 그 밖의
-    # 국경일은 일요일과 겹칠 때만 순연한다(공휴일법 기준 근사).
-    substitute_all = {"설날", "추석", "어린이날", "삼일절", "광복절", "개천절", "한글날", "부처님오신날"}
-    for holiday, reason in sorted(tuple(holidays.items())):
-        if reason not in substitute_all or holiday.weekday() < 5:
-            continue
-        moved = holiday + timedelta(days=1)
+    # 같은 날 공휴일이 둘 이상일 수 있다(2025-05-05 어린이날·부처님오신날) — 이름을 모두 모은다.
+    names_by_day: dict[date, list[str]] = {}
+    for day, name in entries:
+        names_by_day.setdefault(day, []).append(name)
+
+    # 대체공휴일이 필요한 자리: (이 날 다음부터 찾기 시작, 사유)
+    needs: list[tuple[date, str]] = []
+    for day, names in sorted(names_by_day.items()):
+        overlapped = len(names) > 1
+        for name in names:
+            if name in KOREAN_LUNAR_BLOCK_HOLIDAYS:
+                if day.weekday() == 6 or overlapped:
+                    needs.append((max(lunar[name]), name))   # 연휴가 끝난 다음 날부터
+                    break
+            elif name in KOREAN_WEEKEND_SUBSTITUTE_HOLIDAYS and (day.weekday() >= 5 or overlapped):
+                needs.append((day, name))
+                break
+
+    holidays: dict[date, str] = {day: "·".join(names) for day, names in names_by_day.items()}
+    for after, reason in sorted(needs):
+        moved = after + timedelta(days=1)
         while moved.weekday() >= 5 or moved in holidays:
             moved += timedelta(days=1)
         holidays[moved] = f"{reason} 대체공휴일"
+    holidays.setdefault(date(year, 12, 31), "연말 폐장")
     return holidays
 
 
