@@ -18,7 +18,8 @@ let statsFetchedTickers = new Set();
 let dividendData = null;
 let dividendLoadKey = "";
 let dividendInFlight = null;
-let collapsedDividendMonths = new Set();
+// 배당 월 접힘 — 사용자가 직접 펼치거나 접은 달만 기억한다(키 → 접힘 여부). 나머지는 dividendMonthCollapsed의 기본 규칙.
+let dividendMonthOverrides = new Map();
 let chartTicker = null;
 let chartLoadInFlight = null;
 let chartPayload = null;

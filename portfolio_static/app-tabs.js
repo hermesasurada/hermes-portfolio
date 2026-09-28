@@ -212,7 +212,7 @@ function renderDividendTable() {
         </td>
       </tr>
     `;
-    const collapsed = item.kind === "month" && collapsedDividendMonths.has(item.key);
+    const collapsed = item.kind === "month" && dividendMonthCollapsed(item.key, today);
     if (item.kind === "month") return `
     <tr class="dividend-month-row ${collapsed ? "collapsed" : ""}" data-month="${esc(item.key)}">
       <td colspan="15">
@@ -224,7 +224,7 @@ function renderDividendTable() {
       </td>
     </tr>
   `;
-    if (collapsedDividendMonths.has(item.monthKey)) return "";
+    if (dividendMonthCollapsed(item.monthKey, today)) return "";
     const paid = Boolean(payDateValue(item.row) && payDateValue(item.row) <= today);
     return `
     <tr class="${paid ? "dividend-paid-row" : "dividend-upcoming-row"}">
@@ -251,8 +251,7 @@ function renderDividendTable() {
       if (event.target.closest("a")) return;
       const key = row.dataset.month;
       if (!key) return;
-      if (collapsedDividendMonths.has(key)) collapsedDividendMonths.delete(key);
-      else collapsedDividendMonths.add(key);
+      dividendMonthOverrides.set(key, !dividendMonthCollapsed(key, today));
       renderDividendTable();
     });
   });
@@ -497,6 +496,21 @@ function dividendDateText(dateText) {
   const text = String(dateText);
   if (!/^\d{4}-\d{2}-\d{2}/.test(text)) return "-";
   return text.slice(5, 10).replace("-", "/");
+}
+
+// 당월을 포함한 3개월만 기본으로 펼치고 그 뒤 달(날짜 미정 포함)은 접는다(2026-09-29 사용자 지시).
+// 배당 탭은 이번 달부터 1년치를 보여 줘서 전부 펼치면 가까운 지급 일정이 긴 목록에 묻혔다.
+// 사용자가 직접 펼치거나 접은 달은 dividendMonthOverrides가 우선한다(새로고침 전까지 유지).
+const DIVIDEND_OPEN_MONTHS = 3;
+function dividendMonthOpenByDefault(key, today = todayLocal()) {
+  if (!/^\d{4}-\d{2}$/.test(String(key))) return false;
+  const [year, month] = String(today).split("-").map(Number);
+  const [keyYear, keyMonth] = String(key).split("-").map(Number);
+  const offset = (keyYear - year) * 12 + (keyMonth - month);
+  return offset >= 0 && offset < DIVIDEND_OPEN_MONTHS;
+}
+function dividendMonthCollapsed(key, today = todayLocal()) {
+  return dividendMonthOverrides.has(key) ? dividendMonthOverrides.get(key) : !dividendMonthOpenByDefault(key, today);
 }
 
 function dividendMonthKey(row) {
