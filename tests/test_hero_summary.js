@@ -115,4 +115,15 @@ assert.match(carousel, /"dragstart", event => event\.preventDefault\(\)/);
 assert.match(css, /a\.hero-index-item \{[^}]*-webkit-user-drag: none/);
 // 스와이프 직후의 click은 삼켜 면 전환과 차트 이동이 겹치지 않게 한다.
 assert.match(carousel, /if \(!swiped\) return;/);
+// 환율 칸은 등락률이 아니라 전일 대비 금액(원). 등락률은 툴팁에.
+context.data = {fx: {USD: 1354.45, EUR: 1537.1, JPY: 8.606}};
+const fxMeta = {USDKRW: {change: -5.11005, change_pct: -0.3758}, EURKRW: {change: 7.88, change_pct: 0.51}, JPYKRW: {change: 0, change_pct: 0}};
+context.findTickerMeta = ticker => fxMeta[ticker] || { current_price: 6000.12, change_pct: 1.23 };
+vm.runInContext('renderHeroSummaryPage()', context);
+assert.deepEqual(fxItems.map(item => item.change.textContent), ['▼ 5.11', '▲ 7.88', '→ 0']);
+assert.deepEqual(fxItems.map(item => item.change.className.split(' ').pop()), ['down', 'up', 'flat']);
+assert.match(fxItems[0].title, /1 USD 기준 원화 · 전일 대비 −0\.38%/);
+assert.doesNotMatch(fxItems.map(item => item.change.textContent).join(''), /%/, '환율 칸에 등락률이 남았다');
+// 지수 칸은 그대로 등락률
+assert.match(change.textContent, /%$/);
 console.log('Hero sizing, page dots, chart links and swipe-vs-click checks passed.');

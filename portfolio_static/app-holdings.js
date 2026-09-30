@@ -646,16 +646,20 @@ function renderHeroSummaryPage() {
     const rawPrice = data?.fx?.[currency];
     const price = rawPrice == null ? NaN : Number(rawPrice);
     const meta = findTickerMeta(`${currency}KRW`);
+    // 환율 칸은 등락률이 아니라 전일 대비 '원' 금액으로 보인다(2026-09-30 사용자 지시 — 환율은
+    // 몇 원 움직였는지가 읽기 쉽다). 등락률은 칸 툴팁에 함께 둔다. 지수 칸은 등락률 그대로.
+    const changeAmount = meta?.change == null ? NaN : Number(meta.change);
     const changePct = meta?.change_pct == null ? NaN : Number(meta.change_pct);
     const valueEl = item.querySelector(".hero-index-value");
     const changeEl = item.querySelector(".hero-index-change");
     if (valueEl) valueEl.textContent = Number.isFinite(price) && price > 0 ? fmt2.format(price) : "조회불가";
-    item.title = `1 ${currency} 기준 원화${data?.fx_updated ? ` · ${data.fx_updated} 갱신` : ""}`;
+    const pctNote = Number.isFinite(changePct) ? ` · 전일 대비 ${changePct > 0 ? "+" : changePct < 0 ? "−" : ""}${fmt2.format(Math.abs(changePct))}%` : "";
+    item.title = `1 ${currency} 기준 원화${pctNote}${data?.fx_updated ? ` · ${data.fx_updated} 갱신` : ""}`;
     if (!changeEl) return;
-    const { cls, arrow } = changeDirection(changePct);
+    const { cls, arrow } = changeDirection(changeAmount);
     changeEl.className = `hero-index-change pct-chip ${cls}`;
-    changeEl.textContent = Number.isFinite(price) && price > 0 && Number.isFinite(changePct)
-      ? `${arrow} ${fmt2.format(Math.abs(changePct))}%` : "-";
+    changeEl.textContent = Number.isFinite(price) && price > 0 && Number.isFinite(changeAmount)
+      ? `${arrow} ${fmt2.format(Math.abs(changeAmount))}` : "-";
   });
   syncHeroLayout();
 }
