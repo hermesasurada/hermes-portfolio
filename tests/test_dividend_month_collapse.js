@@ -15,6 +15,8 @@ assert.deepEqual(['2026-11', '2026-12', '2027-01', '2027-02'].map(k => open(k, '
 assert.equal(open('2026-08', today), false);
 assert.equal(open('unknown', today), false);
 
+// 월초(1~5일)엔 서버가 전월도 보내 준다 — 전월은 접힘, 당월부터 3개월 펼침
+assert.deepEqual(['2026-09', '2026-10', '2026-11', '2026-12', '2027-01'].map(k => open(k, '2026-10-01')), [false, true, true, true, false]);
 // 사용자가 누른 달은 기본 규칙보다 우선한다
 h.evaluate(ctx, 'dividendMonthOverrides = new Map([["2027-01", false], ["2026-10", true]])');
 assert.equal(collapsed('2027-01', today), false, '접힌 달을 펼쳤다');

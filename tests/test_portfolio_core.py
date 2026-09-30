@@ -2387,6 +2387,17 @@ def test_total_return_performance_reinvests_dividends_and_flags_short_history():
     assert out3["values"]["five_year"] == 0.0 and out3["quality"]["five_year"] == "TR"
 
 
+def test_dividend_list_includes_previous_month_during_first_five_days():
+    from datetime import date
+    from portfolio_core.dividends import dividend_list_start
+
+    assert dividend_list_start(date(2026, 10, 1)) == date(2026, 9, 1)
+    assert dividend_list_start(date(2026, 10, 5)) == date(2026, 9, 1)
+    assert dividend_list_start(date(2026, 10, 6)) == date(2026, 10, 1)
+    assert dividend_list_start(date(2027, 1, 3)) == date(2026, 12, 1)    # 해 넘김
+    assert dividend_list_start(date(2026, 3, 1)) == date(2026, 2, 1)
+
+
 # --- scope rules (single source shared by validation + API) -----------------
 def test_account_scope():
     assert account_scope("overseas") == "overseas"

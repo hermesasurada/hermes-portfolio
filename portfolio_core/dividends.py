@@ -1034,10 +1034,23 @@ def refresh_dividend_growth_cache(tickers: list[str]) -> int:
     return sum(value is not None for value, _ticker in values)
 
 
+# 매달 1~5일에는 전월 배당도 목록에 넣는다(2026-10-01 사용자 지시) — 월초엔 지난달 말 지급분을
+# 아직 확인하는 경우가 많다. 화면은 당월 포함 3개월만 펼치므로 전월은 접힌 채로 나온다.
+DIVIDEND_PREVIOUS_MONTH_DAYS = 5
+
+
+def dividend_list_start(today: date) -> date:
+    """배당 목록 시작일: 이번 달 1일, 단 1~DIVIDEND_PREVIOUS_MONTH_DAYS일에는 전월 1일."""
+    first = today.replace(day=1)
+    if today.day <= DIVIDEND_PREVIOUS_MONTH_DAYS:
+        return (first - timedelta(days=1)).replace(day=1)
+    return first
+
+
 def load_dividends(account_ids: list[str] | None = None) -> dict:
     cleaned_account_ids = clean_account_ids(account_ids)
 
-    start = _today().replace(day=1)   # 이번 달 1일부터
+    start = dividend_list_start(_today())
     end = _today() + timedelta(days=DIVIDEND_LOOKAHEAD_DAYS)
     raw_start = start - timedelta(days=140)  # 지급일 없는 일본 배당락 이벤트 후보 포함
 
