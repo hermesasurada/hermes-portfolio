@@ -437,6 +437,13 @@ document.getElementById("fxAdjustedToggle").addEventListener("change", () => {
   syncFilterToggleControls();
   render();
 });
+// '배당 포함' — 기간 수익률(1주~10년)을 배당 재투자 기준으로. 기본값 미체크, 이 브라우저에 저장.
+document.getElementById("dividendReturnToggle").checked = storageGet(detailStorage.dividendReturns) === "true";
+document.getElementById("dividendReturnToggle").addEventListener("change", () => {
+  storageSet(detailStorage.dividendReturns, String(document.getElementById("dividendReturnToggle").checked));
+  syncFilterToggleControls();
+  render();
+});
 // '보유종목만' — 기본값 미체크
 document.getElementById("interestHeldToggle").checked = storageGet(detailStorage.interestHeldOnly) === "true";
 document.getElementById("interestHeldToggle").addEventListener("change", () => {

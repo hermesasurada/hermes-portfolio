@@ -131,6 +131,19 @@ function changePercentParts(pct) {
   if (!Number.isFinite(pct)) return null;
   return { ...changeDirection(pct), text: `${fmt2.format(Math.abs(pct))}%` };
 }
+// 기간 수익률 열(perf_*) ↔ 서버 기간 키. '배당 포함' 품질 표시에 쓴다.
+const PERF_COLUMN_PERIODS = {
+  perf_1w: "one_week", perf_1m: "one_month", perf_3m: "three_month", perf_6m: "six_month", perf_ytd: "ytd",
+  perf_1y: "one_year", perf_3y: "three_year", perf_5y: "five_year", perf_10y: "ten_year",
+};
+const PERF_PERIOD_KEYS = Object.values(PERF_COLUMN_PERIODS);
+const PERF_PARTIAL_TITLE = "배당 일부만 반영 — 수집된 배당 이력이 이 기간을 다 덮지 못해 실제보다 낮을 수 있음";
+// 기간 수익률 칸. '배당 포함'에서 배당 이력이 기간을 덮지 못한 값(품질 P)은 흐리게 하고 이유를 툴팁으로.
+function perfText(row, key, digits) {
+  const text = signedPercentText(row?.[key], digits);
+  if (row?.perf_quality?.[key] !== "P" || text === "-") return text;
+  return `<span class="perf-partial" title="${esc(PERF_PARTIAL_TITLE)}">${text}</span>`;
+}
 function changePercentText(pct, chip = false) {
   const parts = changePercentParts(pct);
   if (!parts) return "-";

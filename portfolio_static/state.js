@@ -8,6 +8,7 @@ const usPriceStorage = {
 const detailStorage = {
   visibleRows: "portfolio.detail.visibleRows",
   fxAdjusted: "portfolio.detail.fxAdjusted",
+  dividendReturns: "portfolio.detail.dividendReturns",   // 기간 수익률 배당 포함(2026-09-30)
   interestHeldOnly: "portfolio.detail.interestHeldOnly",
   interestAssetType: "portfolio.detail.interestAssetType",
   currencyFilter: "portfolio.detail.currencyFilter",

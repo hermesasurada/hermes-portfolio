@@ -6811,3 +6811,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .schedule-list-note { grid-column: 2 / -1; }
   .schedule-more { height: 24px !important; }
 }
+
+/* '배당 포함' 기간 수익률 중 배당 이력이 기간을 다 덮지 못한 값 — 흐리게, 이유는 툴팁(perfText). */
+.perf-partial { opacity: .5; cursor: help; }

@@ -2361,6 +2361,32 @@ def test_collect_quotes_does_not_record_intentionally_skipped_runs():
         cq.collector_lock = original_lock
 
 
+def test_total_return_performance_reinvests_dividends_and_flags_short_history():
+    from portfolio_core.technical_stats import total_return_performance
+
+    days = ["2025-09-29", "2025-12-30", "2026-03-30", "2026-06-29", "2026-09-28", "2026-09-29"]
+    prices = [{"date": d, "close": 100.0} for d in days]            # 가격은 제자리
+    divs = [{"ex_date": "2026-03-30", "record_date": None, "pay_date": None, "declaration_date": None,
+             "amount": 2.0, "currency": "USD", "source": "polygon"},
+            {"ex_date": "2026-09-28", "record_date": None, "pay_date": None, "declaration_date": None,
+             "amount": 2.0, "currency": "USD", "source": "polygon"}]
+    out = total_return_performance(prices, divs, [], "USD", None, dividend_yield=4.0)
+    v, q = out["values"], out["quality"]
+    # 가격 0%인데 배당 2회(2%씩) 재투자 → 1년 1.02² − 1 = 4.04%
+    assert abs(v["one_year"] - 4.04) < 1e-9, v["one_year"]
+    assert abs(v["one_week"] - 2.0) < 1e-9   # 9/28 배당락 한 번
+    assert q["one_year"] == "TR"
+    # 5년: 가격 이력이 없어 값 없음(가격 수익률과 같은 규칙)
+    assert v["five_year"] is None
+    # 배당을 주는데 배당 이력이 기간 시작보다 400일 넘게 늦게 시작하면 '일부 반영'
+    long_prices = [{"date": "2021-09-29", "close": 100.0}] + prices
+    out2 = total_return_performance(long_prices, divs, [], "USD", None, dividend_yield=4.0)
+    assert out2["quality"]["five_year"] == "P" and out2["quality"]["one_year"] == "TR"
+    # 배당이 없는 종목은 가격 수익률과 같고 품질도 TR
+    out3 = total_return_performance(long_prices, [], [], "USD", None, dividend_yield=None)
+    assert out3["values"]["five_year"] == 0.0 and out3["quality"]["five_year"] == "TR"
+
+
 # --- scope rules (single source shared by validation + API) -----------------
 def test_account_scope():
     assert account_scope("overseas") == "overseas"

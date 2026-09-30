@@ -88,6 +88,9 @@ function krwRate(row) {
     ? valueKrw / value
     : Number(data.fx?.[row.currency] || 1);
 }
+function dividendReturnsEnabled() {
+  return document.getElementById("dividendReturnToggle")?.checked || false;
+}
 function fxAdjustedEnabled() {
   return document.getElementById("fxAdjustedToggle")?.checked || false;
 }
@@ -959,6 +962,7 @@ function sortRows(rows, tab = activeDetailTab) {
 function syncFilterToggleControls() {
   [
     ["fxAdjustedToggle", "fxAdjustedControl"],
+    ["dividendReturnToggle", "dividendReturnControl"],
     ["interestHeldToggle", "interestHeldControl"],
     ["performanceDetailToggle", "performanceDetailControl"]
   ].forEach(([toggleId, controlId]) => {
@@ -1012,6 +1016,11 @@ function syncDetailTabs() {
   document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart || showingInterest);
   // 통계 지표 도움말 버튼은 통합 세부내역에서 노출
   document.getElementById("fxAdjustedControl")?.classList.toggle("hidden", showingChart || showingFxInterest);
+  // 기간 수익률 열이 있는 표(세부내역·관심목록)에서만 — 배당 탭·차트·환율 그룹엔 해당 열이 없다.
+  document.getElementById("dividendReturnControl")?.classList.toggle(
+    "hidden",
+    showingChart || showingFxInterest || (!showingInterest && activeDetailTab !== "detail")
+  );
   document.getElementById("nameFilterControl")?.classList.toggle(
     "hidden",
     showingChart || (!showingInterest && activeDetailTab !== "detail")
@@ -1289,15 +1298,15 @@ function renderTable() {
       <td class="group-start">${peText(r.trailing_pe)}</td>
       <td>${peText(r.forward_pe)}</td>
       <td>${peText(r.price_to_book)}</td>
-      <td class="group-start">${signedPercentText(r.perf_1w, 1)}</td>
-      <td>${signedPercentText(r.perf_1m, 1)}</td>
-      <td>${signedPercentText(r.perf_3m, 0)}</td>
-      <td>${signedPercentText(r.perf_6m, 0)}</td>
-      <td>${signedPercentText(r.perf_ytd, 0)}</td>
-      <td>${signedPercentText(r.perf_1y, 0)}</td>
-      <td>${signedPercentText(r.perf_3y, 1)}</td>
-      <td>${signedPercentText(r.perf_5y, 1)}</td>
-      <td>${signedPercentText(r.perf_10y, 1)}</td>
+      <td class="group-start">${perfText(r, "perf_1w", 1)}</td>
+      <td>${perfText(r, "perf_1m", 1)}</td>
+      <td>${perfText(r, "perf_3m", 0)}</td>
+      <td>${perfText(r, "perf_6m", 0)}</td>
+      <td>${perfText(r, "perf_ytd", 0)}</td>
+      <td>${perfText(r, "perf_1y", 0)}</td>
+      <td>${perfText(r, "perf_3y", 1)}</td>
+      <td>${perfText(r, "perf_5y", 1)}</td>
+      <td>${perfText(r, "perf_10y", 1)}</td>
       <td class="group-start">${marketCapMarkup(r)}</td>
       <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
       <td>${r.is_watchlist ? "-" : `<button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button>`}</td>

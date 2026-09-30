@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 from datetime import date, datetime, timedelta
 from typing import Callable, Iterable
 
@@ -23,6 +23,7 @@ from .indicators import (
     resample_last,
     rsi_series,
     rsi_value,
+    shift_months,
 )
 from .paths import KST
 from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
@@ -169,6 +170,101 @@ def _annualized_mean_and_vol(
     variance = sum((value - mean) ** 2 for value in window) / count
     vol = (variance ** 0.5) * (252 ** 0.5) * 100
     return mean_ann, excess, vol
+
+
+# 기간 수익률(1주~10년)의 배당 포함판 — 표의 '배당 포함' 토글이 쓴다(2026-09-30 사용자 지시).
+# 가격 수익률(recent_performance)과 같은 기준일·같은 현지 통화로, 배당락일 뒤 첫 거래일에 분할
+# 보정한 배당을 더해 일간 수익률을 복리로 곱한다(배당 재투자 가정). 배당 매핑 규칙은
+# total_return_periods와 같고 원화 환산만 하지 않는다 — 표의 가격 수익률도 현지 통화다.
+# 품질 'P' = 실제보다 낮을 수 있다: 배당을 주는 종목인데 수집된 배당 이력이 기간 시작까지 닿지
+# 않거나(한국 종목은 길어야 5년 남짓), 기간 안 배당을 가격일에 매핑하지 못했을 때.
+PERFORMANCE_KEYS = ("one_week", "one_month", "three_month", "six_month", "ytd", "one_year", "three_year", "five_year", "ten_year")
+DIVIDEND_HISTORY_GAP_DAYS = 400  # 첫 배당이 기간 시작보다 이만큼 늦으면 이력이 덜 모인 것으로 본다
+
+
+def _performance_targets(latest: date) -> dict[str, date]:
+    """recent_performance와 같은 기준일."""
+    return {
+        "one_week": latest - timedelta(days=7),
+        "one_month": shift_months(latest, -1),
+        "three_month": shift_months(latest, -3),
+        "six_month": shift_months(latest, -6),
+        "ytd": date(latest.year, 1, 1),
+        "one_year": shift_months(latest, -12),
+        "three_year": shift_months(latest, -36),
+        "five_year": shift_months(latest, -60),
+        "ten_year": shift_months(latest, -120),
+    }
+
+
+def total_return_performance(
+    price_rows: list,
+    dividend_rows: list,
+    splits: list[dict],
+    currency: str,
+    fx_lookup: Callable | None = None,
+    dividend_yield: float | None = None,
+) -> dict[str, dict]:
+    """{'values': {기간: 누적 %}, 'quality': {기간: 'TR'|'P'}} — 현지 통화 배당 포함 수익률."""
+    values: dict[str, float | None] = {key: None for key in PERFORMANCE_KEYS}
+    quality: dict[str, str | None] = {key: None for key in PERFORMANCE_KEYS}
+    if len(price_rows) < 2:
+        return {"values": values, "quality": quality}
+    dates = [row["date"] for row in price_rows]
+    closes = [float(row["close"]) for row in price_rows]
+    last_price_date = parse_iso_date(dates[-1])
+
+    dividend_by_index: dict[int, float] = {}
+    unmapped_dates: list[str] = []
+    first_dividend: date | None = None
+    for event in dedupe_dividend_event_rows(dividend_rows, splits):
+        event_date = parse_iso_date(event["ex_date"]) or entitlement_date(event)
+        amount = positive_float(event["amount"])
+        if event_date is None or not amount:
+            continue
+        if last_price_date is not None and event_date > last_price_date:
+            continue  # 아직 대응 가격이 없는 미래 배당락
+        first_dividend = event_date if first_dividend is None else min(first_dividend, event_date)
+        adjusted, _factor = split_adjusted_amount(amount, event_date, event["source"], splits)
+        event_currency = str(event["currency"] or "").upper() or currency
+        if event_currency != currency:
+            ratio = fx_lookup(event_currency, currency, event_date) if fx_lookup else None
+            if ratio is None:
+                unmapped_dates.append(event_date.isoformat())
+                continue
+            adjusted *= ratio
+        index = bisect_left(dates, event_date.isoformat())
+        mapped_date = parse_iso_date(dates[index]) if index < len(dates) else None
+        if index == 0 or mapped_date is None or (mapped_date - event_date).days > DIVIDEND_MAP_MAX_DAYS:
+            unmapped_dates.append(event_date.isoformat())
+            continue
+        dividend_by_index[index] = dividend_by_index.get(index, 0.0) + adjusted
+
+    # growth[k] = 0일부터 k일까지 배당 재투자 누적 배수 — 구간 수익률은 growth[끝] / growth[시작].
+    growth = [1.0]
+    for index in range(1, len(closes)):
+        previous = closes[index - 1]
+        step = (closes[index] + dividend_by_index.get(index, 0.0)) / previous if previous > 0 else 1.0
+        growth.append(growth[-1] * step)
+
+    pays_dividends = first_dividend is not None or (dividend_yield or 0) > 0.5
+    first_price_date = parse_iso_date(dates[0])
+    for key, target in _performance_targets(last_price_date).items():
+        start = bisect_right(dates, target.isoformat()) - 1
+        if start < 0:
+            # recent_performance와 같은 규칙: 첫 거래일이 기준일 뒤 7일 안이면 그 날을 기준으로
+            if first_price_date is None or not 0 <= (first_price_date - target).days <= 7:
+                continue
+            start = 0
+        if growth[start] <= 0:
+            continue
+        values[key] = (growth[-1] / growth[start] - 1) * 100
+        partial = pays_dividends and (
+            first_dividend is None or (first_dividend - target).days > DIVIDEND_HISTORY_GAP_DAYS
+        )
+        partial = partial or any(dates[start] <= day <= dates[-1] for day in unmapped_dates)
+        quality[key] = "P" if partial else "TR"
+    return {"values": values, "quality": quality}
 
 
 def total_return_periods(
@@ -513,6 +609,16 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
             payload["beta_benchmark"] = adj_benchmark
             payload["beta_adj_benchmark"] = adj_benchmark   # 예전 키 유지
             payload["asset_class"] = score_asset_kind(ticker, name_by_ticker.get(ticker) or "")
+            tr_performance = total_return_performance(
+                price_rows,
+                dividend_rows_by_ticker.get(ticker, []),
+                splits_by_ticker.get(ticker, []),
+                currency_by_ticker.get(ticker) or ticker_currency(ticker),
+                fx_lookup,
+                yield_by_ticker.get(ticker),
+            )
+            payload["performance_tr"] = tr_performance["values"]
+            payload["performance_tr_quality"] = tr_performance["quality"]
             payload["risk_reward"] = total_return_periods(
                 price_rows,
                 dividend_rows_by_ticker.get(ticker, []),

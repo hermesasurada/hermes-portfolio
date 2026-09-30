@@ -3,7 +3,13 @@ function statsRows(rows) {
     const stats = statsData[row.ticker] || {};
     const rsi = stats.rsi || {};
     const bb = stats.bollinger_pband || {};
-    const perf = stats.performance || {};
+    // '배당 포함'이 켜져 있으면 배당 재투자 수익률(서버 performance_tr)을 쓴다. 정렬도 이 값으로 된다.
+    // 아직 계산되지 않은 종목은 가격 수익률로 두되 전 기간을 '일부 반영(P)'으로 표시한다.
+    const includeDividends = dividendReturnsEnabled();
+    const hasTr = Boolean(stats.performance_tr);
+    const perf = (includeDividends && hasTr ? stats.performance_tr : stats.performance) || {};
+    const perfQuality = !includeDividends ? {} : hasTr ? (stats.performance_tr_quality || {})
+      : Object.fromEntries(PERF_PERIOD_KEYS.map(key => [key, "P"]));
     const isEtf = (row.assetClass || row.asset_class) === "etf";
     const isIndex = (row.assetClass || row.asset_class) === "index";
     const hideFundamentals = isEtf || isIndex;
@@ -65,7 +71,8 @@ function statsRows(rows) {
       perf_1y: perf.one_year,
       perf_3y: priceReturnCagr(perf.three_year, 3),
       perf_5y: priceReturnCagr(perf.five_year, 5),
-      perf_10y: priceReturnCagr(perf.ten_year, 10)
+      perf_10y: priceReturnCagr(perf.ten_year, 10),
+      perf_quality: Object.fromEntries(Object.entries(PERF_COLUMN_PERIODS).map(([column, period]) => [column, perfQuality[period] || null]))
     };
   });
 }
