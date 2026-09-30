@@ -45,11 +45,15 @@ def main() -> int:
         for item in fetched:
             row_count += save_daily_prices(item.ticker, item.recent, item.source)
             cache_entries.append((item.ticker, item.price, item.currency, item.source))
-        update_collector_run(
-            "price",
-            len(cache_entries),
-            {"categories": categories, "errors": len(errors)},
-        )
+        # 받을 것도 실패한 것도 없으면(개장 전 한국 수집처럼 일부러 건너뛴 실행) 기록하지 않는다.
+        # 'price' 행은 한국·해외·코인 수집기가 번갈아 덮어써서, 건너뛴 실행이 0건으로 덮으면
+        # 08:45 점검이 '가격 수집 결과 0건'으로 거짓 경보를 냈다(2026-09-30). 실패는 errors로 남는다.
+        if cache_entries or errors:
+            update_collector_run(
+                "price",
+                len(cache_entries),
+                {"categories": categories, "errors": len(errors)},
+            )
 
         if not args.skip_technicals and collector_run_due(technical_run_name, TECHNICAL_REFRESH_SECONDS):
             watch = load_watch(categories=categories, tickers=args.ticker)

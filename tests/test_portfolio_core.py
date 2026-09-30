@@ -2333,6 +2333,34 @@ def test_kospi_daily_prefers_yahoo_over_stale_fdr():
         col.fetch_yahoo_price = original
 
 
+def test_collect_quotes_does_not_record_intentionally_skipped_runs():
+    """개장 전 한국 수집처럼 받을 것도 실패도 없는 실행은 공유 'price' 기록을 0건으로 덮지 않는다."""
+    import sys as _sys
+    import collect_quotes as cq
+
+    recorded = []
+    originals = (cq.collect_snapshots, cq.update_collector_run, cq.initialize_schema, _sys.argv)
+
+    class _Lock:
+        def __enter__(self): return True
+        def __exit__(self, *a): return False
+
+    original_lock = cq.collector_lock
+    try:
+        cq.collector_lock = lambda scope: _Lock()
+        cq.initialize_schema = lambda: None
+        cq.update_collector_run = lambda name, count, meta=None: recorded.append((name, count))
+        _sys.argv = ["collect_quotes.py", "--category", "kr", "--skip-technicals"]
+        cq.collect_snapshots = lambda categories, tickers: ([], [])            # 개장 전: 건너뜀
+        assert cq.main() == 0 and recorded == []
+        cq.collect_snapshots = lambda categories, tickers: ([], ["005930.KS"])  # 실패는 기록한다
+        cq.main()
+        assert recorded == [("price", 0)]
+    finally:
+        cq.collect_snapshots, cq.update_collector_run, cq.initialize_schema, _sys.argv = originals
+        cq.collector_lock = original_lock
+
+
 # --- scope rules (single source shared by validation + API) -----------------
 def test_account_scope():
     assert account_scope("overseas") == "overseas"
