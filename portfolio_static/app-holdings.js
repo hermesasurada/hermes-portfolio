@@ -619,6 +619,8 @@ function applyHeroPageVisibility() {
   });
 }
 
+const HERO_FX_UNITS = { JPY: 100 };   // 전광판 환율 표시 단위(기본 1) — 엔화는 100엔 관례
+
 function renderHeroSummaryPage() {
   if (!document.getElementById("heroPortfolioPage") || !document.getElementById("heroIndexPage")) return;
   applyHeroPageVisibility();
@@ -643,18 +645,21 @@ function renderHeroSummaryPage() {
   });
   document.querySelectorAll("[data-hero-fx]").forEach(item => {
     const currency = item.dataset.heroFx;
+    // 엔화는 100엔 기준으로 보인다(2026-09-30 사용자 지시 — 1엔 기준이면 등락이 ▼ 0.03처럼 너무 작다).
+    // 값·등락 금액 모두 같은 배율. 차트와 데이터는 1엔 기준 그대로다.
+    const unit = HERO_FX_UNITS[currency] || 1;
     const rawPrice = data?.fx?.[currency];
-    const price = rawPrice == null ? NaN : Number(rawPrice);
+    const price = rawPrice == null ? NaN : Number(rawPrice) * unit;
     const meta = findTickerMeta(`${currency}KRW`);
     // 환율 칸은 등락률이 아니라 전일 대비 '원' 금액으로 보인다(2026-09-30 사용자 지시 — 환율은
     // 몇 원 움직였는지가 읽기 쉽다). 등락률은 칸 툴팁에 함께 둔다. 지수 칸은 등락률 그대로.
-    const changeAmount = meta?.change == null ? NaN : Number(meta.change);
+    const changeAmount = meta?.change == null ? NaN : Number(meta.change) * unit;
     const changePct = meta?.change_pct == null ? NaN : Number(meta.change_pct);
     const valueEl = item.querySelector(".hero-index-value");
     const changeEl = item.querySelector(".hero-index-change");
     if (valueEl) valueEl.textContent = Number.isFinite(price) && price > 0 ? fmt2.format(price) : "조회불가";
     const pctNote = Number.isFinite(changePct) ? ` · 전일 대비 ${changePct > 0 ? "+" : changePct < 0 ? "−" : ""}${fmt2.format(Math.abs(changePct))}%` : "";
-    item.title = `1 ${currency} 기준 원화${pctNote}${data?.fx_updated ? ` · ${data.fx_updated} 갱신` : ""}`;
+    item.title = `${unit} ${currency} 기준 원화${pctNote}${data?.fx_updated ? ` · ${data.fx_updated} 갱신` : ""}`;
     if (!changeEl) return;
     const { cls, arrow } = changeDirection(changeAmount);
     changeEl.className = `hero-index-change pct-chip ${cls}`;

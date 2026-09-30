@@ -65,8 +65,8 @@ assert.equal(ids.heroFxPage.classList.hidden, false);
 assert.equal(ids.heroIndexPage.inert, true);
 assert.equal(ids.heroPortfolioPage.inert, true);
 assert.equal(ids.heroNext.attrs['aria-label'], '계좌 요약 보기');
-assert.deepEqual(fxItems.map(item => item.value.textContent), ['1,346.12','1,562.34','8.59']);
-assert.match(fxItems[2].title, /1 JPY 기준 원화/);
+assert.deepEqual(fxItems.map(item => item.value.textContent), ['1,346.12','1,562.34','859']);  // 엔화는 100엔 기준
+assert.match(fxItems[2].title, /100 JPY 기준 원화/);
 context.toggleHeroSummaryPage();
 assert.equal(savedPage, 'portfolio');
 assert.equal(ids.heroFxPage.inert, true);
@@ -117,11 +117,12 @@ assert.match(css, /a\.hero-index-item \{[^}]*-webkit-user-drag: none/);
 assert.match(carousel, /if \(!swiped\) return;/);
 // 환율 칸은 등락률이 아니라 전일 대비 금액(원). 등락률은 툴팁에.
 context.data = {fx: {USD: 1354.45, EUR: 1537.1, JPY: 8.606}};
-const fxMeta = {USDKRW: {change: -5.11005, change_pct: -0.3758}, EURKRW: {change: 7.88, change_pct: 0.51}, JPYKRW: {change: 0, change_pct: 0}};
+const fxMeta = {USDKRW: {change: -5.11005, change_pct: -0.3758}, EURKRW: {change: 7.88, change_pct: 0.51}, JPYKRW: {change: -0.028567, change_pct: -0.33}};
 context.findTickerMeta = ticker => fxMeta[ticker] || { current_price: 6000.12, change_pct: 1.23 };
 vm.runInContext('renderHeroSummaryPage()', context);
-assert.deepEqual(fxItems.map(item => item.change.textContent), ['▼ 5.11', '▲ 7.88', '→ 0']);
-assert.deepEqual(fxItems.map(item => item.change.className.split(' ').pop()), ['down', 'up', 'flat']);
+assert.deepEqual(fxItems.map(item => item.change.textContent), ['▼ 5.11', '▲ 7.88', '▼ 2.86']);  // 엔화 등락도 100배
+assert.deepEqual(fxItems.map(item => item.change.className.split(' ').pop()), ['down', 'up', 'down']);
+assert.equal(fxItems[2].value.textContent, '860.6');
 assert.match(fxItems[0].title, /1 USD 기준 원화 · 전일 대비 −0\.38%/);
 assert.doesNotMatch(fxItems.map(item => item.change.textContent).join(''), /%/, '환율 칸에 등락률이 남았다');
 // 지수 칸은 그대로 등락률
