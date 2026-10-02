@@ -76,3 +76,9 @@
 - The analyst consensus block depends on the local `analyst-reports` service through the same-origin `/api/quote` proxy. Failure of that service may hide consensus data but must not break the portfolio dashboard.
 
 `CLAUDE.md` contains historical repair details. Consult it only when working on those specific records; the stable rules above are authoritative for normal development.
+
+## Distill company events (integration input, 2026-10-03)
+
+- Per-company catalysts, upcoming events and schedules produced by the knowledge-distill pipeline are served at `~/.hermes/vault-enrich/unified/company-events.latest.json` (outside the TCC-protected vault; rebuilt after every distill publication and on demand with `python3 ~/.hermes/scripts/vault_v3.py company-events`). Read this file; do not read the vault sidecar or recompute from thesis state.
+- Shape: `companies[<ticker>] = {name, ticker, held, watched, next_date, counts, events[]}`, `no_ticker[<name>]`, `macro[]`, `serving.report_as_of`/`refreshed_at`, `as_of`. Tickers are the portfolio DB tickers. Each event has `kind` (`catalyst`|`earnings`), `date` (ISO or null) + `date_text`, `bucket` (`upcoming`|`overdue_unresolved`|`stale`|`undated`|`resolved`), `status`, `title`, `success_condition`, `source.scope/cluster`, `attribution`, `linked_hypotheses[]`, `evidence[]` (`ref`, optional `title`/`url`/`date`), optional `verdict`.
+- Display rules: never present `attribution=text_match` as certain (it is a name-match estimate — label it); never show `stale` or `overdue_unresolved` as upcoming; a null `date` must show `date_text` (e.g. 미정), not a made-up date; `earnings` events come from this service's own `next_earnings_date`, so do not render them twice next to the 실적일 column. The file can be missing or older than the price data — degrade to an empty state.
