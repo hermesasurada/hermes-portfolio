@@ -6817,3 +6817,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 
 /* 거래 수정 — 잔고 반영 여부를 묻는 창의 설명 문구(app-transactions.js askTransactionEditHoldings). */
 .tx-edit-holdings-note { margin: 10px 2px 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+/* 배당 수량이 지금 보유와 다를 때(배당락일 기준) — 점선 밑줄로 알리고 이유는 툴팁(dividendQtyCell). */
+.dividend-qty-adjusted { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }

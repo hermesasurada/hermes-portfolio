@@ -2470,6 +2470,24 @@ def test_update_transaction_can_reapply_holdings_when_asked():
         conn.close()
 
 
+def test_dividend_quantity_uses_holdings_on_ex_date():
+    """지급 예정 배당 수량 = 배당락일 기준 보유(지금 수량에서 배당락일 이후 거래를 되돌림)."""
+    from portfolio_core.dividends import entitled_quantity
+
+    # TSMC: 지금 130주, 배당락 9/16 뒤 10/2에 10주 매도 → 이번 배당은 140주
+    assert entitled_quantity(130, [("2026-10-02", "SELL", 10)], "2026-09-16") == 140
+    # 배당락일 당일 매수는 못 받는다(PH 8/31 매수 6주), 전날 매수는 받는다
+    assert entitled_quantity(20, [("2026-08-31", "BUY", 6), ("2026-09-04", "BUY", 5)], "2026-08-31") == 9
+    assert entitled_quantity(20, [("2026-08-30", "BUY", 6)], "2026-08-31") == 20
+    # 배당락 뒤 전량 매도해도 받는다
+    assert entitled_quantity(0, [("2026-10-01", "SELL", 50)], "2026-09-16") == 50
+    # 배당락 뒤에 새로 산 종목은 못 받는다(음수는 0)
+    assert entitled_quantity(5, [("2026-09-20", "BUY", 5)], "2026-09-16") == 0
+    # 배당락이 미래면 지금 수량, 배당락일이 없으면 지금 수량
+    assert entitled_quantity(130, [("2026-10-02", "SELL", 10)], "2026-12-10") == 130
+    assert entitled_quantity(130, [("2026-10-02", "SELL", 10)], None) == 130
+
+
 # --- scope rules (single source shared by validation + API) -----------------
 def test_account_scope():
     assert account_scope("overseas") == "overseas"

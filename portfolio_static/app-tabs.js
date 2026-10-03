@@ -241,7 +241,7 @@ function renderDividendTable() {
       <td class="dividend-target" title="${esc(item.row.target || item.row.member || "-")}"><span class="dividend-target-icon" aria-label="${esc(item.row.target || item.row.member || "-")}">${esc(targetInitial(item.row.target || item.row.member))}</span></td>
       <td class="dividend-name" title="${esc(item.row.name || item.row.ticker || "-")}"><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(item.row.name || item.row.ticker || "-")}</a></td>
       <td>${dividendAmountText(item.row.amount, item.row.currency)}</td>
-      <td>${fmt2.format(Number(item.row.qty) || 0)}</td>
+      <td>${dividendQtyCell(item.row)}</td>
       <td>${dividendMoneyText(item.row.gross, item.row.currency)}</td>
       <td class="tax-dividend">${taxMoneyText(item.row.tax, item.row.currency)}</td>
       <td class="tax-rate">${taxRateText(item.row.tax_rate)}</td>
@@ -520,6 +520,18 @@ function dividendMonthOpenByDefault(key, today = todayLocal()) {
 }
 function dividendMonthCollapsed(key, today = todayLocal()) {
   return dividendMonthOverrides.has(key) ? dividendMonthOverrides.get(key) : !dividendMonthOpenByDefault(key, today);
+}
+
+// 배당 수량은 배당락일 기준 보유분이다(서버 entitled_quantity). 지금 보유와 다르면 이유를 툴팁으로 —
+// 배당락 뒤에 판 주식도 이번 배당은 받고, 배당락 뒤에 산 주식은 못 받는다(2026-10-03 사용자 지시).
+function dividendQtyCell(row) {
+  const qty = Number(row.qty) || 0;
+  const text = fmt2.format(qty);
+  const holding = Number(row.holding_qty);
+  if (!Number.isFinite(holding) || Math.abs(holding - qty) < 1e-9) return text;
+  const exDate = row.ex_date ? dividendDateText(row.ex_date) : "배당락일";
+  const title = `배당락일(${exDate}) 기준 ${fmt2.format(qty)}주 · 지금 보유 ${fmt2.format(holding)}주 — 배당락 뒤 거래는 이번 배당에 반영하지 않음`;
+  return `<span class="dividend-qty-adjusted" title="${esc(title)}">${text}</span>`;
 }
 
 function dividendMonthKey(row) {

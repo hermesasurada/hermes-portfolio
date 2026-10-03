@@ -1047,6 +1047,23 @@ def dividend_list_start(today: date) -> date:
     return first
 
 
+def entitled_quantity(current_qty: float, trades: list[tuple[str, str, float]], ex_date: str | None) -> float:
+    """배당락일 기준 보유 수량 = 지금 수량에서 배당락일 이후 거래를 되돌린 값(2026-10-03 사용자 지시).
+
+    배당은 배당락일 전날 장 마감 보유분이 받는다 — 배당락일 이후에 산 주식은 못 받고, 이후에 판
+    주식은 받는다. 결제일(미국 T+1·한국 T+2)은 배당락일 자체에 이미 녹아 있다(미국 배당락=기준일,
+    한국은 OpenDART 수집 시 배당락=기준일−1영업일). trades는 (거래일, 'BUY'|'SELL', 수량)이고
+    거래일은 원장에 적힌 날짜 그대로 비교한다. 배당락일이 없으면 지금 수량을 쓴다."""
+    if not ex_date:
+        return current_qty
+    adjustment = sum(
+        (qty if side == "SELL" else -qty)
+        for trade_date, side, qty in trades
+        if trade_date >= str(ex_date)[:10]
+    )
+    return max(0.0, current_qty + adjustment)
+
+
 def load_dividends(account_ids: list[str] | None = None) -> dict:
     cleaned_account_ids = clean_account_ids(account_ids)
 
@@ -1055,7 +1072,24 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
     raw_start = start - timedelta(days=140)  # 지급일 없는 일본 배당락 이벤트 후보 포함
 
     with connect() as conn:
-        holding_rows = load_holding_rows(conn, cleaned_account_ids, positive_only=True)
+        holding_rows = load_holding_rows(conn, cleaned_account_ids)
+        # 배당락 이후 거래 — 지급 예정 배당의 수량을 '배당락일 기준 보유'로 되돌리는 데 쓴다.
+        # 잔고에 반영된 거래(apply_to_holdings=1)만 본다: 현재 잔고에서 거꾸로 빼고 더하는 계산이라
+        # 잔고를 바꾸지 않은 이력 보강분을 섞으면 이중으로 빠진다.
+        trade_rows = conn.execute(
+            f"""
+            SELECT account_id, ticker, trade_date, side, qty
+            FROM transactions
+            WHERE COALESCE(apply_to_holdings, 1) = 1 AND trade_date >= ?
+              {"AND account_id IN (" + ",".join("?" for _ in cleaned_account_ids) + ")" if cleaned_account_ids else ""}
+            """,
+            [raw_start.isoformat(), *cleaned_account_ids],
+        ).fetchall()
+    trades_by_holding: dict[tuple[str, str], list[tuple[str, str, float]]] = {}
+    for trade in trade_rows:
+        trades_by_holding.setdefault((str(trade["account_id"]), str(trade["ticker"])), []).append(
+            (str(trade["trade_date"]), str(trade["side"]).upper(), float(trade["qty"] or 0))
+        )
 
     holdings = [
         {
@@ -1069,7 +1103,10 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
             "currency": row["currency"] or ticker_currency(row["ticker"]),
         }
         for row in holding_rows
-        if row["ticker"] and float(row["qty"] or 0) > 0
+        # 지금 0주라도 최근 거래가 있으면 후보 — 배당락 뒤에 전량 팔았어도 그 배당은 받는다.
+        if row["ticker"] and (
+            float(row["qty"] or 0) > 0 or (str(row["account_id"]), str(row["ticker"])) in trades_by_holding
+        )
     ]
     tickers = sorted({row["ticker"] for row in holdings})
 
@@ -1130,8 +1167,14 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
         amount = _float_value(event["amount"])
         rate = rates.get(currency, 1.0)
         for holding in holdings_by_ticker.get(event["ticker"], []):
+            qty = entitled_quantity(
+                holding["qty"],
+                trades_by_holding.get((holding["account_id"], holding["ticker"]), []),
+                event.get("ex_date"),
+            )
+            if qty <= 0:
+                continue  # 배당락일에 들고 있지 않았다(그 뒤에 샀거나, 그 전에 다 팔았다)
             tax_rate = _tax_rate(currency, holding["account_type"])
-            qty = holding["qty"]
             gross = amount * qty if amount is not None else None
             tax = gross * tax_rate / 100 if gross is not None else None
             net = gross - tax if gross is not None and tax is not None else None
@@ -1150,6 +1193,7 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
                     "name": holding["name"],
                     "amount": amount,
                     "qty": qty,
+                    "holding_qty": holding["qty"],   # 지금 보유 — qty(배당락일 기준)와 다르면 화면이 알려 준다
                     "gross": gross,
                     "tax": tax,
                     "tax_rate": tax_rate,
