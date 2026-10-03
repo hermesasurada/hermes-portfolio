@@ -132,6 +132,83 @@ def load_transactions(account_id: str | None = None, ticker: str | None = None, 
     return {"transactions": [dict(row) for row in rows]}
 
 
+def apply_holding_trade(conn, account, ticker: str, side: str, qty: float, price: float,
+                        name: str, currency: str, note: str) -> None:
+    """거래 하나를 잔고에 반영한다. 매수: 원금 += 수량×단가, 평단 = 원금/수량. 매도: 평단 유지, 원금 = 남은 수량×평단."""
+    holding = load_holding(conn, int(account["id"]), ticker)
+    amount = qty * price
+    if side == "BUY":
+        if holding:
+            old_qty = float(holding["qty"] or 0)
+            old_avg = float(holding["avg_price"] or 0)
+            old_invested = float(holding["invested"] if holding["invested"] is not None else old_qty * old_avg)
+            new_qty = old_qty + qty
+            new_invested = old_invested + amount
+            new_avg = new_invested / new_qty
+            conn.execute(
+                """
+                UPDATE holdings
+                SET member = ?, qty = ?, avg_price = ?, invested = ?, name = ?, currency = ?,
+                    notes = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (account["member"], new_qty, round(new_avg, 4), round(new_invested, 2), name, currency, note, holding["id"]),
+            )
+        else:
+            conn.execute(
+                """
+                INSERT INTO holdings
+                  (member, account_id, ticker, name, qty, avg_price, currency, invested, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (account["member"], int(account["id"]), ticker, name, qty, round(price, 4), currency, round(amount, 2), note),
+            )
+        return
+    if not holding:
+        raise ValueError("매도할 보유 종목이 없습니다.")
+    old_qty = float(holding["qty"] or 0)
+    if qty > old_qty + 0.00000001:
+        raise ValueError(f"매도 수량이 보유 수량({old_qty:g})보다 큽니다.")
+    avg_price = float(holding["avg_price"] or 0)
+    new_qty = max(0.0, old_qty - qty)
+    new_invested = new_qty * avg_price
+    conn.execute(
+        """
+        UPDATE holdings
+        SET member = ?, qty = ?, invested = ?, name = ?, currency = ?,
+            notes = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+        """,
+        (account["member"], new_qty, round(new_invested, 2), name, currency, note, holding["id"]),
+    )
+
+
+def reverse_holding_trade(conn, account, ticker: str, side: str, qty: float, price: float) -> None:
+    """apply_holding_trade의 정확한 역연산 — 기존 거래를 고칠 때 옛 효과를 먼저 걷어낸다.
+    매수 취소: 수량 −, 원금 −수량×단가, 평단 = 원금/수량. 매도 취소: 평단 유지, 수량 +, 원금 = 수량×평단."""
+    holding = load_holding(conn, int(account["id"]), ticker)
+    if not holding:
+        raise ValueError("잔고에 이 종목이 없어 기존 거래를 되돌릴 수 없습니다. 거래내역만 수정하세요.")
+    old_qty = float(holding["qty"] or 0)
+    old_avg = float(holding["avg_price"] or 0)
+    old_invested = float(holding["invested"] if holding["invested"] is not None else old_qty * old_avg)
+    if side == "BUY":
+        new_qty = old_qty - qty
+        if new_qty < -0.00000001:
+            raise ValueError(f"보유 수량({old_qty:g})이 되돌릴 매수 수량({qty:g})보다 적습니다. 거래내역만 수정하세요.")
+        new_qty = max(0.0, new_qty)
+        new_invested = max(0.0, old_invested - qty * price) if new_qty > 0 else 0.0
+        new_avg = new_invested / new_qty if new_qty > 0 else old_avg
+    else:
+        new_qty = old_qty + qty
+        new_avg = old_avg
+        new_invested = new_qty * old_avg
+    conn.execute(
+        "UPDATE holdings SET qty = ?, avg_price = ?, invested = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        (new_qty, round(new_avg, 4), round(new_invested, 2), holding["id"]),
+    )
+
+
 def add_transaction(payload: dict, portfolio_loader: Callable[[], dict] | None = None) -> dict:
     account_id = int(payload.get("account_id") or 0)
     ticker = str(payload.get("ticker") or "").strip().upper()
@@ -163,54 +240,10 @@ def add_transaction(payload: dict, portfolio_loader: Callable[[], dict] | None =
         ticker_category = ticker_info["category"] if ticker_info else None
         name = str(payload.get("name") or existing_name or ticker_name or ticker).strip()
         currency = str(payload.get("currency") or (holding["currency"] if holding else ticker_info_currency) or ticker_currency(ticker)).strip().upper()
-        amount = qty * price
         validate_account_ticker_scope(account, ticker, name, ticker_category, currency)
 
         if apply_to_holdings:
-            if side == "BUY":
-                if holding:
-                    old_qty = float(holding["qty"] or 0)
-                    old_avg = float(holding["avg_price"] or 0)
-                    old_invested = float(holding["invested"] if holding["invested"] is not None else old_qty * old_avg)
-                    new_qty = old_qty + qty
-                    new_invested = old_invested + amount
-                    new_avg = new_invested / new_qty
-                    conn.execute(
-                        """
-                        UPDATE holdings
-                        SET member = ?, qty = ?, avg_price = ?, invested = ?, name = ?, currency = ?,
-                            notes = ?, updated_at = CURRENT_TIMESTAMP
-                        WHERE id = ?
-                        """,
-                        (account["member"], new_qty, round(new_avg, 4), round(new_invested, 2), name, currency, note or trade_date, holding["id"]),
-                    )
-                else:
-                    conn.execute(
-                        """
-                        INSERT INTO holdings
-                          (member, account_id, ticker, name, qty, avg_price, currency, invested, notes)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (account["member"], account_id, ticker, name, qty, round(price, 4), currency, round(amount, 2), note or trade_date),
-                    )
-            else:
-                if not holding:
-                    raise ValueError("매도할 보유 종목이 없습니다.")
-                old_qty = float(holding["qty"] or 0)
-                if qty > old_qty + 0.00000001:
-                    raise ValueError(f"매도 수량이 보유 수량({old_qty:g})보다 큽니다.")
-                avg_price = float(holding["avg_price"] or 0)
-                new_qty = max(0.0, old_qty - qty)
-                new_invested = new_qty * avg_price
-                conn.execute(
-                    """
-                    UPDATE holdings
-                    SET member = ?, qty = ?, invested = ?, name = ?, currency = ?,
-                        notes = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                    """,
-                    (account["member"], new_qty, round(new_invested, 2), name, currency, note or trade_date, holding["id"]),
-                )
+            apply_holding_trade(conn, account, ticker, side, qty, price, name, currency, note or trade_date)
 
         ensure_ticker(conn, ticker, name, currency)
         entry_score = entry_score_on(conn, ticker, trade_date)
@@ -231,10 +264,12 @@ def add_transaction(payload: dict, portfolio_loader: Callable[[], dict] | None =
     }
 
 
-def update_transaction(payload: dict) -> dict:
-    """거래내역(원장) 레코드만 수정. 보유(holdings)는 거래의 순수 투영이 아니므로
-    재계산하지 않는다(과거 거래 일부만 입력되는 설계). 티커·계좌·종목명은 식별자라
-    고정하고, 거래일·유형·수량·단가·메모만 수정한다."""
+def update_transaction(payload: dict, portfolio_loader: Callable[[], dict] | None = None) -> dict:
+    """거래내역(원장) 레코드를 수정한다. 티커·계좌·종목명은 식별자라 고정하고, 거래일·유형·수량·
+    단가·메모만 수정한다. 보유(holdings)는 거래의 순수 투영이 아니므로(과거 거래 일부만 입력되는
+    설계) 기본은 원장만 고친다. payload['apply_to_holdings']가 참이고 원래 잔고에 반영됐던
+    거래(apply_to_holdings=1)의 유형·수량·단가가 바뀌면, 옛 효과를 되돌린 뒤 새 값을 반영한다
+    (2026-10-03 사용자 지시 — 화면이 수정 저장 때 한 번 묻는다). 원장·잔고·스냅샷은 한 트랜잭션."""
     tx_id = int(payload.get("id") or 0)
     if not tx_id:
         raise ValueError("거래 id가 필요합니다.")
@@ -258,13 +293,35 @@ def update_transaction(payload: dict) -> dict:
         entry_score = row["entry_score"] if "entry_score" in row.keys() else None
         if trade_date != row["trade_date"] or entry_score is None:
             entry_score = entry_score_on(conn, row["ticker"], trade_date)
+        account_id = int(row["account_id"])
+        holding_fields_changed = (
+            side != str(row["side"]).upper()
+            or abs(qty - float(row["qty"])) > 1e-9
+            or abs(price - float(row["price"])) > 1e-9
+        )
+        apply_holdings = (
+            parse_bool(payload.get("apply_to_holdings"), False)
+            and int(row["apply_to_holdings"] or 0) == 1
+            and holding_fields_changed
+        )
+        if apply_holdings:
+            account = load_account(conn, account_id)
+            ticker = str(row["ticker"])
+            holding = load_holding(conn, account_id, ticker)
+            ticker_info = load_ticker_info(conn, ticker)
+            name = (holding["name"] if holding else None) or (ticker_info["name"] if ticker_info else None) or ticker
+            currency = str(row["currency"] or (holding["currency"] if holding else "") or ticker_currency(ticker)).upper()
+            reverse_holding_trade(conn, account, ticker, str(row["side"]).upper(), float(row["qty"]), float(row["price"]))
+            apply_holding_trade(conn, account, ticker, side, qty, price, name, currency, note or trade_date)
         conn.execute(
             "UPDATE transactions SET trade_date = ?, side = ?, qty = ?, price = ?, note = ?, hidden = ?, entry_score = ? WHERE id = ?",
             (trade_date, side, qty, price, note, hidden, entry_score, tx_id),
         )
-        account_id = int(row["account_id"])
         rebuild_account_snapshots_in_transaction(conn, [account_id])
-    return {"ok": True, "id": tx_id}
+    result = {"ok": True, "id": tx_id, "holdings_applied": apply_holdings}
+    if apply_holdings:
+        result["portfolio"] = (portfolio_loader or load_portfolio)()
+    return result
 
 
 def delete_transaction(payload: dict) -> dict:

@@ -384,17 +384,91 @@ async function setTransactionHidden(id, hidden) {
   }
 }
 
+// 잔고에 반영됐던 거래의 유형·수량·단가가 바뀌는가 — 이때만 잔고 반영 여부를 묻는다.
+// 거래일·메모만 바뀌거나, 원래 잔고에 반영되지 않았던 거래(과거 이력 보강분)는 묻지 않는다.
+function transactionEditTouchesHoldings(original, payload) {
+  if (!original || Number(original.apply_to_holdings) !== 1) return false;
+  const side = String(payload.side ?? original.side).toUpperCase();
+  const qty = Number(payload.qty ?? original.qty);
+  const price = Number(payload.price ?? original.price);
+  return side !== String(original.side).toUpperCase()
+    || Math.abs(qty - Number(original.qty)) > 1e-9
+    || Math.abs(price - Number(original.price)) > 1e-9;
+}
+
+function transactionEditSummary(original, payload) {
+  const line = tx => `${tradeSideLabel(String(tx.side).toUpperCase())} ${tradeQtyText(Number(tx.qty), original.ticker)}주 @ ${unitMoney(Number(tx.price), original.currency, original.ticker)}`;
+  const after = { side: payload.side ?? original.side, qty: payload.qty ?? original.qty, price: payload.price ?? original.price };
+  // 새 거래 저장 확인창(tradeConfirmRows)과 같은 2열 칸을 쓴다. 단가는 unitMoney가 만든 마크업이라 이스케이프하지 않는다.
+  return [
+    ["종목", `${esc(original.name || original.ticker)} · ${esc(original.ticker)}`],
+    ["계좌", esc(tradeAccountLabel(original.account_id))],
+    ["수정 전", line(original)],
+    ["수정 후", line(after)],
+  ].map(([key, value]) => `
+    <div class="trade-confirm-key">${esc(key)}</div>
+    <div class="trade-confirm-val">${value}</div>
+  `).join("");
+}
+
+// 'apply' | 'ledger' | 'cancel'. 대화상자를 못 쓰는 환경은 확인창 두 번으로 대신한다.
+function askTransactionEditHoldings(original, payload) {
+  const modal = document.getElementById("txEditHoldingsModal");
+  const body = document.getElementById("txEditHoldingsBody");
+  const buttons = {
+    apply: document.getElementById("txEditHoldingsApply"),
+    ledger: document.getElementById("txEditHoldingsLedger"),
+    cancel: document.getElementById("txEditHoldingsCancel"),
+  };
+  if (!modal || !body || Object.values(buttons).some(b => !b) || typeof modal.showModal !== "function") {
+    if (window.confirm("이 거래 수정을 잔고에도 반영할까요?\n(취소를 누르면 거래내역만 수정할지 다시 묻습니다)")) return Promise.resolve("apply");
+    return Promise.resolve(window.confirm("거래내역만 수정할까요?") ? "ledger" : "cancel");
+  }
+  body.innerHTML = transactionEditSummary(original, payload);
+  return new Promise(resolve => {
+    const handlers = {};
+    const cleanup = result => {
+      Object.entries(buttons).forEach(([key, btn]) => btn.removeEventListener("click", handlers[key]));
+      modal.removeEventListener("cancel", onCancel);
+      if (modal.open) modal.close();
+      resolve(result);
+    };
+    const onCancel = event => { event.preventDefault(); cleanup("cancel"); };
+    Object.entries(buttons).forEach(([key, btn]) => {
+      handlers[key] = () => cleanup(key);
+      btn.addEventListener("click", handlers[key]);
+    });
+    modal.addEventListener("cancel", onCancel);
+    modal.showModal();
+  });
+}
+
 async function saveTransactionEdit(id) {
   const row = document.querySelector(`tr[data-tx-row="${id}"]`);
   if (!row) return;
   const payload = { id };
   row.querySelectorAll("[data-tx-field]").forEach(el => { payload[el.dataset.txField] = el.value; });
+  // 잔고에 반영됐던 거래의 유형·수량·단가를 바꾸면 한 번 묻는다(2026-10-03 사용자 지시 —
+  // 예전엔 원장만 고쳐져 TSM 매수→매도 수정 뒤 잔고가 150주로 남았다).
+  const original = transactionRows.find(item => Number(item.id) === Number(id));
+  if (transactionEditTouchesHoldings(original, payload)) {
+    const choice = await askTransactionEditHoldings(original, payload);
+    if (choice === "cancel") {
+      showTradeStatus("수정 취소");
+      return;
+    }
+    payload.apply_to_holdings = choice === "apply";
+  }
   try {
     showTradeStatus("수정 중...");
-    await apiUpdateTransaction(payload);
+    const result = await apiUpdateTransaction(payload);
     editingTxId = null;
+    if (result?.portfolio) {
+      data = result.portfolio;
+      render();
+    }
     await loadTransactions();
-    showTradeStatus("수정됨");
+    showTradeStatus(result?.holdings_applied ? "수정됨 · 잔고 반영" : "수정됨");
   } catch (err) {
     showTradeError(err);
   }

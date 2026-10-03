@@ -578,6 +578,20 @@
       </div>
     </form>
   </dialog>
+  <dialog class="watch-modal trade-confirm-modal" id="txEditHoldingsModal">
+    <form method="dialog" class="modal-card trade-confirm-card">
+      <div class="modal-head">
+        <strong>거래내역 수정 — 잔고에도 반영할까요?</strong>
+      </div>
+      <div class="trade-confirm-body" id="txEditHoldingsBody"></div>
+      <p class="tx-edit-holdings-note">'잔고도 반영'은 수정 전 거래를 잔고에서 되돌리고 수정 후 거래를 다시 적용합니다. '거래내역만 수정'은 원장만 고칩니다.</p>
+      <div class="watch-actions trade-confirm-actions">
+        <button class="ghost-btn" id="txEditHoldingsCancel" type="button">취소</button>
+        <button class="ghost-btn" id="txEditHoldingsLedger" type="button">거래내역만 수정</button>
+        <button class="primary-btn" id="txEditHoldingsApply" type="button">잔고도 반영</button>
+      </div>
+    </form>
+  </dialog>
   <dialog class="watch-modal" id="watchModal">
     <form method="dialog" class="modal-card">
       <div class="modal-head">

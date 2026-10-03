@@ -470,7 +470,7 @@ class Handler(BaseHTTPRequestHandler):
         return add_transaction(self.read_json(), portfolio_loader=load_portfolio)
 
     def post_transaction_update(self) -> dict:
-        return update_transaction(self.read_json())
+        return update_transaction(self.read_json(), portfolio_loader=load_portfolio)
 
     def post_transaction_delete(self) -> dict:
         return delete_transaction(self.read_json())

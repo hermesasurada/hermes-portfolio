@@ -2398,6 +2398,78 @@ def test_dividend_list_includes_previous_month_during_first_five_days():
     assert dividend_list_start(date(2026, 3, 1)) == date(2026, 2, 1)
 
 
+def test_update_transaction_can_reapply_holdings_when_asked():
+    """기존 거래 수정 시 '잔고도 반영'을 고르면 옛 효과를 되돌리고 새 값을 반영한다(TSM 매수→매도 사례)."""
+    import pathlib
+    import portfolio_core.transactions as tm
+
+    schema_source = sqlite3.connect(str(pathlib.Path.home() / ".hermes/data/stock_history.db"))
+    ddl = {name: sql for name, sql in schema_source.execute(
+        "SELECT name, sql FROM sqlite_master WHERE type='table' AND name IN ('accounts','holdings','tickers','transactions')")}
+    schema_source.close()
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    for name in ("accounts", "tickers", "holdings", "transactions"):
+        conn.execute(ddl[name])   # 운영 DB와 같은 스키마
+    acct_cols = [r[1] for r in conn.execute("PRAGMA table_info(accounts)")]
+    values = {"id": 1, "member": "Ray", "name": "해외주식", "currency": "USD", "account_type": "overseas"}
+    conn.execute(f"INSERT INTO accounts ({','.join(c for c in acct_cols if c in values)}) VALUES ({','.join('?' for c in acct_cols if c in values)})",
+                 [values[c] for c in acct_cols if c in values])
+    conn.execute("INSERT INTO tickers (ticker, name, currency, category) VALUES ('TSM', 'TSMC', 'USD', 'overseas')")
+    # 잔고 150주(140주 @ 원금 16,480.80 + 잘못 들어간 매수 10주 @ 472.78)
+    conn.execute("INSERT INTO holdings (member, account_id, ticker, name, qty, avg_price, currency, invested) VALUES ('Ray', 1, 'TSM', 'TSMC', 150, 141.3907, 'USD', 21208.6)")
+    tx_cols = [r[1] for r in conn.execute("PRAGMA table_info(transactions)")]
+    tx = {"id": 1, "trade_date": "2026-10-02", "member": "Ray", "account_id": 1, "ticker": "TSM", "side": "BUY", "qty": 10, "price": 472.78,
+          "currency": "USD", "note": "", "apply_to_holdings": 1, "created_at": "2026-10-03"}
+    conn.execute(f"INSERT INTO transactions ({','.join(c for c in tx_cols if c in tx)}) VALUES ({','.join('?' for c in tx_cols if c in tx)})",
+                 [tx[c] for c in tx_cols if c in tx])
+    conn.commit()
+
+    @contextmanager
+    def fake_connect():
+        with conn:
+            yield conn
+
+    originals = (tm.connect, tm.rebuild_account_snapshots_in_transaction, tm.entry_score_on)
+    holding = lambda: conn.execute("SELECT qty, avg_price, invested FROM holdings WHERE ticker='TSM'").fetchone()  # noqa: E731
+    try:
+        tm.connect = fake_connect
+        tm.rebuild_account_snapshots_in_transaction = lambda c, ids: None
+        tm.entry_score_on = lambda c, t, d: None
+        # 거래내역만 수정(기본): 잔고는 그대로
+        out = tm.update_transaction({"id": 1, "side": "SELL"}, portfolio_loader=lambda: {})
+        assert out["holdings_applied"] is False and "portfolio" not in out
+        assert float(holding()["qty"]) == 150
+        tm.update_transaction({"id": 1, "side": "BUY"}, portfolio_loader=lambda: {})   # 원래대로
+        # 잔고도 반영: 매수 10 되돌림(140주 @ 117.72) → 매도 10 적용(130주, 평단 유지)
+        out = tm.update_transaction({"id": 1, "side": "SELL", "apply_to_holdings": True}, portfolio_loader=lambda: {"ok": 1})
+        assert out["holdings_applied"] is True and out["portfolio"] == {"ok": 1}
+        h = holding()
+        assert float(h["qty"]) == 130 and abs(float(h["avg_price"]) - 117.72) < 1e-4 and abs(float(h["invested"]) - 15303.6) < 0.01
+        # 수량만 바꿔도(매도 10 → 4) 같은 방식: 130 + 10 − 4 = 136, 평단 유지
+        tm.update_transaction({"id": 1, "qty": 4, "apply_to_holdings": True}, portfolio_loader=lambda: {})
+        assert float(holding()["qty"]) == 136 and abs(float(holding()["avg_price"]) - 117.72) < 1e-4
+        # 거래일·메모만 바뀌면 잔고 반영을 요청해도 손대지 않는다
+        out = tm.update_transaction({"id": 1, "trade_date": "2026-10-01", "apply_to_holdings": True}, portfolio_loader=lambda: {})
+        assert out["holdings_applied"] is False and float(holding()["qty"]) == 136
+        # 원래 잔고에 반영되지 않았던 거래(apply_to_holdings=0)는 요청해도 잔고를 건드리지 않는다
+        conn.execute("UPDATE transactions SET apply_to_holdings = 0 WHERE id = 1"); conn.commit()
+        out = tm.update_transaction({"id": 1, "side": "BUY", "apply_to_holdings": True}, portfolio_loader=lambda: {})
+        assert out["holdings_applied"] is False and float(holding()["qty"]) == 136
+        # 반영할 수 없으면(보유보다 많이 팔게 됨) 원장도 바뀌지 않는다 — 한 트랜잭션
+        conn.execute("UPDATE transactions SET apply_to_holdings = 1, side = 'SELL', qty = 4 WHERE id = 1"); conn.commit()
+        try:
+            tm.update_transaction({"id": 1, "qty": 500, "apply_to_holdings": True}, portfolio_loader=lambda: {})
+            raise AssertionError("보유보다 많은 매도는 거절해야 한다")
+        except ValueError:
+            pass
+        assert float(conn.execute("SELECT qty FROM transactions WHERE id=1").fetchone()[0]) == 4
+        assert float(holding()["qty"]) == 136
+    finally:
+        tm.connect, tm.rebuild_account_snapshots_in_transaction, tm.entry_score_on = originals
+        conn.close()
+
+
 # --- scope rules (single source shared by validation + API) -----------------
 def test_account_scope():
     assert account_scope("overseas") == "overseas"

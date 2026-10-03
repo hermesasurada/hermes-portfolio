@@ -6814,3 +6814,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 
 /* '배당 포함' 기간 수익률 중 배당 이력이 기간을 다 덮지 못한 값 — 흐리게, 이유는 툴팁(perfText). */
 .perf-partial { opacity: .5; cursor: help; }
+
+/* 거래 수정 — 잔고 반영 여부를 묻는 창의 설명 문구(app-transactions.js askTransactionEditHoldings). */
+.tx-edit-holdings-note { margin: 10px 2px 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
