@@ -176,9 +176,46 @@ def test_daily_prices_schema_is_created_from_code():
         conn.close()
 
 
+def test_spike_sanitizer_handles_leading_scale_and_keeps_scanning():
+    """1489.T: 맨 앞 2행이 분할 미반영(×30) → 예전엔 '복귀 없음'으로 종목 검사를 통째로 끝내
+    뒤쪽 2일짜리 1/30 bad tick까지 남았다. 앞 행은 지우고, 진짜 스케일 변화 뒤로도 검사를 잇는다."""
+    from datetime import date, timedelta
+    conn = memory_price_db()
+    price_store.ensure_stock_split_tables(conn)
+    day = date(2017, 2, 9)
+    closes = [34875.0, 35706.0] + [1200.0 + i for i in range(40)]   # 앞 2행만 다른 스케일
+    closes += [70.6, 69.3] + [2080.0 + i for i in range(30)]        # 2일 bad tick 후 복귀
+    closes += [5000.0 + i for i in range(30)]                       # 복귀 없는 스케일 변화(보존)
+    closes += [5100.0, 50.0, 5101.0, 5102.0]                        # 그 뒤 bad tick도 잡는다
+    rows = []
+    for close in closes:
+        rows.append((day.isoformat(), "TEST", close))
+        day += timedelta(days=1)
+    conn.executemany("INSERT INTO daily_prices (date, ticker, close) VALUES (?, ?, ?)", rows)
+    bad = {rows[0][0], rows[1][0], rows[42][0], rows[43][0], rows[-3][0]}
+
+    @contextmanager
+    def fake_connect():
+        yield conn
+
+    original_connect = price_store.connect
+    try:
+        price_store.connect = fake_connect
+        result = price_store.sanitize_price_spikes(["TEST"])
+        left = {row["date"] for row in conn.execute("SELECT date FROM daily_prices")}
+        assert result == {"TEST": 5}
+        assert not (bad & left)
+        assert len(left) == len(rows) - 5
+        assert price_store.sanitize_price_spikes(["TEST"]) == {}   # 멱등
+    finally:
+        price_store.connect = original_connect
+        conn.close()
+
+
 if __name__ == "__main__":
     test_close_only_snapshot_preserves_existing_ohlc()
     test_split_repair_adjusts_complete_candle()
     test_candle_bounds_stay_coherent()
     test_daily_prices_schema_is_created_from_code()
+    test_spike_sanitizer_handles_leading_scale_and_keeps_scanning()
     print("price OHLC tests passed")

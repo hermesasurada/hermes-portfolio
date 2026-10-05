@@ -31,6 +31,7 @@ SPIKE_EXTREME_HIGH = 2.5    # +150% 이상 급등하면 이탈 후보
 SPIKE_CONTINUITY_LOW = 0.6  # 오염 구간 양끝(정상↔정상)이 서로 이 범위면 '연속=복귀'로 판정
 SPIKE_CONTINUITY_HIGH = 1.7
 SPIKE_MAX_RUN_DAYS = 5       # 오염으로 간주할 최대 연속 길이(그 이상은 스케일 변화로 보고 보존)
+SPIKE_HEAD_MIN_ROWS = 20     # 이력 맨 앞 이탈 판정: 그 뒤로 이만큼 같은 스케일이 이어져야 앞을 오염으로 본다
 
 
 def infer_category(ticker: str, category: str | None = None) -> str:
@@ -403,7 +404,29 @@ def sanitize_price_spikes(tickers: Iterable[str], since: str | None = None) -> d
             closes = [(r["date"], float(r["close"])) for r in rows]
             n = len(closes)
             to_delete: list[str] = []
-            i = 1  # 시작·끝값은 양끝 비교가 불가하므로 건드리지 않는다
+            near_split_date = lambda day: _date_value(day) is not None and any(
+                abs((_date_value(day) - sd).days) <= SPLIT_REPAIR_MAX_DATE_DISTANCE_DAYS
+                for sd in split_dates
+            )
+            # 이력 맨 앞의 몇 행만 다른 스케일인 경우(1489.T 2017-02-09·10 — 상장 전 분할
+            # 미반영 가격, 거래량 0): 양끝 비교가 불가하니 '그 뒤로 SPIKE_HEAD_MIN_ROWS행이
+            # 이어지는 스케일'을 정상으로 본다. since 검사(앵커부터 시작)에서는 하지 않는다.
+            start = 1  # 끝값은 양끝 비교가 불가하므로 건드리지 않는다
+            if not since and n > SPIKE_MAX_RUN_DAYS + SPIKE_HEAD_MIN_ROWS:
+                for k in range(1, SPIKE_MAX_RUN_DAYS + 1):
+                    ratio = closes[k][1] / closes[k - 1][1] if closes[k - 1][1] else 1.0
+                    if SPIKE_EXTREME_LOW <= ratio <= SPIKE_EXTREME_HIGH:
+                        continue
+                    tail = closes[k:k + SPIKE_HEAD_MIN_ROWS]
+                    steady = all(
+                        SPIKE_EXTREME_LOW <= b[1] / a[1] <= SPIKE_EXTREME_HIGH
+                        for a, b in zip(tail, tail[1:]) if a[1]
+                    )
+                    if steady and not any(near_split_date(closes[h][0]) for h in range(k)):
+                        to_delete.extend(closes[h][0] for h in range(k))
+                        start = k + 1
+                    break
+            i = start
             while i < n - 1:
                 prev = closes[i - 1][1]
                 ratio = closes[i][1] / prev if prev else 1.0
@@ -417,18 +440,15 @@ def sanitize_price_spikes(tickers: Iterable[str], since: str | None = None) -> d
                     if SPIKE_EXTREME_LOW <= r <= SPIKE_EXTREME_HIGH:
                         break
                     j += 1
-                if j >= n:  # 끝까지 극단(복귀 없음) → 스케일 변화/실제로 보고 보존
-                    break
+                if j >= n:
+                    # 끝까지 극단(복귀 없음) → 스케일 변화/실제로 보고 보존. 검사는 멈추지 않고
+                    # 바뀐 스케일을 새 기준으로 이어 간다 — 예전엔 여기서 종목 검사를 통째로
+                    # 끝내 그 뒤의 bad tick(1489.T 2024-01-17·18, 1/30 가격)이 남았다.
+                    i += 1
+                    continue
                 continuity = closes[j][1] / prev if prev else None
                 run_dates = [closes[k][0] for k in range(i, j)]
-                near_split = any(
-                    _date_value(rd) is not None
-                    and any(
-                        abs((_date_value(rd) - sd).days) <= SPLIT_REPAIR_MAX_DATE_DISTANCE_DAYS
-                        for sd in split_dates
-                    )
-                    for rd in run_dates
-                )
+                near_split = any(near_split_date(rd) for rd in run_dates)
                 if (
                     (j - i) <= SPIKE_MAX_RUN_DAYS
                     and continuity is not None
