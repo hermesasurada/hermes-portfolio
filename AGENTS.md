@@ -48,6 +48,7 @@
 ## Data invariants
 
 - 변동성 손익비(`portfolio_core/risk_reward.py`) 창 가중치는 **5y(3~5년 전) 0.4 / 3y(1~3년 전) 0.3 / 1y(최근 1년) 0.3**(2026-10-05 사용자 결정, 이전 0.6/0.3/0.1 — 2022 하락장을 담은 가장 오래된 창이 레버리지 ETF 점수를 과도하게 지배했다). 바꿀 때는 `index.html`·`app-interest-columns.js` 툴팁과 `tests/test_portfolio_core.py` 기대값을 함께 맞춘다.
+- 변동성 손익비는 **수익률이 아니라 기간점수(초과수익 ÷ 변동성)를 ±2로 자르고, 없는 창은 0점**으로 둔다(2026-10-05 사용자 결정). 예전 수익률 캡(−50~+100%)은 자기 변동성으로 나누면 레버리지가 이미 상쇄돼 목적을 잃었고 5년 이력 종목의 급등 구간만 깎았다. 없는 창을 남은 창에 재분배하면 이력 1년 종목(단일종목 레버리지 ETF 등)의 운 좋은 한 해가 1위권을 차지했다 — 재분배로 되돌리지 말 것.
 
 - Preserve the existing entry risk/reward column and formula. Account/watchlist lists place the separate experimental `trade_timing` reference immediately to its right. Buy requires rising SMA50, price above SMA50 and optional SMA200, an SMA20 upward cross within three bars still held, and R≥1.5. R uses prior-20-bar high and min(prior-10-bar low−0.5ATR, price−1.5ATR). Sell requires price below SMA20, ≥3ATR off the prior-20-bar high, and prior-low break; ≥2ATR below SMA20 is caution. ATR14 uses up to 61 prior OHLC bars. Same/new-session selected-price recalculation must preserve these prior-bar anchors. Missing OHLC/history and leveraged/inverse/index/FX items stay absent, never neutral-imputed. This is unvalidated price-only reference, not a trade recommendation or probability; keep R/ATR units and provisional-session caveats visible. Sort by state, never compare unlike units.
 

@@ -1435,7 +1435,7 @@ def test_quarterly_dividend_cycle_never_groups_more_than_four_payments():
 def test_risk_reward_score_formula():
     from portfolio_core.risk_reward import risk_reward_score, vol_floor_pct
 
-    # 정상: 기간별 총변동성(clamp(excess)/max(vol, 자산군 바닥)) 가중평균 ×10
+    # 정상: 기간별 clamp(excess/max(vol, 자산군 바닥), ±2) 가중합 ×10
     # 52주 고점 보정 없음. 주식 바닥 8% — vol 20/25/40은 바닥에 안 걸림.
     periods = {
         "5y": {"excess": 16.0, "vol": 20.0, "quality": "TR"},
@@ -1447,11 +1447,11 @@ def test_risk_reward_score_formula():
     assert basis == "5y" and quality == "TR"
     assert abs(score - round(expected, 2)) < 0.01
 
-    # 결측 기간 가중 비례 재분배: 5y 없음 → 3y 0.5 / 1y 0.5
+    # 결측 기간은 0점(재분배 안 함): 5y 없음 → 3y 0.3 / 1y 0.3만 반영
     score3, basis3, _q = risk_reward_score(
         {"3y": {"excess": 12.0, "vol": 25.0, "quality": "TR"},
          "1y": {"excess": 30.0, "vol": 40.0, "quality": "TR"}}, "stock")
-    expected3 = (0.5 * 12 / 25 + 0.5 * 30 / 40) * 10
+    expected3 = (0.3 * 12 / 25 + 0.3 * 30 / 40) * 10
     assert basis3 == "3y"
     assert abs(score3 - round(expected3, 2)) < 0.01
 
@@ -1461,13 +1461,19 @@ def test_risk_reward_score_formula():
          "1y": {"excess": 10.0, "vol": 20.0, "quality": "TR"}}, "stock")
     assert quality_p == "P"
 
-    # 캡·자산군별 변동성 바닥 (주식 8%, 크립토 20%)
+    # 비율 캡 ±2: 수익률이 아니라 수익÷변동성을 자른다
     capped, _b, _q = risk_reward_score({"1y": {"excess": 500.0, "vol": 40.0, "quality": "TR"}}, "stock")
-    assert abs(capped - 100.0 / 40.0 * 10) < 0.01
+    assert abs(capped - 0.3 * 2.0 * 10) < 0.01
+    sunk, _b, _q = risk_reward_score({"1y": {"excess": -300.0, "vol": 120.0, "quality": "TR"}}, "stock")
+    assert abs(sunk - 0.3 * -2.0 * 10) < 0.01
+    # 급등 구간이라도 비율이 캡 안이면 수익률을 깎지 않는다(예전엔 120%가 100%로 잘렸다)
+    surge, _b, _q = risk_reward_score({"1y": {"excess": 120.0, "vol": 75.0, "quality": "TR"}}, "stock")
+    assert abs(surge - 0.3 * 120.0 / 75.0 * 10) < 0.01
+    # 자산군별 변동성 바닥 (주식 8%, 크립토 20%)
     floor, _b, _q = risk_reward_score({"1y": {"excess": 4.0, "vol": 1.0, "quality": "TR"}}, "stock")
-    assert abs(floor - 4.0 / 8.0 * 10) < 0.01
+    assert abs(floor - 0.3 * 4.0 / 8.0 * 10) < 0.01
     crypto, _b, _q = risk_reward_score({"1y": {"excess": 4.0, "vol": 1.0, "quality": "TR"}}, "crypto")
-    assert abs(crypto - 4.0 / 20.0 * 10) < 0.01
+    assert abs(crypto - 0.3 * 4.0 / 20.0 * 10) < 0.01
     assert vol_floor_pct("fx") == 3.0
 
     # 고점 괴리와 무관 — 기간만 있으면 점수

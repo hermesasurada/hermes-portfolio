@@ -297,7 +297,7 @@ const BETA_ADJ_TOOLTIP = [
 ].join("\n");
 /* 손익비 산식은 서버(portfolio_core/risk_reward.py)가 단일 진실 —
    /api/stats 응답의 score·basis(기준 기간)·quality(TR/P)를 표시만 한다.
-   기본 케이스(5Y·총수익)는 라벨 생략, 폴백만 '3Y'·'5Y·P' 형태로 병기. */
+   기본 케이스(5Y·총수익)는 라벨 생략, 이력이 짧거나 P면 '3Y'·'5Y·P' 형태로 병기. */
 function riskRewardScoreText(v, basis, quality) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "-";
@@ -307,7 +307,7 @@ function riskRewardScoreText(v, basis, quality) {
   if (basis && (basis !== "5y" || quality === "P")) {
     const label = `${basis.toUpperCase()}${quality === "P" ? "·P" : ""}`;
     const why = basis !== "5y"
-      ? `이력이 짧아 ${basis.toUpperCase()} 기준으로 산출`
+      ? `이력이 짧아 ${basis.toUpperCase()}까지만 반영 — 없는 구간은 0점`
       : "배당 매핑 실패 또는 이력 미비";
     mark = ` <small class="history-growth-basis" title="${why}${quality === "P" ? " (P=배당 일부 미반영)" : ""}">${label}</small>`;
   }

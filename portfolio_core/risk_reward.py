@@ -1,16 +1,22 @@
 """변동성 손익비 점수 — 비겹침 창의 KRW 초과수익 / 총변동성 가중평균.
 
 산식:
-  기간점수(h) = clamp(산술연율 − rf, -50, +100) ÷ max(총변동성(h), 자산군 바닥)
+  기간점수(h) = clamp((산술연율 − rf) ÷ max(총변동성(h), 자산군 바닥), -2, +2)
     - 총수익 = 배당 재투자 일간 수익률을 KRW로 환산한 시계열
       (technical_stats.total_return_periods).
     - 분자는 CAGR이 아니라 산술 연율. 기하평균이 이미 변동성을 깎은 뒤
       다시 σ로 나누던 이중 페널티를 제거.
     - rf = KRW 단기 무위험 3%(국고 3개월 근사).
     - 분모는 일간 수익률의 연율 표준편차(상승·하락 모두).
-  최종점수 = 10 × 가용 기간점수의 가중평균
+    - 수익률이 아니라 비율을 자른다(2026-10-05). 자기 변동성으로 나누면 레버리지는 이미
+      상쇄되므로 수익률 캡(예전 -50~+100%)의 원래 목적이 사라졌고, 남은 효과는 5년 이력이
+      다 있는 종목의 급등 구간(삼성전자 1Y 152%)을 깎는 것뿐이었다. ±2는 이상값 안전장치.
+  최종점수 = 10 × Σ w(h) × 기간점수(h)
     - 창은 비겹침: 5y = 3~5년 전, 3y = 1~3년 전, 1y = 최근 1년.
-    - 기본 가중 5y 0.4 / 3y 0.3 / 1y 0.3(2026-10-05, 이전 0.6/0.3/0.1), 없는 기간은 가용 기간에 비례 재분배.
+    - 가중 5y 0.4 / 3y 0.3 / 1y 0.3(2026-10-05, 이전 0.6/0.3/0.1).
+    - 없는 기간은 0점(2026-10-05, 이전엔 가용 기간에 비례 재분배). 재분배하면 이력 1년
+      종목은 그 1년이 100%가 되어 운 좋은 한 해(SNDK·MULL 등 단일종목 레버리지)가
+      1위권을 차지했다. 이력이 짧을수록 덜 믿는다 — 1년뿐이면 최대 30%만 반영.
     - 52주 고점 괴리 보정은 제거(이미 별도 컬럼).
     - 변동성 바닥: 주식·ETF·지수 8%, 크립토 20%, FX 3%.
   품질: 가용 기간이 모두 총수익(TR)이면 TR, 배당 매핑 실패·이력 미비면 P.
@@ -22,8 +28,7 @@ from __future__ import annotations
 from .constants import CRYPTO_MARKETS, FX_TICKERS, MARKET_INDEXES
 from .tickers import asset_class
 
-RETURN_CLAMP_LOW = -50.0
-RETURN_CLAMP_HIGH = 100.0
+PERIOD_RATIO_CAP = 2.0  # 기간점수(초과수익 ÷ 변동성) 상·하한
 SCORE_SCALE = 10.0
 PERIOD_WEIGHTS = (("5y", 0.4), ("3y", 0.3), ("1y", 0.3))  # 2026-10-05 사용자 지시(0.6/0.3/0.1 → 0.4/0.3/0.3)
 RISK_FREE_RATE_PCT = 3.0  # KRW 단기 무위험 연율(%). 국고 3개월 근사.
@@ -86,12 +91,12 @@ def risk_reward_score(
     if not available:
         return None, None, None
 
-    total_weight = sum(weight for _key, weight, _excess, _quality in available)
+    # 없는 기간은 0점 — 가중치를 남은 기간에 나눠 주지 않는다(모듈 설명 참고).
     weighted = 0.0
     for key, weight, excess, _quality in available:
         vol = _finite(periods[key].get("vol")) or 0.0
-        clamped = max(RETURN_CLAMP_LOW, min(RETURN_CLAMP_HIGH, excess))
-        weighted += (weight / total_weight) * (clamped / max(vol, floor))
+        ratio = excess / max(vol, floor)
+        weighted += weight * max(-PERIOD_RATIO_CAP, min(PERIOD_RATIO_CAP, ratio))
 
     score = weighted * SCORE_SCALE
     basis = available[0][0]
