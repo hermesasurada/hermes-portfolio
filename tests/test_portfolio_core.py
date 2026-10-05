@@ -1443,15 +1443,15 @@ def test_risk_reward_score_formula():
         "1y": {"excess": 30.0, "vol": 40.0, "quality": "TR"},
     }
     score, basis, quality = risk_reward_score(periods, "stock")
-    expected = (0.6 * 16 / 20 + 0.3 * 12 / 25 + 0.1 * 30 / 40) * 10
+    expected = (0.4 * 16 / 20 + 0.3 * 12 / 25 + 0.3 * 30 / 40) * 10
     assert basis == "5y" and quality == "TR"
     assert abs(score - round(expected, 2)) < 0.01
 
-    # 결측 기간 가중 비례 재분배: 5y 없음 → 3y 0.75 / 1y 0.25
+    # 결측 기간 가중 비례 재분배: 5y 없음 → 3y 0.5 / 1y 0.5
     score3, basis3, _q = risk_reward_score(
         {"3y": {"excess": 12.0, "vol": 25.0, "quality": "TR"},
          "1y": {"excess": 30.0, "vol": 40.0, "quality": "TR"}}, "stock")
-    expected3 = (0.75 * 12 / 25 + 0.25 * 30 / 40) * 10
+    expected3 = (0.5 * 12 / 25 + 0.5 * 30 / 40) * 10
     assert basis3 == "3y"
     assert abs(score3 - round(expected3, 2)) < 0.01
 
