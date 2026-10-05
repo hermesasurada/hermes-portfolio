@@ -425,6 +425,7 @@ async function reloadPerformanceChart({ skeleton = false } = {}) {
 }
 
 async function openPerformanceChart() {
+  rememberListScroll();
   performanceChartOpen = true;
   discardHiddenListRowsForChart();
   syncTransactionPanel();
@@ -460,11 +461,47 @@ function discardHiddenListRowsForChart() {
   if (interest) interest.innerHTML = "";
 }
 
+// 차트를 열면 목록 표는 숨겨지고(display:none) 행도 비워져 스크롤이 맨 위로 돌아간다.
+// 열기 직전 위치를 기억했다가 목록으로 돌아올 때 되돌린다. 차트에서 다른 차트로 넘어갈 때는
+// 처음 목록 위치를 그대로 둔다.
+const LIST_SCROLL_WRAP_IDS = ["detailTableWrap", "interestTableWrap", "dividendTableWrap"];
+let listScrollMemory = null;
+
+function rememberListScroll() {
+  if (chartTicker || performanceChartOpen) return;
+  const wrap = LIST_SCROLL_WRAP_IDS
+    .map(id => document.getElementById(id))
+    .find(el => el && !el.classList.contains("hidden"));
+  listScrollMemory = {
+    id: wrap?.id || "",
+    top: wrap?.scrollTop || 0,
+    left: wrap?.scrollLeft || 0,
+    windowY: window.scrollY || 0,
+  };
+}
+
+function restoreListScroll() {
+  const memory = listScrollMemory;
+  listScrollMemory = null;
+  if (!memory) return;
+  const wrap = memory.id ? document.getElementById(memory.id) : null;
+  // 차트에 있는 동안 사이드바 탭을 바꿔 다른 표로 돌아왔으면 그 표의 위치는 건드리지 않는다.
+  if (wrap && !wrap.classList.contains("hidden")) {
+    wrap.scrollTop = memory.top;
+    wrap.scrollLeft = memory.left;
+    // 관심목록은 창 렌더링이라 맨 위 구간만 그려져 있다 — 되돌린 위치의 행을 바로 그린다.
+    if (wrap.id === "interestTableWrap" && interestVirtual) renderInterestRowsWindow(true);
+  }
+  // 모바일은 표가 아니라 페이지가 스크롤된다.
+  window.scrollTo(0, memory.windowY);
+}
+
 async function openChart(ticker) {
   const cleanTicker = String(ticker || "").trim().toUpperCase();
   if (!cleanTicker) return;
   // 같은 티커를 이미 로딩 중이면 재진입 무시 (연타·중복 클릭 시 fetch 중복 방지)
   if (chartTicker === cleanTicker && chartLoadInFlight) return;
+  rememberListScroll();
   performanceChartOpen = false;
   performanceLoadToken += 1;
   syncPerformanceTitle("");   // 성과 → 종목 차트로 넘어갈 때 툴바 타이틀도 함께 내린다
@@ -541,6 +578,7 @@ function closeChart(updateHash = true) {
     history.pushState(null, "", location.pathname + location.search);
   }
   renderTable();
+  restoreListScroll();
 }
 
 function syncChartRoute() {
