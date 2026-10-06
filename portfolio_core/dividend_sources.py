@@ -197,6 +197,29 @@ def _fetch_polygon_dividends(ticker: str) -> list[dict]:
     return events
 
 
+POLYGON_TICKER_URL = "https://api.polygon.io/v3/reference/tickers/{ticker}"
+
+
+def fetch_polygon_list_date(ticker: str) -> tuple[str | None, str]:
+    """(상장일, 상태). 상태: 'ok' 상장일 있음 · 'none' 응답에 상장일 없음/미등록(404) —
+    둘 다 확정이라 다시 묻지 않는다 · 'error' 일시 실패(다음에 재시도) · 'nokey'."""
+    key = _polygon_api_key()
+    if not key:
+        return None, "nokey"
+    url = POLYGON_TICKER_URL.format(ticker=urllib.parse.quote(ticker)) + "?" + urllib.parse.urlencode({"apiKey": key})
+    req = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "portfolio-dividends/1.0"})
+    _polygon_throttle()
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        return None, "none" if exc.code == 404 else "error"
+    except (OSError, ValueError):
+        return None, "error"
+    list_date = str((data.get("results") or {}).get("list_date") or "")[:10]
+    return (list_date, "ok") if len(list_date) == 10 else (None, "none")
+
+
 def _nasdaq_candidate(ticker: str) -> bool:
     return ticker_currency(ticker) == "USD" and "." not in ticker
 

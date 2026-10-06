@@ -303,7 +303,8 @@ function renderDividendHistory(payload) {
   const body = document.getElementById("dividendHistoryBody");
   document.getElementById("dividendHistoryName").textContent = payload.name || payload.ticker || "-";
   document.getElementById("dividendHistoryTicker").textContent = payload.ticker || "-";
-  const freqLabel = payload.summary?.frequency_label;
+  // 이력이 없으면 지급주기도 없다(서버 기본값 '연배당'을 그대로 붙이지 않는다 — SPCX).
+  const freqLabel = rows.length ? payload.summary?.frequency_label : "";
   document.getElementById("dividendHistoryFreq").textContent = freqLabel ? `(${freqLabel})` : "";
   if (!rows.length) {
     body.innerHTML = `<div class="dividend-history-empty">${payload.start_year || 2010}년 이후 배당이력 없음</div>`;

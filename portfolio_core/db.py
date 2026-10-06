@@ -394,6 +394,23 @@ def ensure_stock_split_tables(conn: sqlite3.Connection) -> None:
     )
 
 
+def ensure_listing_dates_table(conn: sqlite3.Connection) -> None:
+    """종목 상장일 — 티커를 물려받은 종목(SPCX: SPAC ETF → SpaceX 2026-06-12)에서
+    이전 종목의 배당을 걸러 내는 기준. 종목당 한 번만 조회한다(list_date가 없는 응답도
+    status로 남겨 다시 묻지 않는다). 조회 실패(error)만 다음 수집에서 다시 시도한다."""
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ticker_listing_dates (
+            ticker TEXT PRIMARY KEY,
+            list_date TEXT,
+            source TEXT NOT NULL,
+            status TEXT NOT NULL,
+            fetched_at TEXT NOT NULL
+        )
+        """
+    )
+
+
 def ensure_market_index_tickers(conn: sqlite3.Connection) -> None:
     for ticker, meta in MARKET_INDEXES.items():
         conn.execute(
@@ -435,6 +452,7 @@ def initialize_schema() -> None:
         ensure_transaction_columns(conn)
         ensure_dividend_tables(conn)
         ensure_stock_split_tables(conn)
+        ensure_listing_dates_table(conn)
         ensure_daily_prices_table(conn)   # 인덱스보다 먼저 — 테이블·OHLC 컬럼 보장
         ensure_price_indexes(conn)
         ensure_collector_runs_table(conn)

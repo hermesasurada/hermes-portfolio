@@ -17,6 +17,7 @@ from .dividend_sources import (
 )
 from .dividend_pipeline import normalize_dividend_events
 from .dates import today_kst
+from .listing_dates import before_listing, ensure_listing_dates, load_listing_dates
 from .tickers import ticker_currency
 
 DIVIDEND_HISTORY_YEARS = 10
@@ -83,10 +84,20 @@ def refresh_dividend_events(tickers: list[str]) -> None:
     # 네트워크 조회는 DB 트랜잭션 밖에서 수행한다. 소스별 응답이 느릴 때
     # 수백 종목 전체가 끝날 때까지 SQLite 쓰기 잠금을 잡지 않도록, 조회가
     # 끝난 종목만 짧은 트랜잭션으로 즉시 저장한다.
+    # 상장일은 종목당 한 번만 조회한다(확정되면 다시 묻지 않는다) — 티커를 물려받은 종목에서
+    # 이전 종목의 배당을 거른다(listing_dates 모듈 설명).
+    ensure_listing_dates(due)
     for ticker in due:
         raw_events, status = _fetch_dividends(ticker, names.get(ticker))
         events = normalize_dividend_events(ticker, raw_events)
         with connect() as conn:
+            list_date = load_listing_dates(conn, [ticker]).get(ticker)
+            if list_date:
+                events = [event for event in events if not before_listing(event, list_date)]
+                conn.execute(
+                    "DELETE FROM dividend_events WHERE ticker = ? AND COALESCE(ex_date, record_date, pay_date) < ?",
+                    (ticker, list_date),
+                )
             # KR은 소스별 ex_date 관례가 달라(opendart=기준일-1영업일,
             # yf=ex) 근접 중복이 누적된다. _fetch_dividends가 이미 중복 억제한 완전한
             # 병합본을 주므로, 정상 수집된 경우 기존 이벤트를 통째로 교체한다.

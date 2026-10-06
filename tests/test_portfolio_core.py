@@ -756,10 +756,12 @@ def test_dividend_network_fetch_runs_outside_db_transaction():
         "ensure_dividend_tables": dividend_refresh_module.ensure_dividend_tables,
         "_fetch_dividends": dividend_refresh_module._fetch_dividends,
         "normalize_dividend_events": dividend_refresh_module.normalize_dividend_events,
+        "ensure_listing_dates": dividend_refresh_module.ensure_listing_dates,
     }
     try:
         dividend_refresh_module.connect = fake_connect
         dividend_refresh_module.ensure_dividend_tables = lambda _conn: None
+        dividend_refresh_module.ensure_listing_dates = lambda _tickers: {}   # 네트워크 금지
 
         def fake_fetch(_ticker, _name):
             assert active_connections == 0
@@ -772,6 +774,54 @@ def test_dividend_network_fetch_runs_outside_db_transaction():
     finally:
         for name, value in originals.items():
             setattr(dividend_refresh_module, name, value)
+
+
+def test_dividends_before_listing_date_are_dropped():
+    """SPCX: 같은 티커를 먼저 쓰던 SPAC ETF의 분배금(2021~2025)이 2026-06-12 상장한 SpaceX에
+    붙었다. 상장일 이전 배당은 저장하지 않고, 이미 있던 것도 지운다."""
+    import sqlite3 as sqlite
+    from contextlib import contextmanager
+    import portfolio_core.dividend_refresh as dividend_refresh_module
+    from portfolio_core.db import ensure_dividend_tables, ensure_listing_dates_table
+    from portfolio_core.listing_dates import before_listing
+
+    assert before_listing({"ex_date": "2025-12-16"}, "2026-06-12")
+    assert not before_listing({"ex_date": "2026-06-12"}, "2026-06-12")
+    assert not before_listing({"ex_date": "2025-12-16"}, None)
+
+    conn = sqlite.connect(":memory:")
+    conn.row_factory = sqlite.Row
+    conn.execute("CREATE TABLE tickers (ticker TEXT PRIMARY KEY, name TEXT)")
+    conn.execute("INSERT INTO tickers VALUES ('SPCX', 'SpaceX')")
+    ensure_dividend_tables(conn)
+    ensure_listing_dates_table(conn)
+    conn.execute("INSERT INTO ticker_listing_dates VALUES ('SPCX', '2026-06-12', 'polygon', 'ok', 'now')")
+    conn.execute(
+        "INSERT INTO dividend_events (ticker, ex_date, amount, currency, source, fetched_at) "
+        "VALUES ('SPCX', '2024-12-17', 0.138803, 'USD', 'polygon', 'old')"
+    )
+
+    @contextmanager
+    def fake_connect():
+        yield conn
+
+    names = ("connect", "_fetch_dividends", "normalize_dividend_events", "ensure_listing_dates")
+    originals = {name: getattr(dividend_refresh_module, name) for name in names}
+    try:
+        dividend_refresh_module.connect = fake_connect
+        dividend_refresh_module.ensure_listing_dates = lambda _tickers: {}
+        dividend_refresh_module.normalize_dividend_events = lambda _ticker, events: events
+        dividend_refresh_module._fetch_dividends = lambda _ticker, _name: ([
+            {"ticker": "SPCX", "ex_date": "2025-12-16", "amount": 3.105412, "currency": "USD", "source": "polygon"},
+            {"ticker": "SPCX", "ex_date": "2026-12-15", "amount": 0.5, "currency": "USD", "source": "polygon"},
+        ], "polygon")
+        dividend_refresh_module.refresh_dividend_events(["SPCX"])
+        left = [row["ex_date"] for row in conn.execute("SELECT ex_date FROM dividend_events ORDER BY ex_date")]
+        assert left == ["2026-12-15"]
+    finally:
+        for name, value in originals.items():
+            setattr(dividend_refresh_module, name, value)
+        conn.close()
 
 
 def test_kr_dividend_partial_failure_preserves_existing_history():
