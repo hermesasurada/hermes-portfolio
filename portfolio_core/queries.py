@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import date
 from typing import Iterable
+
+from .market_calendar import _exchange_session
 
 
 TICKER_SEARCH_ALIASES = {
@@ -114,6 +117,46 @@ def clean_account_ids(account_ids: Iterable[str] | None) -> list[int]:
     return [int(value) for value in (account_ids or []) if str(value).strip()]
 
 
+STALE_PRICE_DAYS = 4             # 전체 최신일보다 이만큼(달력일) 넘게 뒤처지면 후보
+STALE_EXCHANGE_HOLIDAY_DAYS = 12  # 거래소 전체가 함께 멈춘 건 이만큼까진 휴장으로 본다
+
+
+def _exchange_group(ticker: str) -> str:
+    session = _exchange_session(ticker)
+    if session:
+        return session[0]   # 거래소 타임존 — 상하이·선전(.SS·.SZ)이 한 묶음
+    upper = str(ticker or "").upper()
+    return upper.rsplit(".", 1)[-1] if "." in upper else upper
+
+
+def stale_price_rows(last_rows) -> list:
+    """가격 정체 종목. 전체 최신일보다 4일 넘게 뒤처졌더라도, 같은 거래소 종목이 모두 같이
+    멈춰 있으면 거래소 휴장으로 보고 빼낸다 — 중국 국경절(10/1~7)에 상하이·선전 5종목이
+    9/30에 멈춘 걸 정체로 경보했다(2026-10-07). 거래소 전체가 12일 넘게 멈추면 휴장으로
+    보기엔 길어서(춘절·국경절도 9일 안팎) 다시 정체로 알린다. 휴장 달력이 없는 거래소도
+    다른 종목의 시세로 휴장을 판단할 수 있다."""
+    rows = [row for row in last_rows if row["last_date"]]
+    if not rows:
+        return []
+    days = {row["ticker"]: date.fromisoformat(str(row["last_date"])[:10]) for row in rows}
+    latest = max(days.values())
+    group_latest: dict[str, date] = {}
+    for ticker, day in days.items():
+        group = _exchange_group(ticker)
+        group_latest[group] = max(group_latest.get(group, day), day)
+    stale = []
+    for row in rows:
+        day = days[row["ticker"]]
+        if (latest - day).days <= STALE_PRICE_DAYS:
+            continue
+        group_day = group_latest[_exchange_group(row["ticker"])]
+        behind_peers = (group_day - day).days > STALE_PRICE_DAYS
+        exchange_too_long = (latest - group_day).days > STALE_EXCHANGE_HOLIDAY_DAYS
+        if behind_peers or exchange_too_long:
+            stale.append(row)
+    return stale
+
+
 def load_collection_diagnostics(conn: sqlite3.Connection) -> dict:
     """수집 상태 진단 — 기존 DB 흔적만 노출(새 수집 없음). 조용히 삼켜지던 실패를
     화면에 보이게 하기 위함."""
@@ -121,18 +164,17 @@ def load_collection_diagnostics(conn: sqlite3.Connection) -> dict:
         "SELECT ticker, status FROM ticker_dividend_cache WHERE status LIKE '%_error%' ORDER BY ticker"
     ).fetchall()
     dividend_errors = [row for row in dividend_rows if dividend_status_total_failure(row["status"])]
-    stale = conn.execute(
+    last_rows = conn.execute(
         """
-        WITH latest AS (SELECT MAX(date) AS d FROM daily_prices)
         SELECT t.ticker, MAX(p.date) AS last_date
         FROM tickers t
         JOIN daily_prices p ON p.ticker = t.ticker
         WHERE t.category IN ('overseas', 'kr', 'crypto')
         GROUP BY t.ticker
-        HAVING julianday((SELECT d FROM latest)) - julianday(MAX(p.date)) > 4
         ORDER BY last_date
         """
     ).fetchall()
+    stale = stale_price_rows(last_rows)
     run = conn.execute(
         "SELECT updated_at, item_count FROM collector_runs WHERE name = 'price'"
     ).fetchone()

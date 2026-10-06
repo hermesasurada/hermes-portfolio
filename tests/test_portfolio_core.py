@@ -776,6 +776,28 @@ def test_dividend_network_fetch_runs_outside_db_transaction():
             setattr(dividend_refresh_module, name, value)
 
 
+def test_stale_prices_skip_exchange_wide_holiday():
+    """중국 국경절: 상하이·선전 종목이 모두 9/30에 멈춘 건 휴장 — 정체 경보에서 뺀다."""
+    from portfolio_core.queries import stale_price_rows
+
+    def rows(**last):
+        return [{"ticker": ticker.replace("_", "."), "last_date": day} for ticker, day in last.items()]
+
+    holiday = rows(AAPL="2026-10-06", **{"002594_SZ": "2026-09-30", "688981_SS": "2026-09-30"})
+    assert stale_price_rows(holiday) == []
+    # 같은 거래소 다른 종목은 갱신됐는데 혼자 멈췄으면 정체
+    lagging = rows(AAPL="2026-10-06", **{"002594_SZ": "2026-10-06", "688981_SS": "2026-09-30"})
+    assert [row["ticker"] for row in stale_price_rows(lagging)] == ["688981.SS"]
+    # 미국 종목 하나만 멈춘 것도 정체(같은 묶음의 다른 종목이 최신)
+    us = rows(AAPL="2026-10-06", MSFT="2026-09-30")
+    assert [row["ticker"] for row in stale_price_rows(us)] == ["MSFT"]
+    # 거래소 전체라도 12일을 넘기면 휴장으로 보기엔 길다 — 수집 장애로 알린다
+    too_long = rows(AAPL="2026-10-20", **{"002594_SZ": "2026-10-06", "688981_SS": "2026-10-06"})
+    assert len(stale_price_rows(too_long)) == 2
+    # 4일 이내는 후보도 아니다
+    assert stale_price_rows(rows(AAPL="2026-10-06", MSFT="2026-10-02")) == []
+
+
 def test_dividends_before_listing_date_are_dropped():
     """SPCX: 같은 티커를 먼저 쓰던 SPAC ETF의 분배금(2021~2025)이 2026-06-12 상장한 SpaceX에
     붙었다. 상장일 이전 배당은 저장하지 않고, 이미 있던 것도 지운다."""
