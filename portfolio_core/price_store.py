@@ -360,11 +360,15 @@ def repair_split_adjusted_daily_prices(tickers: Iterable[str], since: str | None
                     SET open = CASE WHEN open IS NULL THEN NULL ELSE open / ? END,
                         high = CASE WHEN high IS NULL THEN NULL ELSE high / ? END,
                         low = CASE WHEN low IS NULL THEN NULL ELSE low / ? END,
+                        -- 거래량·수정종가도 분할 단위로 맞춘다(1321.T 1:100 — 안 하면 분할 전
+                        -- 거래량이 100배 작게 남는다). 야후가 분할을 반영해 다시 주는 값과 같다.
+                        volume = CASE WHEN volume IS NULL THEN NULL ELSE volume * ? END,
+                        adj_close = CASE WHEN adj_close IS NULL THEN NULL ELSE adj_close / ? END,
                         close = close / ?
                     WHERE ticker = ?
                       AND date < ?{start_clause}
                     """,
-                    (ratio, ratio, ratio, *params),
+                    (ratio, ratio, ratio, ratio, ratio, *params),
                 )
                 for prior in rows[start_idx:idx]:
                     prior["close"] /= ratio

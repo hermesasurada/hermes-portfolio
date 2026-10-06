@@ -80,10 +80,10 @@ def test_split_repair_adjusts_complete_candle():
         "INSERT INTO stock_splits VALUES ('TEST', '2026-08-02', 2, 'test', '2026-08-02')"
     )
     conn.executemany(
-        "INSERT INTO daily_prices (date, ticker, open, high, low, close) VALUES (?, 'TEST', ?, ?, ?, ?)",
+        "INSERT INTO daily_prices (date, ticker, open, high, low, close, volume, adj_close) VALUES (?, 'TEST', ?, ?, ?, ?, ?, ?)",
         [
-            ("2026-08-01", 98, 102, 96, 100),
-            ("2026-08-02", 49, 52, 48, 50),
+            ("2026-08-01", 98, 102, 96, 100, 1000, 100),
+            ("2026-08-02", 49, 52, 48, 50, 2100, 50),
         ],
     )
 
@@ -95,9 +95,9 @@ def test_split_repair_adjusts_complete_candle():
     try:
         price_store.connect = fake_connect
         result = price_store.repair_split_adjusted_daily_prices(["TEST"])
-        row = conn.execute("SELECT open, high, low, close FROM daily_prices WHERE date = '2026-08-01'").fetchone()
+        row = conn.execute("SELECT open, high, low, close, volume, adj_close FROM daily_prices WHERE date = '2026-08-01'").fetchone()
         assert result == {"TEST": 1}
-        assert tuple(row) == (49, 51, 48, 50)
+        assert tuple(row) == (49, 51, 48, 50, 2000, 50)   # 거래량은 분할비만큼 곱한다
     finally:
         price_store.connect = original_connect
         conn.close()

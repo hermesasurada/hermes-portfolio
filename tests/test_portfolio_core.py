@@ -1735,6 +1735,61 @@ def test_dedupe_same_currency_duplicates():
     ])
     assert len(cross) == 1
 
+    def paid(ex_date, amount, pay_date, source="yf-history", record_date=None):
+        return dict(event(ex_date, amount, source, "JPY"), pay_date=pay_date, record_date=record_date)
+
+    # 같은 출처 복제(1489.T 유형): 금액·지급일 같고 3일 차 → 병합, 이른 날짜(배당락일) 유지
+    jp = dedupe_dividend_event_rows([
+        paid("2024-10-04", 38.0, "2024-11-15"),
+        paid("2024-10-07", 38.0, "2024-11-15"),
+    ])
+    assert [row["ex_date"] for row in jp] == ["2024-10-04"]
+    # 같은 출처·같은 금액이라도 지급일이 다르면(또는 없으면) 보존
+    assert len(dedupe_dividend_event_rows([
+        paid("2024-10-04", 38.0, "2024-11-15"), paid("2024-10-07", 38.0, "2024-11-29")])) == 2
+    assert len(dedupe_dividend_event_rows([
+        event("2024-10-04", 38.0, "yf-history"), event("2024-10-07", 38.0, "yf-history")])) == 2
+
+    # 분할 미반영 유령(1489.T 2023-01-10 ¥145 = ¥4.8333 × 30, 지급일 없음) → 버림
+    ghost = dedupe_dividend_event_rows([
+        paid("2023-01-06", 4.833333, "2023-02-15"),
+        event("2023-01-10", 145.0, "yf-history", "JPY"),
+    ])
+    assert [(row["ex_date"], row["amount"]) for row in ghost] == [("2023-01-06", 4.833333)]
+    # 유령이 먼저 와도 같다
+    ghost_first = dedupe_dividend_event_rows([
+        event("2023-01-05", 145.0, "yf-history", "JPY"),
+        paid("2023-01-06", 4.833333, "2023-02-15"),
+    ])
+    assert [row["ex_date"] for row in ghost_first] == ["2023-01-06"]
+    # 정수배가 아니거나 양쪽 다 지급일이 있으면 보존(특별배당 + 정기배당)
+    assert len(dedupe_dividend_event_rows([
+        paid("2017-05-08", 7.0, "2017-05-26", "polygon"), paid("2017-05-10", 0.5, "2017-05-26", "polygon")])) == 2
+    assert len(dedupe_dividend_event_rows([
+        paid("2017-05-08", 0.5, "2017-05-26", "polygon"), event("2017-05-10", 7.3, "polygon", "JPY")])) == 2
+
+    # 기준일이 같은 중복 중 배당락일이 기준일과 맞는 행을 남긴다(CL polygon 2024)
+    cl = dedupe_dividend_event_rows([
+        paid("2024-04-19", 0.5, "2024-08-15", "polygon", "2024-07-19"),
+        paid("2024-07-19", 0.5, "2024-08-15", "polygon", "2024-07-19"),
+    ])
+    assert [row["ex_date"] for row in cl] == ["2024-07-19"]
+
+
+def test_manual_split_adjusts_yahoo_dividends_only_for_manual_rows():
+    from datetime import date
+    from portfolio_core.corporate_actions import split_adjusted_amount
+
+    manual = [{"split_date": "2026-10-05", "ratio": 100.0, "source": "manual"}]
+    yahoo = [{"split_date": "2026-10-05", "ratio": 100.0, "source": "yfinance"}]
+    # 야후가 모르는 분할(수동)은 야후 배당에도 적용한다(1321.T ¥812 → ¥8.12)
+    assert split_adjusted_amount(812.0, date(2026, 7, 8), "yf-history", manual) == (8.12, 100.0)
+    # 야후가 아는 분할은 야후 배당이 이미 조정돼 있으니 건너뛴다
+    assert split_adjusted_amount(8.12, date(2026, 7, 8), "yf-history", yahoo) == (8.12, 1.0)
+    # 미조정 소스는 출처와 무관하게 적용, 분할 이후 배당은 그대로
+    assert split_adjusted_amount(812.0, date(2026, 7, 8), "polygon", yahoo)[1] == 100.0
+    assert split_adjusted_amount(8.2, date(2026, 10, 6), "yf-history", manual) == (8.2, 1.0)
+
 
 def test_special_dividend_excluded_from_annual_totals_and_cycles():
     # COST 패턴: $1.02 분기 사이클 중간의 12월 $15 특별배당.
