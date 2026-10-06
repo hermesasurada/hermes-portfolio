@@ -146,6 +146,13 @@ function tradeTimingSortValue(timing) {
 function hasExtendedQuote(row) {
   return optionalNumber(row?.extended_change_pct) !== null;
 }
+// 연장 정렬의 묶음 순서(정렬 방향과 무관): 연장가 있음 → 연장가 없이 정규장 진행 중(유럽 등)
+// → 연장가 없고 정규장이 끝났거나 휴장(일본 등). 장 상태는 서버가 붙인 등락 배지
+// (change_session_note: 진행 중이면 없음, '종'·'휴'면 있음)로 판단한다(2026-10-06 사용자 지시).
+function extendedSortTier(row) {
+  if (hasExtendedQuote(row)) return 0;
+  return row?.change_session_note ? 2 : 1;
+}
 function listSortValue(row, key) {
   if (key === "extended_change_pct") {
     // The extended column is a percentage, not a currency-denominated unit price.
@@ -945,10 +952,10 @@ function sortValueMissing(value, key) {
 // 두 표가 공유하는 비교 함수 — 정렬 규칙은 여기 한 곳에만 둔다.
 function compareListRows(a, b, key, dir) {
   const av = listSortValue(a, key), bv = listSortValue(b, key);
-  // 연장가가 있는 종목끼리 먼저 정렬하고, 없는 종목은 그 뒤에서 자기들끼리 정렬한다.
+  // 연장가 있음 → 정규장 진행 중 → 장 종료·휴장 묶음 순으로 두고, 묶음 안에서 값으로 정렬한다.
   if (key === "extended_change_pct") {
-    const aHas = hasExtendedQuote(a), bHas = hasExtendedQuote(b);
-    if (aHas !== bHas) return aHas ? -1 : 1;
+    const aTier = extendedSortTier(a), bTier = extendedSortTier(b);
+    if (aTier !== bTier) return aTier - bTier;
   }
   if (MISSING_LAST_SORT_KEYS.has(key)) {
     const aMissing = sortValueMissing(av, key), bMissing = sortValueMissing(bv, key);

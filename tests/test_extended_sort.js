@@ -44,4 +44,20 @@ assert.equal(ctx.hasExtendedQuote({extended_change_pct:0}),true);
 for (const value of [null,undefined,'',NaN,Infinity]) {
   assert.equal(ctx.hasExtendedQuote({extended_change_pct:value}),false);
 }
+// 연장가 없는 종목 중 정규장이 끝났거나 휴장(등락 배지 있음)이면 맨 뒤 묶음 — 방향과 무관
+const closed = {kind:'session_closed',label:'종'};
+const tiered = [
+  {ticker:'JP',extended_change_pct:null,display_change_pct:9,change_session_note:closed},
+  {ticker:'KRholiday',extended_change_pct:null,display_change_pct:5,change_session_note:{kind:'holiday_closed',label:'휴'}},
+  {ticker:'EU',extended_change_pct:null,display_change_pct:-1},
+  {ticker:'EU2',extended_change_pct:null,display_change_pct:4},
+  {ticker:'US',extended_change_pct:-3,display_change_pct:1,change_session_note:closed},
+];
+for (const [dir, expected] of [[-1,['US','EU2','EU','JP','KRholiday']],[1,['US','EU','EU2','KRholiday','JP']]]) {
+  setDir(dir);
+  assert.deepEqual(ctx.sortRows(tiered.slice()).map(r=>r.ticker), expected);
+  const watch = tiered.slice();
+  ctx.sortInterestRows(watch,{});
+  assert.deepEqual(watch.map(r=>r.ticker), expected);
+}
 console.log('Extended sorting: extended-quote rows grouped first, regular fallback inside each group, both directions and missing-last OK');
