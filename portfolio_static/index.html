@@ -228,6 +228,7 @@
               </label>
             </span>
             <button class="ghost-btn hidden" id="interestAssetTypeToggle" type="button" title="종목 유형: 전체 → ETF → 개별주" aria-label="종목 유형: 전체">전체</button>
+            <button class="ghost-btn hidden" id="interestScreenButton" type="button" aria-haspopup="dialog" aria-controls="interestScreenModal">스크리닝</button>
             <span class="currency-filter-control visible-rows-control" id="visibleRowsControl">
               <label for="visibleRowsInput">행 수</label>
               <input id="visibleRowsInput" type="number" min="1" max="100" step="1" value="12" inputmode="numeric" aria-label="리스트 표시 행 수" title="1~100행 · 이 브라우저에 저장">
@@ -551,6 +552,24 @@
     </form>
   </dialog>
 
+  <dialog class="watch-modal interest-screen-modal" id="interestScreenModal" aria-labelledby="interestScreenTitle">
+    <form method="dialog" class="modal-card interest-screen-card">
+      <div class="modal-head">
+        <strong id="interestScreenTitle">스크리닝</strong>
+        <button class="ghost-btn" id="interestScreenClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <p class="screen-hint">조건은 모두 만족해야 합니다(AND, 최대 5개). 값이 없는 종목은 제외되고, 배당율이 없으면 0%로 봅니다. 관심목록 전체 그룹에 적용됩니다.</p>
+      <div class="screen-rows" id="interestScreenRows"></div>
+      <button class="ghost-btn screen-add" id="interestScreenAdd" type="button">+ 조건 추가</button>
+      <div class="screen-status" id="interestScreenStatus" role="status" aria-live="polite"></div>
+      <div class="watch-actions screen-actions">
+        <button class="ghost-btn" id="interestScreenReset" type="button">초기화</button>
+        <span class="screen-actions-gap"></span>
+        <button class="ghost-btn" id="interestScreenCancel" type="button">취소</button>
+        <button class="primary-btn" id="interestScreenApply" type="button">적용</button>
+      </div>
+    </form>
+  </dialog>
   <dialog class="watch-modal ticker-search-modal" id="tickerSearchModal">
     <form method="dialog" class="modal-card ticker-search-card">
       <div class="modal-head">
@@ -832,6 +851,7 @@
   <script src="/static/app-trade-controls.js"></script>
   <script src="/static/app-watchlist.js"></script>
   <script src="/static/app-interest-watchlists.js"></script>
+  <script src="/static/app-interest-screen.js"></script>
   <script src="/static/app-ticker-search.js"></script>
   <script src="/static/app-calendar.js"></script>
   <script src="/static/app-cash-flows.js"></script>
@@ -844,7 +864,7 @@
       var expected = ["state", "format", "api", "chart-utils", "app-consensus", "app-company-profile", "app-interest-columns",
         "app-tabs", "app-charts", "app-holdings", "app-chart-scale", "app-chart-metrics", "app-line-chart",
         "app-chart-compare", "app-transactions", "app-trade-controls",
-        "app-watchlist", "app-interest-watchlists", "app-ticker-search", "app-calendar", "app-cash-flows", "app"];
+        "app-watchlist", "app-interest-watchlists", "app-interest-screen", "app-ticker-search", "app-calendar", "app-cash-flows", "app"];
       var loaded = window.__loaded || new Set();
       var missing = expected.filter(function (name) { return !loaded.has(name); });
       if (missing.length && window.__bootBanner) {

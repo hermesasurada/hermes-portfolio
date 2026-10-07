@@ -14,7 +14,7 @@ const SCRIPT_ORDER = [
   'state.js', 'format.js', 'api.js', 'chart-utils.js', 'app-consensus.js', 'app-company-profile.js',
   'app-interest-columns.js', 'app-tabs.js', 'app-charts.js', 'app-holdings.js', 'app-chart-scale.js',
   'app-chart-metrics.js', 'app-line-chart.js', 'app-chart-compare.js', 'app-transactions.js',
-  'app-trade-controls.js', 'app-watchlist.js', 'app-interest-watchlists.js', 'app-ticker-search.js',
+  'app-trade-controls.js', 'app-watchlist.js', 'app-interest-watchlists.js', 'app-interest-screen.js', 'app-ticker-search.js',
   'app-calendar.js', 'app-cash-flows.js', 'app.js',
 ];
 

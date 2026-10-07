@@ -6820,3 +6820,47 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 
 /* 배당 수량이 지금 보유와 다를 때(배당락일 기준) — 점선 밑줄로 알리고 이유는 툴팁(dividendQtyCell). */
 .dividend-qty-adjusted { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+
+/* ── 관심목록 스크리닝 팝업 (2026-10-07) ───────────────────────────────── */
+.watch-modal.interest-screen-modal { width: min(560px, calc(100vw - 24px)); }
+.interest-screen-card { display: flex; flex-direction: column; gap: 10px; }
+.screen-hint { margin: 0; color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+.screen-rows { display: grid; gap: 8px; }
+.screen-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 72px 32px;
+  gap: 6px;
+  align-items: center;
+}
+.screen-row select,
+.screen-row input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  font-size: 12.5px;
+}
+.screen-value-wrap { position: relative; display: block; min-width: 0; }
+.screen-value-wrap input { padding-right: 26px; font-family: var(--grid-num-font); text-align: right; appearance: textfield; }
+/* 증감 화살표가 단위(%·B$) 표기와 겹친다 — 값은 직접 입력 */
+.screen-value-wrap input::-webkit-outer-spin-button,
+.screen-value-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.screen-unit {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 11px;
+  pointer-events: none;
+}
+.screen-row .screen-remove { width: 32px; height: 32px; padding: 0; font-size: 15px; }
+.screen-empty { color: var(--muted); font-size: 12px; padding: 6px 0; }
+.screen-add { align-self: flex-start; height: 30px; }
+.screen-add:disabled { opacity: 0.45; cursor: default; }
+.screen-status { color: var(--ink); font-size: 12px; font-weight: 700; min-height: 16px; }
+.screen-actions .screen-actions-gap { flex: 1; }
+@media (max-width: 520px) {
+  .screen-row { grid-template-columns: minmax(0, 1fr) 64px 32px; }
+  .screen-row .screen-field { grid-column: 1 / -1; }
+}

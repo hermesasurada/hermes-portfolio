@@ -648,17 +648,22 @@ function renderInterestMainTable() {
   const sectorRows = interestSectorSelection.size === 0
     ? baseRows
     : baseRows.filter(row => interestSectorSelection.has(String(row.sector || "").trim()));
-  const rows = sectorRows.filter(row => matchesNameFilter(row));
+  const rows = applyInterestScreen(sectorRows.filter(row => matchesNameFilter(row)));
   sortInterestRows(rows, group);
   // lazy-load는 섹터 필터와 무관하게 그룹 전체(baseRows) 기준 — 필터 전환 시 재요청 방지
   const missingStats = baseRows.some(row => !statsData[row.ticker]
     || (!statsFetchedTickers.has(row.ticker) && hasMissingTechnicalStats(statsData[row.ticker])));
   if (missingStats) loadStatsForRows(baseRows);
+  interestScreenStatsPending = missingStats;   // 지표가 오기 전엔 스크리닝 결과가 비어 보인다
+  if (document.getElementById("interestScreenModal")?.open) syncInterestScreenPreview();
   // 애널리스트 컨센서스는 개별주·ETF만 대상(환율·지수·가상자산 제외). 도착하면
   // 관심목록을 다시 그려 컨센서스 5컬럼을 채운다.
   loadQuotesForRows(baseRows.filter(consensusCandidate).map(row => row.ticker), scheduleInterestMainTable);
   document.getElementById("tableTitle").textContent = group.name;
-  document.getElementById("rowCount").textContent = `${rows.length} rows`;
+  // 스크리닝 중이면 '일치 / 전체'로 — 몇 종목이 걸러졌는지 보이게
+  document.getElementById("rowCount").textContent = interestScreenConditions.length
+    ? `${rows.length} / ${interestPreScreenRows.length} rows`
+    : `${rows.length} rows`;
   const suppressIndexHighlight = interestGroupIsIndex(group);
   const table = body.closest("table");
   const columns = visibleInterestColumns(rows, suppressIndexHighlight);
@@ -672,7 +677,9 @@ function renderInterestMainTable() {
     renderInterestRowsWindow(true);
   } else {
     interestVirtual = null;
-    body.innerHTML = interestEmptyRow(nameFilterValue()
+    body.innerHTML = interestEmptyRow(interestScreenConditions.length && interestPreScreenRows.length
+      ? (interestScreenStatsPending ? "지표 불러오는 중…" : "조건에 맞는 종목 없음")
+      : nameFilterValue()
       ? "명칭 검색 결과가 없습니다."
       : interestAssetType !== "all" && interestAssetFilterAvailable() ? "선택한 유형에 해당하는 종목이 없습니다."
       : group.fixed ? "모든 수집 종목이 관심그룹에 분류되어 있습니다." : "이 그룹에 등록된 종목이 없습니다.");
