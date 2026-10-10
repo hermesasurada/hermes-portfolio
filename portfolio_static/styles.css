@@ -64,14 +64,15 @@
   --chart-shadow: drop-shadow(0 5px 14px rgba(37, 99, 235, .12));
   /* chart series — 의미가 다른 선은 hue 자체를 분리한다. */
   --chart-price: #2563eb;
-  --chart-ma-short: #d97706;
-  --chart-ma-medium: #0d9488;
-  --chart-ma-long: #c026d3;
+  /* 이평선 = 차가운 색, 일목 = 따뜻한 색(2026-10-10 — 기준선과 20일선이 같은 주황이라 구분이 안 됐다) */
+  --chart-ma-short: #0d9488;
+  --chart-ma-medium: #4f46e5;
+  --chart-ma-long: #475569;
   --chart-bb: #7c3aed;
   --chart-rsi: #0d9488;
   --chart-entry: #d97706;
   --chart-ichi-tenkan: #db2777;
-  --chart-ichi-kijun: #d97706;
+  --chart-ichi-kijun: #b45309;
   --chart-ichi-span-a: #16a34a;
   --chart-ichi-span-b: #ea580c;
   /* type scale */
@@ -159,9 +160,9 @@
     --chart-selection-fill: rgba(96, 165, 250, .16);
     --chart-shadow: drop-shadow(0 8px 18px rgba(0, 0, 0, .35));
     --chart-price: #60a5fa;
-    --chart-ma-short: #fbbf24;
-    --chart-ma-medium: #2dd4bf;
-    --chart-ma-long: #e879f9;
+    --chart-ma-short: #2dd4bf;
+    --chart-ma-medium: #818cf8;
+    --chart-ma-long: #94a3b8;
     --chart-bb: #c084fc;
     --chart-rsi: #2dd4bf;
     --chart-entry: #fbbf24;
@@ -3389,6 +3390,14 @@ th.pc-frozen-edge {
   stroke-width: 1.05;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+/* 전환·기준선은 이평선과 같은 화면 두께로(차트 좌표 1.05는 모바일에서 0.4px로 줄어 안 보였다).
+   계단선이라 꺾이는 모서리는 각지게 둔다. */
+.chart-ichi-line.tenkan,
+.chart-ichi-line.kijun {
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: miter;
 }
 .chart-ichi-line.tenkan {
   stroke: var(--chart-ichi-tenkan);
@@ -6863,4 +6872,16 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 @media (max-width: 520px) {
   .screen-row { grid-template-columns: minmax(0, 1fr) 64px 32px; }
   .screen-row .screen-field { grid-column: 1 / -1; }
+}
+
+/* 차트 오른쪽 끝 선 이름표(전환·기준·20·50·200) — 선택한 선의 색으로 */
+.chart-line-end-label {
+  font-size: var(--chart-num-size);
+  font-family: var(--chart-num-font);
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: var(--chart-label-halo);
+  stroke-width: 3.5px;
+  stroke-linejoin: round;
+  pointer-events: none;
 }

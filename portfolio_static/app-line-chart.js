@@ -881,6 +881,47 @@ function chartSeriesPaths(points, key, xFor, yFor) {
   return paths;
 }
 
+// 전환선·기준선은 9·26봉 고저 중간값이라 값이 계단처럼 바뀐다 — 다음 봉까지 수평으로 유지하다
+// 그 봉에서 수직으로 바뀌는 계단선으로 그린다. 매끈한 이평선과 색이 아니라 모양으로도 구분되고,
+// 기준선이 평평한 구간(횡보 신호)이 그대로 보인다(2026-10-10 사용자 요청).
+function chartStepSeriesPaths(points, key, xFor, yFor) {
+  const paths = [];
+  let run = [];
+  const flush = () => {
+    if (run.length >= 2) {
+      paths.push(run.map((item, index) => index === 0
+        ? `M${item.x.toFixed(2)},${item.y.toFixed(2)}`
+        : `H${item.x.toFixed(2)} V${item.y.toFixed(2)}`).join(" "));
+    }
+    run = [];
+  };
+  points.forEach((point, index) => {
+    const value = chartNumericValue(point, key);
+    if (value == null) {
+      flush();
+      return;
+    }
+    run.push({ x: xFor(index), y: yFor(value) });
+  });
+  flush();
+  return paths;
+}
+
+// 선 끝 이름표 — 마지막 값 오른쪽에 붙이고, 세로로 겹치면 위아래로 밀어 최소 간격을 둔다.
+function chartLineEndLabels(items, minGap, top, bottom) {
+  const sorted = items.filter(item => Number.isFinite(item.y)).sort((a, b) => a.y - b.y);
+  for (let i = 1; i < sorted.length; i += 1) {
+    sorted[i].y = Math.max(sorted[i].y, sorted[i - 1].y + minGap);
+  }
+  // 아래 경계를 넘은 것만 경계로 끌어올리고, 그 위는 겹치는 만큼만 따라 올린다(전부 밀면 멀쩡한 이름표가 선에서 떨어진다).
+  sorted.forEach(item => { item.y = Math.min(item.y, bottom); });
+  for (let i = sorted.length - 2; i >= 0; i -= 1) {
+    sorted[i].y = Math.min(sorted[i].y, sorted[i + 1].y - minGap);
+  }
+  sorted.forEach(item => { item.y = Math.max(top, item.y); });
+  return sorted;
+}
+
 function ichimokuCloudPaths(points, xFor, yFor) {
   const paths = [];
   let run = [];
@@ -1476,8 +1517,8 @@ function renderLineChart(payload) {
     const bottom = [...run].reverse().map(item => ({ x: item.x, y: item.lower }));
     return `${straightLinePath(top)} L${bottom.map(item => `${item.x.toFixed(2)},${item.y.toFixed(2)}`).join(" L")} Z`;
   });
-  const ichiTenkanPaths = showIchimoku ? chartSeriesPaths(points, "ichi_tenkan", xFor, yFor) : [];
-  const ichiKijunPaths = showIchimoku ? chartSeriesPaths(points, "ichi_kijun", xFor, yFor) : [];
+  const ichiTenkanPaths = showIchimoku ? chartStepSeriesPaths(points, "ichi_tenkan", xFor, yFor) : [];
+  const ichiKijunPaths = showIchimoku ? chartStepSeriesPaths(points, "ichi_kijun", xFor, yFor) : [];
   const ichiSpanAPaths = showIchimoku ? chartSeriesPaths(cloudPoints, "ichi_span_a", xFor, yFor) : [];
   const ichiSpanBPaths = showIchimoku ? chartSeriesPaths(cloudPoints, "ichi_span_b", xFor, yFor) : [];
   const ichiCloudAreas = showIchimoku ? ichimokuCloudPaths(cloudPoints, xFor, yFor) : [];
@@ -1514,6 +1555,31 @@ function renderLineChart(payload) {
     .find(value => Number.isFinite(value));
   const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
   const currentPriceY = yFor(last);
+  // 선 끝 이름표: 마지막 봉 오른쪽에 자리가 있을 때만(일목 선행 26봉 자리가 있으면 생긴다).
+  // 자리가 없으면 오른쪽 가격축과 겹치므로 붙이지 않는다 — 그땐 위 범례 칩으로 구분한다.
+  const lastPointX = xFor(points.length - 1);
+  const endLabelRoom = pad.left + plotW - lastPointX;
+  const lastValueOf = key => {
+    for (let index = points.length - 1; index >= Math.max(0, points.length - 3); index -= 1) {
+      const value = chartNumericValue(points[index], key);
+      if (value != null) return value;
+    }
+    return null;
+  };
+  const endLabelCandidates = endLabelRoom >= (compactChart ? 44 : 30) ? [
+    ...(showIchimoku ? [
+      { key: "ichi_tenkan", text: "전환", color: "var(--chart-ichi-tenkan)" },
+      { key: "ichi_kijun", text: "기준", color: "var(--chart-ichi-kijun)" },
+    ] : []),
+    ...maSeries.map(series => ({ key: series.key, text: String(series.period), color: series.color })),
+  ] : [];
+  const lineEndLabels = chartLineEndLabels(
+    endLabelCandidates
+      .map(item => ({ ...item, value: lastValueOf(item.key) }))
+      .filter(item => item.value != null)
+      .map(item => ({ ...item, y: yFor(item.value) + 3.5 })),
+    compactChart ? 14 : 11, pad.top + 9, pad.top + plotH - 3,
+  );
   const currentPriceLabel = chartMoney(last, payload.currency, payload.ticker);
   const vGrid = indexedChartVerticalGrid(points, xFor, chartRange);
   const labelEvery = Math.max(1, Math.ceil(vGrid.ticks.length / 8));
@@ -1604,6 +1670,7 @@ function renderLineChart(payload) {
       <g class="chart-moving-averages" clip-path="url(#chartPlotClip)">
         ${maSeries.map(series => series.paths.map(path => `<path class="chart-ma-line ma-${series.period}" style="stroke:${series.color}" data-ma-period="${series.period}" d="${path}"></path>`).join("")).join("")}
       </g>
+      ${lineEndLabels.map(item => `<text class="chart-line-end-label" x="${(lastPointX + (compactChart ? 10 : 7)).toFixed(2)}" y="${item.y.toFixed(2)}" style="fill:${item.color}">${esc(item.text)}</text>`).join("")}
       <line class="chart-current-price-tick" x1="${(pad.left + plotW).toFixed(2)}" x2="${(width - 8).toFixed(2)}" y1="${currentPriceY.toFixed(2)}" y2="${currentPriceY.toFixed(2)}"></line>
       <text class="chart-current-price-label" x="${width - 6}" y="${(currentPriceY + 4).toFixed(2)}">${esc(currentPriceLabel)}</text>
       <g class="chart-rsi-series" clip-path="url(#chartRsiClip)">
