@@ -78,8 +78,8 @@ function renderChartRangeButtons() {
       ${(!isCompare && !performanceChartOpen) ? `
         <span class="chart-marker-toggles" role="group" aria-label="거래 마커 표시">
           <span class="chart-control-label">거래</span>
-          <button class="chart-range-btn marker-toggle buy ${chartShowBuys ? "active" : ""}" type="button" data-marker-toggle="buy" aria-label="매수 마커" title="${chartInterval === "day" ? "매수 마커" : "일 단위에서만 표시"}" aria-pressed="${chartShowBuys}" ${chartInterval === "day" ? "" : "disabled"}><i></i><span class="chart-marker-full">Buy</span><span class="chart-marker-short">B</span></button>
-          <button class="chart-range-btn marker-toggle sell ${chartShowSells ? "active" : ""}" type="button" data-marker-toggle="sell" aria-label="매도 마커" title="${chartInterval === "day" ? "매도 마커" : "일 단위에서만 표시"}" aria-pressed="${chartShowSells}" ${chartInterval === "day" ? "" : "disabled"}><i></i><span class="chart-marker-full">Sell</span><span class="chart-marker-short">S</span></button>
+          <button class="chart-range-btn marker-toggle buy ${chartShowBuys ? "active" : ""}" type="button" data-marker-toggle="buy" aria-label="매수 마커" title="${chartInterval === "day" ? "매수 마커" : "일 단위에서만 표시"}" aria-pressed="${chartShowBuys}" ${chartInterval === "day" ? "" : "disabled"}><i></i><span class="chart-marker-full">매수</span><span class="chart-marker-short">B</span></button>
+          <button class="chart-range-btn marker-toggle sell ${chartShowSells ? "active" : ""}" type="button" data-marker-toggle="sell" aria-label="매도 마커" title="${chartInterval === "day" ? "매도 마커" : "일 단위에서만 표시"}" aria-pressed="${chartShowSells}" ${chartInterval === "day" ? "" : "disabled"}><i></i><span class="chart-marker-full">매도</span><span class="chart-marker-short">S</span></button>
         </span>
       ` : ""}
     </div>
