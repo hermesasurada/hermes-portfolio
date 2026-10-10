@@ -6361,9 +6361,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .chart-bottom-controls .chart-marker-toggles {
     display: contents;
   }
-  .chart-bottom-controls .chart-control-label,
-  .chart-bottom-controls .chart-marker-full { display: none; }
-  .chart-bottom-controls .chart-marker-short { display: inline; }
+  .chart-bottom-controls .chart-control-label { display: none; }
   .chart-bottom-controls > * + *,
   .chart-bottom-controls .chart-marker-toggles {
     margin-left: 0;
@@ -6846,6 +6844,12 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     font-weight: 700;
   }
   .chart-bottom-controls .chart-indicator-caption { padding-left: 2px; }
+  /* 두 줄이 된 만큼 버튼을 한 단계 낮게(30 → 26px) */
+  .chart-bottom-controls:not(.perf-mode) .chart-head-toggle,
+  .chart-bottom-controls:not(.perf-mode) .chart-range-btn {
+    height: 26px;
+    min-height: 26px;
+  }
 }
 @media (max-width: 700px) {
   .schedule-card { padding: 10px; gap: 10px; max-height: calc(100dvh - 16px); }
@@ -6917,9 +6921,9 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .screen-row .screen-field { grid-column: 1 / -1; }
 }
 
-/* 차트 오른쪽 끝 선 이름표(전환·기준·20·50·200) — 선택한 선의 색으로, 축 숫자보다 한 단계 작게 */
+/* 차트 오른쪽 끝 선 이름표(전환·기준·20·50·200) — 선택한 선의 색으로. 한글인 전환·기준만 한 단계 작게 */
 .chart-line-end-label {
-  font-size: calc(var(--chart-num-size) * .82);
+  font-size: var(--chart-num-size);
   font-family: var(--chart-num-font);
   font-weight: 800;
   paint-order: stroke;
@@ -6928,6 +6932,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   stroke-linejoin: round;
   pointer-events: none;
 }
+.chart-line-end-label.ichi { font-size: calc(var(--chart-num-size) * .82); }
 
 /* 기준선 예상경로(신고가 없이 가격이 지금에 머물 때)와 현재가 도달 지점 */
 .chart-ichi-line.kijun-projection {

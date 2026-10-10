@@ -1573,8 +1573,8 @@ function renderLineChart(payload) {
   };
   const endLabelCandidates = endLabelRoom >= (compactChart ? 44 : 30) ? [
     ...(showIchimoku ? [
-      { key: "ichi_tenkan", text: "전환", color: "var(--chart-ichi-tenkan)" },
-      { key: "ichi_kijun", text: "기준", color: "var(--chart-ichi-kijun)" },
+      { key: "ichi_tenkan", text: "전환", color: "var(--chart-ichi-tenkan)", cls: "ichi" },
+      { key: "ichi_kijun", text: "기준", color: "var(--chart-ichi-kijun)", cls: "ichi" },
     ] : []),
     ...maSeries.map(series => ({ key: series.key, text: String(series.period), color: series.color })),
   ] : [];
@@ -1707,7 +1707,7 @@ function renderLineChart(payload) {
           <circle cx="${kijunProjection.meet.x.toFixed(2)}" cy="${kijunProjection.meet.y.toFixed(2)}" r="${compactChart ? 5 : 3}"></circle>
           <text x="${kijunProjection.meet.x.toFixed(2)}" y="${(kijunProjection.meet.y - (compactChart ? 12 : 7)).toFixed(2)}" text-anchor="middle">${kijunProjection.meet.bars}${esc(kijunProjection.meet.unit)} 뒤</text>
         </g>` : ""}
-      ${lineEndLabels.map(item => `<text class="chart-line-end-label" x="${(lastPointX + (compactChart ? 10 : 7)).toFixed(2)}" y="${item.y.toFixed(2)}" style="fill:${item.color}">${esc(item.text)}</text>`).join("")}
+      ${lineEndLabels.map(item => `<text class="chart-line-end-label${item.cls ? ` ${item.cls}` : ""}" x="${(lastPointX + (compactChart ? 10 : 7)).toFixed(2)}" y="${item.y.toFixed(2)}" style="fill:${item.color}">${esc(item.text)}</text>`).join("")}
       <line class="chart-current-price-tick" x1="${(pad.left + plotW).toFixed(2)}" x2="${(width - 8).toFixed(2)}" y1="${currentPriceY.toFixed(2)}" y2="${currentPriceY.toFixed(2)}"></line>
       <text class="chart-current-price-label" x="${width - 6}" y="${(currentPriceY + 4).toFixed(2)}">${esc(currentPriceLabel)}</text>
       <g class="chart-rsi-series" clip-path="url(#chartRsiClip)">
