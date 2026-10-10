@@ -1534,11 +1534,18 @@ function renderLineChart(payload) {
   );
   const rsiOverboughtAreas = rsiThresholdAreaPaths(points, 70, "above", xFor, rsiYFor);
   const rsiOversoldAreas = rsiThresholdAreaPaths(points, 30, "below", xFor, rsiYFor);
-  const rsiGuides = rsiScale.ticks.map(value => ({
-    value,
-    y: rsiYFor(value),
-    boundary: value === rsiScale.min || value === rsiScale.max,
-  }));
+  const rsiGuides = rsiScale.ticks.map(value => {
+    const boundary = value === rsiScale.min || value === rsiScale.max;
+    return {
+      value,
+      y: rsiYFor(value),
+      boundary,
+      // 칸 위·아래 끝 눈금(예: 80·20)은 30·50·70과 15 미만으로 붙으면 숫자를 빼고 선만 남긴다
+      // — 칸 높이를 70%로 줄인 뒤 70과 80이 겹쳤다(2026-10-10 사용자 지시).
+      label: !boundary || [30, 50, 70].includes(value)
+        || [30, 50, 70].every(level => Math.abs(level - value) >= 15),
+    };
+  });
   const latestRsi = [...points].reverse().map(point => Number(point.rsi)).find(value => Number.isFinite(value));
   const currentRsiY = Number.isFinite(latestRsi) ? rsiYFor(latestRsi) : null;
   // 진입점수(종가 기준)는 RSI 패널에 겹쳐 그린다 — 축은 왼쪽 안쪽에 0~max.
@@ -1716,7 +1723,7 @@ function renderLineChart(payload) {
       </g>
       ${rsiGuides.map(guide => `
         <line class="chart-rsi-guide ${guide.boundary ? "boundary" : `level-${guide.value}`}" x1="${pad.left}" x2="${pad.left + plotW}" y1="${guide.y.toFixed(2)}" y2="${guide.y.toFixed(2)}"></line>
-        <text class="chart-rsi-axis" x="${width - 6}" y="${(guide.y + 4).toFixed(2)}">${guide.value}</text>
+        ${guide.label && !(currentRsiY != null && Math.abs(guide.y - currentRsiY) < (compactChart ? 14 : 9)) ? `<text class="chart-rsi-axis" x="${width - 6}" y="${(guide.y + 4).toFixed(2)}">${guide.value}</text>` : ""}
       `).join("")}
       ${entryTicks.map((value, index) => `
         <text class="chart-entry-axis" x="${pad.left + 4}" y="${(entryYFor(value) + (index === 0 ? 11 : index === entryTicks.length - 1 ? -2 : 4)).toFixed(2)}">${Number.isInteger(value) ? value : value.toFixed(1)}</text>
