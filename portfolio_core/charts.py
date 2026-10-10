@@ -88,7 +88,27 @@ def _chart_interval_ichimoku_series(points, interval: str, projection=None) -> d
         pending = [(None, None)] * max(0, 26 - len(raw_spans)) + raw_spans[-26:]
         projection.extend({key: value for key, value in zip(("ichi_span_a", "ichi_span_b"), spans)
                            if value is not None} for spans in pending)
+        for step, value in enumerate(_kijun_flat_projection(highs, lows, float(points[-1]["close"]))):
+            projection[step]["ichi_kijun_flat"] = value
     return overlay
+
+
+def _kijun_flat_projection(highs: list[float], lows: list[float], close: float) -> list[float]:
+    """신고가(신저가)가 더 안 나오고 가격이 지금 종가에 머문다고 볼 때 기준선의 앞으로 26봉 경로.
+
+    기준선 = 최근 26봉 (최고가 + 최저가) / 2 라서, 오래된 봉이 창에서 하나씩 빠지는 날을
+    미리 셀 수 있다. k봉 뒤의 창 = 최근 실제 (26 − k)봉 + 종가에 머문 k봉. 기준선이 지금 가격에
+    닿는 날이 '시간 조정(횡보)으로 이격이 메워지는 날'의 대략적인 추정이다(2026-10-10 사용자 요청).
+    """
+    if len(highs) < 26 or len(lows) < 26:
+        return []
+    path = []
+    for step in range(1, 27):
+        keep = 26 - step
+        window_highs = (highs[-keep:] if keep else []) + [close]
+        window_lows = (lows[-keep:] if keep else []) + [close]
+        path.append((max(window_highs) + min(window_lows)) / 2)
+    return path
 
 
 def _chart_overlay_series(rows) -> dict[str, dict[str, float | None]]:

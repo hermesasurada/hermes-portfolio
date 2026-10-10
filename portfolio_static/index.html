@@ -371,6 +371,7 @@
                 <button class="chart-head-toggle active" id="chartTypeToggle" type="button" aria-pressed="true" aria-label="차트 종류 전환">선</button>
                 <button class="chart-head-toggle icon-toggle" id="chartSmoothToggle" type="button" aria-pressed="true" aria-label="부드러운 차트선" title="부드러운 차트선">&#8767;</button>
                 <button class="chart-head-toggle" id="chartLogToggle" type="button" aria-pressed="false" aria-label="로그 스케일" title="로그 스케일">log</button>
+                <span class="chart-control-label chart-indicator-caption">보조지표</span>
                 <button class="chart-head-toggle" id="chartBollingerToggle" type="button" aria-pressed="false" aria-label="볼린저 밴드" title="볼린저 밴드">BB</button>
                 <button class="chart-head-toggle" id="chartIchimokuToggle" type="button" aria-pressed="false" aria-label="일목균형표" title="일목균형표">일목</button>
                 <span class="chart-control-label chart-ma-caption" id="chartMaCaption">이동평균선</span>
@@ -383,6 +384,8 @@
                 <button class="chart-head-toggle active hidden" id="chartIntervalToggle" type="button" aria-pressed="true" aria-label="차트 단위 전환">일</button>
               </div>
               <div class="chart-range-host" id="chartRangeHost"></div>
+              <span class="chart-controls-break" aria-hidden="true"></span>
+              <button class="chart-head-toggle chart-help-btn" id="chartHelpButton" type="button" aria-haspopup="dialog" aria-controls="chartHelpModal" aria-label="차트 지표 설명" title="차트 지표 설명">?</button>
             </div>
             <div class="chart-canvas" id="chartCanvas"></div>
           </div>
@@ -552,6 +555,64 @@
     </form>
   </dialog>
 
+  <dialog class="watch-modal chart-help-modal" id="chartHelpModal" aria-labelledby="chartHelpTitle">
+    <form method="dialog" class="modal-card chart-help-card">
+      <div class="modal-head">
+        <strong id="chartHelpTitle">차트 지표 설명</strong>
+        <button class="ghost-btn" id="chartHelpClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <div class="chart-help-body">
+        <section>
+          <h3><i class="help-swatch" style="--swatch:var(--chart-bb)"></i>볼린저 밴드 (BB)</h3>
+          <ul>
+            <li>가운데선은 20봉 단순이동평균, 위·아래 선은 그 ±2 표준편차입니다.</li>
+            <li>밴드 폭이 변동성입니다. 좁아지면(스퀴즈) 큰 움직임이 뒤따르는 경우가 많습니다.</li>
+            <li>상단에 붙어 오르는 건 강한 추세라는 뜻이지, 그 자체로 매도 신호는 아닙니다.</li>
+            <li>표의 BB 값은 밴드 안 위치(%B)입니다. 0이면 하단, 100이면 상단입니다.</li>
+          </ul>
+        </section>
+        <section>
+          <h3><i class="help-swatch" style="--swatch:var(--chart-ichi-kijun)"></i>일목균형표</h3>
+          <dl>
+            <dt><i class="help-line step" style="--swatch:var(--chart-ichi-tenkan)"></i>전환선</dt>
+            <dd>최근 9봉의 (최고가 + 최저가) ÷ 2. 단기 균형점입니다. 실제 값이 계단처럼 바뀌어 계단선으로 그립니다.</dd>
+            <dt><i class="help-line step" style="--swatch:var(--chart-ichi-kijun)"></i>기준선</dt>
+            <dd>최근 26봉의 (최고가 + 최저가) ÷ 2. 중기 추세의 기준입니다. 평평하면 26봉 동안 신고가·신저가가 없었다는 뜻(횡보)입니다.</dd>
+            <dt><i class="help-line dashed" style="--swatch:var(--chart-ichi-kijun)"></i>기준선 예상경로</dt>
+            <dd>신고가가 안 나오고 가격이 지금에 머문다고 볼 때의 앞으로 26봉 기준선입니다. 오래된 봉이 26봉 창에서 빠지는 날마다 계단처럼 움직입니다. 'N거래일 뒤' 표시는 기준선이 현재가에 닿는 시점으로, 가격 조정 없이 횡보만으로 이격이 메워지는 대략의 날입니다.</dd>
+            <dt><i class="help-line dashed" style="--swatch:var(--chart-ichi-span-a)"></i>선행스팬 A · <i class="help-line dashed" style="--swatch:var(--chart-ichi-span-b)"></i>B · 구름</dt>
+            <dd>A = (전환선 + 기준선) ÷ 2, B = 최근 52봉의 (최고가 + 최저가) ÷ 2이며, 둘 다 26봉 앞에 그립니다. 그 사이가 구름입니다. A가 위면 빨간 빗금(양운), B가 위면 파란 빗금(음운)입니다. 구름은 지지·저항대이고 두꺼울수록 강합니다. 후행스팬은 그리지 않습니다.</dd>
+          </dl>
+          <p class="chart-help-note">가격이 구름 위에 있고 전환선이 기준선 위면 상승 정렬입니다. 가격이 기준선에서 멀리 벌어지면 가격이 내려오거나(가격 조정) 기준선이 따라오는(시간 조정) 쪽으로 이격이 메워지기 쉽습니다.</p>
+        </section>
+        <section>
+          <h3><i class="help-swatch" style="--swatch:var(--chart-ma-medium)"></i>이동평균선</h3>
+          <ul>
+            <li><i class="help-line" style="--swatch:var(--chart-ma-short)"></i>20 · <i class="help-line" style="--swatch:var(--chart-ma-medium)"></i>50 · <i class="help-line dashed" style="--swatch:var(--chart-ma-long)"></i>200 거래일 종가의 단순평균입니다. 주·월 차트에서도 같은 거래일 수를 씁니다.</li>
+            <li>가격이 선 위에 있고 짧은 선이 긴 선 위로 정렬되면 상승 추세입니다. 200일선은 장기 추세의 기준으로 많이 씁니다.</li>
+          </ul>
+        </section>
+        <section>
+          <h3><i class="help-swatch" style="--swatch:var(--chart-rsi)"></i>RSI (14)</h3>
+          <ul>
+            <li>최근 14봉의 상승폭 평균을 (상승폭 + 하락폭) 평균으로 나눈 값(0~100)입니다.</li>
+            <li>70 이상은 과매수(빨간 영역), 30 이하는 과매도(파란 영역)입니다. 강한 추세에서는 70 위에 오래 머물기도 합니다.</li>
+            <li>가격은 신고가인데 RSI가 이전 고점을 못 넘으면 약세 다이버전스로, 상승 힘이 줄었다는 신호로 봅니다.</li>
+            <li><i class="help-line" style="--swatch:var(--chart-entry)"></i>같은 칸의 주황 선은 <b>진입점수</b>(관심목록 '진입 손익비'와 같은 값, 왼쪽 축)입니다. 볼린저 상단까지 남은 여유를 손절폭(1.5 ATR)으로 나누고 RSI·추세로 보정합니다. 높을수록 지금 들어가는 자리가 유리합니다.</li>
+          </ul>
+        </section>
+        <section>
+          <h3>표시 기호</h3>
+          <ul>
+            <li><b class="up">빨간 원 · 고점</b>, <b class="down">파란 원 · 저점</b>: 표시 기간의 최고가·최저가입니다.</li>
+            <li>파란 점: 현재가가 마지막 캔들 종가와 다를 때(애프터마켓·프리마켓 시세) 현재가 위치입니다.</li>
+            <li>B · S: 내 매수·매도 기록입니다(일 단위 차트에서만).</li>
+            <li>오른쪽 끝 이름표(전환·기준·20·50·200): 각 선의 마지막 값 위치입니다.</li>
+          </ul>
+        </section>
+      </div>
+    </form>
+  </dialog>
   <dialog class="watch-modal interest-screen-modal" id="interestScreenModal" aria-labelledby="interestScreenTitle">
     <form method="dialog" class="modal-card interest-screen-card">
       <div class="modal-head">

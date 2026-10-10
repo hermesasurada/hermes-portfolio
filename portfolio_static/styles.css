@@ -6810,6 +6810,42 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .perf-group-label { padding-top: 0; }
   .perf-legend { gap: 6px; }
   .perf-line.perf-focused { stroke-width: 5; }
+  /* 기준선 예상경로도 모바일에선 가늘게 */
+  .chart-canvas .chart-ichi-line.kijun-projection { stroke-width: 0.9; }
+
+  /* 1줄: 차트 형태·단위·기간·거래 마커·도움말 / 2줄: 보조지표(BB·일목)·이동평균선 */
+  .chart-stage .chart-bottom-controls:not(.perf-mode) {
+    flex-wrap: wrap;
+    row-gap: 5px;
+  }
+  .chart-bottom-controls .chart-controls-break {
+    display: block;
+    flex: 0 0 100%;
+    height: 0;
+    order: 2;
+  }
+  .chart-bottom-controls .chart-help-btn {
+    order: 1;
+    flex: 0 0 30px;
+  }
+  .chart-bottom-controls .chart-indicator-caption,
+  .chart-bottom-controls #chartBollingerToggle,
+  .chart-bottom-controls #chartIchimokuToggle,
+  .chart-bottom-controls #chartMaCaption,
+  .chart-bottom-controls .chart-ma-toggle {
+    order: 3;
+  }
+  .chart-bottom-controls .chart-indicator-caption,
+  .chart-bottom-controls #chartMaCaption {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    padding: 0 3px 0 5px;
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 700;
+  }
+  .chart-bottom-controls .chart-indicator-caption { padding-left: 2px; }
 }
 @media (max-width: 700px) {
   .schedule-card { padding: 10px; gap: 10px; max-height: calc(100dvh - 16px); }
@@ -6881,9 +6917,9 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .screen-row .screen-field { grid-column: 1 / -1; }
 }
 
-/* 차트 오른쪽 끝 선 이름표(전환·기준·20·50·200) — 선택한 선의 색으로 */
+/* 차트 오른쪽 끝 선 이름표(전환·기준·20·50·200) — 선택한 선의 색으로, 축 숫자보다 한 단계 작게 */
 .chart-line-end-label {
-  font-size: var(--chart-num-size);
+  font-size: calc(var(--chart-num-size) * .82);
   font-family: var(--chart-num-font);
   font-weight: 800;
   paint-order: stroke;
@@ -6892,3 +6928,53 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   stroke-linejoin: round;
   pointer-events: none;
 }
+
+/* 기준선 예상경로(신고가 없이 가격이 지금에 머물 때)와 현재가 도달 지점 */
+.chart-ichi-line.kijun-projection {
+  stroke: var(--chart-ichi-kijun);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 3 3;
+  stroke-linejoin: miter;
+  opacity: .85;
+}
+.chart-kijun-meet circle {
+  fill: var(--chart-dot-fill);
+  stroke: var(--chart-ichi-kijun);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.chart-kijun-meet text {
+  fill: var(--chart-ichi-kijun);
+  font-size: calc(var(--chart-num-size) * .82);
+  font-family: var(--chart-num-font);
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: var(--chart-label-halo);
+  stroke-width: 3.5px;
+  stroke-linejoin: round;
+}
+
+/* ── 차트 컨트롤: 도움말 버튼·모바일 두 줄 배치(2026-10-10) ───────────────── */
+.chart-indicator-caption,
+.chart-controls-break { display: none; }
+.chart-help-btn { min-width: 28px; font-weight: 800; }
+.chart-bottom-controls.perf-mode .chart-help-btn { display: none; }
+
+/* 차트 지표 설명 팝업 */
+.watch-modal.chart-help-modal { width: min(620px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); }
+.chart-help-card { display: flex; flex-direction: column; gap: 10px; max-height: calc(100dvh - 24px); box-sizing: border-box; }
+.chart-help-body { overflow-y: auto; display: grid; gap: 14px; padding-right: 2px; font-size: 12.5px; line-height: 1.6; }
+.chart-help-body section { display: grid; gap: 4px; }
+.chart-help-body h3 { margin: 0; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.chart-help-body ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
+.chart-help-body dl { margin: 0; display: grid; gap: 2px; }
+.chart-help-body dt { font-weight: 700; margin-top: 4px; }
+.chart-help-body dd { margin: 0 0 0 20px; }
+.chart-help-body .chart-help-note { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.chart-help-body .up { color: var(--up); }
+.chart-help-body .down { color: var(--down); }
+.help-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--swatch); }
+.help-line { display: inline-block; width: 16px; height: 0; margin-right: 5px; vertical-align: middle; border-top: 2px solid var(--swatch); }
+.help-line.dashed { border-top-style: dashed; }
+.help-line.step { width: 14px; height: 5px; border-left: 2px solid var(--swatch); transform: translateY(1px); }

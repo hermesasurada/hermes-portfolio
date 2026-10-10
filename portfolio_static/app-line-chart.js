@@ -217,6 +217,11 @@ function initChartDisplayControls() {
       if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
     });
   });
+  const helpModal = document.getElementById("chartHelpModal");
+  document.getElementById("chartHelpButton")?.addEventListener("click", () => helpModal?.showModal());
+  document.getElementById("chartHelpClose")?.addEventListener("click", () => helpModal?.close());
+  // 바깥(배경) 클릭으로 닫기 — 카드 안 클릭은 무시
+  helpModal?.addEventListener("click", event => { if (event.target === helpModal) helpModal.close(); });
   const smoothToggle = document.getElementById("chartSmoothToggle");
   const logToggle = document.getElementById("chartLogToggle");
   const bollingerToggle = document.getElementById("chartBollingerToggle");
@@ -1573,6 +1578,31 @@ function renderLineChart(payload) {
     ] : []),
     ...maSeries.map(series => ({ key: series.key, text: String(series.period), color: series.color })),
   ] : [];
+  // 기준선 예상경로: 신고가가 안 나오고 가격이 지금에 머문다고 볼 때(서버 ichi_kijun_flat).
+  // 기준선이 현재가에 닿는 첫 봉 = 시간 조정(횡보)으로 이격이 메워지는 대략의 시점.
+  const kijunNow = lastValueOf("ichi_kijun");
+  const kijunFlat = showIchimoku && futureCount
+    ? projection.slice(0, futureCount).map(item => chartNumericValue(item, "ichi_kijun_flat"))
+    : [];
+  let kijunProjection = null;
+  if (kijunNow != null && kijunFlat.length && kijunFlat.every(value => value != null)) {
+    const lastIndex = points.length - 1;
+    const steps = [{ x: xFor(lastIndex), y: yFor(kijunNow) },
+      ...kijunFlat.map((value, step) => ({ x: xFor(lastIndex + step + 1), y: yFor(value) }))];
+    const above = last >= kijunNow;
+    const meetStep = kijunFlat.findIndex(value => (above ? value >= last : value <= last));
+    kijunProjection = {
+      d: steps.map((item, index) => index === 0
+        ? `M${item.x.toFixed(2)},${item.y.toFixed(2)}`
+        : `H${item.x.toFixed(2)} V${item.y.toFixed(2)}`).join(" "),
+      meet: meetStep >= 0 ? {
+        bars: meetStep + 1,
+        x: xFor(lastIndex + meetStep + 1),
+        y: yFor(kijunFlat[meetStep]),
+        unit: { day: "거래일", week: "주", month: "개월" }[chartInterval] || "봉",
+      } : null,
+    };
+  }
   const lineEndLabels = chartLineEndLabels(
     endLabelCandidates
       .map(item => ({ ...item, value: lastValueOf(item.key) }))
@@ -1659,6 +1689,7 @@ function renderLineChart(payload) {
         ${ichiSpanBPaths.map(path => `<path class="chart-ichi-line span-b" d="${path}"></path>`).join("")}
         ${ichiTenkanPaths.map(path => `<path class="chart-ichi-line tenkan" d="${path}"></path>`).join("")}
         ${ichiKijunPaths.map(path => `<path class="chart-ichi-line kijun" d="${path}"></path>`).join("")}
+        ${kijunProjection ? `<path class="chart-ichi-line kijun-projection" d="${kijunProjection.d}"><title>기준선 예상경로 — 신고가가 안 나오고 가격이 지금에 머문다고 볼 때</title></path>` : ""}
         ${bbFillAreas.map(path => `<path class="chart-bb-fill" d="${path}"></path>`).join("")}
         ${bbUpperPaths.map(path => `<path class="chart-bb-line outer" d="${path}"></path>`).join("")}
         ${bbMidPaths.map(path => `<path class="chart-bb-line mid" d="${path}"></path>`).join("")}
@@ -1670,6 +1701,12 @@ function renderLineChart(payload) {
       <g class="chart-moving-averages" clip-path="url(#chartPlotClip)">
         ${maSeries.map(series => series.paths.map(path => `<path class="chart-ma-line ma-${series.period}" style="stroke:${series.color}" data-ma-period="${series.period}" d="${path}"></path>`).join("")).join("")}
       </g>
+      ${kijunProjection?.meet ? `
+        <g class="chart-kijun-meet">
+          <title>가격이 지금에 머물면 기준선이 ${kijunProjection.meet.bars}${kijunProjection.meet.unit} 뒤 현재가에 닿습니다(시간 조정 완료 추정)</title>
+          <circle cx="${kijunProjection.meet.x.toFixed(2)}" cy="${kijunProjection.meet.y.toFixed(2)}" r="${compactChart ? 5 : 3}"></circle>
+          <text x="${kijunProjection.meet.x.toFixed(2)}" y="${(kijunProjection.meet.y - (compactChart ? 12 : 7)).toFixed(2)}" text-anchor="middle">${kijunProjection.meet.bars}${esc(kijunProjection.meet.unit)} 뒤</text>
+        </g>` : ""}
       ${lineEndLabels.map(item => `<text class="chart-line-end-label" x="${(lastPointX + (compactChart ? 10 : 7)).toFixed(2)}" y="${item.y.toFixed(2)}" style="fill:${item.color}">${esc(item.text)}</text>`).join("")}
       <line class="chart-current-price-tick" x1="${(pad.left + plotW).toFixed(2)}" x2="${(width - 8).toFixed(2)}" y1="${currentPriceY.toFixed(2)}" y2="${currentPriceY.toFixed(2)}"></line>
       <text class="chart-current-price-label" x="${width - 6}" y="${(currentPriceY + 4).toFixed(2)}">${esc(currentPriceLabel)}</text>

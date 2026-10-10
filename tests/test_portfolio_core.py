@@ -776,6 +776,23 @@ def test_dividend_network_fetch_runs_outside_db_transaction():
             setattr(dividend_refresh_module, name, value)
 
 
+def test_kijun_flat_projection_counts_bars_leaving_the_window():
+    """기준선 예상경로: 신고가 없이 가격이 종가에 머물 때 앞으로 26봉의 기준선."""
+    from portfolio_core.charts import _kijun_flat_projection
+
+    highs = [100.0 + i for i in range(30)]   # 마지막 26봉 최고 129
+    lows = [90.0 + i for i in range(30)]     # 마지막 26봉 최저 94
+    path = _kijun_flat_projection(highs, lows, 120.0)
+    assert len(path) == 26
+    assert path[0] == (129 + 95) / 2       # 1봉 뒤: 가장 오래된 봉(저가 94)이 빠진다
+    assert path[1] == (129 + 96) / 2
+    assert path[-1] == 120.0               # 26봉 뒤엔 창 전체가 종가에 머문 봉
+    # 종가가 최고가 위(신고가)여도 종가가 창에 들어가 그대로 반영된다
+    assert _kijun_flat_projection(highs, lows, 140.0)[0] == (140 + 95) / 2
+    # 26봉이 안 되면 경로 없음
+    assert _kijun_flat_projection(highs[:20], lows[:20], 120.0) == []
+
+
 def test_stale_prices_skip_exchange_wide_holiday():
     """중국 국경절: 상하이·선전 종목이 모두 9/30에 멈춘 건 휴장 — 정체 경보에서 뺀다."""
     from portfolio_core.queries import stale_price_rows
