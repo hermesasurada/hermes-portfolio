@@ -6451,6 +6451,13 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   /* 차트 숫자는 변수 한 곳에서만 키운다(고정폭·공통 크기 유지) */
   :root { --chart-num-size: 11.5px; }
+  /* 좁은 화면은 캔들도 가늘어 선이 상대적으로 굵어 보인다 — 이평선·전환·기준선을 한 단계 가늘게
+     (2026-10-10 사용자 지시, PC 1.3·1.4 → 0.9) */
+  .chart-ma-line,
+  .chart-ichi-line.tenkan,
+  .chart-ichi-line.kijun {
+    stroke-width: 0.9;
+  }
   .chart-y-label,
   .chart-x-label {
     font-weight: 700;
