@@ -1434,7 +1434,7 @@ function renderLineChart(payload) {
   const pad = { top: 12, right: 58, bottom: compactChart ? 54 : 44, left: 14 };
   const plotW = width - pad.left - pad.right;
   const rsiGap = compactChart ? 24 : 18;
-  const rsiH = compactChart ? 180 : 96;
+  const rsiH = compactChart ? 126 : 67;   // RSI·진입점수 칸 — 2026-10-10 사용자 지시로 70%(180·96 → 126·67), 남는 높이는 가격 칸으로
   const plotH = height - pad.top - pad.bottom - rsiGap - rsiH;
   const rsiTop = pad.top + plotH + rsiGap;
   const rsiBottom = rsiTop + rsiH;
