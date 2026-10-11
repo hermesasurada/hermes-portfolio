@@ -9,14 +9,31 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const STATIC = path.join(__dirname, '../portfolio_static');
-// index.html의 <script src> 순서 그대로 — 로드 순서가 바뀌면 여기도 함께 바꾼다.
-const SCRIPT_ORDER = [
-  'state.js', 'format.js', 'api.js', 'chart-utils.js', 'app-consensus.js', 'app-company-profile.js',
-  'app-interest-columns.js', 'app-tabs.js', 'app-charts.js', 'app-holdings.js', 'app-chart-scale.js',
-  'app-chart-metrics.js', 'app-line-chart.js', 'app-chart-compare.js', 'app-transactions.js',
-  'app-trade-controls.js', 'app-watchlist.js', 'app-interest-watchlists.js', 'app-interest-screen.js', 'app-ticker-search.js',
-  'app-calendar.js', 'app-cash-flows.js', 'app.js',
-];
+// 스크립트 로드 순서는 index.html의 <script src>가 유일한 정본 — 여기서 읽어 쓴다(복사본을 두지 않는다).
+const SCRIPT_ORDER = [...fs.readFileSync(path.join(STATIC, 'index.html'), 'utf8')
+  .matchAll(/<script src="\/static\/([^"]+)"/g)].map(m => m[1]);
+
+// @media 블록 추출 — 질의(예: '(max-width: 980px)')가 같은 블록을 모두, 중괄호 깊이로 끝을 찾아 돌려준다.
+// 파일 끝의 '마지막 블록'에 기대지 않으므로 모바일 규칙을 어느 980px 블록에 두어도 테스트가 같은 답을 낸다.
+function mediaBlocks(css, query) {
+  const blocks = [];
+  const needle = `@media ${query}`;
+  for (let at = css.indexOf(needle); at >= 0; at = css.indexOf(needle, at + 1)) {
+    const open = css.indexOf('{', at);
+    let depth = 0;
+    for (let i = open; i < css.length; i += 1) {
+      if (css[i] === '{') depth += 1;
+      else if (css[i] === '}' && (depth -= 1) === 0) { blocks.push({ start: at, end: i + 1, text: css.slice(open + 1, i) }); break; }
+    }
+  }
+  return blocks;
+}
+// 미디어 블록을 뺀 나머지(기본 규칙)
+function withoutMediaBlocks(css, query) {
+  let out = ''; let cursor = 0;
+  for (const block of mediaBlocks(css, query)) { out += css.slice(cursor, block.start); cursor = block.end; }
+  return out + css.slice(cursor);
+}
 
 function readStatic(name) {
   return fs.readFileSync(path.join(STATIC, name), 'utf8');
@@ -155,4 +172,4 @@ function plain(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
 }
 
-module.exports = { SCRIPT_ORDER, STATIC, readStatic, element, classList, fakeDocument, memoryStorage, createContext, loadScripts, evaluate, plain };
+module.exports = { SCRIPT_ORDER, STATIC, readStatic, mediaBlocks, withoutMediaBlocks, element, classList, fakeDocument, memoryStorage, createContext, loadScripts, evaluate, plain };

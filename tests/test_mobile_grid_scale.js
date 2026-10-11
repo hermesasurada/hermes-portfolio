@@ -5,15 +5,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const css = fs.readFileSync(path.join(__dirname, '../portfolio_static/styles.css'), 'utf8');
 
-// 축소 규칙이 들어 있는 ≤980px 블록만 잘라낸다(중괄호 깊이로 끝을 찾는다).
-const start = css.lastIndexOf('@media (max-width: 980px)', css.indexOf('--grid-fs:'));
-assert.ok(start >= 0, '--grid-fs를 담은 980px 미디어 블록을 찾지 못했다');
-let depth = 0, end = start;
-for (let i = css.indexOf('{', start); i < css.length; i += 1) {
-  if (css[i] === '{') depth += 1;
-  else if (css[i] === '}' && (depth -= 1) === 0) { end = i; break; }
-}
-const mobile = css.slice(start, end);
+// ≤980px 블록 전부(공용 도우미) — 축소 변수가 어느 블록에 있든 같은 답.
+const h = require('./harness');
+const mobile = h.mediaBlocks(css, '(max-width: 980px)').map(b => b.text).join('\n');
+assert.ok(mobile.includes('--grid-fs:'), '--grid-fs를 담은 980px 미디어 블록을 찾지 못했다');
 
 // 네 변수가 한자리에 모여 있고, 값이 데스크톱보다 작다.
 const sizes = Object.fromEntries(['--grid-fs', '--grid-fs-sub', '--grid-fs-chip', '--grid-fs-tiny']
@@ -40,7 +35,7 @@ assert.match(mobile, /\.interest-group-head th\[rowspan\] \{\s*font-size: var\(-
 assert.match(mobile, /\.interest-group-head th:not\(\[rowspan\]\) \{\s*font-size: var\(--grid-fs-tiny\);/);
 
 // 데스크톱 기본값은 그대로 — 모바일 블록 밖에서 확인한다.
-const desktop = css.slice(0, start) + css.slice(end);
+const desktop = h.withoutMediaBlocks(css, '(max-width: 980px)');
 assert.match(desktop, /\.ticker-symbol \{[^}]*font-size: 10\.5px/);
 assert.match(desktop, /\.pct-chip \{[^}]*font-size: 11px/);
 assert.match(desktop, /\.interest-detail-list thead \.interest-group-head th\[rowspan\] \{[^}]*font-size: 12px/);

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const h = require('./harness');
 const root = path.join(__dirname, '../portfolio_static');
 const css = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
 
@@ -11,7 +12,7 @@ const css = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
 // 그리드 부모를 붙인 선택자가 기본·모바일 양쪽에 있어야 한다.
 assert.match(css, /\.hero-index-grid > \.hero-index-item \{\s*display: grid;[^}]*padding: 0 14px;[^}]*border-left: 1px solid var\(--line\);/);
 assert.doesNotMatch(css, /^\.hero-index-item \{/m, '특이도 낮은 기본 규칙이 돌아오면 .ticker-link에 다시 덮인다');
-assert.match(css, /@media[^{]*980px[\s\S]*\.hero-index-grid > \.hero-index-item \{[^}]*border-left: 0;/);
+assert.match(h.mediaBlocks(css, '(max-width: 980px)').map(b => b.text).join('\n'), /\.hero-index-grid > \.hero-index-item \{[^}]*border-left: 0;/);
 // 합친 모드: 칸은 내용 폭 아래로 줄지 않고(max-content) 남는 폭만 나눈다 — 그래야 모자랄 때 넘치고, JS가 그 넘침으로 판정한다.
 assert.match(css, /\.hero-strip\.hero-combined \.hero-page-shell \{[^}]*grid-template-columns: max-content minmax\(max-content, 1fr\) minmax\(max-content, 1fr\);/);
 assert.match(css, /\.hero-strip\.hero-combined \.hero-index-grid \{[^}]*repeat\(3, minmax\(max-content, 1fr\)\)/);

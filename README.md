@@ -53,10 +53,8 @@ python3 collect_prices.py --category kr
 ## 테스트
 
 ```bash
-tests/run_all.sh
-python3 tests/test_refactor_performance.py
-python3 tests/test_atomic_writes.py
-python3 tests/test_transaction_split_repair.py
+tests/run_all.sh                                  # 전체(python 13 + node 39)
+PYTHONPATH=. python3 tests/test_portfolio_core.py  # 개별 실행 예
 node tests/test_interest_columns.js
 ```
 
