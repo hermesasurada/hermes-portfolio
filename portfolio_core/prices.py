@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .tickers import normalize_tickers
+
 import sqlite3
 from datetime import datetime
 
@@ -11,7 +13,7 @@ from .us_live_quotes import apply_us_live_prices, us_market_status
 
 
 def latest_prices(conn: sqlite3.Connection, tickers: list[str] | None = None) -> dict[str, dict]:
-    clean_tickers = sorted({ticker.strip().upper() for ticker in tickers or [] if ticker and ticker.strip()})
+    clean_tickers = normalize_tickers(tickers)
     # Seek one row per ticker, not MAX(date) over every historical price. The
     # unfiltered path also walks distinct index keys (including orphan tickers),
     # so callers do not need metadata or a cache to keep the result complete.
@@ -86,6 +88,21 @@ def latest_prices(conn: sqlite3.Connection, tickers: list[str] | None = None) ->
             "prior_date": row["prior_date"],
         }
     return prices
+
+
+PRICE_FIELD_KEYS = (
+    "regular_price", "regular_previous_price", "regular_change", "regular_change_pct",
+    "extended_price", "extended_base_price", "extended_change", "extended_change_pct", "extended_source",
+)
+
+
+def price_fields(record: dict | None) -> dict:
+    """정규장·연장 가격 필드 묶음 — 보유·종목·차트 응답이 같은 키를 싣는다(세 벌로 복제돼 보유 쪽엔
+    regular_change가 빠지는 등 드리프트가 있었다, 2026-10-11 통합). 연장 세션 상태는 옛 키 market_state도 받는다."""
+    record = record or {}
+    fields = {key: record.get(key) for key in PRICE_FIELD_KEYS}
+    fields["extended_market_state"] = record.get("extended_market_state") or record.get("market_state")
+    return fields
 
 
 def build_market_snapshot(

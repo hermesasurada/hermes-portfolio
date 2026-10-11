@@ -22,6 +22,8 @@
 
 from __future__ import annotations
 
+from .dates import finite_float
+
 import re
 
 STOP_ATR_MULT = 1.5
@@ -57,16 +59,8 @@ def is_leveraged_product(name: str | None) -> bool:
     return bool(name) and LEVERAGED_NAME_PATTERN.search(str(name)) is not None
 
 
-def _finite(value) -> float | None:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    return number if number == number and abs(number) != float("inf") else None
-
-
 def _rsi_scale(rsi) -> float | None:
-    value = _finite(rsi)
+    value = finite_float(rsi)
     if value is None:
         return None
     factor = 1.0 + (RSI_PIVOT - value) / RSI_SPAN * RSI_AMPLITUDE
@@ -88,9 +82,9 @@ def _trend_factor(rsi_week, ma50_pct, ma200_pct=None) -> float:
 
     필수 성분(주 RSI·50일선)의 결측은 점수 진입점에서 차단한다.
     """
-    week = _finite(rsi_week)
-    ma = _finite(ma50_pct)
-    long_ma = _finite(ma200_pct)
+    week = finite_float(rsi_week)
+    ma = finite_float(ma50_pct)
+    long_ma = finite_float(ma200_pct)
     parts = []
     if week is not None:
         parts.append((0.4, _unit_ramp(week, TREND_RSI_PIVOT, TREND_RSI_BAND)))
@@ -105,8 +99,8 @@ def _trend_factor(rsi_week, ma50_pct, ma200_pct=None) -> float:
 
 
 def _upside_pct(upper_pct, upper_week_pct) -> float | None:
-    day = _finite(upper_pct)
-    week = _finite(upper_week_pct)
+    day = finite_float(upper_pct)
+    week = finite_float(upper_week_pct)
     day_up = max(day, 0.0) if day is not None else None
     week_up = max(week, 0.0) if week is not None else None
     if week_up is not None:
@@ -136,10 +130,10 @@ def entry_risk_reward_score(
     상위권에 올랐다(HONA: 주RSI·주상단·60일선 전부 결측인데 전체 1위).
     회피 게이지에서 '모르면 안전'은 방향이 반대다. 실질 기준은 상장 20주.
     """
-    if any(_finite(value) is None for value in (upper_pct, upper_week_pct, rsi_day, rsi_week, ma50_pct)):
+    if any(finite_float(value) is None for value in (upper_pct, upper_week_pct, rsi_day, rsi_week, ma50_pct)):
         return None
     upside = _upside_pct(upper_pct, upper_week_pct)
-    atr = _finite(atr_pct)
+    atr = finite_float(atr_pct)
     if upside is None or atr is None or atr < 0:
         return None
     stop = max(atr * STOP_ATR_MULT, ATR_FLOOR_PCT)

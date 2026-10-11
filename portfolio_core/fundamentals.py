@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from .dates import finite_float
+
 import html
 import json
-import math
 import re
 import sqlite3
 import urllib.request
@@ -37,18 +38,10 @@ YFINANCE_PROFILE_FIELDS = {
 }
 
 
-def finite_number(value) -> float | None:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    return number if math.isfinite(number) else None
-
-
 def dividend_yield_from_run_rate(annualized_run_rate, current_price) -> float | None:
     """연환산 주당배당과 현재가로 배당수익률(%)을 계산한다."""
-    annualized = finite_number(annualized_run_rate)
-    price = finite_number(current_price)
+    annualized = finite_float(annualized_run_rate)
+    price = finite_float(current_price)
     if annualized is None or annualized <= 0 or price is None or price <= 0:
         return None
     return annualized / price * 100
@@ -67,7 +60,7 @@ def history_backed_dividend_yield(
     """
     if not is_korean_stock_ticker(ticker):
         return None
-    price = finite_number(current_price)
+    price = finite_float(current_price)
     if price is None or price <= 0:
         try:
             row = conn.execute(
@@ -82,7 +75,7 @@ def history_backed_dividend_yield(
             ).fetchone()
         except sqlite3.Error:
             row = None
-        price = finite_number(row["close"]) if row else None
+        price = finite_float(row["close"]) if row else None
     if price is None or price <= 0:
         return None
     try:
@@ -101,7 +94,7 @@ def apply_history_dividend_yield(
     data: dict,
     current_price=None,
 ) -> dict:
-    if finite_number(data.get("dividend_yield")) is not None:
+    if finite_float(data.get("dividend_yield")) is not None:
         return data
     derived = history_backed_dividend_yield(conn, ticker, current_price)
     if derived is None:
@@ -136,8 +129,8 @@ def yfinance_dividend_yield(raw: dict | str | None) -> float | None:
 
     trading_currency = str(info.get("currency") or "").strip().upper()
     financial_currency = str(info.get("financialCurrency") or "").strip().upper()
-    annual_rate = finite_number(info.get("trailingAnnualDividendRate"))
-    trading_price = finite_number(
+    annual_rate = finite_float(info.get("trailingAnnualDividendRate"))
+    trading_price = finite_float(
         info.get("currentPrice")
         or info.get("regularMarketPrice")
         or info.get("regularMarketPreviousClose")
@@ -153,7 +146,7 @@ def yfinance_dividend_yield(raw: dict | str | None) -> float | None:
         and annual_rate > trading_price
     ):
         return None
-    return finite_number(dividend_yield)
+    return finite_float(dividend_yield)
 
 
 def yfinance_profile_metrics(raw: dict | str | None) -> dict:
@@ -164,7 +157,7 @@ def yfinance_profile_metrics(raw: dict | str | None) -> dict:
     """
     info = _yfinance_info(raw)
     result = {
-        field: finite_number(info.get(source_field))
+        field: finite_float(info.get(source_field))
         for field, source_field in YFINANCE_PROFILE_FIELDS.items()
     }
     financial_currency = str(info.get("financialCurrency") or "").strip().upper()
@@ -205,13 +198,13 @@ def load_stats_cache_items(
         if fresh_only and stats_cache_expires_today() and now_ts - float(row["fetched_ts"] or 0) >= STATS_CACHE_SECONDS:
             continue
         item = {
-            "market_cap": finite_number(row["market_cap"]),
-            "aum": finite_number(row["aum"]),
-            "dividend_yield": finite_number(row["dividend_yield"]),
-            "dividend_growth_5y": finite_number(row["dividend_growth_5y"]),
-            "dividend_streak_years": finite_number(row["dividend_streak_years"]),
+            "market_cap": finite_float(row["market_cap"]),
+            "aum": finite_float(row["aum"]),
+            "dividend_yield": finite_float(row["dividend_yield"]),
+            "dividend_growth_5y": finite_float(row["dividend_growth_5y"]),
+            "dividend_streak_years": finite_float(row["dividend_streak_years"]),
             "dividend_streak_floor": int(row["dividend_streak_floor"] or 0),
-            "dividend_growth_streak_years": finite_number(row["dividend_growth_streak_years"]),
+            "dividend_growth_streak_years": finite_float(row["dividend_growth_streak_years"]),
             "trailing_pe": normalize_pe(row["trailing_pe"]),
             "forward_pe": normalize_pe(row["forward_pe"]),
             "price_to_book": normalize_pe(row["price_to_book"]),
@@ -249,9 +242,9 @@ def save_stats_cache_item(conn: sqlite3.Connection, ticker: str, source: str, da
             datetime.now().timestamp(),
             datetime.now(KST).isoformat(timespec="seconds"),
             source,
-            finite_number(data.get("market_cap")),
-            finite_number(data.get("aum")),
-            finite_number(data.get("dividend_yield")),
+            finite_float(data.get("market_cap")),
+            finite_float(data.get("aum")),
+            finite_float(data.get("dividend_yield")),
             normalize_pe(data.get("trailing_pe")),
             normalize_pe(data.get("forward_pe")),
             normalize_pe(data.get("price_to_book")),
@@ -274,7 +267,7 @@ def parse_number(text: str | None) -> float | None:
 
 
 def normalize_pe(value) -> float | None:
-    number = finite_number(value)
+    number = finite_float(value)
     if number is None:
         return None
     return number if number > 0 else None
@@ -380,9 +373,9 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
                     is_etf = quote_type == "ETF" or asset_class(ticker, info_name or meta_name or "") == "etf"
                     aum = None
                     if is_etf:
-                        aum = finite_number(info.get("totalAssets"))
+                        aum = finite_float(info.get("totalAssets"))
                         if aum is None:
-                            aum = finite_number(info.get("netAssets"))
+                            aum = finite_float(info.get("netAssets"))
                     # yfinance는 거래통화 != 재무통화(ADR·해외기업)일 때 주당순자산
                     # (bookValue)을 잘못 환산해 P/B가 비현실적으로 폭발한다
                     # (예: ASML 1500, TSM 65). 통화 불일치/이상치는 신뢰 불가 → 공란.
@@ -394,9 +387,9 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
                     if price_to_book is not None and price_to_book > PB_SANITY_MAX:
                         price_to_book = None
                     data = {
-                        "market_cap": finite_number(info.get("marketCap")),
+                        "market_cap": finite_float(info.get("marketCap")),
                         "aum": aum,
-                        "dividend_yield": finite_number(dividend_yield),
+                        "dividend_yield": finite_float(dividend_yield),
                         "trailing_pe": normalize_pe(info.get("trailingPE")),
                         "forward_pe": normalize_pe(info.get("forwardPE")),
                         "price_to_book": price_to_book,

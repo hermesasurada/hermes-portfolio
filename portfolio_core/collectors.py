@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .dates import finite_float
+
 import json
 import re
 import ssl
@@ -12,7 +14,7 @@ from html import unescape
 from urllib.parse import quote
 from typing import Any
 
-from .constants import CRYPTO_MARKETS, MARKET_INDEXES
+from .constants import CRYPTO_MARKETS, MARKET_INDEXES, BROWSER_USER_AGENT
 from .paths import KST
 from .tickers import kr_ticker_code, normalize_yfinance_symbol, ticker_currency
 
@@ -29,7 +31,7 @@ INVESTING_HEADERS = {
     "DNT": "1",
     "Referer": "https://kr.investing.com/",
     "Upgrade-Insecure-Requests": "1",
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+    "User-Agent": BROWSER_USER_AGENT,
 }
 
 
@@ -43,14 +45,6 @@ class CollectedPrice:
     recent: list[dict[str, Any] | tuple[str, float]]
 
 
-def _finite_number(value) -> float | None:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    return number if number == number else None
-
-
 def _rows_from_frame(frame, tail: int | None = None) -> list[dict[str, Any]]:
     """pandas 일봉 프레임을 저장용 OHLC 행으로 정규화한다."""
     if frame is None or frame.empty or "Close" not in frame:
@@ -58,18 +52,18 @@ def _rows_from_frame(frame, tail: int | None = None) -> list[dict[str, Any]]:
     selected = frame.tail(tail) if tail else frame
     rows: list[dict[str, Any]] = []
     for date, item in selected.iterrows():
-        close = _finite_number(item.get("Close"))
+        close = finite_float(item.get("Close"))
         if close is None or close <= 0:
             continue
         rows.append(
             {
                 "date": date.strftime("%Y-%m-%d"),
-                "open": _finite_number(item.get("Open")),
-                "high": _finite_number(item.get("High")),
-                "low": _finite_number(item.get("Low")),
+                "open": finite_float(item.get("Open")),
+                "high": finite_float(item.get("High")),
+                "low": finite_float(item.get("Low")),
                 "close": close,
-                "volume": _finite_number(item.get("Volume")),
-                "adj_close": _finite_number(item.get("Adj Close")),
+                "volume": finite_float(item.get("Volume")),
+                "adj_close": finite_float(item.get("Adj Close")),
             }
         )
     return rows
@@ -77,16 +71,16 @@ def _rows_from_frame(frame, tail: int | None = None) -> list[dict[str, Any]]:
 
 def _upbit_candle_row(item: dict) -> dict[str, Any] | None:
     date_text = str(item.get("candle_date_time_kst") or "")[:10]
-    close = _finite_number(item.get("trade_price"))
+    close = finite_float(item.get("trade_price"))
     if not date_text or close is None or close <= 0:
         return None
     return {
         "date": date_text,
-        "open": _finite_number(item.get("opening_price")),
-        "high": _finite_number(item.get("high_price")),
-        "low": _finite_number(item.get("low_price")),
+        "open": finite_float(item.get("opening_price")),
+        "high": finite_float(item.get("high_price")),
+        "low": finite_float(item.get("low_price")),
         "close": close,
-        "volume": _finite_number(item.get("candle_acc_trade_volume")),
+        "volume": finite_float(item.get("candle_acc_trade_volume")),
         "adj_close": None,
     }
 

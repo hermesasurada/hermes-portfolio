@@ -11,7 +11,7 @@ from pathlib import Path
 from urllib.parse import quote, urlparse
 
 from .paths import LOGO_DIR
-from .constants import FX_TICKERS, KOREAN_ETF_BRANDS, MARKET_INDEXES
+from .constants import FX_TICKERS, KOREAN_ETF_BRANDS, MARKET_INDEXES, BROWSER_USER_AGENT
 from .tickers import normalize_yfinance_symbol
 from .logo_assets import MAX_BYTES, download, needs_dark_filter, official_icon, validate_asset
 
@@ -27,7 +27,7 @@ PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
 # 정방형 심볼 로고 소스 — FMP가 가로 워드마크를 줄 때 기업 도메인 파비콘으로 대체.
 FAVICON_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
+    "User-Agent": BROWSER_USER_AGENT,
     "Accept": "image/png,image/*;q=0.8,*/*;q=0.5",
 }
 # icon.horse가 '아이콘 없음' 도메인에 돌려주는 기본 플레이스홀더(256x256, 4267B) — 채택 금지.

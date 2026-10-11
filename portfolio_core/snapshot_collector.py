@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .dates import positive_float
+
 import json
 import random
 import time
@@ -125,14 +127,6 @@ def quote_date(row: dict) -> str:
     return datetime.now(KST).strftime("%Y-%m-%d")
 
 
-def _positive_number(value) -> float | None:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    return number if number == number and number > 0 else None
-
-
 def candle_row(date_text: str, close: float, ohlc: dict, scale: float = 1.0) -> dict | tuple:
     """진행 중인 세션도 캔들로 남기기 위한 일봉 행.
 
@@ -141,9 +135,9 @@ def candle_row(date_text: str, close: float, ohlc: dict, scale: float = 1.0) -> 
     있을 때만 OHLC 행을 만들고, 하나라도 없으면 종가 행으로 물러난다 —
     가짜 시·고·저는 만들지 않는다(daily_prices upsert의 COALESCE 규약과 동일).
     """
-    open_value = _positive_number(ohlc.get("open"))
-    high = _positive_number(ohlc.get("high"))
-    low = _positive_number(ohlc.get("low"))
+    open_value = positive_float(ohlc.get("open"))
+    high = positive_float(ohlc.get("high"))
+    low = positive_float(ohlc.get("low"))
     if open_value is None or high is None or low is None:
         return (date_text, close)
     row = {
@@ -153,7 +147,7 @@ def candle_row(date_text: str, close: float, ohlc: dict, scale: float = 1.0) -> 
         "low": low * scale,
         "close": close,
     }
-    volume = _positive_number(ohlc.get("volume"))
+    volume = positive_float(ohlc.get("volume"))
     if volume is not None:
         row["volume"] = volume
     return row

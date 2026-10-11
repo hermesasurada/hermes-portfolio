@@ -5,7 +5,8 @@ from datetime import timedelta
 
 from .dates import today_kst
 from .db import connect
-from .dividend_schedule import add_months, consolidated_dividend_events, event_schedule_date
+from .dates import shift_months
+from .dividend_schedule import consolidated_dividend_events, event_schedule_date
 from .earnings_history import collapse_near_earnings_events
 from .tickers import ticker_scope
 
@@ -25,8 +26,8 @@ def load_schedule(
     logo_hint = logo_hint_fn or _default_logo
     today = today_kst()
     first_of_month = today.replace(day=1)
-    start = add_months(first_of_month, -12)
-    end = add_months(first_of_month, 13) - timedelta(days=1)
+    start = shift_months(first_of_month, -12)
+    end = shift_months(first_of_month, 13) - timedelta(days=1)
 
     with connect() as conn:
         # Schema/backfill run at startup and when earnings are collected. A GET

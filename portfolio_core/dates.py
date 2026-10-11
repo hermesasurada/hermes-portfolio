@@ -17,13 +17,29 @@ def now_kst_text() -> str:
     return datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def positive_float(value: Any) -> float | None:
-    """유한 양수 float만 통과 (배당금 등). 그 외 None."""
+def finite_float(value: Any) -> float | None:
+    """유한 float만 통과(None·빈 값·NaN·inf·문자열 쓰레기는 None). 모듈마다 복제돼 있던 숫자 변환의 정본."""
     try:
         number = float(value)
     except (TypeError, ValueError):
         return None
-    return number if math.isfinite(number) and number > 0 else None
+    return number if math.isfinite(number) else None
+
+
+def positive_float(value: Any) -> float | None:
+    """유한 양수 float만 통과 (배당금·가격 등). 그 외 None."""
+    number = finite_float(value)
+    return number if number is not None and number > 0 else None
+
+
+def shift_months(day: date, months: int) -> date:
+    """달 더하기 — 일자는 그 달 말일로 잘라 맞춘다(1/31 + 1달 = 2/28·29)."""
+    month_index = day.month - 1 + months
+    year = day.year + month_index // 12
+    month = month_index % 12 + 1
+    leap = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+    month_lengths = [31, 29 if leap else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    return date(year, month, min(day.day, month_lengths[month - 1]))
 
 
 def parse_iso_date(value: Any) -> date | None:

@@ -12,7 +12,7 @@ from html import unescape
 from pathlib import Path
 from typing import Any
 
-from .constants import KOREAN_SUFFIXES
+from .constants import KOREAN_SUFFIXES, BROWSER_USER_AGENT
 from .dates import now_kst_text, positive_float, to_iso_text, today_kst
 from .dividend_pipeline import normalize_dividend_events
 from .dividend_schedule import previous_kr_business_day
@@ -25,12 +25,12 @@ NASDAQ_HEADERS = {
     "Accept": "application/json, text/plain, */*",
     "Origin": "https://www.nasdaq.com",
     "Referer": "https://www.nasdaq.com/",
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
+    "User-Agent": BROWSER_USER_AGENT,
 }
-KIND_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36"
+KIND_USER_AGENT = BROWSER_USER_AGENT
 STOCKANALYSIS_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36",
+    "User-Agent": BROWSER_USER_AGENT,
 }
 CURRENCY_SYMBOLS = {
     "$": "USD",

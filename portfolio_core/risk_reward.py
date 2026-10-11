@@ -25,6 +25,8 @@
 
 from __future__ import annotations
 
+from .dates import finite_float
+
 from .constants import CRYPTO_MARKETS, FX_TICKERS, MARKET_INDEXES
 from .tickers import asset_class
 
@@ -41,14 +43,6 @@ VOL_FLOOR_PCT = {
     "index": 8.0,
 }
 DEFAULT_VOL_FLOOR_PCT = 8.0
-
-
-def _finite(value) -> float | None:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    return number if number == number and abs(number) != float("inf") else None
 
 
 def score_asset_kind(ticker: str, name: str = "") -> str:
@@ -83,8 +77,8 @@ def risk_reward_score(
         row = periods.get(key) if isinstance(periods, dict) else None
         if not row:
             continue
-        excess = _finite(row.get("excess"))
-        vol = _finite(row.get("vol"))
+        excess = finite_float(row.get("excess"))
+        vol = finite_float(row.get("vol"))
         if excess is None or vol is None or vol < 0:
             continue
         available.append((key, weight, excess, str(row.get("quality") or "TR")))
@@ -94,7 +88,7 @@ def risk_reward_score(
     # 없는 기간은 0점 — 가중치를 남은 기간에 나눠 주지 않는다(모듈 설명 참고).
     weighted = 0.0
     for key, weight, excess, _quality in available:
-        vol = _finite(periods[key].get("vol")) or 0.0
+        vol = finite_float(periods[key].get("vol")) or 0.0
         ratio = excess / max(vol, floor)
         weighted += weight * max(-PERIOD_RATIO_CAP, min(PERIOD_RATIO_CAP, ratio))
 

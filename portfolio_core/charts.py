@@ -4,12 +4,12 @@ from datetime import date, datetime
 from itertools import groupby
 
 from .constants import MARKET_INDEXES
-from .dates import parse_iso_date, today_kst
+from .dates import parse_iso_date, shift_months, today_kst
 from .db import connect
-from .indicators import rsi_series, shift_months
+from .indicators import rsi_series
 from .market_calendar import change_session_note
 from .paths import US_EASTERN
-from .prices import build_market_snapshot, latest_prices, price_view
+from .prices import build_market_snapshot, latest_prices, price_view, price_fields
 from .queries import account_filter_clause, clean_account_ids, load_holding_rows
 from .technical_stats import price_adjusted_rows
 from .tickers import account_label, ticker_currency
@@ -320,16 +320,7 @@ def load_price_chart(
         ),
         "change": market_view["change"],
         "change_pct": market_view["change_pct"],
-        "regular_price": price_record.get("regular_price"),
-        "regular_previous_price": price_record.get("regular_previous_price"),
-        "regular_change": price_record.get("regular_change"),
-        "regular_change_pct": price_record.get("regular_change_pct"),
-        "extended_price": price_record.get("extended_price"),
-        "extended_base_price": price_record.get("extended_base_price"),
-        "extended_change": price_record.get("extended_change"),
-        "extended_change_pct": price_record.get("extended_change_pct"),
-        "extended_source": price_record.get("extended_source"),
-        "extended_market_state": price_record.get("extended_market_state") or price_record.get("market_state"),
+        **price_fields(price_record),
         "market": snapshot["market_status"],
         "history_start": history_start,
         "history_end": history_end,

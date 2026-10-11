@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from .constants import DIVIDEND_LOOKAHEAD_DAYS, DIVIDEND_LOOKBACK_DAYS
-from .dates import parse_iso_date, positive_float, today_kst
+from .dates import parse_iso_date, positive_float, shift_months, today_kst
 from .market_calendar import korea_equity_calendar_day
 
 # 공용 헬퍼 위임 (중복 제거)
@@ -45,14 +45,6 @@ def last_day_of_month(year: int, month: int) -> date:
     return date(year, month + 1, 1) - timedelta(days=1)
 
 
-def add_months(value: date, months: int) -> date:
-    month_index = value.month - 1 + months
-    year = value.year + month_index // 12
-    month = month_index % 12 + 1
-    day = min(value.day, last_day_of_month(year, month).day)
-    return date(year, month, day)
-
-
 def nth_kr_business_day(year: int, month: int, nth: int) -> date:
     current = date(year, month, 1)
     count = 0
@@ -77,7 +69,7 @@ def estimated_kr_monthly_etf_pay_date(record_date: date) -> date:
 
 
 def estimated_jp_pay_date(record_date: date) -> date:
-    target = add_months(record_date, 3)
+    target = shift_months(record_date, 3)
     return previous_weekday(last_day_of_month(target.year, target.month))
 
 

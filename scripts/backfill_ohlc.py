@@ -21,17 +21,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # scripts/ 아래에서도 portfolio_core를 찾도록
 
 from portfolio_core.collect_common import collector_lock
+from portfolio_core.dates import positive_float
 from portfolio_core.collectors import fetch_history_rows
 from portfolio_core.db import connect
 from portfolio_core.price_store import _coherent_candle_bounds, infer_category
-
-
-def _number(value) -> float | None:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    return number if number == number and number > 0 else None
 
 
 def missing_targets(conn, since: str, tickers: list[str] | None) -> list[tuple[str, str, int]]:
@@ -81,21 +74,21 @@ def fill_ticker(conn, ticker: str, category: str, since: str, period: str, toler
         if not source:
             continue
         stored_close = float(row["close"])
-        source_close = _number(source.get("close"))
+        source_close = positive_float(source.get("close"))
         if source_close is None:
             continue
         # 분할 기준이 다른 이력을 섞으면 봉과 종가가 어긋난다 — 그런 행은 손대지 않는다.
         if abs(source_close - stored_close) / stored_close * 100 > tolerance_pct:
             mismatched += 1
             continue
-        open_value = _number(source.get("open"))
-        high = _number(source.get("high"))
-        low = _number(source.get("low"))
+        open_value = positive_float(source.get("open"))
+        high = positive_float(source.get("high"))
+        low = positive_float(source.get("low"))
         if open_value is None or high is None or low is None:
             continue
         # 저장된 종가를 기준으로 꼬리를 넓혀 봉이 자기 종가를 뚫지 않게 한다.
         high, low = _coherent_candle_bounds(open_value, high, low, stored_close)
-        updates.append((open_value, high, low, _number(source.get("volume")), ticker, row["date"]))
+        updates.append((open_value, high, low, positive_float(source.get("volume")), ticker, row["date"]))
 
     if updates:
         conn.executemany(

@@ -6,7 +6,7 @@ from collections.abc import Mapping, Sequence
 from typing import Iterable
 
 from .constants import CRYPTO_MARKETS, FX_TICKERS, MARKET_INDEXES
-from .dates import parse_iso_date
+from .dates import parse_iso_date, finite_float
 from .db import (
     connect,
     ensure_collector_runs_table,
@@ -16,7 +16,7 @@ from .db import (
 )
 from .earnings_history import NEAR_EARNINGS_DAYS
 from .paths import KST
-from .tickers import ticker_currency
+from .tickers import ticker_currency, normalize_tickers
 
 CATEGORIES = ("fx", "crypto", "overseas", "kr", "index")
 SPLIT_REPAIR_TOLERANCE = 0.18
@@ -81,7 +81,7 @@ def load_watch(
 
 
 def load_ticker_profiles(tickers: Iterable[str]) -> dict[str, dict[str, str | None]]:
-    clean_tickers = sorted({ticker.strip().upper() for ticker in tickers if ticker and ticker.strip()})
+    clean_tickers = normalize_tickers(tickers)
     if not clean_tickers:
         return {}
     placeholders = ",".join("?" for _ in clean_tickers)
@@ -107,16 +107,6 @@ def load_ticker_profiles(tickers: Iterable[str]) -> dict[str, dict[str, str | No
 # 저장분 최소 날짜에서 이만큼 거슬러 올라간 지점부터만 단절/스파이크를 검사.
 # 분할 단절 매칭 허용(±20일)과 스파이크 run(≤5일)을 모두 덮는 여유폭.
 REPAIR_SCAN_BUFFER_DAYS = 30
-
-
-def _optional_number(value):
-    if value is None:
-        return None
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    return number if number == number else None
 
 
 def _coherent_candle_bounds(
@@ -146,23 +136,23 @@ def _normalize_daily_price_row(row, ticker: str, source: str) -> tuple | None:
     """신규 OHLC dict와 기존 (date, close) tuple을 모두 저장 형태로 변환한다."""
     if isinstance(row, Mapping):
         date_str = row.get("date")
-        close = _optional_number(row.get("close"))
-        open_value = _optional_number(row.get("open"))
-        high = _optional_number(row.get("high"))
-        low = _optional_number(row.get("low"))
-        volume = _optional_number(row.get("volume"))
-        adj_close = _optional_number(row.get("adj_close"))
+        close = finite_float(row.get("close"))
+        open_value = finite_float(row.get("open"))
+        high = finite_float(row.get("high"))
+        low = finite_float(row.get("low"))
+        volume = finite_float(row.get("volume"))
+        adj_close = finite_float(row.get("adj_close"))
     elif isinstance(row, Sequence) and not isinstance(row, (str, bytes)) and len(row) >= 2:
         date_str = row[0]
         if len(row) >= 5:
-            open_value = _optional_number(row[1])
-            high = _optional_number(row[2])
-            low = _optional_number(row[3])
-            close = _optional_number(row[4])
-            volume = _optional_number(row[5]) if len(row) > 5 else None
-            adj_close = _optional_number(row[6]) if len(row) > 6 else None
+            open_value = finite_float(row[1])
+            high = finite_float(row[2])
+            low = finite_float(row[3])
+            close = finite_float(row[4])
+            volume = finite_float(row[5]) if len(row) > 5 else None
+            adj_close = finite_float(row[6]) if len(row) > 6 else None
         else:
-            close = _optional_number(row[1])
+            close = finite_float(row[1])
             open_value = high = low = volume = adj_close = None
     else:
         return None
@@ -298,7 +288,7 @@ def repair_split_adjusted_daily_prices(tickers: Iterable[str], since: str | None
     (직전 1행은 anchor로 포함). 발견 시 보정 UPDATE는 기존대로 단절일 이전
     전체 이력에 적용되므로 결과는 전체 스캔과 동일하다.
     """
-    clean_tickers = sorted({str(ticker).strip().upper() for ticker in tickers if str(ticker).strip()})
+    clean_tickers = normalize_tickers(tickers)
     if not clean_tickers:
         return {}
 
@@ -586,7 +576,7 @@ def update_earnings_dates(entries: Iterable[tuple[str, str | None]]) -> int:
 
 
 def earnings_update_due_tickers(tickers: Iterable[str], max_age_hours: float = 24) -> list[str]:
-    clean_tickers = sorted({ticker.strip().upper() for ticker in tickers if ticker and ticker.strip()})
+    clean_tickers = normalize_tickers(tickers)
     if not clean_tickers:
         return []
     cutoff = datetime.now(KST) - timedelta(hours=max_age_hours)

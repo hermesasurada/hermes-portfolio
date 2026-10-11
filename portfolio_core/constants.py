@@ -77,3 +77,6 @@ MARKET_INDEXES = {
     "CAC40": {"name": "CAC 40", "symbol": "^FCHI", "currency": "EUR", "region": "FR"},
     "EUROSTOXX50": {"name": "Euro Stoxx 50", "symbol": "^STOXX50E", "currency": "EUR", "region": "EU"},
 }
+
+# 외부 사이트 조회용 브라우저 User-Agent — 모듈마다 복제돼 있던 문자열의 정본
+BROWSER_USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/125.0 Safari/537.36"

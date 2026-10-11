@@ -22,7 +22,7 @@ from .dates import parse_iso_date, positive_float, today_kst
 from .db import connect, ensure_stats_cache_table
 from .dividend_refresh import dividend_history_start
 from .dividend_schedule import estimated_jp_pay_date
-from .tickers import ticker_currency
+from .tickers import ticker_currency, normalize_tickers
 
 # 공용 헬퍼 위임 — 테스트가 _today를 바꿔 '오늘'을 고정한다
 _today = today_kst
@@ -995,7 +995,7 @@ def load_dividend_history(ticker: str) -> dict:
 
 def refresh_dividend_growth_cache(tickers: list[str]) -> int:
     """배당 귀속연도 기준 5년 CAGR을 펀더멘털 캐시에 저장한다."""
-    clean_tickers = sorted({str(ticker or "").strip().upper() for ticker in tickers if ticker})
+    clean_tickers = normalize_tickers(tickers)
     values: list[tuple[float | None, str]] = []
     for ticker in clean_tickers:
         try:

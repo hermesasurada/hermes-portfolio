@@ -41,6 +41,11 @@ def display_name(name: str | None, ticker: str | None = None) -> str:
     return cleaned or raw
 
 
+def normalize_tickers(tickers) -> list[str]:
+    """티커 목록 정리: 공백 제거·대문자·중복 제거·정렬. 모듈마다 복제돼 있던 set-comprehension의 정본."""
+    return sorted({str(ticker).strip().upper() for ticker in (tickers or []) if ticker and str(ticker).strip()})
+
+
 def ticker_currency(ticker: str) -> str:
     if ticker in CRYPTO_MARKETS:
         return "KRW"

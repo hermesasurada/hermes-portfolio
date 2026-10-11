@@ -7,7 +7,7 @@ from typing import Any, Iterable
 from .db import connect, ensure_stock_split_tables
 from .dates import now_kst_text, parse_iso_date, positive_float
 from .paths import KST
-from .tickers import normalize_yfinance_symbol
+from .tickers import normalize_yfinance_symbol, normalize_tickers
 
 SPLIT_CACHE_HOURS = 24
 
@@ -211,7 +211,7 @@ def fetch_yahoo_stock_splits(ticker: str) -> list[tuple[str, float]]:
 
 
 def refresh_stock_splits(tickers: Iterable[str], force: bool = False) -> dict[str, int]:
-    clean_tickers = sorted({str(ticker).strip().upper() for ticker in tickers if str(ticker).strip()})
+    clean_tickers = normalize_tickers(tickers)
     if not clean_tickers:
         return {}
 

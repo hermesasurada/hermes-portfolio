@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .tickers import normalize_tickers
+
 from datetime import datetime, timedelta
 
 from .db import connect
@@ -17,7 +19,7 @@ from .us_live_quotes import us_market_status
 
 
 def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
-    clean_tickers = sorted({ticker.strip().upper() for ticker in tickers if ticker and ticker.strip()})
+    clean_tickers = normalize_tickers(tickers)
     if not clean_tickers:
         return {
             "stats": {},

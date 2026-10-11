@@ -8,7 +8,7 @@ from .constants import FX_TICKERS, MARKET_INDEXES
 from .db import connect
 from .market_calendar import change_session_note
 from .paths import DB_PATH, KST
-from .prices import build_market_snapshot, fx_updated_at, latest_prices, price_cache_updated_at, price_updated_at, price_view
+from .prices import build_market_snapshot, fx_updated_at, latest_prices, price_cache_updated_at, price_updated_at, price_view, price_fields
 from .tickers import account_kind, account_label, account_scope, asset_class, ticker_currency, ticker_scope
 
 
@@ -158,14 +158,7 @@ def load_portfolio(
             "change": view["change"],
             "change_pct": view["change_pct"],
             "change_krw_pct": view["change_krw_pct"],
-            "regular_price": current.get("regular_price"),
-            "regular_previous_price": current.get("regular_previous_price"),
-            "extended_price": current.get("extended_price"),
-            "extended_base_price": current.get("extended_base_price"),
-            "extended_change": current.get("extended_change"),
-            "extended_change_pct": current.get("extended_change_pct"),
-            "extended_source": current.get("extended_source"),
-            "extended_market_state": current.get("extended_market_state"),
+            **price_fields(current),
             "fx_rate": rate,
             "previous_fx_rate": view["previous_fx_rate"],
             "price_source": current.get("source"),
@@ -213,16 +206,7 @@ def load_portfolio(
                 "change": view["change"],
                 "change_pct": view["change_pct"],
                 "change_krw_pct": view["change_krw_pct"],
-                "regular_price": ticker_price.get("regular_price"),
-                "regular_previous_price": ticker_price.get("regular_previous_price"),
-                "regular_change": ticker_price.get("regular_change"),
-                "regular_change_pct": ticker_price.get("regular_change_pct"),
-                "extended_price": ticker_price.get("extended_price"),
-                "extended_base_price": ticker_price.get("extended_base_price"),
-                "extended_change": ticker_price.get("extended_change"),
-                "extended_change_pct": ticker_price.get("extended_change_pct"),
-                "extended_source": ticker_price.get("extended_source"),
-                "extended_market_state": ticker_price.get("extended_market_state"),
+                **price_fields(ticker_price),
                 "previous_fx_rate": view["previous_fx_rate"],
                 "next_earnings_date": row["next_earnings_date"],
                 "earnings_updated_at": row["earnings_updated_at"],

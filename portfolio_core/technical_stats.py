@@ -12,7 +12,7 @@ from .corporate_actions import (
     entitlement_date,
     split_adjusted_amount,
 )
-from .dates import parse_iso_date, positive_float
+from .dates import parse_iso_date, positive_float, shift_months
 from .db import connect, ensure_technical_stats_cache_table
 from .indicators import (
     atr_percent,
@@ -23,11 +23,10 @@ from .indicators import (
     resample_last,
     rsi_series,
     rsi_value,
-    shift_months,
 )
 from .paths import KST
 from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
-from .tickers import is_korean_stock_ticker, ticker_currency
+from .tickers import is_korean_stock_ticker, ticker_currency, normalize_tickers
 from .trade_timing import calculate_trade_timing
 
 TECHNICAL_CACHE_VERSION = 15  # 15: 별도 매수·매도 타점 참고 (기존 진입 손익비 유지)
@@ -484,9 +483,6 @@ def calculate_price_adjusted_indicators(
         **_entry_seat_pct(daily, weekly),
     }
 
-
-def normalize_tickers(tickers: Iterable[str]) -> list[str]:
-    return sorted({ticker.strip().upper() for ticker in tickers if ticker and ticker.strip()})
 
 
 def load_technical_stats_cache(conn: sqlite3.Connection, tickers: Iterable[str]) -> dict[str, dict]:

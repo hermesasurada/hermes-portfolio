@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .dates import shift_months
+
 import sqlite3
 from bisect import bisect_right
 from datetime import date, timedelta
@@ -189,12 +191,6 @@ def resample_last(rows: list[sqlite3.Row], period: str) -> list[float]:
     return [grouped[key] for key in sorted(grouped)]
 
 
-def shift_months(day: date, months: int) -> date:
-    month_index = day.month - 1 + months
-    year = day.year + month_index // 12
-    month = month_index % 12 + 1
-    month_lengths = [31, 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-    return date(year, month, min(day.day, month_lengths[month - 1]))
 
 
 def price_on_or_before(rows: list[sqlite3.Row], target: date) -> float | None:

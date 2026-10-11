@@ -10,6 +10,8 @@ SPAX도 같다). 상장일 이전 배당은 그 종목의 것일 수 없으므�
 
 from __future__ import annotations
 
+from .tickers import normalize_tickers
+
 from typing import Iterable
 
 from .dates import now_kst_text
@@ -21,7 +23,7 @@ from .dividend_sources import _polygon_candidate, fetch_polygon_list_date
 def load_listing_dates(conn, tickers: Iterable[str]) -> dict[str, str]:
     """{ticker: list_date} — 상장일이 확정된 종목만."""
     ensure_listing_dates_table(conn)
-    clean = sorted({str(t).strip().upper() for t in tickers if str(t).strip()})
+    clean = normalize_tickers(tickers)
     if not clean:
         return {}
     placeholders = ",".join("?" for _ in clean)
@@ -34,7 +36,7 @@ def load_listing_dates(conn, tickers: Iterable[str]) -> dict[str, str]:
 
 def ensure_listing_dates(tickers: Iterable[str]) -> dict[str, str]:
     """아직 확정되지 않은 미국 종목의 상장일을 조회해 저장한다. {ticker: status}."""
-    clean = sorted({str(t).strip().upper() for t in tickers if str(t).strip()})
+    clean = normalize_tickers(tickers)
     candidates = [t for t in clean if _polygon_candidate(t)]
     if not candidates:
         return {}

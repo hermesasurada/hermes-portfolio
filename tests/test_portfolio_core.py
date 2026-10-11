@@ -72,7 +72,6 @@ from portfolio_core.indicators import (
 )
 from portfolio_core.market_calendar import (
     change_session_note,
-    change_session_note,
     japan_equity_calendar_day,
     us_equity_calendar_day,
 )
@@ -816,6 +815,23 @@ def test_korean_calendar_closes_on_labor_day_and_dividend_schedule_shares_it():
     assert is_kr_business_day(date(2026, 5, 4))
     assert not is_kr_business_day(date(2026, 2, 17))          # 설날 연휴(음력)도 이제 반영된다
     assert previous_kr_business_day(date(2026, 5, 4)) == date(2026, 4, 30)
+
+
+def test_shared_helpers_replace_module_copies():
+    """2026-10-11 통합한 공용 헬퍼 — 모듈마다 복제돼 있던 숫자 변환·월 산술·티커 정리·가격 필드."""
+    from portfolio_core.dates import finite_float, positive_float, shift_months
+    from portfolio_core.tickers import normalize_tickers
+    from portfolio_core.prices import price_fields
+
+    assert [finite_float(v) for v in (None, "", "x", float("nan"), float("inf"), "1.5", 0)] == [None, None, None, None, None, 1.5, 0.0]
+    assert [positive_float(v) for v in (0, -1, "2")] == [None, None, 2.0]
+    assert shift_months(date(2026, 1, 31), 1) == date(2026, 2, 28)
+    assert shift_months(date(2024, 1, 31), 1) == date(2024, 2, 29)
+    assert shift_months(date(2026, 3, 15), -13) == date(2025, 2, 15)
+    assert normalize_tickers([" nvda", "NVDA", "", None, "005930.ks"]) == ["005930.KS", "NVDA"]
+    fields = price_fields({"regular_price": 1, "regular_change": 2, "market_state": "POST"})
+    assert fields["regular_change"] == 2 and fields["extended_market_state"] == "POST" and fields["extended_price"] is None
+    assert price_fields(None)["regular_price"] is None
 
 
 def test_stale_prices_skip_exchange_wide_holiday():
