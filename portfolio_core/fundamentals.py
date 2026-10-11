@@ -86,8 +86,8 @@ def history_backed_dividend_yield(
     if price is None or price <= 0:
         return None
     try:
-        # 순환 import를 피하고, 배당이력이 필요한 누락 종목에만 로드한다.
-        from .dividends import load_dividend_history
+        # 배당이력이 필요한 누락 종목에만 로드한다(dividend_history → dividend_refresh → … 무거운 import 지연).
+        from .dividend_history import load_dividend_history
 
         summary = load_dividend_history(ticker).get("summary") or {}
     except (KeyError, TypeError, ValueError, sqlite3.Error):

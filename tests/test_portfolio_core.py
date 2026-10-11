@@ -28,7 +28,7 @@ _db_module.initialize_schema()
 import portfolio_core.fundamentals as fundamentals_module
 import portfolio_core.dividend_refresh as dividend_refresh_module
 import portfolio_core.dividend_sources as dividend_sources_module
-import portfolio_core.dividends as dividends_module
+import portfolio_core.dividend_history as dividend_history_module
 import portfolio_core.schedule as schedule_module
 import portfolio_core.ticker_metadata as ticker_metadata_module
 import portfolio_core.price_store as price_store_module
@@ -45,7 +45,7 @@ from portfolio_core.fundamentals import (
     yfinance_profile_metrics,
 )
 from portfolio_core.dates import parse_iso_date, to_iso_text
-from portfolio_core.dividends import (
+from portfolio_core.dividend_history import (
     _active_dividend_year,
     _aggregate_annual_dividends,
     _attributed_history_events,
@@ -55,7 +55,9 @@ from portfolio_core.dividends import (
     _mark_fiscal_finals,
     _monthly_annual_estimate,
     _rolling_monthly_growth,
-    split_adjusted_amount,
+)
+from portfolio_core.corporate_actions import split_adjusted_amount
+from portfolio_core.dividends import (
     _tax_rate,
 )
 from portfolio_core.dividend_schedule import consolidated_dividend_events
@@ -532,23 +534,23 @@ def test_dividend_history_includes_source_backed_future_payment():
     def fake_connect():
         yield conn
 
-    original_connect = dividends_module.connect
-    original_today = dividends_module._today
-    original_history_start = dividends_module.dividend_history_start
+    original_connect = dividend_history_module.connect
+    original_today = dividend_history_module._today
+    original_history_start = dividend_history_module.dividend_history_start
     try:
-        dividends_module.connect = fake_connect
-        dividends_module._today = lambda: date(2026, 7, 22)
-        dividends_module.dividend_history_start = lambda: date(2016, 1, 1)
-        payload = dividends_module.load_dividend_history("ASML")
+        dividend_history_module.connect = fake_connect
+        dividend_history_module._today = lambda: date(2026, 7, 22)
+        dividend_history_module.dividend_history_start = lambda: date(2016, 1, 1)
+        payload = dividend_history_module.load_dividend_history("ASML")
         details = [detail for row in payload["rows"] for detail in row["payments_detail"]]
         future = next(detail for detail in details if detail["pay_date"] == "2026-08-05")
         assert future["entitlement_date"] == "2026-07-28"
         assert abs(future["amount"] - 2.15072) < 1e-9
         assert future["source"] == "polygon"
     finally:
-        dividends_module.connect = original_connect
-        dividends_module._today = original_today
-        dividends_module.dividend_history_start = original_history_start
+        dividend_history_module.connect = original_connect
+        dividend_history_module._today = original_today
+        dividend_history_module.dividend_history_start = original_history_start
         conn.close()
 
 
@@ -587,14 +589,14 @@ def test_race_cross_currency_duplicate_is_one_annual_dividend():
     def fake_connect():
         yield conn
 
-    original_connect = dividends_module.connect
-    original_today = dividends_module._today
-    original_history_start = dividends_module.dividend_history_start
+    original_connect = dividend_history_module.connect
+    original_today = dividend_history_module._today
+    original_history_start = dividend_history_module.dividend_history_start
     try:
-        dividends_module.connect = fake_connect
-        dividends_module._today = lambda: date(2026, 7, 24)
-        dividends_module.dividend_history_start = lambda: date(2016, 1, 1)
-        payload = dividends_module.load_dividend_history("RACE")
+        dividend_history_module.connect = fake_connect
+        dividend_history_module._today = lambda: date(2026, 7, 24)
+        dividend_history_module.dividend_history_start = lambda: date(2016, 1, 1)
+        payload = dividend_history_module.load_dividend_history("RACE")
         assert payload["summary"]["frequency"] == 1
         assert payload["summary"]["frequency_label"] == "연배당"
         rows = {row["year"]: row for row in payload["rows"]}
@@ -604,14 +606,14 @@ def test_race_cross_currency_duplicate_is_one_annual_dividend():
         assert len(rows[2025]["payments_detail"]) == 1
         assert rows[2025]["payments_detail"][0]["source"] == "polygon"
     finally:
-        dividends_module.connect = original_connect
-        dividends_module._today = original_today
-        dividends_module.dividend_history_start = original_history_start
+        dividend_history_module.connect = original_connect
+        dividend_history_module._today = original_today
+        dividend_history_module.dividend_history_start = original_history_start
         conn.close()
 
 
 def test_yearly_expected_payment_counts_preserves_historical_frequency():
-    expected = dividends_module._yearly_expected_payment_counts(
+    expected = dividend_history_module._yearly_expected_payment_counts(
         {2021: 1, 2022: 1, 2023: 1, 2024: 1, 2025: 2, 2026: 1},
         2026,
         2,
@@ -633,7 +635,7 @@ def test_yearly_expected_payment_counts_handles_isolated_years():
     None → None == None 이 참이 된 뒤 None > frequency 비교로 TypeError,
     배당이력 팝업이 500으로 비었다(같은 증상 37종목).
     """
-    expected = dividends_module._yearly_expected_payment_counts(
+    expected = dividend_history_module._yearly_expected_payment_counts(
         {2022: 1, 2026: 1}, 2026, 1,
     )
     assert expected == {2022: 1, 2026: 1}
@@ -1296,7 +1298,7 @@ def test_jpm_october_raise_groups_four_equal_quarters():
     역년으로 통째 폴백한다(같은 1.5달러 네 회차가 두 해로 갈렸다).
     FISCAL_END_MONTH_OVERRIDES는 재라벨을 타지 않아 회계연도 귀속이 유지된다.
     """
-    from portfolio_core.dividends import FISCAL_END_MONTH_OVERRIDES
+    from portfolio_core.dividend_history import FISCAL_END_MONTH_OVERRIDES
 
     assert FISCAL_END_MONTH_OVERRIDES.get("JPM") == 9
     rows = [
@@ -2013,13 +2015,13 @@ def test_rms_combined_final_and_special_dividends_are_split():
     )["year"] == 2025
 
     totals = {year: row["amount"] for year, row in annual.items()}
-    assert dividends_module._dividend_frequency(
+    assert dividend_history_module._dividend_frequency(
         [event for event in events if not event["is_special"]],
         {year: row["payments"] for year, row in annual.items()},
         2026,
         "RMS.PA",
     ) == 2
-    growth, basis = dividends_module._year_growth(
+    growth, basis = dividend_history_module._year_growth(
         2025, annual, totals, {2023, 2024, 2025}, False
     )
     assert basis == "annual"

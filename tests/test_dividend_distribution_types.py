@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from portfolio_core.dividends import (
+from portfolio_core.dividend_history import (
     _aggregate_annual_dividends,
     _attributed_history_events,
     _history_year_rows,

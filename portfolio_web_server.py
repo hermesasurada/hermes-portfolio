@@ -30,7 +30,8 @@ from portfolio_core.db import connect, initialize_schema
 from portfolio_core.queries import load_collection_diagnostics, load_ticker_directory
 from portfolio_core.schedule import load_schedule
 from portfolio_core.logos import KR_ETF_BRAND_SOURCES, SVG_PREFERRED_LOGOS, is_dark_logo
-from portfolio_core.dividends import load_dividend_history, load_dividends
+from portfolio_core.dividend_history import load_dividend_history
+from portfolio_core.dividends import load_dividends
 from portfolio_core.interest_watchlists import (
     add_interest_item,
     create_interest_group,
