@@ -17,6 +17,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# 운영 DB 격리 — 어떤 테스트가 패치를 빠뜨리고 connect()까지 내려가도 임시 DB에 쓰게 한다.
+# 2026-10-11: 연장가 테스트가 extended_quote_store를 안 막아 운영 DB에 AAPL 210달러 가짜 행을 남겼다.
+import tempfile as _tempfile
+import portfolio_core.db as _db_module
+_TEST_DB_DIR = _tempfile.TemporaryDirectory(prefix="portfolio-test-")
+_db_module.DB_PATH = Path(_TEST_DB_DIR.name) / "stock_history.db"
+_db_module.initialize_schema()
+
 import portfolio_core.fundamentals as fundamentals_module
 import portfolio_core.dividend_refresh as dividend_refresh_module
 import portfolio_core.dividend_sources as dividend_sources_module
@@ -2550,17 +2558,12 @@ def test_dividend_list_includes_previous_month_during_first_five_days():
 
 def test_update_transaction_can_reapply_holdings_when_asked():
     """기존 거래 수정 시 '잔고도 반영'을 고르면 옛 효과를 되돌리고 새 값을 반영한다(TSM 매수→매도 사례)."""
-    import pathlib
     import portfolio_core.transactions as tm
 
-    schema_source = sqlite3.connect(str(pathlib.Path.home() / ".hermes/data/stock_history.db"))
-    ddl = {name: sql for name, sql in schema_source.execute(
-        "SELECT name, sql FROM sqlite_master WHERE type='table' AND name IN ('accounts','holdings','tickers','transactions')")}
-    schema_source.close()
+    from portfolio_core.db import ensure_base_tables
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
-    for name in ("accounts", "tickers", "holdings", "transactions"):
-        conn.execute(ddl[name])   # 운영 DB와 같은 스키마
+    ensure_base_tables(conn)   # 운영 DB와 같은 스키마(portfolio_core/schema.sql)
     acct_cols = [r[1] for r in conn.execute("PRAGMA table_info(accounts)")]
     values = {"id": 1, "member": "Ray", "name": "해외주식", "currency": "USD", "account_type": "overseas"}
     conn.execute(f"INSERT INTO accounts ({','.join(c for c in acct_cols if c in values)}) VALUES ({','.join('?' for c in acct_cols if c in values)})",

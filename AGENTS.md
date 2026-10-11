@@ -9,7 +9,7 @@
 
 ## Tests
 
-- Run all frontend tests with `for f in tests/test_*.js; do node "$f"; done` and backend tests with `python3 tests/test_portfolio_core.py`.
+- Run the whole suite with `tests/run_all.sh` (13 Python + 39 Node files, ~5s). It sets `PYTHONPATH=.` and a throwaway `HOME`, so no test can reach `~/.hermes` data. `tests/test_portfolio_core.py` also redirects `portfolio_core.db.DB_PATH` to a temp DB at import (2026-10-11: an extended-quote test had written a fake AAPL row into the production DB). Base-table DDL lives in `portfolio_core/schema.sql` (`db.ensure_base_tables`); tests build in-memory DBs from it instead of borrowing DDL from production.
 - Frontend tests load whole scripts through `tests/harness.js` (`createContext` + `loadScripts`, in `index.html` order). Never slice source text by `indexOf('function …')` and run the fragment; `tests/test_harness.js` fails on that pattern. Slicing source only to inspect text is fine.
 - Script-scope `let`/`const` state (e.g. `sortState`, `data`, `chartRange`) is not a context property: read/write it with `h.evaluate(ctx, '…')`. Top-level `function` declarations are context properties and can be stubbed by assigning `ctx.name`.
 - The harness `fetch` never settles so bootstrap requests cannot fire later; stub `ctx.fetch` when a test needs a response. Compare vm-created objects via `h.plain()`/JSON, not `deepStrictEqual` (different realm).

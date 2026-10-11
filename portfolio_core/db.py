@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from pathlib import Path
 from collections.abc import Iterator
 from contextlib import contextmanager
 
@@ -442,8 +443,17 @@ def ensure_fx_tickers(conn: sqlite3.Connection) -> None:
         )
 
 
+BASE_SCHEMA_PATH = Path(__file__).with_name("schema.sql")
+
+
+def ensure_base_tables(conn: sqlite3.Connection) -> None:
+    """계좌·종목·잔고·거래 네 기본 표(schema.sql). 있으면 그대로 둔다 — 빈 DB·테스트 DB용."""
+    conn.executescript(BASE_SCHEMA_PATH.read_text(encoding="utf-8"))
+
+
 def initialize_schema() -> None:
     with connect() as conn:
+        ensure_base_tables(conn)
         ensure_ticker_metadata_columns(conn)
         ensure_earnings_events_table(conn)
         ensure_stats_cache_table(conn)

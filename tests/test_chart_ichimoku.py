@@ -40,7 +40,9 @@ class IchimokuTests(unittest.TestCase):
         projection = []
         _chart_interval_ichimoku_series(bars('week', 26), 'week', projection)
         self.assertEqual(len(projection), 26)
-        self.assertEqual(projection[0], {})
+        self.assertNotIn('ichi_span_a', projection[0])
+        self.assertNotIn('ichi_span_b', projection[0])
+        self.assertIn('ichi_kijun_flat', projection[0])   # 기준선 예상경로는 26봉이 있으면 바로 나온다
         self.assertIn('ichi_span_a', projection[-1])
         self.assertNotIn('ichi_span_b', projection[-1])
 

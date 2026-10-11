@@ -7,6 +7,9 @@ from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from portfolio_core import company_profiles as profiles
 
 
