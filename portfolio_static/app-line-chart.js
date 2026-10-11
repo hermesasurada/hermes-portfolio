@@ -536,7 +536,9 @@ function renderChartIdentity(payload) {
   renderChartPriceSummary(payload);
 }
 
+// 값 없음(null·undefined·"")은 null — Number(null)은 0이라 연장가가 없는 종목의 헤더가 "$0.0"으로 보였다.
 function finiteChartNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }

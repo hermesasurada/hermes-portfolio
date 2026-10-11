@@ -89,7 +89,9 @@ function chartStatMetricRows(payload) {
   ];
 }
 
+// 값 없음은 null — Number(null)은 0이라 β가 없는 종목이 비교 보드에서 'lowAbs' 최고 표시를 가져갔다.
 function finiteMetric(value) {
+  if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
