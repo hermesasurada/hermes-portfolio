@@ -1,21 +1,4 @@
 // 비교(compare) 차트 전용: 공통기간·시리즈·범례·검색추가·호버툴팁·렌더. app-line-chart.js에서 분리.
-// 비교 대상(메인+추가) 전 종목이 데이터를 갖는 공통 시작 시각 (가장 늦은 최초가용일).
-// 비교 모드에서 이보다 긴 기간 옵션은 사용 불가 → 비활성화 판정에 사용.
-function compareCommonStartTime() {
-  const payloads = [chartPayload, ...chartComparePayloads].filter(Boolean);
-  const starts = payloads.map(item => {
-    const pts = aggregateChartPoints(item.points || [])
-      .filter(point => point.date && Number.isFinite(Number(point.close)) && Number(point.close) > 0);
-    return pts.length ? new Date(`${pts[0].date}T00:00:00`).getTime() : null;
-  }).filter(value => value != null);
-  return starts.length ? Math.max(...starts) : null;
-}
-
-function compareAvailableMonths() {
-  const extent = chartPayloadExtent([chartPayload, ...chartComparePayloads], true);
-  return extent ? extent.months : Infinity;
-}
-
 function chartCompareSeries(payload) {
   // 종목별 양수 가격 시계열
   const raw = [payload, ...chartComparePayloads].map((item, index) => {

@@ -66,11 +66,6 @@ function normalizePerformancePoints(points, rangeKey, bounds = null, useTwr = fa
   }));
 }
 
-function performanceTwrLabel(payload) {
-  if (!payload?.twr_basis) return "";
-  return payload.twr_basis === "full" ? " · 시간가중" : " · 시간가중(증권 기준)";
-}
-
 function performanceValueText(point) {
   const value = Number(point?.value);
   return Number.isFinite(value) ? krwShort(value) : "";

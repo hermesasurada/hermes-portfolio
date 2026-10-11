@@ -90,15 +90,6 @@ function renderChartRangeControls() {
   const host = document.getElementById("chartRangeHost");
   if (!host) return;
   host.innerHTML = renderChartRangeButtons();
-  requestAnimationFrame(syncChartOverlayPosition);
-}
-
-function syncChartOverlayPosition() {
-  // Desktop and mobile both use a normal-flow control row above the plot.
-  const control = document.getElementById("chartBottomControls");
-  if (!control) return;
-  control.style.top = "";
-  control.style.right = "";
 }
 
 function syncChartBottomControls(visible = Boolean(chartTicker || performanceChartOpen)) {
@@ -257,7 +248,6 @@ function initChartDisplayControls() {
     syncChartDisplayControls();
     if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
   });
-  window.addEventListener("resize", () => requestAnimationFrame(syncChartOverlayPosition));
   syncChartDisplayControls();
 }
 
@@ -376,10 +366,6 @@ function chartLogoRow(payload) {
     name: payload?.name || holding?.name || meta?.name || ticker,
     logo: payload?.logo || holding?.logo || meta?.logo || null,
   };
-}
-
-function isKoreanTicker(ticker) {
-  return /\.(KS|KQ)$/i.test(String(ticker || ""));
 }
 
 function koreanTickerCode(ticker) {
@@ -1784,8 +1770,6 @@ function renderLineChart(payload) {
   ensureChartStats(payload.ticker);
   ensureChartQuote(payload.ticker);
   // rAF 타이밍에 기대지 않고 렌더 직후 즉시 위치 계산(+rAF는 보험)
-  syncChartOverlayPosition();
-  requestAnimationFrame(syncChartOverlayPosition);
 }
 
 // 파일 끝 로드 마커 — 파스 에러·태그 미닫힘 시 이 줄이 실행되지 않아 부트 검사에 걸린다

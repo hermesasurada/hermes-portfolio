@@ -1003,7 +1003,6 @@ function syncMobileFilterIndicator() {
 }
 
 function syncDetailTabs() {
-  if (activeDetailTab === "stats") activeDetailTab = "detail";
   const showingChart = Boolean(chartTicker) || performanceChartOpen;
   const showingInterest = interestModeActive() && !showingChart;
   const showingFxInterest = showingInterest && interestGroupIsFx();
@@ -1233,7 +1232,6 @@ function syncPcFrozenColumns() {
 }
 
 function renderTable() {
-  if (activeDetailTab === "stats") activeDetailTab = "detail";
   ensureTabSortKey(activeDetailTab);
   syncTransactionPanel();
   syncFilterToggleControls();
@@ -1241,7 +1239,7 @@ function renderTable() {
   // 차트에서는 목록 표가 보이지 않는다. 숨은 40~234행을 다시 만들고 통계까지
   // 조회하면 초기 차트 로딩과 자동갱신만 느려지므로 목록 복귀 때 재구성한다.
   if (chartTicker || performanceChartOpen) return;
-  if (interestModeActive() && !chartTicker && !performanceChartOpen) {
+  if (interestModeActive()) {
     renderInterestMainTable();
     return;
   }
