@@ -21,7 +21,8 @@ from portfolio_core.collectors import (
 from portfolio_core.collect_common import collector_lock, parse_categories
 from portfolio_core.corporate_actions import refresh_stock_splits
 from portfolio_core.db import connect, ensure_dividend_tables, initialize_schema
-from portfolio_core.dividends import refresh_dividend_events, refresh_dividend_growth_cache
+from portfolio_core.dividend_refresh import refresh_dividend_events
+from portfolio_core.dividends import refresh_dividend_growth_cache
 from portfolio_core.dividend_streaks import refresh_dividend_streaks
 from portfolio_core.performance_snapshots import rebuild_account_snapshots
 from portfolio_core.fundamentals import fetch_fundamentals

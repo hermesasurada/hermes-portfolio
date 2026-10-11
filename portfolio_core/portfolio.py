@@ -6,7 +6,7 @@ from datetime import datetime
 
 from .constants import FX_TICKERS, MARKET_INDEXES
 from .db import connect
-from .market_calendar import holiday_change_session_note
+from .market_calendar import change_session_note
 from .paths import DB_PATH, KST
 from .prices import build_market_snapshot, fx_updated_at, latest_prices, price_cache_updated_at, price_updated_at, price_view
 from .tickers import account_kind, account_label, account_scope, asset_class, ticker_currency, ticker_scope
@@ -152,7 +152,7 @@ def load_portfolio(
             "price_date": current.get("date"),
             "previous_price": view["previous_price"],
             "previous_date": current.get("previous_date"),
-            "change_session_note": holiday_change_session_note(
+            "change_session_note": change_session_note(
                 row["ticker"], current.get("date")
             ),
             "change": view["change"],
@@ -207,7 +207,7 @@ def load_portfolio(
                 "price_date": ticker_price.get("date"),
                 "previous_price": view["previous_price"],
                 "previous_date": ticker_price.get("previous_date"),
-                "change_session_note": holiday_change_session_note(
+                "change_session_note": change_session_note(
                     row["ticker"], ticker_price.get("date")
                 ),
                 "change": view["change"],

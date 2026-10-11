@@ -18,7 +18,6 @@ Pillow 필요(런타임 서버 의존성 아님 — 오프라인 유지보수 �
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 from PIL import Image

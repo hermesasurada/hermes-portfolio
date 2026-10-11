@@ -69,22 +69,6 @@ def ticker_currency(ticker: str) -> str:
     return "USD"
 
 
-def currency_symbol(currency: str) -> str:
-    return {
-        "USD": "$",
-        "EUR": "EUR ",
-        "JPY": "JPY ",
-        "KRW": "KRW ",
-        "GBP": "GBP ",
-        "CHF": "CHF ",
-        "CAD": "CAD ",
-        "AUD": "AUD ",
-        "SGD": "SGD ",
-        "HKD": "HKD ",
-        "INR": "INR ",
-    }.get(currency, f"{currency} ")
-
-
 def is_korean_stock_ticker(ticker: str) -> bool:
     return ticker.endswith(KOREAN_SUFFIXES)
 

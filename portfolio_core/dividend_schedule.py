@@ -1,14 +1,10 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import Any
 
 from .constants import DIVIDEND_LOOKAHEAD_DAYS, DIVIDEND_LOOKBACK_DAYS
 from .dates import parse_iso_date, positive_float, today_kst
-
-KR_MARKET_HOLIDAY_OVERRIDES = {
-    "2026-05-04",
-}
+from .market_calendar import korea_equity_calendar_day
 
 # 공용 헬퍼 위임 (중복 제거)
 today = today_kst
@@ -23,29 +19,10 @@ def add_one_year(value: date) -> date:
         return value.replace(year=value.year + 1, day=28)
 
 
-def kr_market_holidays(year: int) -> set[date]:
-    fixed_days = (
-        (1, 1),
-        (3, 1),
-        (5, 1),
-        (5, 5),
-        (6, 6),
-        (8, 15),
-        (10, 3),
-        (10, 9),
-        (12, 25),
-    )
-    holidays = {date(year, month, day) for month, day in fixed_days}
-    holidays.update(
-        parsed
-        for parsed in (parse_date(value) for value in KR_MARKET_HOLIDAY_OVERRIDES)
-        if parsed and parsed.year == year
-    )
-    return holidays
-
-
 def is_kr_business_day(value: date) -> bool:
-    return value.weekday() < 5 and value not in kr_market_holidays(value.year)
+    """KRX 영업일 — 휴장 달력은 market_calendar 하나만 쓴다(예전 자체 목록은 설·추석·대체공휴일이
+    없었고 2026-05-04를 휴장으로 잘못 넣었다 — 그날 국내 시세 100종목이 정상 수집됐다)."""
+    return korea_equity_calendar_day(value)["status"] == "open"
 
 
 def previous_kr_business_day(value: date) -> date:

@@ -50,7 +50,6 @@ def beta_benchmark(ticker: str) -> str:
 
 
 # 예전 이름 — 외부에서 참조하던 코드가 있으면 그대로 동작하게 남긴다.
-beta_adj_benchmark = beta_benchmark
 
 # 손익비 점수용 비겹침 창. (key, 필요 이력 거래일, 슬라이스 끝 오프셋)
 # 5y = 3~5년 전(returns[-1260:-756]), 3y = 1~3년 전, 1y = 최근 1년.
@@ -607,7 +606,6 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
                 grouped.get(adj_benchmark, []) if adj_benchmark != BETA_BENCHMARK else None,
             )
             payload["beta_benchmark"] = adj_benchmark
-            payload["beta_adj_benchmark"] = adj_benchmark   # 예전 키 유지
             payload["asset_class"] = score_asset_kind(ticker, name_by_ticker.get(ticker) or "")
             tr_performance = total_return_performance(
                 price_rows,

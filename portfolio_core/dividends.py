@@ -8,13 +8,12 @@ from typing import Any
 from .constants import DIVIDEND_LOOKAHEAD_DAYS, KOREAN_SUFFIXES
 from .corporate_actions import (
     dedupe_dividend_event_rows,
-    dividend_event_information_score,
-    entitlement_date as _ca_entitlement_date,
+    entitlement_date as _entitlement_date,
     split_adjusted_amount,
 )
 from .dates import parse_iso_date, positive_float, today_kst
 from .db import connect, ensure_stats_cache_table
-from .dividend_refresh import dividend_history_start, refresh_dividend_events
+from .dividend_refresh import dividend_history_start
 from .dividend_schedule import consolidated_dividend_events, estimated_jp_pay_date, event_schedule_date
 from .prices import fx_rates, latest_prices
 from .queries import clean_account_ids, load_holding_rows
@@ -42,7 +41,6 @@ DIVIDEND_ANCHOR_MONTH_OVERRIDES = {
     "HSBC": 5,
 }
 PAY_DATE_YEAR_TICKERS = {"DIS"}
-from .corporate_actions import UNADJUSTED_DIVIDEND_SOURCES  # 공용화(재수출)
 # 원천이 같은 날짜의 정기·특별배당 합계만 제공하는 경우 공식 구성금액으로 분리한다.
 # (raw amount, is_special) — 수집 DB가 갱신되어도 상세·연간 성장률 보정이 유지된다.
 DIVIDEND_COMPONENT_OVERRIDES = {
@@ -138,14 +136,6 @@ def _estimated_annual_cagr(
 _history_date = parse_iso_date
 
 
-def _entitlement_date(event: Any) -> date | None:
-    return (
-        _history_date(event["record_date"])
-        or _history_date(event["ex_date"])
-        or _history_date(event["pay_date"])
-    )
-
-
 def _dividend_components(
     ticker: str,
     entitlement_date: date,
@@ -171,8 +161,6 @@ def _distribution_type_override(ticker: str, event: Any) -> str | None:
 
 
 # 중복 병합·정보 점수는 corporate_actions로 공용화 — 배당이력·총수익 시계열이 공유
-_history_event_information_score = dividend_event_information_score
-_dedupe_cross_currency_history_rows = dedupe_dividend_event_rows
 
 
 def _most_recent_raise_month(adjusted_events: list[dict]) -> int | None:
@@ -209,7 +197,6 @@ def _active_dividend_year(today: date, fiscal_end_month: int | None) -> int:
     return today.year
 
 
-_split_adjusted_amount = split_adjusted_amount  # corporate_actions로 공용화
 
 
 def _dividend_attribution(
@@ -547,7 +534,7 @@ def _attributed_history_events(
         ):
             if distribution_type == "capital_gain" and special_override is None:
                 special_override = True
-            amount, split_factor = _split_adjusted_amount(
+            amount, split_factor = split_adjusted_amount(
                 component_amount, entitlement_date, event["source"], splits
             )
             events.append(
@@ -925,7 +912,7 @@ def load_dividend_history(ticker: str) -> dict:
             ).fetchall()
         ]
         # 동일통화 중복 병합은 분할보정 후 금액 비교가 필요해 splits를 전달
-        event_rows = _dedupe_cross_currency_history_rows(event_rows, split_rows)
+        event_rows = dedupe_dividend_event_rows(event_rows, split_rows)
         is_korean = ticker_row["ticker"].upper().endswith(KOREAN_SUFFIXES)
         # 배당년도 종료월을 '최근 인상월 직전'으로 도출 → 같은 금액 N분기가 한 묶음.
         # 인상 감지엔 분할조정 금액이 필요하므로 먼저 (기준일, 조정금액) 시계열을 만든다.
@@ -941,7 +928,7 @@ def load_dividend_history(ticker: str) -> dict:
             ):
                 if special_override is True:
                     continue
-                amount, _factor = _split_adjusted_amount(
+                amount, _factor = split_adjusted_amount(
                     component_amount, event_date, event["source"], split_rows
                 )
                 adjusted_events.append({"date": event_date, "amount": amount})

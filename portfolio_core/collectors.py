@@ -16,19 +16,11 @@ from .constants import CRYPTO_MARKETS, MARKET_INDEXES
 from .paths import KST
 from .tickers import kr_ticker_code, normalize_yfinance_symbol, ticker_currency
 
-FX_SYMBOLS = {
-    "USDKRW": "USDKRW=X",
-    "EURKRW": "EURKRW=X",
-    "JPYKRW": "JPYKRW=X",
-    "CNYKRW": "CNYKRW=X",
-    "TWDKRW": "TWDKRW=X",
-    "GBPKRW": "GBPKRW=X",
-    "CHFKRW": "CHFKRW=X",
-    "CADKRW": "CADKRW=X",
-    "AUDKRW": "AUDKRW=X",
-    "SGDKRW": "SGDKRW=X",
-    "HKDKRW": "HKDKRW=X",
-}
+def fx_yahoo_symbol(ticker: str) -> str:
+    """환율 티커(USDKRW) → 야후 심볼(USDKRW=X). 손수 사전은 두지 않는다(CNY·TWD 누락 사고 이력)."""
+    return f"{ticker}=X"
+
+
 YAHOO_INDEX_SYMBOL_OVERRIDES = {"KOSPI": "^KS11"}
 INVESTING_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -146,7 +138,7 @@ def fetch_history_rows(category: str, ticker: str, period: str = "10y") -> list[
     import yfinance as yf
 
     if category == "fx":
-        symbol = FX_SYMBOLS.get(ticker, f"{ticker}=X")
+        symbol = fx_yahoo_symbol(ticker)
     elif category == "index":
         meta = MARKET_INDEXES.get(ticker)
         symbol = YAHOO_INDEX_SYMBOL_OVERRIDES.get(ticker) or (str(meta["symbol"]) if meta else ticker)
@@ -184,7 +176,7 @@ def yahoo_batch_target(category: str, ticker: str) -> tuple[str, str, str] | Non
     if category == "overseas":
         return ticker, normalize_yfinance_symbol(ticker) or ticker, ticker_currency(ticker)
     if category == "fx":
-        return ticker, FX_SYMBOLS.get(ticker, f"{ticker}=X"), "FX"
+        return ticker, fx_yahoo_symbol(ticker), "FX"
     if category == "index" and ticker != "KOSPI":
         meta = MARKET_INDEXES.get(ticker)
         if meta:
@@ -209,12 +201,6 @@ def _download_symbol_frame(frame, symbol: str, single_symbol: bool):
     if single_symbol and "Close" in level_zero:
         return frame.droplevel(1, axis=1)
     return None
-
-
-def _download_close_series(frame, symbol: str, single_symbol: bool):
-    """기존 호출부 호환용 종가 시리즈 헬퍼."""
-    symbol_frame = _download_symbol_frame(frame, symbol, single_symbol)
-    return symbol_frame["Close"] if symbol_frame is not None and "Close" in symbol_frame else None
 
 
 def fetch_yahoo_prices_batch(
@@ -367,7 +353,7 @@ def fetch_investing_kr_earnings_date(ticker: str) -> str | None:
 
 
 def fetch_fx_price(label: str) -> CollectedPrice | None:
-    symbol = FX_SYMBOLS.get(label, f"{label}=X")
+    symbol = fx_yahoo_symbol(label)
     return fetch_yahoo_price(symbol, cache_ticker=label, currency="FX")
 
 

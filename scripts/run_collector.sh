@@ -45,10 +45,15 @@ output=$(
 )
 status=$?
 
-{
-  printf '\n[%s] exit=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %Z')" "$status"
-  printf '%s\n' "$output"
-} >> "$log_dir/$log_name"
+# 성공은 한 줄(마지막 출력 줄)만, 실패는 전체 출력을 남긴다 — 분 단위 수집기 로그가 수백 MB로 자라던 것 방지.
+if [ "$status" -eq 0 ]; then
+  printf '[%s] exit=0 %s\n' "$(date '+%Y-%m-%d %H:%M:%S %Z')" "$(printf '%s\n' "$output" | grep -v '^$' | tail -1)" >> "$log_dir/$log_name"
+else
+  {
+    printf '\n[%s] exit=%s\n' "$(date '+%Y-%m-%d %H:%M:%S %Z')" "$status"
+    printf '%s\n' "$output"
+  } >> "$log_dir/$log_name"
+fi
 
 if [ "$status" -ne 0 ]; then
   printf '%s\n' "$output"

@@ -76,7 +76,6 @@ def refresh_dividend_events(tickers: list[str]) -> None:
                 or _opendart_attempt_due(ticker, statuses.get(ticker))
             )
         ]
-        conn.commit()
 
     if not due:
         return

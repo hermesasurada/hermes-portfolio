@@ -8,7 +8,7 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
-from .collectors import CollectedPrice, FX_SYMBOLS, fetch_crypto_krw
+from .collectors import CollectedPrice, fetch_crypto_krw, fx_yahoo_symbol
 from .constants import MARKET_INDEXES
 from .db import connect, ensure_live_quote_cache_table, ensure_quote_source_state_table
 from .market_calendar import korea_equity_calendar_day
@@ -181,7 +181,7 @@ def fetch_yahoo_snapshots(watch: dict[str, list[str]]) -> tuple[list[CollectedPr
         symbol = normalize_yfinance_symbol(ticker) or ticker
         requests[symbol.upper()] = (ticker, ticker_currency(ticker))
     for ticker in watch.get("fx", []):
-        symbol = FX_SYMBOLS.get(ticker, f"{ticker}=X")
+        symbol = fx_yahoo_symbol(ticker)
         requests[symbol.upper()] = (ticker, "FX")
     for ticker in watch.get("index", []):
         if ticker == "KOSPI":

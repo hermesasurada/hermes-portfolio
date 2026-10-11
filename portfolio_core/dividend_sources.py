@@ -13,8 +13,9 @@ from pathlib import Path
 from typing import Any
 
 from .constants import KOREAN_SUFFIXES
-from .dates import now_kst_text, parse_iso_date, positive_float, to_iso_text, today_kst
+from .dates import now_kst_text, positive_float, to_iso_text, today_kst
 from .dividend_pipeline import normalize_dividend_events
+from .dividend_schedule import previous_kr_business_day
 from .opendart_dividends import fetch_opendart_dividends, is_opendart_candidate
 from .paths import KST
 from .tickers import normalize_yfinance_symbol, ticker_currency
@@ -43,7 +44,6 @@ CURRENCY_SYMBOLS = {
 _today = today_kst
 _now_text = now_kst_text
 _date_text = to_iso_text
-_parse_date = parse_iso_date
 _float_value = positive_float
 
 
@@ -450,11 +450,6 @@ def _fetch_kind_etf_dividends(ticker: str, name: str | None) -> list[dict]:
     today = _today()
     start = (today - timedelta(days=KIND_HISTORY_LOOKBACK_DAYS)).isoformat()
     end = (today + timedelta(days=KIND_LOOKAHEAD_DAYS)).isoformat()
-    try:
-        from .dividend_schedule import previous_kr_business_day
-    except Exception:
-        previous_kr_business_day = None
-
     events: dict[str, dict] = {}
     for acptno in _kind_distribution_acptnos(name, start, end):
         for row in _kind_document_rows(acptno):
@@ -462,7 +457,7 @@ def _fetch_kind_etf_dividends(ticker: str, name: str | None) -> list[dict]:
                 continue
             record = date.fromisoformat(row["record_date"])
             # yfinance 관례에 맞춰 ex_date = 배당기준일 직전 영업일 (병합 시 정렬·중복억제).
-            ex = previous_kr_business_day(record) if previous_kr_business_day else record
+            ex = previous_kr_business_day(record)
             ex_text = ex.isoformat()
             events[ex_text] = {
                 "ticker": ticker,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from .constants import CRYPTO_MARKETS, FX_TICKERS, KOREAN_SUFFIXES, MARKET_INDEXES
@@ -226,6 +226,7 @@ def korean_exchange_holidays(year: int) -> dict[date, str]:
     fixed = [
         (date(year, 1, 1), "신정"),
         (date(year, 3, 1), "삼일절"),
+        (date(year, 5, 1), "근로자의 날"),   # 공휴일은 아니지만 KRX 휴장 — 대체공휴일 규칙은 안 탄다
         (date(year, 5, 5), "어린이날"),
         (date(year, 6, 6), "현충일"),
         (date(year, 8, 15), "광복절"),
@@ -494,7 +495,6 @@ def change_session_note(
 
 
 # 이전 이름 — 호출부 호환용
-holiday_change_session_note = change_session_note
 
 
 def us_equity_market_status(now: datetime | None = None) -> dict:

@@ -13,8 +13,12 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from contextlib import contextmanager
 from datetime import date, timedelta
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))   # scripts/ 아래에서도 portfolio_core를 찾도록
 
 from portfolio_core.collect_common import collector_lock
 from portfolio_core.collectors import fetch_history_rows

@@ -5,23 +5,6 @@ from bisect import bisect_right
 from datetime import date, timedelta
 
 
-def technical_indicators_available() -> bool:
-    """기술지표는 표준 라이브러리만으로 계산하므로 항상 사용할 수 있다."""
-    return True
-
-
-def last_number(series) -> float | None:
-    if series is None or len(series) == 0:
-        return None
-    value = series.iloc[-1]
-    try:
-        if value != value:
-            return None
-        return float(value)
-    except Exception:
-        return None
-
-
 def rsi_value(values: list[float], period: int = 14) -> float | None:
     series = rsi_series(values, period)
     return next((value for value in reversed(series) if value is not None), None)

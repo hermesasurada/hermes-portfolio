@@ -17,14 +17,6 @@ import sqlite3
 from .dates import now_kst_text
 from .db import connect, ensure_extended_quote_cache_table
 
-EXTENDED_FIELDS = (
-    "extended_price",
-    "extended_base_price",
-    "extended_change",
-    "extended_change_pct",
-    "extended_source",
-    "extended_market_state",
-)
 
 
 def _rows_to_params(prices: dict[str, dict], tickers: list[str]) -> list[tuple]:

@@ -55,7 +55,7 @@ from portfolio_core.dividends import (
     _mark_fiscal_finals,
     _monthly_annual_estimate,
     _rolling_monthly_growth,
-    _split_adjusted_amount,
+    split_adjusted_amount,
     _tax_rate,
 )
 from portfolio_core.dividend_schedule import consolidated_dividend_events
@@ -70,7 +70,7 @@ from portfolio_core.indicators import (
 )
 from portfolio_core.market_calendar import (
     change_session_note,
-    holiday_change_session_note,
+    change_session_note,
     japan_equity_calendar_day,
     us_equity_calendar_day,
 )
@@ -799,6 +799,21 @@ def test_kijun_flat_projection_counts_bars_leaving_the_window():
     assert _kijun_flat_projection(highs, lows, 140.0)[0] == (140 + 95) / 2
     # 26봉이 안 되면 경로 없음
     assert _kijun_flat_projection(highs[:20], lows[:20], 120.0) == []
+
+
+def test_korean_calendar_closes_on_labor_day_and_dividend_schedule_shares_it():
+    """근로자의 날(5/1)은 공휴일이 아니지만 KRX 휴장(2025·2026-05-01 국내 시세 0건). 대체공휴일은 없다.
+    dividend_schedule의 영업일 판정은 market_calendar 하나를 쓴다(예전 자체 목록은 2026-05-04를 휴장으로 오판)."""
+    from portfolio_core.market_calendar import korea_equity_calendar_day, korean_exchange_holidays
+    from portfolio_core.dividend_schedule import is_kr_business_day, previous_kr_business_day
+
+    assert korea_equity_calendar_day(date(2026, 5, 1))["reason"] == "근로자의 날"
+    assert korea_equity_calendar_day(date(2025, 5, 1))["status"] == "closed"
+    assert "대체" not in " ".join(v for d, v in korean_exchange_holidays(2027).items() if d.month == 5 and d.day in (2, 3, 4))  # 2027-05-01 토요일 — 대체 없음
+    assert not is_kr_business_day(date(2026, 5, 1))
+    assert is_kr_business_day(date(2026, 5, 4))
+    assert not is_kr_business_day(date(2026, 2, 17))          # 설날 연휴(음력)도 이제 반영된다
+    assert previous_kr_business_day(date(2026, 5, 4)) == date(2026, 4, 30)
 
 
 def test_stale_prices_skip_exchange_wide_holiday():
@@ -2036,13 +2051,13 @@ def test_split_adjusted_half_cent_stays_in_same_dividend_cycle():
 
 def test_dividend_split_adjustment_is_source_aware():
     splits = [{"split_date": "2024-07-15", "ratio": 10.0}]
-    adjusted, factor = _split_adjusted_amount(
+    adjusted, factor = split_adjusted_amount(
         5.25, date(2024, 6, 24), "polygon", splits
     )
     assert adjusted == 0.525
     assert factor == 10.0
 
-    yahoo_amount, yahoo_factor = _split_adjusted_amount(
+    yahoo_amount, yahoo_factor = split_adjusted_amount(
         0.525, date(2024, 6, 24), "yf-history", splits
     )
     assert yahoo_amount == 0.525
@@ -2191,7 +2206,7 @@ def test_us_market_calendar_observed_independence_day_and_early_close():
 def test_japan_market_holiday_marks_previous_session_change():
     holiday = japan_equity_calendar_day(date(2026, 8, 11))
     assert holiday == {"status": "closed", "reason": "산의 날"}
-    note = holiday_change_session_note(
+    note = change_session_note(
         "7974.T",
         "2026-08-10",
         datetime(2026, 8, 11, 12, 0, tzinfo=KST),
@@ -2202,7 +2217,7 @@ def test_japan_market_holiday_marks_previous_session_change():
         "price_date": "2026-08-10",
         "reason": "산의 날",
     }
-    assert holiday_change_session_note(
+    assert change_session_note(
         "7974.T",
         "2026-08-11",
         datetime(2026, 8, 11, 12, 0, tzinfo=KST),
@@ -3230,7 +3245,6 @@ def test_beta_korean_benchmark_cache_routing():
         assert technical.beta_benchmark(ticker) == "278530.KS"
     for ticker in ("AAPL", "4063.T", "KOSPI", "BTCKRW"):
         assert technical.beta_benchmark(ticker) == "SP500"
-    assert technical.beta_adj_benchmark is technical.beta_benchmark   # 예전 이름 유지
 
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row

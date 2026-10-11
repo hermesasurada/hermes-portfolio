@@ -11,7 +11,6 @@ from .logos import logo_stem
 from .paths import LOGO_DIR
 from .price_store import infer_category
 from .ticker_lookup import (
-    is_registered_ticker,
     lookup_ticker,
     normalize_lookup_ticker,
     ticker_region,

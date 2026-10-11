@@ -16,7 +16,6 @@ from .dates import now_kst_text
 from .db import connect, ensure_listing_dates_table
 from .dividend_sources import _polygon_candidate, fetch_polygon_list_date
 
-SETTLED_STATUSES = ("ok", "none")   # 확정 — 다시 묻지 않는다
 
 
 def load_listing_dates(conn, tickers: Iterable[str]) -> dict[str, str]:

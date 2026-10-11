@@ -273,10 +273,6 @@ def fetch_square_symbol(domain: str | None, timeout: float = 10.0) -> tuple[byte
     return None, "no square favicon"
 
 
-def _write_logo_png(ticker: str, body: bytes, logo_dir: Path = LOGO_DIR) -> Path:
-    return _write_logo_asset(ticker, body, "png", logo_dir)
-
-
 def _write_logo_asset(ticker: str, body: bytes, ext: str, logo_dir: Path = LOGO_DIR) -> Path:
     out_path = logo_dir / f"{logo_stem(ticker)}.{ext}"
     tmp_path = out_path.with_suffix(f".{ext}.tmp")

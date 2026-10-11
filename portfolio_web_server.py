@@ -22,11 +22,9 @@ from portfolio_core.payload_compact import compact_chart_payload, compact_perfor
 from portfolio_core.charts import load_account_performance, load_price_chart
 from portfolio_core.performance_snapshots import load_account_snapshots, rebuild_account_snapshots
 from portfolio_core.constants import (
-    FX_TICKERS,
     KOREAN_ETF_BRANDS,
     KOREAN_SUFFIXES,
     LOCAL_MARKET_SUFFIXES,
-    MARKET_INDEXES,
 )
 from portfolio_core.db import connect, initialize_schema
 from portfolio_core.queries import load_collection_diagnostics, load_ticker_directory
@@ -209,8 +207,13 @@ INDEX_HTML = STATIC_DIR / "index.html"
 
 
 class Handler(BaseHTTPRequestHandler):
+    # 요청 로그는 log_access 한 곳(logging → err.log)만 남긴다. 기본 log_request까지 두면 같은 요청이
+    # out.log에도 필터 없이 찍혀 두 배로 쌓였다(2026-10-11 정리 전 out.log 27MB·err.log 45MB).
+    def log_request(self, code="-", size="-") -> None:
+        return None
+
     def log_message(self, fmt: str, *args) -> None:
-        print("[%s] %s" % (self.log_date_time_string(), fmt % args))
+        logging.warning("%s", fmt % args)   # log_error 경로(끊긴 연결 등)만 여기로 온다
 
     def request_elapsed(self) -> float:
         return time.perf_counter() - getattr(self, "_request_started_at", time.perf_counter())
@@ -224,6 +227,8 @@ class Handler(BaseHTTPRequestHandler):
             return True
         if self.path.startswith(("/static/", "/logos/")):
             return self.request_elapsed() >= 1.0
+        if self.path == "/" and self.command == "GET":
+            return self.request_elapsed() >= 1.0   # 포털 상태 점검이 1분마다 치는 첫 화면 — 느릴 때만
         return True
 
     def log_access(self, status: int | str, body_len: int = 0) -> None:

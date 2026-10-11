@@ -7,7 +7,7 @@ from .constants import MARKET_INDEXES
 from .dates import parse_iso_date, today_kst
 from .db import connect
 from .indicators import rsi_series, shift_months
-from .market_calendar import holiday_change_session_note
+from .market_calendar import change_session_note
 from .paths import US_EASTERN
 from .prices import build_market_snapshot, latest_prices, price_view
 from .queries import account_filter_clause, clean_account_ids, load_holding_rows
@@ -315,7 +315,7 @@ def load_price_chart(
         "current_price": market_view["current_price"],
         "price_date": price_record.get("date"),
         "previous_price": market_view["previous_price"],
-        "change_session_note": holiday_change_session_note(
+        "change_session_note": change_session_note(
             clean_ticker, price_record.get("date")
         ),
         "change": market_view["change"],

@@ -178,43 +178,6 @@ def stats_cache_expires_today() -> bool:
     return datetime.now(KST).weekday() < 5
 
 
-def load_stats_cache_item(conn: sqlite3.Connection, ticker: str, now_ts: float, fresh_only: bool = True) -> dict | None:
-    row = conn.execute(
-        """
-        SELECT version, fetched_ts, source, market_cap, aum, dividend_yield, dividend_growth_5y,
-               dividend_streak_years, dividend_streak_floor, dividend_growth_streak_years,
-               trailing_pe, forward_pe, price_to_book, next_earnings_date, raw_json
-        FROM ticker_stats_cache
-        WHERE ticker = ?
-        """,
-        (ticker,),
-    ).fetchone()
-    if not row:
-        return None
-    if int(row["version"] or 0) != STATS_CACHE_VERSION:
-        return None
-    if row["source"] == "unknown":
-        return None
-    if fresh_only and stats_cache_expires_today() and now_ts - float(row["fetched_ts"] or 0) >= STATS_CACHE_SECONDS:
-        return None
-    result = {
-        "market_cap": finite_number(row["market_cap"]),
-        "aum": finite_number(row["aum"]),
-        "dividend_yield": finite_number(row["dividend_yield"]),
-        "dividend_growth_5y": finite_number(row["dividend_growth_5y"]),
-        "dividend_streak_years": finite_number(row["dividend_streak_years"]),
-        "dividend_streak_floor": int(row["dividend_streak_floor"] or 0),
-        "dividend_growth_streak_years": finite_number(row["dividend_growth_streak_years"]),
-        "trailing_pe": normalize_pe(row["trailing_pe"]),
-        "forward_pe": normalize_pe(row["forward_pe"]),
-        "price_to_book": normalize_pe(row["price_to_book"]),
-        "next_earnings_date": row["next_earnings_date"],
-    }
-    if row["source"] == "yfinance":
-        result.update(yfinance_profile_metrics(row["raw_json"]))
-    return result
-
-
 def load_stats_cache_items(
     conn: sqlite3.Connection,
     tickers: list[str],
