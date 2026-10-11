@@ -157,25 +157,6 @@ def ensure_technical_stats_cache_table(conn: sqlite3.Connection) -> None:
     )
 
 
-def ensure_daily_technical_indicators_table(conn: sqlite3.Connection) -> None:
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS daily_technical_indicators (
-            ticker TEXT NOT NULL,
-            date TEXT NOT NULL,
-            rsi_14 REAL,
-            computed_at TEXT NOT NULL,
-            PRIMARY KEY (ticker, date)
-        )
-        """
-    )
-    conn.execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_daily_technical_indicators_ticker_date
-        ON daily_technical_indicators(ticker, date)
-        """
-    )
-
 
 def ensure_daily_prices_table(conn: sqlite3.Connection) -> None:
     """일봉 테이블 + OHLC 확장 컬럼.
@@ -458,7 +439,6 @@ def initialize_schema() -> None:
         ensure_earnings_events_table(conn)
         ensure_stats_cache_table(conn)
         ensure_technical_stats_cache_table(conn)
-        ensure_daily_technical_indicators_table(conn)
         ensure_transaction_columns(conn)
         ensure_dividend_tables(conn)
         ensure_stock_split_tables(conn)

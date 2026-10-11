@@ -20,7 +20,6 @@ from .tickers import display_name, ticker_currency
 # 수집 대상에서 종목을 뗄 때 함께 지울 시세·배당·캐시 테이블.
 TICKER_DATA_TABLES = (
     "daily_prices",
-    "daily_technical_indicators",
     "dividend_events",
     "ticker_dividend_cache",
     "stock_splits",
