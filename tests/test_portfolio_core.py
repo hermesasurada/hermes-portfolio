@@ -858,6 +858,24 @@ def test_ticker_tags_clean_store_and_count():
     assert "INTC" not in ticker_tags.load_tags_payload()["tags"]
 
 
+def test_yahoo_stale_session_open_is_not_used_for_candle():
+    """장 시작 후 ~15분 동안 NYSE 종목의 야후 시가가 직전 거래일 시가 그대로 온다(2026-10-12 DE·CAT).
+    그 값으로 오늘 캔들을 만들지 않고 종가만 기록한다."""
+    from portfolio_core.snapshot_collector import candle_row, stale_session_open
+
+    # DE: 시가 651.87 = 10/9 시가, 오늘 고가 628.28보다도 높다
+    de = {"open": 651.87, "high": 628.28, "low": 618.0, "volume": 45616}
+    assert stale_session_open(de, 651.87)
+    assert stale_session_open(de, None)                      # 직전 시가를 몰라도 범위 밖이면 잡는다
+    # CAT: 시가 796.22가 범위 안이지만 직전 시가와 같다
+    cat = {"open": 796.22, "high": 801.95, "low": 795.7611}
+    assert stale_session_open(cat, 796.22)
+    assert not stale_session_open(cat, 796.18)               # 직전 시가와 다르고 범위 안이면 정상
+    assert not stale_session_open({"open": None, "high": 1, "low": 1}, 1.0)
+    # 버린 시가로는 캔들 행을 만들지 않는다 — 종가 행
+    assert candle_row("2026-10-12", 628.28, dict(de, open=None)) == ("2026-10-12", 628.28)
+
+
 def test_stale_prices_skip_exchange_wide_holiday():
     """중국 국경절: 상하이·선전 종목이 모두 9/30에 멈춘 건 휴장 — 정체 경보에서 뺀다."""
     from portfolio_core.queries import stale_price_rows

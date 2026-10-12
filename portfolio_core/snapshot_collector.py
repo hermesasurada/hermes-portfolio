@@ -169,6 +169,44 @@ def kr_market_date(timestamp_ms: float | int | None) -> str:
     return market_date.isoformat()
 
 
+def previous_session_opens(pairs: list[tuple[str, str]]) -> dict[str, float]:
+    """(티커, 오늘 날짜) → 그 날짜 직전 거래일의 시가. 시가가 그대로 복사돼 온 시세를 가려내는 데 쓴다."""
+    if not pairs:
+        return {}
+    opens: dict[str, float] = {}
+    with connect() as conn:
+        for ticker, day in pairs:
+            row = conn.execute(
+                "SELECT open FROM daily_prices WHERE ticker = ? AND date < ? AND open IS NOT NULL "
+                "ORDER BY date DESC LIMIT 1",
+                (ticker, day),
+            ).fetchone()
+            if row and row["open"] is not None:
+                opens[ticker] = float(row["open"])
+    return opens
+
+
+def stale_session_open(ohlc: dict, previous_open: float | None) -> bool:
+    """야후 시세의 '오늘 시가'가 아직 지난 거래일 시가 그대로인가.
+
+    장 시작 후 약 15분 동안 NYSE 종목(DE·CAT·XOM·BX·C …)은 regularMarketOpen이 직전 거래일 시가를
+    그대로 준다(2026-10-12 실측: DE 651.87 = 10/9 시가, 같은 응답의 오늘 고가 628.28보다도 높다).
+    그 값으로 캔들을 만들면 오늘 봉이 어제 시가에서 시작하는 긴 음봉·양봉이 된다. 시가가 직전 시가와
+    같거나(소수 넷째 자리까지) 오늘 고가·저가 범위를 벗어나면 믿지 않는다 — 그동안은 종가만 기록하고,
+    야후가 시가를 바로잡으면 다음 수집이 COALESCE로 채운다.
+    """
+    open_value = positive_float(ohlc.get("open"))
+    if open_value is None:
+        return False
+    if previous_open is not None and abs(open_value - previous_open) < 1e-4:
+        return True
+    high = positive_float(ohlc.get("high"))
+    low = positive_float(ohlc.get("low"))
+    if high is not None and low is not None and not (low * 0.9999 <= open_value <= high * 1.0001):
+        return True
+    return False
+
+
 def fetch_yahoo_snapshots(watch: dict[str, list[str]]) -> tuple[list[CollectedPrice], list[str]]:
     requests: dict[str, tuple[str, str]] = {}
     for ticker in watch.get("overseas", []):
@@ -213,6 +251,16 @@ def fetch_yahoo_snapshots(watch: dict[str, list[str]]) -> tuple[list[CollectedPr
 
     fetched: list[CollectedPrice] = []
     missing: list[str] = []
+    quoted = [
+        (ticker, quote_date(rows[symbol]))
+        for symbol, (ticker, _currency) in requests.items()
+        if rows.get(symbol, {}).get("regularMarketPrice") not in (None, 0)
+    ]
+    try:
+        previous_opens = previous_session_opens(quoted)
+    except Exception as exc:   # 비교값을 못 읽어도 수집은 계속한다 — 범위 검사만 남는다
+        print(f"  x previous opens skipped: {exc}")
+        previous_opens = {}
     for symbol, (ticker, currency) in requests.items():
         row = rows.get(symbol, {})
         price = row.get("regularMarketPrice")
@@ -220,6 +268,14 @@ def fetch_yahoo_snapshots(watch: dict[str, list[str]]) -> tuple[list[CollectedPr
             missing.append(ticker)
             continue
         date_text = quote_date(row)
+        ohlc = {
+            "open": row.get("regularMarketOpen"),
+            "high": row.get("regularMarketDayHigh"),
+            "low": row.get("regularMarketDayLow"),
+            "volume": row.get("regularMarketVolume"),
+        }
+        if stale_session_open(ohlc, previous_opens.get(ticker)):
+            ohlc["open"] = None   # → 종가만 기록(candle_row가 종가 행으로 물러난다)
         fetched.append(
             CollectedPrice(
                 ticker=ticker,
@@ -227,12 +283,7 @@ def fetch_yahoo_snapshots(watch: dict[str, list[str]]) -> tuple[list[CollectedPr
                 currency=currency,
                 source="yf-batch",
                 price_date=date_text,
-                recent=[candle_row(date_text, float(price), {
-                    "open": row.get("regularMarketOpen"),
-                    "high": row.get("regularMarketDayHigh"),
-                    "low": row.get("regularMarketDayLow"),
-                    "volume": row.get("regularMarketVolume"),
-                })],
+                recent=[candle_row(date_text, float(price), ohlc)],
             )
         )
     return fetched, missing
