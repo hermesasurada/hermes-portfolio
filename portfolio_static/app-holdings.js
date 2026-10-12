@@ -996,7 +996,8 @@ function syncMobileFilterIndicator() {
   if (filterButton) {
     const visible = id => !document.getElementById(id)?.classList.contains("hidden");
     const filtered = (visible("currencyFilterControl") && currencyFilterValue() !== "all")
-      || (visible("interestSectorControl") && document.getElementById("interestSectorButton")?.classList.contains("filtering"));
+      || (visible("interestSectorControl") && document.getElementById("interestSectorButton")?.classList.contains("filtering"))
+      || (visible("tagFilterControl") && document.getElementById("tagFilterButton")?.classList.contains("filtering"));
     filterButton.classList.toggle("active", Boolean(filtered));
     filterButton.textContent = filtered ? "필터 · 적용" : "필터";
   }
@@ -1052,6 +1053,7 @@ function syncDetailTabs() {
     sectorControl?.classList.add("hidden");
     closeInterestSectorPanel();
   }
+  syncTagFilterControl();
   document.getElementById("chartNameEdit")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
   if (!chartTicker || performanceChartOpen) closeChartNameEditor();
   // '기타'(자동 분류 가상 그룹)는 직접 추가 불가 → 추가 폼 숨김
@@ -1243,7 +1245,7 @@ function renderTable() {
     renderInterestMainTable();
     return;
   }
-  const rows = statsRows(filteredRows()).filter(row => matchesNameFilter(row));
+  const rows = applyTagFilter(statsRows(filteredRows()).filter(row => matchesNameFilter(row)));
   sortRows(rows, "detail");
   if (rows.some(row => row.ticker && !statsData[row.ticker])) loadStatsForRows(rows);
   // 연장 컬럼은 장 상태만이 아니라 실제 값 유무로도 감춘다 — 국내 종목만
@@ -1280,7 +1282,9 @@ function renderTable() {
         <span class="ticker-text">
           <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
             <span class="asset-name">${esc(r.name)}</span>
-            <span class="ticker-symbol">${esc(r.ticker)}</span>
+            ${tagsFor(r.ticker).length
+              ? `<span class="interest-ticker-meta"><span class="ticker-symbol">${esc(r.ticker)}</span>${rowTagChips(r.ticker)}</span>`
+              : `<span class="ticker-symbol">${esc(r.ticker)}</span>`}
           </a>
         </span>
       </td>
@@ -1327,7 +1331,7 @@ function renderTable() {
       <td>${r.is_watchlist ? "-" : `<button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button>`}</td>
     </tr>
   `;
-  }).join("");
+  }).join("") || detailTagEmptyRow();
   // 다음 렌더의 펄스 판정용으로 현재가 스냅샷 갱신
   rows.forEach(r => {
     const priceNum = Number(r.current_price);

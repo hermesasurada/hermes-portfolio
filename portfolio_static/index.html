@@ -237,12 +237,18 @@
               <label for="nameFilter">명칭</label>
               <input id="nameFilter" type="search" placeholder="종목명·티커" autocomplete="off" spellcheck="false" aria-label="종목명 또는 티커 필터">
             </span>
-            <button id="mobileFiltersToggle" class="mobile-filters-toggle" type="button" aria-expanded="false" aria-controls="interestSectorControl currencyFilterControl">필터</button>
+            <button id="mobileFiltersToggle" class="mobile-filters-toggle" type="button" aria-expanded="false" aria-controls="interestSectorControl tagFilterControl currencyFilterControl">필터</button>
             <span class="currency-filter-control sector-filter-control hidden" id="interestSectorControl">
               <label id="interestSectorLabel">섹터</label>
               <button class="sector-filter-btn" id="interestSectorButton" type="button"
                 aria-haspopup="true" aria-expanded="false" aria-labelledby="interestSectorLabel interestSectorButton">전체</button>
               <div class="sector-filter-panel hidden" id="interestSectorPanel" role="group" aria-label="섹터 다중 선택"></div>
+            </span>
+            <span class="currency-filter-control sector-filter-control tag-filter-control hidden" id="tagFilterControl">
+              <label id="tagFilterLabel">태그</label>
+              <button class="sector-filter-btn" id="tagFilterButton" type="button"
+                aria-haspopup="true" aria-expanded="false" aria-labelledby="tagFilterLabel tagFilterButton">전체</button>
+              <div class="sector-filter-panel hidden" id="tagFilterPanel" role="group" aria-label="태그 다중 선택(하나라도 가진 종목)"></div>
             </span>
             <span class="currency-filter-control" id="currencyFilterControl">
               <label for="currencyFilter">통화</label>
@@ -357,6 +363,14 @@
                   <span class="chart-name-edit-status" id="chartNameEditStatus" aria-live="polite"></span>
                 </form>
                 <span id="chartTicker">-</span>
+                <span class="chart-tags hidden" id="chartTags" aria-label="종목 태그"></span>
+                <form class="chart-tag-form hidden" id="chartTagForm">
+                  <input id="chartTagInput" type="text" maxlength="240" autocomplete="off" placeholder="#반도체 #CPU #파운드리" aria-label="종목 태그(띄어쓰기로 구분)">
+                  <button type="submit">저장</button>
+                  <button id="chartTagCancel" type="button">취소</button>
+                  <span class="chart-tag-suggestions" id="chartTagSuggestions" aria-label="쓰던 태그"></span>
+                  <span class="chart-name-edit-status" id="chartTagStatus" aria-live="polite"></span>
+                </form>
               </div>
               <div class="chart-price-summary" id="chartPriceSummary"></div>
             </div>
@@ -915,6 +929,7 @@
   <script src="/static/app-watchlist.js"></script>
   <script src="/static/app-interest-watchlists.js"></script>
   <script src="/static/app-interest-screen.js"></script>
+  <script src="/static/app-ticker-tags.js"></script>
   <script src="/static/app-ticker-search.js"></script>
   <script src="/static/app-calendar.js"></script>
   <script src="/static/app-cash-flows.js"></script>

@@ -454,6 +454,7 @@ document.getElementById("interestHeldToggle").addEventListener("change", () => {
 initListVisibleRowsControl();
 initInterestAssetTypeControl();
 initInterestScreen();
+initTickerTags();
 document.getElementById("nameFilter").addEventListener("input", () => {
   syncFilterToggleControls();
   render();

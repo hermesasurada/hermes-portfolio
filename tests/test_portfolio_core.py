@@ -834,6 +834,30 @@ def test_shared_helpers_replace_module_copies():
     assert price_fields(None)["regular_price"] is None
 
 
+def test_ticker_tags_clean_store_and_count():
+    """종목 태그: '#반도체 #CPU, 파운드리' 형식 입력 정리, 종목별 통째 교체, 순서 유지, 사용 수 집계."""
+    from portfolio_core import ticker_tags
+
+    assert ticker_tags.clean_tags("#반도체 #CPU, 파운드리 #cpu  ##AI") == ["반도체", "CPU", "파운드리", "AI"]
+    assert ticker_tags.clean_tags(["# 메모리 ", "", None]) == ["메모리"]
+    for bad in ("#" + "가" * 21, " ".join(f"#t{i}" for i in range(11))):
+        try:
+            ticker_tags.clean_tags(bad)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(bad)
+
+    result = ticker_tags.set_ticker_tags({"ticker": "intc", "tags": "#반도체 #CPU #파운드리"})
+    assert result["ticker"] == "INTC" and result["tags"] == ["반도체", "CPU", "파운드리"]
+    ticker_tags.set_ticker_tags({"ticker": "NVDA", "tags": ["반도체", "AI"]})
+    payload = ticker_tags.load_tags_payload()
+    assert payload["tags"]["INTC"] == ["반도체", "CPU", "파운드리"]      # 적은 순서 유지
+    assert payload["all"][0] == {"tag": "반도체", "count": 2}
+    ticker_tags.set_ticker_tags({"ticker": "INTC", "tags": []})         # 빈 목록 = 모두 지움
+    assert "INTC" not in ticker_tags.load_tags_payload()["tags"]
+
+
 def test_stale_prices_skip_exchange_wide_holiday():
     """중국 국경절: 상하이·선전 종목이 모두 9/30에 멈춘 건 휴장 — 정체 경보에서 뺀다."""
     from portfolio_core.queries import stale_price_rows

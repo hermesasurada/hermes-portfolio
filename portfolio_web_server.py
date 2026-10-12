@@ -48,6 +48,7 @@ from portfolio_core.tickers import asset_class
 from portfolio_core.transactions import add_transaction, delete_transaction, load_transactions, update_transaction
 from portfolio_core.ticker_lookup import is_registered_ticker, lookup_ticker
 from portfolio_core.ticker_metadata import update_ticker_display_name
+from portfolio_core.ticker_tags import load_tags_payload, set_ticker_tags
 from portfolio_core.watchlist import add_watchlist_async, unregister_collected_ticker
 
 
@@ -536,6 +537,12 @@ class Handler(BaseHTTPRequestHandler):
     def post_ticker_display_name(self) -> dict:
         return update_ticker_display_name(self.read_json())
 
+    def api_tags(self, query: dict[str, list[str]]) -> dict:
+        return load_tags_payload()
+
+    def post_ticker_tags(self) -> dict:
+        return set_ticker_tags(self.read_json())
+
     def _dispatch(self, verb: str, handler) -> None:
         """GET/POST 공통 에러 처리: 끊긴 파이프 무시, ValueError→400, 그 외→로그+500."""
         try:
@@ -582,6 +589,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/transactions": self.api_transactions,
                 "/api/watchlist/lookup": self.api_watchlist_lookup,
                 "/api/interest-watchlists": self.api_interest_watchlists,
+                "/api/tags": self.api_tags,
             }
             if path in get_routes:
                 self.send_json(get_routes[path](query))
@@ -614,6 +622,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/interest-watchlists/items": self.post_interest_item,
                 "/api/interest-watchlists/items/delete": self.post_interest_item_delete,
                 "/api/tickers/display-name": self.post_ticker_display_name,
+                "/api/tags": self.post_ticker_tags,
             }
             if path in post_routes:
                 self.send_json(post_routes[path]())

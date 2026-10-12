@@ -161,9 +161,9 @@ function renderDividendTable() {
     loadDividendsForSelection();
     return;
   }
-  const rows = [...(dividendData.rows || [])];
+  const rows = applyTagFilter([...(dividendData.rows || [])]);
   document.getElementById("rowCount").textContent = `${rows.length} rows`;
-  const empty = `<tr><td colspan="15" class="flat">예정 배당 없음</td></tr>`;
+  const empty = `<tr><td colspan="15" class="flat">${tagFilterSelection.size && dividendData.rows?.length ? "선택한 태그 종목의 예정 배당 없음" : "예정 배당 없음"}</td></tr>`;
   const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : "confirmed-date"}">${dividendDateText(value)}</span>`;
   const targetInitial = value => {
     const match = String(value || "").match(/[A-Za-z]/);

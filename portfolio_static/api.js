@@ -117,6 +117,18 @@ function apiUpdateTickerDisplayName(ticker, displayName) {
   });
 }
 
+function apiFetchTags() {
+  return fetchJson("/api/tags");
+}
+
+function apiSaveTickerTags(ticker, tags) {
+  return fetchJson("/api/tags", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ticker, tags }),
+  });
+}
+
 function apiFetchDiagnostics() {
   return fetchJson("/api/diagnostics");
 }

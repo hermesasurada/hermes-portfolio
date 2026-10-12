@@ -432,9 +432,25 @@ def ensure_base_tables(conn: sqlite3.Connection) -> None:
     conn.executescript(BASE_SCHEMA_PATH.read_text(encoding="utf-8"))
 
 
+def ensure_ticker_tags_table(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ticker_tags (
+            ticker TEXT NOT NULL,
+            tag TEXT NOT NULL,
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT,
+            PRIMARY KEY (ticker, tag)
+        )
+        """
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_ticker_tags_tag ON ticker_tags(tag)")
+
+
 def initialize_schema() -> None:
     with connect() as conn:
         ensure_base_tables(conn)
+        ensure_ticker_tags_table(conn)
         ensure_ticker_metadata_columns(conn)
         ensure_earnings_events_table(conn)
         ensure_stats_cache_table(conn)

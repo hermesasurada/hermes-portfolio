@@ -648,7 +648,7 @@ function renderInterestMainTable() {
   const sectorRows = interestSectorSelection.size === 0
     ? baseRows
     : baseRows.filter(row => interestSectorSelection.has(String(row.sector || "").trim()));
-  const rows = applyInterestScreen(sectorRows.filter(row => matchesNameFilter(row)));
+  const rows = applyInterestScreen(applyTagFilter(sectorRows.filter(row => matchesNameFilter(row))));
   sortInterestRows(rows, group);
   // lazy-load는 섹터 필터와 무관하게 그룹 전체(baseRows) 기준 — 필터 전환 시 재요청 방지
   const missingStats = baseRows.some(row => !statsData[row.ticker]
@@ -681,6 +681,7 @@ function renderInterestMainTable() {
       ? (interestScreenStatsPending ? "지표 불러오는 중…" : "조건에 맞는 종목 없음")
       : nameFilterValue()
       ? "명칭 검색 결과가 없습니다."
+      : tagFilterSelection.size && baseRows.length ? "선택한 태그의 종목이 없습니다."
       : interestAssetType !== "all" && interestAssetFilterAvailable() ? "선택한 유형에 해당하는 종목이 없습니다."
       : group.fixed ? "모든 수집 종목이 관심그룹에 분류되어 있습니다." : "이 그룹에 등록된 종목이 없습니다.");
   }
