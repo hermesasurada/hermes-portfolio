@@ -6856,8 +6856,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     height: 26px;
     min-height: 26px;
   }
-  /* 목록 이름 칸이 좁아 태그 칩이 잘려 보인다 — 모바일 목록에선 숨기고(필터는 그대로) 차트 헤더에서 본다 */
-  .ticker-link .row-tags { display: none; }   /* 기본 .row-tags가 파일 뒤쪽이라 특이도로 이긴다 */
 }
 @media (max-width: 700px) {
   .schedule-card { padding: 10px; gap: 10px; max-height: calc(100dvh - 16px); }
@@ -7009,9 +7007,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.tag-chip.more { border-color: color-mix(in srgb, var(--line) 70%, transparent); background: transparent; color: var(--muted); }
-/* 태그는 티커·섹터가 자리를 잡고 남는 폭만 쓴다(basis 0) — 티커가 'I...'로 잘리지 않게 */
-.row-tags { display: inline-flex; flex: 1 1 0; gap: 3px; min-width: 0; overflow: hidden; }
 .tag-filter-count { margin-left: auto; padding-left: 10px; color: var(--muted); font-size: 10.5px; font-weight: 600; }
 .chart-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 3px; }
 .chart-tags.hidden, .chart-tag-form.hidden { display: none; }

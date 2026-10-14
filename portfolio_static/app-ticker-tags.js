@@ -1,11 +1,11 @@
 // 종목 태그 — 종목마다 자유 태그(#반도체 #CPU #파운드리)를 붙이고 세부내역·배당·관심목록에서 거른다(2026-10-12).
 // 태그는 서버(ticker_tags 표)에 저장해 기기와 무관하게 같고, 필터 선택만 이 브라우저에 저장한다.
+// 목록에는 태그를 보이지 않는다(2026-10-15 사용자 지시) — 차트 헤더에서만 보고 고친다.
 // 필터는 선택한 태그 중 하나라도 가진 종목(OR) — 섹터 필터와 같은 규칙.
 let tickerTags = {};          // { TICKER: ["반도체", "CPU"] }
 let tagCounts = [];           // [{ tag, count }] 많이 쓴 순
 const tagFilterSelection = new Set();
 let tagSaveInFlight = false;
-const TAG_CHIPS_IN_ROW = 3;   // 목록 이름 칸에 보이는 태그 수(넘치면 +n)
 
 function tagsFor(ticker) {
   return tickerTags[String(ticker || "").toUpperCase()] || [];
@@ -18,15 +18,6 @@ function matchesTagFilter(row) {
 
 function applyTagFilter(rows) {
   return tagFilterSelection.size ? rows.filter(matchesTagFilter) : rows;
-}
-
-// 목록 이름 칸 보조 줄에 붙이는 태그 칩(링크 안이라 장식용 — 누르면 차트로 간다)
-function rowTagChips(ticker) {
-  const tags = tagsFor(ticker);
-  if (!tags.length) return "";
-  const shown = tags.slice(0, TAG_CHIPS_IN_ROW);
-  const more = tags.length - shown.length;
-  return `<span class="row-tags" title="${esc(tags.map(tag => `#${tag}`).join(" "))}">${shown.map(tag => `<span class="tag-chip">#${esc(tag)}</span>`).join("")}${more > 0 ? `<span class="tag-chip more">+${more}</span>` : ""}</span>`;
 }
 
 // 세부내역 표가 태그 필터 때문에 비었을 때의 안내 행(41열 표)
@@ -57,7 +48,7 @@ async function loadTickerTags() {
   }
   syncTagFilterControl();
   renderChartTags();
-  render();
+  if (data) render();   // 태그가 포트폴리오보다 먼저 오면 그리지 않는다 — 포트폴리오 로드가 곧 그린다
 }
 
 // ── 필터 컨트롤(섹터 필터와 같은 패널 모양) ─────────────────────────────────

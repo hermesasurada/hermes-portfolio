@@ -1,4 +1,4 @@
-// 종목 태그: 입력 정리, OR 필터, 목록 칩(+n), 필터 선택 저장·복원, 사라진 태그 선택 정리.
+// 종목 태그: 입력 정리, OR 필터, 필터 선택 저장·복원, 사라진 태그 선택 정리. 목록에는 칩을 그리지 않는다.
 const assert = require('node:assert/strict');
 const h = require('./harness');
 const ctx = h.loadScripts(h.createContext());
@@ -22,11 +22,6 @@ assert.deepEqual(json('[...tagFilterSelection].sort()'), ['AI', '음료']);
 // 더는 없는 태그는 선택에서 빠진다
 run('setTagData({tags: {NVDA: ["AI"]}, all: [{tag:"AI",count:1}]})');
 assert.deepEqual(json('[...tagFilterSelection]'), ['AI']);
-// 목록 칩: 3개까지 + 나머지 수
-run('setTagData({tags: {INTC: ["반도체","CPU","파운드리","미국"]}, all: []})');
-const chips = run('rowTagChips("INTC")');
-assert.equal((chips.match(/class="tag-chip"/g) || []).length, 3);
-assert.match(chips, /\+1</);
-assert.match(chips, /title="#반도체 #CPU #파운드리 #미국"/);
-assert.equal(run('rowTagChips("AAPL")'), '');
+// 목록에는 태그를 보이지 않는다(2026-10-15) — 칩 함수가 되살아나지 않게
+assert.equal(run('typeof rowTagChips'), 'undefined');
 console.log('ticker tags ok');

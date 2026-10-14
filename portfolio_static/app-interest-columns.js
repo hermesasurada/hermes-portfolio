@@ -21,7 +21,6 @@ const INTEREST_COLUMNS = [
             <span class="interest-ticker-meta">
               <span class="ticker-symbol">${esc(r.ticker)}</span>
               ${r.sector ? `<span class="sector-chip" title="${esc(sectorLabel(r.sector))}">${esc(sectorLabel(r.sector))}</span>` : ""}
-              ${rowTagChips(r.ticker)}
             </span>
           </a>
         </span>` },

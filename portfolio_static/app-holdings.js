@@ -1282,9 +1282,7 @@ function renderTable() {
         <span class="ticker-text">
           <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
             <span class="asset-name">${esc(r.name)}</span>
-            ${tagsFor(r.ticker).length
-              ? `<span class="interest-ticker-meta"><span class="ticker-symbol">${esc(r.ticker)}</span>${rowTagChips(r.ticker)}</span>`
-              : `<span class="ticker-symbol">${esc(r.ticker)}</span>`}
+            <span class="ticker-symbol">${esc(r.ticker)}</span>
           </a>
         </span>
       </td>
