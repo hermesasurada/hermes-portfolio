@@ -499,6 +499,49 @@ def test_stockanalysis_404_is_an_empty_dividend_result():
         dividend_sources_module._fetch_text = original
 
 
+def test_asml_interim_plus_final_dividend_year():
+    """ASML: 사업연도 N분 = 8·11월(N)·2월(N+1) 중간배당 + 5월(N+1) 결산배당(2026-10-14 사용자 지적).
+    결산배당이 중간배당보다 커서 인상월 자동 판정에 걸려 달력 기준으로 묶이던 것."""
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE tickers (ticker TEXT PRIMARY KEY, name TEXT, currency TEXT)")
+    conn.execute("CREATE TABLE dividend_events (ticker TEXT, ex_date TEXT, record_date TEXT, pay_date TEXT, "
+                 "declaration_date TEXT, amount REAL, currency TEXT, source TEXT)")
+    conn.execute("CREATE TABLE stock_splits (ticker TEXT, split_date TEXT, ratio REAL, source TEXT)")
+    conn.execute("INSERT INTO tickers VALUES ('ASML', 'ASML Holding N.V.', 'USD')")
+    rows = [
+        ("2023-07-31", "2023-08-10", 1.59), ("2023-10-31", "2023-11-10", 1.53),
+        ("2024-02-05", "2024-02-14", 1.56), ("2024-04-26", "2024-05-07", 1.87),
+        ("2024-07-29", "2024-08-07", 1.64), ("2024-10-29", "2024-11-07", 1.64),
+        ("2025-02-11", "2025-02-19", 1.57), ("2025-04-28", "2025-05-06", 2.09),
+        ("2025-07-29", "2025-08-06", 1.85), ("2025-10-29", "2025-11-06", 1.86),
+        ("2026-02-10", "2026-02-18", 1.91), ("2026-04-27", "2026-05-05", 3.17),
+        ("2026-07-28", "2026-08-05", 2.14),
+    ]
+    conn.executemany("INSERT INTO dividend_events VALUES ('ASML', ?, ?, ?, NULL, ?, 'USD', 'polygon')",
+                     [(ex, ex, pay, amount) for ex, pay, amount in rows])
+
+    @contextmanager
+    def fake_connect():
+        yield conn
+
+    originals = (dividend_history_module.connect, dividend_history_module._today, dividend_history_module.dividend_history_start)
+    try:
+        dividend_history_module.connect = fake_connect
+        dividend_history_module._today = lambda: date(2026, 10, 14)
+        dividend_history_module.dividend_history_start = lambda: date(2016, 1, 1)
+        payload = dividend_history_module.load_dividend_history("ASML")
+        by_year = {row["year"]: row for row in payload["rows"]}
+        pays = sorted(detail["pay_date"] for detail in by_year[2024]["payments_detail"])
+        assert pays == ["2024-08-07", "2024-11-07", "2025-02-19", "2025-05-06"], pays
+        final = [detail["pay_date"] for detail in by_year[2024]["payments_detail"] if detail["is_final"]]
+        assert final == ["2025-05-06"]                          # 5월 회차가 결산배당
+        assert [d["pay_date"] for d in by_year[2026]["payments_detail"]] == ["2026-08-05"]   # 새 배당년도 진행 중
+    finally:
+        dividend_history_module.connect, dividend_history_module._today, dividend_history_module.dividend_history_start = originals
+        conn.close()
+
+
 def test_dividend_history_includes_source_backed_future_payment():
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row

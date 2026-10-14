@@ -40,8 +40,11 @@ FISCAL_END_MONTH_OVERRIDES = {
 # 지금 스케줄과 무관해진다 — 명시가 필요한 종목만 여기 적는다.
 #   HSBC: 영국식 '중간배당 3회 + 결산배당 1회'. 사업연도 2025분은 5·8·11월 중간배당
 #   0.5씩과 이듬해 3월 결산배당이 한 묶음이라 5월이 배당년도의 시작이다.
+#   ASML: 같은 구조. 사업연도 N분 = 8·11월(N)·2월(N+1) 중간배당 + 5월(N+1) 결산배당
+#   (예: 2024분 €1.52×3 + 결산 €1.84 = €6.40). 기준일 7·10·2·4월이라 7월이 시작(2026-10-14 사용자 지적).
 DIVIDEND_ANCHOR_MONTH_OVERRIDES = {
     "HSBC": 5,
+    "ASML": 7,
 }
 PAY_DATE_YEAR_TICKERS = {"DIS"}
 # 원천이 같은 날짜의 정기·특별배당 합계만 제공하는 경우 공식 구성금액으로 분리한다.
@@ -179,6 +182,10 @@ def _dividend_fiscal_end_month(ticker: str, adjusted_events: list[dict]) -> int 
     override = FISCAL_END_MONTH_OVERRIDES.get(str(ticker or "").upper())
     if override:
         return override
+    # 배당년도 시작월을 명시한 종목(중간배당 + 결산배당 구조)은 인상월 자동 판정을 타지 않는다 —
+    # ASML은 결산배당(5월)이 중간배당보다 커서 인상으로 오인돼 시작월 지정이 무시됐다.
+    if str(ticker or "").upper() in DIVIDEND_ANCHOR_MONTH_OVERRIDES:
+        return None
     raise_month = _most_recent_raise_month(adjusted_events)
     if raise_month is None:
         return None
@@ -966,7 +973,9 @@ def load_dividend_history(ticker: str) -> dict:
             if year < active_year and count >= expected_payments_by_year.get(year, frequency)
         }
     )
-    if fiscal_end_month:
+    # 비역년 회계연도 종목, 그리고 '중간배당 + 결산배당' 구조로 시작월을 명시한 종목(HSBC 4월·ASML 5월
+    # 지급)은 완결 배당년도의 마지막 회차가 결산배당이다.
+    if fiscal_end_month or ticker_row["ticker"].upper() in DIVIDEND_ANCHOR_MONTH_OVERRIDES:
         final_dividend_count += _mark_fiscal_finals(annual, complete_years)
     rolling_monthly_growth = (
         _rolling_monthly_growth(regular_events) if monthly_distribution else None
