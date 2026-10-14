@@ -16,6 +16,7 @@
 - 모바일 표 밀도는 가로 위주: 행 높이 `--list-row-height` 40px 유지, `--col-scale`(0.84)·`--grid-pad-x`로 열을 더 담는다. **`--col-scale`은 계좌표 CSS·관심목록 colgroup·JS 표 전체 폭 세 곳이 함께** 타야 한다. `thead th` 높이 규칙에 `:is()`로 #id 섞지 말 것.
 - 색은 CSS 토큰만(브랜드색 예외). 테마 '화이트·슬레이트', 평면, Pretendard. 표·사이드바·히어로 숫자는 `--grid-num-font`(tnum), `--chart-num-font`(Roboto Mono)는 차트 축·툴팁 전용. 카드화 금지.
 - 전광판: 세 면(계좌·지수·환율) 한 자리, 점 3개 + 다음 버튼. PC에서 일곱 칸이 들어가면 전부 펼침(`syncHeroLayout`, 실측 판정). 지수·환율 칸은 `repeat(3, minmax(0,1fr))`, 좁은 화면은 세 줄. 환율 칸 등락은 **금액(원)**, 엔화는 **100엔 기준**(`HERO_FX_UNITS`). 칸 클릭은 app.js 문서 위임. 스와이프에 `setPointerCapture`·pointerdown `preventDefault` 금지. 테스트 `test_hero_summary.js`, `test_hero_combined.js`.
+- 팝업(`dialog.watch-modal`)은 UA `:modal`의 `position: fixed`에 기댄다 — 전역 `body > :not(dialog)` relative 규칙에 dialog를 다시 넣지 말 것(넣으면 팝업이 문서에 붙어 배경과 함께 스크롤). 열려 있는 동안 `html:has(dialog.watch-modal[open])`이 뒤 화면 스크롤을 잠근다. 팝업 높이는 `100dvh` 기준(100vh는 모바일 주소창만큼 넘친다).
 - 관심목록 그룹·종목 편집 컨트롤은 **항상 보인다**(편집 토글 부활 금지). 모바일은 검색 상시, 섹터·통화·지수는 '필터' 버튼으로 접음. 테스트 `test_design_controls.js`.
 
 ## 프런트 구조 (classic script, 빌드 없음)

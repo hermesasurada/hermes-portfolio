@@ -227,7 +227,8 @@ h1,
   letter-spacing: -.018em;
 }
 * { box-sizing: border-box; }
-body > * { position: relative; z-index: 1; }
+/* dialog는 제외: relative가 UA의 :modal position:fixed를 덮어 팝업이 문서에 붙어 배경과 함께 스크롤됐다(2026-10-14). */
+body > :not(dialog) { position: relative; z-index: 1; }
 body {
   margin: 0;
   min-height: 100vh;
@@ -4956,7 +4957,8 @@ th.pc-frozen-edge {
      좁은 화면은 뷰포트가 상한이라 이 값이 무시된다. */
   min-width: min(600px, calc(100vw - 16px));
   max-width: calc(100vw - 16px);
-  max-height: min(760px, calc(100vh - 28px));
+  /* dvh = 주소창을 뺀 실제 보이는 높이. 100vh는 모바일에서 화면보다 커서 팝업이 한 화면을 넘었다. */
+  max-height: min(760px, calc(100dvh - 28px));
 }
 /* 세로 스크롤은 표(wrap) 안에서만 — 헤더·통계 보드는 항상 고정.
    [open] 한정 필수: dialog에 무조건 display를 주면 닫힘 상태(UA display:none)를 덮는다. */
@@ -5323,9 +5325,23 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 
 /* ── 반응형 ① 모바일(≤560px) — 배당이력 모달 ───────────────────────────── */
 @media (max-width: 560px) {
-  .dividend-history-stats .cstat-board {
-    grid-template-columns: 1fr;
+  /* 1열 4줄(약 150px)이던 요약을 2열 2줄로 — 표가 더 길게 보이고 팝업이 한 화면에 들어간다 */
+  .dividend-history-stats { margin-top: 0; }
+  .dividend-history-stats .cstat-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 0;
+    padding: 0;
   }
+  .dividend-history-stats .cstat-k {
+    padding: 4px 6px;
+    font-size: 10.5px;
+  }
+  .dividend-history-stats .cstat-v {
+    padding: 4px 6px;
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  .dividend-history-stats .cstat-v small { display: none; }   /* 인상일·전년 금액은 표에 이미 있다 */
 }
 
 .dividend-history-stats .cstat-v small {
@@ -7057,3 +7073,8 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .chart-tag-suggestions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
 .chart-tag-suggestions:empty { display: none; }
 .chart-tag-suggestions .tag-chip { max-width: none; height: 20px; padding: 0 7px; font-size: 11px; line-height: 18px; cursor: pointer; background: transparent; }
+
+/* ── 팝업이 열려 있는 동안 뒤 화면은 스크롤되지 않는다(2026-10-14) ───────────── */
+/* 팝업 안 표를 끝까지 스크롤하면 스크롤이 뒤 페이지로 넘어가 바닥 화면이 움직였다. */
+html:has(dialog.watch-modal[open]) { overflow: hidden; }
+.watch-modal[open] :is(.dividend-history-table-wrap, .chart-help-body, .cash-flows-table-wrap) { overscroll-behavior: contain; }
