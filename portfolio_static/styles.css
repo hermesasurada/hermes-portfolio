@@ -7070,14 +7070,16 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 .watch-modal[open] :is(.dividend-history-table-wrap, .chart-help-body, .cash-flows-table-wrap) { overscroll-behavior: contain; }
 
 /* ── 모바일 차트 헤더 정리(2026-10-14) ──────────────────────────────────────── */
+/* 태그는 로고 밑 별도 행(2026-10-15 사용자 지시) — 로고 왼쪽 끝부터 한 줄을 통째로 쓴다 */
+.chart-identity { row-gap: 6px; }
+.chart-identity > :is(.chart-tags, .chart-tag-form) { flex: 1 0 100%; margin-top: 0; }
 /* 빈 chartMeta 칸이 간격(gap)만 먹어 가격 아래가 휑했다 */
 .chart-head-right:has(> .chart-meta:empty) { display: none; }
 .chart-session-note { white-space: nowrap; }
 @media (max-width: 980px) {
-  /* 티커와 태그를 한 줄에 — 태그 버튼이 혼자 한 줄을 차지하지 않게 */
-  .chart-id-text { grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 8px; row-gap: 2px; }
-  .chart-id-text > :is(.chart-name-line, .chart-name-edit-form, .chart-tag-form) { grid-column: 1 / -1; }
-  .chart-id-text > .chart-tags { margin-top: 0; min-width: 0; }
+  /* 태그 줄은 이름 줄 바로 아래(가격보다 위) */
+  .chart-identity > :is(.chart-tags, .chart-tag-form) { grid-column: 1 / -1; order: 1; }
+  .chart-identity > .chart-price-summary { order: 2; }
   .chart-tags .tag-chip, .chart-tag-edit { height: 18px; padding: 0 6px; font-size: 10.5px; line-height: 16px; }
   .chart-name-edit-btn { width: 22px; height: 22px; font-size: 13px; }
   /* 가격 두 줄을 한 격자로 — 라벨·가격·등락 칩이 세로로 줄을 맞춘다 */
