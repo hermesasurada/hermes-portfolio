@@ -587,6 +587,13 @@ function chartShouldShowExtendedLine(meta, metric, hasExtendedMarket) {
   return true;
 }
 
+// 차트 헤더는 자리가 있어 표의 한 글자 배지('종') 대신 읽히는 말로 쓴다 — '10.13 종가', '휴장'
+function chartSessionNoteText(note) {
+  if (note?.kind !== "session_closed") return "휴장";
+  const date = String(note?.price_date || "").slice(5).replace("-", ".");
+  return date ? `${date} 종가` : "직전 종가";
+}
+
 function renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, hasExtendedMarket, extendedLabel, sessionNote = null) {
   const extendedLine = hasExtendedMarket && extendedMetric.price != null
     ? `
@@ -603,7 +610,7 @@ function renderChartPriceQuote(dayMetric, extendedMetric, currency, ticker, hasE
         <span class="chart-price-row-label">정규</span>
         <strong class="chart-price-current">${dayMetric.price == null ? "-" : esc(chartMoney(dayMetric.price, currency, ticker))}</strong>
         ${chartPricePctPill(dayMetric)}
-        ${sessionNote?.label ? `<sup class="change-session-note chart-session-note" title="${esc(sessionNoteTitle(sessionNote))}">${esc(sessionNote.label)}</sup>` : ""}
+        ${sessionNote?.label ? `<span class="chart-session-note" title="${esc(sessionNoteTitle(sessionNote))}">${esc(chartSessionNoteText(sessionNote))}</span>` : ""}
       </div>
       ${extendedLine}
     </div>
