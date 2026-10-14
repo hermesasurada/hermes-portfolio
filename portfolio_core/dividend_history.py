@@ -45,6 +45,7 @@ FISCAL_END_MONTH_OVERRIDES = {
 DIVIDEND_ANCHOR_MONTH_OVERRIDES = {
     "HSBC": 5,
     "ASML": 7,
+    "ASME.DE": 7,   # 같은 회사의 독일(Xetra) 상장분 — 유로 금액, 일정은 같다
 }
 PAY_DATE_YEAR_TICKERS = {"DIS"}
 # 원천이 같은 날짜의 정기·특별배당 합계만 제공하는 경우 공식 구성금액으로 분리한다.

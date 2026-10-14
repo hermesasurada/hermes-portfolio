@@ -537,6 +537,8 @@ def test_asml_interim_plus_final_dividend_year():
         final = [detail["pay_date"] for detail in by_year[2024]["payments_detail"] if detail["is_final"]]
         assert final == ["2025-05-06"]                          # 5월 회차가 결산배당
         assert [d["pay_date"] for d in by_year[2026]["payments_detail"]] == ["2026-08-05"]   # 새 배당년도 진행 중
+        # 같은 회사의 유럽(Xetra) 상장분도 같은 배당년도 규칙
+        assert dividend_history_module.DIVIDEND_ANCHOR_MONTH_OVERRIDES.get("ASME.DE") == 7
     finally:
         dividend_history_module.connect, dividend_history_module._today, dividend_history_module.dividend_history_start = originals
         conn.close()
