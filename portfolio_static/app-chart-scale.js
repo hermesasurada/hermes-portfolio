@@ -113,6 +113,8 @@ function aggregateChartPoints(points, interval = chartInterval) {
     }
     const pointHasCandle = chartPointHasCandle(point);
     const previousHasCandle = chartPointHasCandle(previous);
+    // 주·월 봉에 확정 일봉이 섞이면 잠정 표시를 떼고, 이미 잠정인 봉(같은 주의 앞선 잠정 일봉)은 유지한다.
+    if (previousHasCandle && !previous.provisional) delete next.provisional;
     if (pointHasCandle) {
       const candleClose = chartCandleClose(point);
       next.open = previousHasCandle ? Number(previous.open) : Number(point.open);

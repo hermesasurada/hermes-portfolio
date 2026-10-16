@@ -3344,6 +3344,8 @@ th.pc-frozen-edge {
   stroke: var(--muted);
   fill: var(--muted);
 }
+/* 잠정 봉(당일 정규장 봉 수집 전) — 테두리 색은 그대로, 몸통만 비운다 */
+.chart-candle.provisional .chart-candle-body { fill: var(--panel); }
 .chart-price-overlays,
 .chart-price-overlays * {
   pointer-events: none;

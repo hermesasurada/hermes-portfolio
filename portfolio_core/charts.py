@@ -388,6 +388,19 @@ def _append_market_chart_point(
                 "live": True,
                 "extended": bool(market_status.get("include_extended")),
             }
+            # 당일 정규장 봉이 아직 없다(미국 장전, 또는 수집 전). 종가 하나뿐이면 캔들이 빠져
+            # '오늘 캔들이 안 보였다'(2026-10-16 보고) — 직전 종가→라이브 가격으로 잠정 봉을 만든다.
+            # provisional 표시로 화면은 속 빈 몸통으로 구분하고, 실제 일봉이 수집되면 위 existing 경로가 대신한다.
+            confirmed_close = last_close
+            if confirmed_close is not None:
+                point.update(
+                    {
+                        "open": confirmed_close,
+                        "high": max(confirmed_close, float(value)),
+                        "low": min(confirmed_close, float(value)),
+                        "provisional": True,
+                    }
+                )
         latest_rsi = next((item for item in reversed(adjusted_rsi) if item is not None), None)
         if latest_rsi is not None:
             point["rsi"] = latest_rsi

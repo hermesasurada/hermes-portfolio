@@ -835,6 +835,7 @@ function chartPointTooltipLines(point, payload, previous = null) {
     if (point.live && Number.isFinite(current) && Math.abs(current - candle.close) > 1e-9) {
       lines.push([[point.extended ? "장외" : "현재", money(current)]]);
     }
+    if (point.provisional) lines.push([["잠정", point.extended ? "직전 종가→장외가" : "직전 종가→현재가"]]);
   } else {
     lines.push([["가격", money(Number(point.close))]]);
   }
@@ -1469,8 +1470,9 @@ function renderLineChart(payload) {
     const bodyY = Math.min(openY, closeY);
     const bodyH = Math.max(1.15, Math.abs(closeY - openY));
     const { cls } = changeDirection(candle.close - candle.open);
+    // 잠정 봉(당일 정규장 봉 수집 전, 직전 종가→라이브 가격)은 속 빈 몸통으로 구분한다.
     return `
-      <g class="chart-candle ${cls}">
+      <g class="chart-candle ${cls}${point.provisional ? " provisional" : ""}">
         <line class="chart-candle-wick" x1="${x.toFixed(2)}" x2="${x.toFixed(2)}" y1="${yFor(candle.high).toFixed(2)}" y2="${yFor(candle.low).toFixed(2)}"></line>
         <rect class="chart-candle-body" x="${(x - candleBodyWidth / 2).toFixed(2)}" y="${bodyY.toFixed(2)}" width="${candleBodyWidth.toFixed(2)}" height="${bodyH.toFixed(2)}"></rect>
       </g>

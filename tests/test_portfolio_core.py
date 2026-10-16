@@ -3446,6 +3446,34 @@ def test_entry_moving_average_windows_and_live_price():
     assert live['ma200_pct'] == round(ma_pct(values, 200), 4)
 
 
+def test_live_chart_point_without_today_row_gets_provisional_candle():
+    """미국 장전처럼 당일 일봉이 없을 때 라이브 점은 직전 종가→라이브 가격 잠정 봉을 갖는다(2026-10-16).
+    당일 일봉이 이미 있으면 그 봉을 쓰고 잠정 표시를 붙이지 않는다."""
+    from portfolio_core import charts as charts_module
+    from portfolio_core.paths import US_EASTERN
+
+    today = datetime.now(US_EASTERN).strftime("%Y-%m-%d")
+    rows = [
+        {"date": (date.fromisoformat(today) - timedelta(days=60 - i)).isoformat(),
+         "open": 100.0 + i, "high": 101.0 + i, "low": 99.0 + i, "close": 100.0 + i, "volume": 1.0}
+        for i in range(60)
+    ]
+    points = [{"date": r["date"], "close": r["close"], "open": r["open"], "high": r["high"], "low": r["low"]} for r in rows]
+    status = {"use_live": True, "include_extended": True}
+    charts_module._append_market_chart_point({"price": 155.0}, status, points, rows, entry_scoring=False)
+    live = points[-1]
+    assert live["date"] == today and live["live"] and live["provisional"]
+    assert (live["open"], live["high"], live["low"], live["close"]) == (159.0, 159.0, 155.0, 155.0)
+
+    # 당일 일봉이 있으면 확정 봉 — 잠정 아님, 장외가는 candle_close로 몸통 보존
+    rows_today = rows[:-1] + [{**rows[-1], "date": today}]
+    points_today = [{"date": r["date"], "close": r["close"], "open": r["open"], "high": r["high"], "low": r["low"]} for r in rows_today]
+    charts_module._append_market_chart_point({"price": 155.0}, status, points_today, rows_today, entry_scoring=False)
+    assert len(points_today) == len(rows_today)
+    assert "provisional" not in points_today[-1]
+    assert points_today[-1]["candle_close"] == 159.0
+
+
 # --- runner -----------------------------------------------------------------
 def _run() -> int:
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
