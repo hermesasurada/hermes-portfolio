@@ -7094,6 +7094,7 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 }
 .tx-memo-btn svg { width: 14px; height: 14px; }
 .tx-memo-btn:hover, .tx-memo-btn:focus-visible { color: var(--brand); background: var(--brand-soft); }
+.tx-action-btn.has-memo { border-color: var(--brand); color: var(--brand); }
 .tx-memo-target { color: var(--muted); font-size: 12px; font-weight: 600; }
 #txMemoInput { width: 100%; height: auto; min-height: 112px; padding: 8px 10px; font-size: 13px; line-height: 1.45; }
 #txMemoStatus:empty { display: none; }

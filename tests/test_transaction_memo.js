@@ -15,7 +15,14 @@ assert.match(btn, /title="&lt;b&gt;실적 전&lt;\/b&gt; 분할매수"/);   // �
 ctx.currentPriceForTicker = () => null;
 ctx.txTickerCell = tx => tx.ticker;
 const tx = '{id: 7, trade_date: "2026-10-16", ticker: "AAPL", name: "Apple", side: "BUY", qty: 1, price: 100, currency: "USD", memo: "메모"}';
-assert.match(run(`txViewRow(${tx}, null)`), /data-tx-memo="7"/);
+const view = run(`txViewRow(${tx}, null)`);
+assert.equal((view.match(/data-tx-memo="7"/g) || []).length, 2);   // 종목명 아이콘 + 관리 칸 버튼
+assert.match(view, /tx-action-btn has-memo/);
+// 메모 없는 거래도 관리 칸 버튼으로 새로 달 수 있다
+const bare = run(`txViewRow({...${tx}, memo: null}, null)`);
+assert.equal((bare.match(/data-tx-memo="7"/g) || []).length, 1);
+assert.match(bare, /title="메모 추가">메모</);
+assert.doesNotMatch(bare, /has-memo|tx-memo-btn/);
 assert.doesNotMatch(run(`txEditRow(${tx}, null)`), /data-tx-memo|memo/i);
 
 // 저장 확인창: 메모가 있을 때만 '메모' 줄

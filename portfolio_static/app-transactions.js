@@ -253,6 +253,7 @@ function txTickerCell(tx) {
 }
 
 // 메모가 있는 거래만 종목명 옆에 아이콘 — 누르면 메모만 고치는 팝업(2026-10-16 사용자 지시).
+// 메모가 없는 거래는 관리 칸의 '메모' 버튼으로 새로 단다(모든 행 같은 자리, 메모 있으면 강조).
 // 행 편집(txEditRow)은 메모를 다루지 않는다.
 function txMemoButton(tx) {
   const memo = String(tx?.memo || "").trim();
@@ -405,6 +406,7 @@ function txViewRow(tx, endingQty) {
       <td>${compareText}</td>
       <td>${entryRewardText(tx.entry_score)}</td>
       <td class="tx-actions">
+        <button class="tx-action-btn${String(tx.memo || "").trim() ? " has-memo" : ""}" type="button" data-tx-memo="${tx.id}" title="${String(tx.memo || "").trim() ? "메모 편집" : "메모 추가"}">메모</button>
         <button class="tx-action-btn" type="button" data-tx-edit="${tx.id}" title="편집">편집</button>
         <button class="tx-action-btn" type="button" data-tx-hide="${tx.id}" data-tx-hidden="${hidden ? "0" : "1"}" title="${hideLabel}">${hideLabel}</button>
         <button class="tx-action-btn tx-del" type="button" data-tx-delete="${tx.id}" title="삭제">삭제</button>
