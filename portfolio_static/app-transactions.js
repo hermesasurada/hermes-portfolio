@@ -125,7 +125,8 @@ function tradeConfirmRows(payload) {
     ["단가", unitMoney(Number(payload.price), payload.currency, payload.ticker), true],
     ["금액", Number.isFinite(amount) ? money(amount, payload.currency) : "-", true],
     ["통화", payload.currency],
-    ["잔고", tradeApplyLabel(payload.apply_to_holdings)]
+    ["잔고", tradeApplyLabel(payload.apply_to_holdings)],
+    ...(payload.memo ? [["메모", payload.memo]] : [])
   ];
   return rows.map(([key, value, isHtml]) => `
     <div class="trade-confirm-key">${esc(key)}</div>
@@ -251,6 +252,62 @@ function txTickerCell(tx) {
   `;
 }
 
+// 메모가 있는 거래만 종목명 옆에 아이콘 — 누르면 메모만 고치는 팝업(2026-10-16 사용자 지시).
+// 행 편집(txEditRow)은 메모를 다루지 않는다.
+function txMemoButton(tx) {
+  const memo = String(tx?.memo || "").trim();
+  if (!memo) return "";
+  return `<button class="tx-memo-btn" type="button" data-tx-memo="${tx.id}" title="${esc(memo)}" aria-label="메모 보기·편집">`
+    + `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.5h7.5L13 5v8.5H3z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.5 7.5h5M5.5 10h3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`
+    + `</button>`;
+}
+
+let txMemoEditingId = null;
+let txMemoSaving = false;
+
+function openTxMemoEditor(id) {
+  const tx = transactionRows.find(item => Number(item.id) === Number(id));
+  const modal = document.getElementById("txMemoModal");
+  const input = document.getElementById("txMemoInput");
+  if (!tx || !modal || !input) return;
+  txMemoEditingId = Number(tx.id);
+  document.getElementById("txMemoTarget").textContent =
+    `${tx.trade_date} · ${tx.name || tx.ticker} ${tradeSideLabel(String(tx.side).toUpperCase())} ${tradeQtyText(tx.qty || 0, tx.ticker)}주`;
+  document.getElementById("txMemoStatus").textContent = "";
+  input.value = tx.memo || "";
+  modal.showModal();
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+}
+
+async function saveTxMemo(event) {
+  event.preventDefault();
+  if (txMemoSaving || txMemoEditingId == null) return;
+  const status = document.getElementById("txMemoStatus");
+  txMemoSaving = true;
+  status.textContent = "저장 중...";
+  try {
+    const result = await apiUpdateTransactionMemo(txMemoEditingId, document.getElementById("txMemoInput").value);
+    const tx = transactionRows.find(item => Number(item.id) === Number(result.id));
+    if (tx) tx.memo = result.memo;
+    document.getElementById("txMemoModal").close();
+    renderTransactions(transactionRows, false);
+    showTradeStatus(result.memo ? "메모 저장됨" : "메모 지움");
+  } catch (err) {
+    status.textContent = err.message || String(err);
+  } finally {
+    txMemoSaving = false;
+  }
+}
+
+function initTxMemoEditor() {
+  const modal = document.getElementById("txMemoModal");
+  document.getElementById("txMemoForm")?.addEventListener("submit", saveTxMemo);
+  document.getElementById("txMemoCancel")?.addEventListener("click", () => modal?.close());
+  modal?.addEventListener("click", event => { if (event.target === modal) modal.close(); });
+  modal?.addEventListener("close", () => { txMemoEditingId = null; });
+}
+
 function txApplyToHoldings(tx) {
   if (tx == null || tx.apply_to_holdings == null) return true;
   return Number(tx.apply_to_holdings) !== 0;
@@ -338,7 +395,7 @@ function txViewRow(tx, endingQty) {
       <td>${esc(tx.trade_date)}</td>
       <td>${esc(account)}</td>
       <td>${txTickerCell(tx)}</td>
-      <td class="tx-name-cell">${esc(tx.name || "")}</td>
+      <td class="tx-name-cell">${esc(tx.name || "")}${txMemoButton(tx)}</td>
       <td>${sideChip}</td>
       <td>${unitMoney(tx.price, tx.currency, tx.ticker)}</td>
       <td>${tradeQtyText(tx.qty || 0, tx.ticker)}</td>
@@ -369,6 +426,7 @@ function bindTransactionRowActions(tbody) {
   tbody.querySelectorAll("[data-tx-hide]").forEach(btn => btn.addEventListener("click", () => {
     setTransactionHidden(Number(btn.dataset.txHide), btn.dataset.txHidden === "1");
   }));
+  tbody.querySelectorAll("[data-tx-memo]").forEach(btn => btn.addEventListener("click", () => openTxMemoEditor(Number(btn.dataset.txMemo))));
   tbody.querySelectorAll("[data-tx-delete]").forEach(btn => btn.addEventListener("click", () => deleteTransactionRow(Number(btn.dataset.txDelete))));
 }
 

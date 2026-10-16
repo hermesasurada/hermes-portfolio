@@ -93,6 +93,14 @@ function apiUpdateTransaction(payload) {
   });
 }
 
+function apiUpdateTransactionMemo(id, memo) {
+  return fetchJson("/api/transactions/memo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, memo }),
+  });
+}
+
 function apiDeleteTransaction(id) {
   return fetchJson("/api/transactions/delete", {
     method: "POST",

@@ -395,7 +395,8 @@ document.getElementById("tradeForm").addEventListener("submit", async event => {
     currency: document.getElementById("tradeCurrency").value,
     trade_date: document.getElementById("tradeDate").value,
     apply_to_holdings: document.getElementById("tradeApply").checked,
-    note: ""
+    note: "",
+    memo: document.getElementById("tradeMemo").value.trim()
   };
   const confirmed = await confirmTradeSave(payload);
   if (!confirmed) {
@@ -408,6 +409,7 @@ document.getElementById("tradeForm").addEventListener("submit", async event => {
     data = result.portfolio;
     selectedTrade = { accountId: String(payload.account_id), ticker: payload.ticker };
     document.getElementById("tradeQty").value = "";
+    document.getElementById("tradeMemo").value = "";
     setTradeApply(true);
     closeTradeModal();
     render();
@@ -537,6 +539,7 @@ initChartDisplayControls();
 initChartIntervalControl();
 initChartNameEditor();
 initTradeSideToggle();
+initTxMemoEditor();
 initTradeApplyToggle();
 initInterestWatchlists();
 initTableScrollNudges();

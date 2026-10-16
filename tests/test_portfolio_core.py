@@ -348,6 +348,21 @@ def test_transaction_hidden_flag_persists_and_is_returned():
         transactions_module.update_transaction({"id": 1, "hidden": 0})
         rows = transactions_module.load_transactions(account_ids=["1"])["transactions"]
         assert int(rows[0]["hidden"]) == 0
+        # 메모(2026-10-16): 옛 표에도 칸이 생기고, 메모 전용 수정만 바꾸며, 행 편집은 메모를 건드리지 않는다
+        assert rows[0]["memo"] is None
+        assert transactions_module.update_transaction_memo({"id": 1, "memo": "  실적 전 분할매수  "})["memo"] == "실적 전 분할매수"
+        transactions_module.update_transaction({"id": 1, "qty": 2})
+        rows = transactions_module.load_transactions(account_ids=["1"])["transactions"]
+        assert rows[0]["memo"] == "실적 전 분할매수"
+        assert rows[0]["note"] == ""   # 원장 감사 기록(note)은 그대로
+        transactions_module.update_transaction_memo({"id": 1, "memo": "   "})
+        assert transactions_module.load_transactions(account_ids=["1"])["transactions"][0]["memo"] is None
+        for bad in ({"id": 1, "memo": "가" * 501}, {"id": 999, "memo": "x"}):
+            try:
+                transactions_module.update_transaction_memo(bad)
+                raise AssertionError(f"거절해야 한다: {bad['id']}")
+            except ValueError:
+                pass
     finally:
         transactions_module.connect = original_connect
         conn.close()

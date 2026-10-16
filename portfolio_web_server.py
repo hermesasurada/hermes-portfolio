@@ -45,7 +45,7 @@ from portfolio_core.paths import DB_PATH, LOGO_DIR
 from portfolio_core.portfolio import load_portfolio as load_portfolio_data
 from portfolio_core.stats import load_stats
 from portfolio_core.tickers import asset_class
-from portfolio_core.transactions import add_transaction, delete_transaction, load_transactions, update_transaction
+from portfolio_core.transactions import add_transaction, delete_transaction, load_transactions, update_transaction, update_transaction_memo
 from portfolio_core.ticker_lookup import is_registered_ticker, lookup_ticker
 from portfolio_core.ticker_metadata import update_ticker_display_name
 from portfolio_core.ticker_tags import load_tags_payload, set_ticker_tags
@@ -479,6 +479,9 @@ class Handler(BaseHTTPRequestHandler):
     def post_transaction_update(self) -> dict:
         return update_transaction(self.read_json(), portfolio_loader=load_portfolio)
 
+    def post_transaction_memo(self) -> dict:
+        return update_transaction_memo(self.read_json())
+
     def post_transaction_delete(self) -> dict:
         return delete_transaction(self.read_json())
 
@@ -610,6 +613,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/transactions": self.post_transactions,
                 "/api/transactions/update": self.post_transaction_update,
                 "/api/transactions/delete": self.post_transaction_delete,
+                "/api/transactions/memo": self.post_transaction_memo,
                 "/api/cash-flows": self.post_cash_flow,
                 "/api/cash-flows/delete": self.post_cash_flow_delete,
                 "/api/performance/rebuild": self.post_performance_rebuild,

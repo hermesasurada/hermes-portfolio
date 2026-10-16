@@ -54,6 +54,17 @@ def require_positive_float(value, label: str) -> float:
     return number
 
 
+MAX_MEMO_LENGTH = 500
+
+
+def clean_memo(value) -> str | None:
+    """사용자 거래 메모 — 앞뒤 공백 제거, 비면 None(목록에 아이콘이 안 뜬다)."""
+    memo = str(value or "").strip()
+    if len(memo) > MAX_MEMO_LENGTH:
+        raise ValueError(f"메모는 {MAX_MEMO_LENGTH}자 이하여야 합니다.")
+    return memo or None
+
+
 def parse_bool(value, default: bool = True) -> bool:
     if value is None:
         return default
@@ -117,6 +128,7 @@ def load_transactions(account_id: str | None = None, ticker: str | None = None, 
                 t.price,
                 t.currency,
                 t.note,
+                t.memo,
                 t.apply_to_holdings,
                 COALESCE(t.hidden, 0) AS hidden,
                 t.entry_score
@@ -217,6 +229,7 @@ def add_transaction(payload: dict, portfolio_loader: Callable[[], dict] | None =
     price = require_positive_float(payload.get("price"), "단가")
     trade_date = parse_trade_date(payload.get("trade_date"))
     note = str(payload.get("note") or "").strip()
+    memo = clean_memo(payload.get("memo"))
     apply_to_holdings = parse_bool(payload.get("apply_to_holdings"), True)
     if not account_id:
         raise ValueError("계좌를 선택해야 합니다.")
@@ -228,6 +241,7 @@ def add_transaction(payload: dict, portfolio_loader: Callable[[], dict] | None =
     with connect() as conn:
         # 잔고를 읽기 전에 쓰기 잠금을 잡아 동시 매매의 갱신 유실을 막는다.
         conn.execute("BEGIN IMMEDIATE")
+        ensure_transaction_columns(conn)
         account = load_account(conn, account_id)
         if not account:
             raise ValueError("존재하지 않는 계좌입니다.")
@@ -250,10 +264,10 @@ def add_transaction(payload: dict, portfolio_loader: Callable[[], dict] | None =
         conn.execute(
             """
             INSERT INTO transactions
-              (trade_date, member, account_id, ticker, side, qty, price, currency, note, created_at, apply_to_holdings, entry_score)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              (trade_date, member, account_id, ticker, side, qty, price, currency, note, memo, created_at, apply_to_holdings, entry_score)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (trade_date, account["member"], account_id, ticker, side, qty, price, currency, note, now_kst_text(), 1 if apply_to_holdings else 0, entry_score),
+            (trade_date, account["member"], account_id, ticker, side, qty, price, currency, note, memo, now_kst_text(), 1 if apply_to_holdings else 0, entry_score),
         )
 
         rebuild_account_snapshots_in_transaction(conn, [account_id])
@@ -322,6 +336,21 @@ def update_transaction(payload: dict, portfolio_loader: Callable[[], dict] | Non
     if apply_holdings:
         result["portfolio"] = (portfolio_loader or load_portfolio)()
     return result
+
+
+def update_transaction_memo(payload: dict) -> dict:
+    """거래 메모만 고친다(2026-10-16 사용자 지시 — 목록의 메모 아이콘에서 편집). 원장 값·잔고·스냅샷과
+    무관하므로 다시 계산하지 않는다. 빈 메모는 NULL로 지워 아이콘이 사라지게 한다."""
+    tx_id = int(payload.get("id") or 0)
+    if not tx_id:
+        raise ValueError("거래 id가 필요합니다.")
+    memo = clean_memo(payload.get("memo"))
+    with connect() as conn:
+        ensure_transaction_columns(conn)
+        updated = conn.execute("UPDATE transactions SET memo = ? WHERE id = ?", (memo, tx_id)).rowcount
+    if not updated:
+        raise ValueError("존재하지 않는 거래입니다.")
+    return {"ok": True, "id": tx_id, "memo": memo}
 
 
 def delete_transaction(payload: dict) -> dict:

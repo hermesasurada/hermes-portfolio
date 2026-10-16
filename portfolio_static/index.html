@@ -524,6 +524,12 @@
                 </select>
               </div>
             </div>
+            <div class="trade-dialog-row trade-row-memo">
+              <div class="field">
+                <label for="tradeMemo">메모 (선택)</label>
+                <textarea id="tradeMemo" rows="2" maxlength="500" placeholder="매매 이유·계획 등"></textarea>
+              </div>
+            </div>
           </div>
         </section>
       </div>
@@ -685,6 +691,20 @@
         <button class="ghost-btn" id="txEditHoldingsCancel" type="button">취소</button>
         <button class="ghost-btn" id="txEditHoldingsLedger" type="button">거래내역만 수정</button>
         <button class="primary-btn" id="txEditHoldingsApply" type="button">잔고도 반영</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog class="watch-modal trade-confirm-modal" id="txMemoModal" aria-labelledby="txMemoTitle">
+    <form method="dialog" class="modal-card trade-confirm-card" id="txMemoForm">
+      <div class="modal-head">
+        <strong id="txMemoTitle">거래 메모</strong>
+      </div>
+      <div class="tx-memo-target" id="txMemoTarget"></div>
+      <textarea id="txMemoInput" rows="5" maxlength="500" aria-label="거래 메모" placeholder="비우고 저장하면 메모가 지워집니다"></textarea>
+      <span class="status" id="txMemoStatus" aria-live="polite"></span>
+      <div class="watch-actions trade-confirm-actions">
+        <button class="ghost-btn" id="txMemoCancel" type="button">취소</button>
+        <button class="primary-btn" id="txMemoSave" type="submit">저장</button>
       </div>
     </form>
   </dialog>

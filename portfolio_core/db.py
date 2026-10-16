@@ -307,6 +307,9 @@ def ensure_transaction_columns(conn: sqlite3.Connection) -> None:
     # 거래 실행 시점의 진입 손익비 — 저장 시 1회 계산(과거 시점 값은 불변).
     if "entry_score" not in columns:
         conn.execute("ALTER TABLE transactions ADD COLUMN entry_score REAL")
+    # 사용자 메모(2026-10-16). note는 일괄 등록·분할 보정 등 원장 감사 기록이라 따로 둔다.
+    if "memo" not in columns:
+        conn.execute("ALTER TABLE transactions ADD COLUMN memo TEXT")
 
 
 def ensure_dividend_tables(conn: sqlite3.Connection) -> None:
