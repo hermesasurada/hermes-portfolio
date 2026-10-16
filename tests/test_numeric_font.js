@@ -36,7 +36,6 @@ for (const grid of ['#holdings > tr > td:nth-child(n+3)', '#interestRows > tr > 
   assert.ok(block.includes('font-family: var(--grid-num-font)'), `${grid}가 고정폭을 다시 쓴다`);
   assert.ok(block.includes('tabular-nums'), `${grid}에 tabular-nums가 빠지면 자릿수가 어긋난다`);
 }
-assert.match(css, /\.trade-timing-value \{ font-family: var\(--grid-num-font\)/);
 assert.match(css, /@font-face\s*\{\s*font-family: "Roboto Mono";\s*src: url\("\/static\/RobotoMono-Variable\.woff2"\) format\("woff2"\);\s*font-style: normal;\s*font-weight: 100 700;/);
 assert.match(page, /rel="preload" href="\/static\/RobotoMono-Variable\.woff2" as="font" type="font\/woff2" crossorigin/);
 assert.doesNotMatch(css + page, /https?:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com)/);

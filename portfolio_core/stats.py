@@ -131,8 +131,7 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
             merged.get("bb_upper_week_pct"),
             merged.get("ma200_pct"),
         )
-        if is_leveraged_product(ticker_names.get(ticker)) or ticker_meta.get(ticker, {}).get("category") in {"index", "fx"}:
-            merged["trade_timing"] = None
+        merged.pop("trade_timing", None)   # 매매참고(실험적) 폐지(2026-10-16) — 옛 캐시에 남은 값은 내보내지 않는다
         stats[ticker] = merged
 
     return {

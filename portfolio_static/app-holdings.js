@@ -129,18 +129,6 @@ function optionalNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
-// Status bucket first, then the state's own metric inside the bucket. One axis
-// runs bad→good: sell/caution rank by ATR (deeper drawdown first), watch/buy by R
-// (larger reward last). The metric is squashed into (0,1) so it never crosses buckets;
-// R and ATR still never compete against each other.
-function tradeTimingSortValue(timing) {
-  const rank = ({sell: 0, caution: 1, wait: 2, breakout: 3, watch: 4, buy: 5})[timing?.state];
-  if (rank == null) return null;
-  const squash = v => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) / (1 + Number(v)) : 0.5);
-  if (rank <= 1) return rank + (1 - squash(timing.sell_atr)) * 0.98 + 0.01;
-  if (rank >= 4) return rank + squash(timing.buy_r) * 0.98 + 0.01;
-  return rank + 0.5;
-}
 // 연장 정렬은 실제 연장가가 온 종목과 그렇지 않은 종목을 먼저 두 묶음으로 나눈다.
 // listSortValue는 연장가가 없으면 정규장 등락으로 대신하므로 그 값만으로는 구분되지 않는다.
 function hasExtendedQuote(row) {
@@ -162,7 +150,6 @@ function listSortValue(row, key) {
       ?? optionalNumber(row?.display_change_pct)
       ?? optionalNumber(row?.change_pct);
   }
-  if (key === "trade_timing") return tradeTimingSortValue(row?.trade_timing);
   return row?.[key];
 }
 function holdingChangeBasePrice(row) {
@@ -942,7 +929,7 @@ function filteredRows(options = {}) {
 // 관심목록에서만 빈 값을 맨 위로, 실적일 오름차순이 계좌표에서만 빈 값을 맨 위로).
 const MISSING_LAST_SORT_KEYS = new Set([
   "extended_change_pct", "next_earnings_date", "risk_reward_score", "entry_risk_reward",
-  "trade_timing", "ma20_pct", "ma50_pct", "ma200_pct",
+  "ma20_pct", "ma50_pct", "ma200_pct",
 ]);
 function sortValueMissing(value, key) {
   // 실적일은 날짜 문자열이라 빈 문자열·null이 곧 '없음'이다.
@@ -1300,7 +1287,6 @@ function renderTable() {
       <td class="group-start">${signedPercentText(r.drawdown_52w, 1)}</td>
       <td>${riskRewardScoreText(r.risk_reward_score, r.risk_reward_basis, r.risk_reward_quality)}</td>
       <td>${entryRewardText(r.entry_risk_reward)}</td>
-      <td class="trade-timing-col">${tradeTimingMarkup(r.trade_timing)}</td>
       <td>${betaText(r.beta)}</td>
       <td>${betaText(r.beta_adj)}</td>
       <td class="group-start">${indicatorText(r.rsi_day, "rsi")}</td>

@@ -29,7 +29,7 @@ for (const grid of ['#detailTableWrap', '.dividend-list', '.interest-detail-list
 }
 assert.match(mobile, /#detailTableWrap th, #detailTableWrap td,[\s\S]*?font-size: var\(--grid-fs\);/);
 assert.match(mobile, /\.ticker-symbol, \.krw-sub, \.sector-chip\)[\s\S]*?font-size: var\(--grid-fs-sub\);/);
-assert.match(mobile, /\.pct-chip, \.trade-timing-value\)[\s\S]*?font-size: var\(--grid-fs-chip\);/);
+assert.match(mobile, /\.tx-list\)\s*\.pct-chip \{\s*font-size: var\(--grid-fs-chip\);/);
 // 관심목록 헤더는 우선순위가 높은 자체 규칙이 있어 따로 덮어야 한다.
 assert.match(mobile, /\.interest-group-head th\[rowspan\] \{\s*font-size: var\(--grid-fs\);/);
 assert.match(mobile, /\.interest-group-head th:not\(\[rowspan\]\) \{\s*font-size: var\(--grid-fs-tiny\);/);

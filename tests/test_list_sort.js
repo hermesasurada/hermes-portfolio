@@ -36,7 +36,6 @@ const rows = Array.from({length: 10}, (_, i) => {
   const row = {ticker: `T${i}`, name: `이름${(i * 7) % 10}`};
   for (const key of keys) row[key] = samples[(i * 3 + key.length) % samples.length];
   row.next_earnings_date = i % 3 ? `2026-10-0${i % 9 + 1}` : null;
-  row.trade_timing = i % 4 ? {state: ['sell', 'wait', 'buy'][i % 3], buy_r: i, sell_atr: i} : null;
   return row;
 });
 for (const key of keys) {

@@ -15,7 +15,7 @@ const INTEREST_SCREEN_PERCENT_KEYS = new Set([
 ]);
 // 통화가 종목마다 달라 한 기준으로 비교할 수 없거나 수치가 아닌 열
 const INTEREST_SCREEN_EXCLUDED = new Set([
-  "logo", "name", "delete", "trade_timing", "rating_rank", "next_earnings_date",
+  "logo", "name", "delete", "rating_rank", "next_earnings_date",
   "current_price", "target_price", "free_cash_flow",
 ]);
 const INTEREST_SCREEN_LABELS = {

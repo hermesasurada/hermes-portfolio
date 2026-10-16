@@ -27,7 +27,6 @@ from .indicators import (
 from .paths import KST
 from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
 from .tickers import is_korean_stock_ticker, ticker_currency, normalize_tickers
-from .trade_timing import calculate_trade_timing
 
 TECHNICAL_CACHE_VERSION = 15  # 15: 별도 매수·매도 타점 참고 (기존 진입 손익비 유지)
 TECHNICAL_LOOKBACK_DAYS = 11 * 366
@@ -422,7 +421,6 @@ def calculate_technical_stats(
         "performance": recent_performance(rows),
         "drawdown_52w": high_52w_drawdown(daily),
         "atr_pct": None if (value := atr_percent(rows)) is None else round(value, 4),
-        "trade_timing": calculate_trade_timing(rows),
         **_entry_seat_pct(daily, weekly),
         **betas,
     }
@@ -479,7 +477,6 @@ def calculate_price_adjusted_indicators(
             "month": bollinger_pband(monthly),
         },
         "drawdown_52w": high_52w_drawdown(daily),
-        "trade_timing": calculate_trade_timing(adjusted, provisional=True),
         **_entry_seat_pct(daily, weekly),
     }
 

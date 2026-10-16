@@ -2092,39 +2092,33 @@ tr.dividend-month-row:hover td {
 #detailTableWrap th:nth-child(7), #detailTableWrap td:nth-child(7) { min-width: calc(80px * var(--col-scale, 1)); }   /* 등락금액 */
 #detailTableWrap th:nth-child(8), #detailTableWrap td:nth-child(8) { min-width: calc(74px * var(--col-scale, 1)); }   /* 평가액 */
 #detailTableWrap th:nth-child(9), #detailTableWrap td:nth-child(9) { min-width: calc(54px * var(--col-scale, 1)); }   /* 비중 */
-#detailTableWrap th:nth-child(39), #detailTableWrap td:nth-child(39) { min-width: calc(76px * var(--col-scale, 1)); } /* 시총/AUM */
+#detailTableWrap th:nth-child(38), #detailTableWrap td:nth-child(38) { min-width: calc(76px * var(--col-scale, 1)); } /* 시총/AUM */
 #detailTableWrap th:nth-child(10), #detailTableWrap td:nth-child(10) { min-width: calc(48px * var(--col-scale, 1)); } /* 배당율 */
 #detailTableWrap th:nth-child(11), #detailTableWrap td:nth-child(11) { min-width: calc(72px * var(--col-scale, 1)); } /* 5년 배당성장 */
-#detailTableWrap th:nth-child(40), #detailTableWrap td:nth-child(40) { min-width: calc(60px * var(--col-scale, 1)); } /* 실적일 */
+#detailTableWrap th:nth-child(39), #detailTableWrap td:nth-child(39) { min-width: calc(60px * var(--col-scale, 1)); } /* 실적일 */
 #detailTableWrap th:nth-child(12), #detailTableWrap td:nth-child(12) { min-width: calc(62px * var(--col-scale, 1)); } /* 52주高 */
 #detailTableWrap th:nth-child(13), #detailTableWrap td:nth-child(13) { min-width: calc(58px * var(--col-scale, 1)); } /* 변동성 손익비 */
 #detailTableWrap th:nth-child(14), #detailTableWrap td:nth-child(14) { min-width: calc(58px * var(--col-scale, 1)); } /* 진입 손익비 */
-#detailTableWrap .trade-timing-col { min-width: calc(76px * var(--col-scale, 1)); width: calc(76px * var(--col-scale, 1)); }
-.trade-timing-col { text-align: center; }
-.trade-timing-ref { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.2; white-space: nowrap; font-family: "Pretendard Variable", sans-serif; cursor: help; }
-.trade-timing-ref:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
-.trade-timing-value { font-family: var(--grid-num-font); font-variant-numeric: tabular-nums lining-nums; font-size: 11px; }
-.trade-timing-note { color: var(--muted); font-size: 10px; font-weight: 400; }
-#detailTableWrap th:nth-child(16), #detailTableWrap td:nth-child(16),
-#detailTableWrap th:nth-child(17), #detailTableWrap td:nth-child(17) { min-width: calc(42px * var(--col-scale, 1)); } /* β */
-#detailTableWrap th:nth-child(n+18):nth-child(-n+23),
-#detailTableWrap td:nth-child(n+18):nth-child(-n+23) {
+#detailTableWrap th:nth-child(15), #detailTableWrap td:nth-child(15),
+#detailTableWrap th:nth-child(16), #detailTableWrap td:nth-child(16) { min-width: calc(42px * var(--col-scale, 1)); } /* β */
+#detailTableWrap th:nth-child(n+17):nth-child(-n+22),
+#detailTableWrap td:nth-child(n+17):nth-child(-n+22) {
   min-width: calc(43px * var(--col-scale, 1));
   padding-left: 1px;
   padding-right: 1px;
 } /* RSI/BB */
 #detailTableWrap .ma-distance-col { min-width: calc(76px * var(--col-scale, 1)); } /* 20/50/200일선 이격률 */
-#detailTableWrap th:nth-child(27), #detailTableWrap td:nth-child(27),
-#detailTableWrap th:nth-child(28), #detailTableWrap td:nth-child(28) { min-width: calc(56px * var(--col-scale, 1)); } /* P/E */
-#detailTableWrap th:nth-child(29), #detailTableWrap td:nth-child(29) { min-width: calc(40px * var(--col-scale, 1)); } /* P/B */
-#detailTableWrap th:nth-child(n+30):nth-child(-n+38),
-#detailTableWrap td:nth-child(n+30):nth-child(-n+38) { min-width: calc(58px * var(--col-scale, 1)); } /* 기간 수익률 */
-#detailTableWrap th:nth-child(41), #detailTableWrap td:nth-child(41) { min-width: calc(54px * var(--col-scale, 1)); } /* 거래 */
-#detailTableWrap th:nth-child(17),
-#detailTableWrap td:nth-child(17),
-#detailTableWrap th:nth-child(23),
-#detailTableWrap td:nth-child(23),
-#detailTableWrap th:nth-child(29),
+#detailTableWrap th:nth-child(26), #detailTableWrap td:nth-child(26),
+#detailTableWrap th:nth-child(27), #detailTableWrap td:nth-child(27) { min-width: calc(56px * var(--col-scale, 1)); } /* P/E */
+#detailTableWrap th:nth-child(28), #detailTableWrap td:nth-child(28) { min-width: calc(40px * var(--col-scale, 1)); } /* P/B */
+#detailTableWrap th:nth-child(n+29):nth-child(-n+37),
+#detailTableWrap td:nth-child(n+29):nth-child(-n+37) { min-width: calc(58px * var(--col-scale, 1)); } /* 기간 수익률 */
+#detailTableWrap th:nth-child(40), #detailTableWrap td:nth-child(40) { min-width: calc(54px * var(--col-scale, 1)); } /* 거래 */
+#detailTableWrap th:nth-child(16),
+#detailTableWrap td:nth-child(16),
+#detailTableWrap th:nth-child(22),
+#detailTableWrap td:nth-child(22),
+#detailTableWrap th:nth-child(28),
 /* 그룹 경계선 앞 셀 여백 — P/B와 모멘텀 마지막 열의 값이 선에 붙지 않도록 한다.
    :not(.hidden)은 숨긴 셀 제외 겸 모멘텀 1px 규칙(:nth-child 둘)보다 특이도를 높이는 용도. */
 #detailTableWrap th:not(.hidden):has(+ .group-start),
@@ -6048,7 +6042,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   #detailTableWrap, .dividend-list, .interest-detail-list, .tx-list {
     --grid-fs: 11px;        /* 셀 기본 */
     --grid-fs-sub: 9.5px;   /* 티커 심볼 · 원화 환산 */
-    --grid-fs-chip: 10px;   /* 등락 칩 · 매매참고 수치 */
+    --grid-fs-chip: 10px;   /* 등락 칩 */
     --grid-fs-tiny: 9px;    /* 배당 성장 기준 등 각주 */
   }
   #detailTableWrap th, #detailTableWrap td,
@@ -6062,7 +6056,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     font-size: var(--grid-fs-sub);
   }
   :is(#detailTableWrap, .dividend-list, .interest-detail-list, .tx-list)
-    :is(.pct-chip, .trade-timing-value) {
+    .pct-chip {
     font-size: var(--grid-fs-chip);
   }
   :is(#detailTableWrap, .dividend-list, .interest-detail-list, .tx-list)

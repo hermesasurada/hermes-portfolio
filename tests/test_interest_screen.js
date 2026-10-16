@@ -31,7 +31,7 @@ assert.deepEqual(screen([{key: 'dividend_yield', op: 'lte', value: 1}]), ['A', '
 // 필드 목록: 통화가 다른 가격·FCF, 날짜·문자 열은 없다. 단위 표기
 const fields = run('interestScreenFields()');
 const keys = new Set(fields.map(f => f.key));
-for (const excluded of ['current_price', 'target_price', 'free_cash_flow', 'next_earnings_date', 'trade_timing', 'rating_rank', 'name'])
+for (const excluded of ['current_price', 'target_price', 'free_cash_flow', 'next_earnings_date', 'rating_rank', 'name'])
   assert.ok(!keys.has(excluded), excluded);
 for (const key of ['rsi_day', 'perf_1y', 'gross_margin', 'market_cap_usd', 'risk_reward_score', 'ma200_pct']) assert.ok(keys.has(key), key);
 const byKey = Object.fromEntries(fields.map(f => [f.key, f]));
