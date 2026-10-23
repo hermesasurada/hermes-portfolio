@@ -94,7 +94,7 @@ const INTEREST_COLUMNS = [
     cell: (r, group) => `${perfText(r, "perf_3y", 1)}` },
   { key: "perf_5y", width: 64, label: "5년", headClass: "interest-leaf-head", ariaLabel: "5년 연평균 복리수익률",
     cell: (r, group) => `${perfText(r, "perf_5y", 1)}` },
-  { key: "trend_return", width: 64, label: "<span>추세</span><span>수익률</span>", headClass: "indicator-head interest-leaf-head", title: "추세 수익률 = 최근 3년(756거래일) 로그 종가에 직선을 맞춘 기울기의 연율 환산\n기간 수익률(CAGR)은 시작·끝 두 점만 보지만 이 값은 경로 전체를 반영해 막판 급등에 덜 흔들린다\nR² = 가격이 그 직선을 얼마나 따라왔는가(1에 가까울수록 꾸준, 횡보 후 급등은 낮다)\n이력이 3년보다 짧으면 있는 만큼(최소 1년)으로 계산",
+  { key: "trend_return", width: 64, label: "<span>추세</span><span>수익률</span>", headClass: "indicator-head interest-leaf-head", title: "추세 수익률 = 최근 5년(1,260거래일) 로그 종가에 직선을 맞춘 기울기의 연율 환산\n기간 수익률(CAGR)은 시작·끝 두 점만 보지만 이 값은 경로 전체를 반영해 막판 급등에 덜 흔들린다\nR² = 가격이 그 직선을 얼마나 따라왔는가(1에 가까울수록 꾸준, 횡보 후 급등은 낮다)\n이력이 5년보다 짧으면 있는 만큼(최소 1년)으로 계산",
     cell: (r, group) => `${trendReturnText(r.trend_return, r.trend_r2)}` },
   { key: "perf_10y", width: 64, label: "10년", headClass: "interest-leaf-head", ariaLabel: "10년 연평균 복리수익률",
     cell: (r, group) => `${perfText(r, "perf_10y", 1)}` },

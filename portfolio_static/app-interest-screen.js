@@ -22,7 +22,7 @@ const INTEREST_SCREEN_LABELS = {
   display_change_pct: "등락", extended_change_pct: "연장 등락", market_cap_usd: "시총/AUM",
   perf_1w: "수익률 1주", perf_1m: "수익률 1개월", perf_3m: "수익률 3개월", perf_6m: "수익률 6개월",
   perf_ytd: "수익률 YTD", perf_1y: "수익률 1년", perf_3y: "수익률 3년(연)", perf_5y: "수익률 5년(연)",
-  perf_10y: "수익률 10년(연)", trend_return: "추세 수익률(3년·연)",
+  perf_10y: "수익률 10년(연)", trend_return: "추세 수익률(5년·연)",
 };
 const INTEREST_SCREEN_OPS = { gte: "이상", lte: "이하" };
 
