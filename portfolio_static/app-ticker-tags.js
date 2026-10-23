@@ -20,9 +20,9 @@ function applyTagFilter(rows) {
   return tagFilterSelection.size ? rows.filter(matchesTagFilter) : rows;
 }
 
-// 세부내역 표가 태그 필터 때문에 비었을 때의 안내 행(41열 표)
+// 세부내역 표가 태그 필터 때문에 비었을 때의 안내 행(42열 표)
 function detailTagEmptyRow() {
-  return tagFilterSelection.size ? `<tr><td colspan="41" class="flat">선택한 태그의 보유 종목이 없습니다.</td></tr>` : "";
+  return tagFilterSelection.size ? `<tr><td colspan="42" class="flat">선택한 태그의 보유 종목이 없습니다.</td></tr>` : "";
 }
 
 function parseTagInput(text) {

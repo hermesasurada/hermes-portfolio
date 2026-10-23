@@ -928,7 +928,7 @@ function filteredRows(options = {}) {
 // 예전엔 두 표가 목록을 따로 들고 있어 같은 열이 표마다 반대로 정렬됐다(이격 오름차순이
 // 관심목록에서만 빈 값을 맨 위로, 실적일 오름차순이 계좌표에서만 빈 값을 맨 위로).
 const MISSING_LAST_SORT_KEYS = new Set([
-  "extended_change_pct", "next_earnings_date", "trend_return", "risk_reward_score", "entry_risk_reward",
+  "extended_change_pct", "next_earnings_date", "trend_return", "trend_r2", "risk_reward_score", "entry_risk_reward",
   "ma20_pct", "ma50_pct", "ma200_pct",
 ]);
 function sortValueMissing(value, key) {
@@ -1309,7 +1309,8 @@ function renderTable() {
       <td>${perfText(r, "perf_1y", 0)}</td>
       <td>${perfText(r, "perf_3y", 1)}</td>
       <td>${perfText(r, "perf_5y", 1)}</td>
-      <td>${trendReturnText(r.trend_return, r.trend_r2)}</td>
+      <td>${trendReturnText(r.trend_return)}</td>
+      <td>${trendR2Text(r.trend_r2)}</td>
       <td>${perfText(r, "perf_10y", 1)}</td>
       <td class="group-start">${marketCapMarkup(r)}</td>
       <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>

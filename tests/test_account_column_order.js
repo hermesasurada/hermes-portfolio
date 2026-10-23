@@ -8,14 +8,14 @@ const headers = [...table.matchAll(/<th\b[^>]*>[\s\S]*?<\/th>/g)].map(m => m[0])
 const source = read('app-holdings.js');
 const body = source.slice(source.indexOf('<tr class="${tableRowClass(r)}">'), source.indexOf('// 다음 렌더의 펄스'));
 const cells = [...body.matchAll(/<td\b[^>]*>[\s\S]*?<\/td>/g)].map(m => m[0]);
-assert.equal(headers.length, 41);
+assert.equal(headers.length, 42);
 assert.equal(cells.length, headers.length);
-assert.match(headers[38], /data-key="market_cap_usd">시총\/AUM/);
-assert.match(headers[39], /data-key="next_earnings_date">실적일/);
-assert.match(headers[40], />거래</);
-assert.match(cells[38], /marketCapMarkup\(r\)/);
-assert.match(cells[39], /earningsText\(r.next_earnings_date\)/);
-assert.match(cells[40], /tx-pick/);
+assert.match(headers[39], /data-key="market_cap_usd">시총\/AUM/);
+assert.match(headers[40], /data-key="next_earnings_date">실적일/);
+assert.match(headers[41], />거래</);
+assert.match(cells[39], /marketCapMarkup\(r\)/);
+assert.match(cells[40], /earningsText\(r.next_earnings_date\)/);
+assert.match(cells[41], /tx-pick/);
 assert.match(headers[9], /dividend_yield/);
 assert.match(headers[12], /risk_reward_score/);
 assert.match(headers[13], /entry_risk_reward/);
@@ -29,10 +29,12 @@ assert.match(headers[28], /perf_1w/);
 // 추세 수익률(2026-10-23)은 5년 수익률 바로 오른쪽, 10년 앞
 assert.match(headers[35], /perf_5y/);
 assert.match(headers[36], /data-key="trend_return"/);
-assert.match(cells[36], /trendReturnText\(r.trend_return, r.trend_r2\)/);
-assert.match(headers[37], /perf_10y/);
+assert.match(cells[36], /trendReturnText\(r.trend_return\)/);
+assert.match(headers[37], /data-key="trend_r2"/);   // 추세 R²는 별도 열(2026-10-23)
+assert.match(cells[37], /trendR2Text\(r.trend_r2\)/);
+assert.match(headers[38], /perf_10y/);
 const css = read('styles.css');
 // 폭은 --col-scale 배율을 타되 기본값(데스크톱)은 원래 값 그대로다.
-assert.match(css, /td:nth-child\(40\) \{ min-width: calc\(60px \* var\(--col-scale, 1\)\); \} \/\* 실적일/);
-assert.match(css, /td:nth-child\(39\) \{ min-width: calc\(76px \* var\(--col-scale, 1\)\); \} \/\* 시총\/AUM/);
+assert.match(css, /td:nth-child\(41\) \{ min-width: calc\(60px \* var\(--col-scale, 1\)\); \} \/\* 실적일/);
+assert.match(css, /td:nth-child\(40\) \{ min-width: calc\(76px \* var\(--col-scale, 1\)\); \} \/\* 시총\/AUM/);
 console.log('Account headers, cells and widths aligned; market cap and earnings date precede trade action.');

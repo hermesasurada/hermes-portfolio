@@ -97,6 +97,7 @@ const defaultSortDir = {
   insider_ownership: -1,
   institutional_ownership: -1,
   trend_return: -1,
+  trend_r2: -1,
   risk_reward_score: -1,
   entry_risk_reward: -1,
   beta: -1,

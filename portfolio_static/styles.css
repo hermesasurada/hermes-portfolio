@@ -2092,10 +2092,10 @@ tr.dividend-month-row:hover td {
 #detailTableWrap th:nth-child(7), #detailTableWrap td:nth-child(7) { min-width: calc(80px * var(--col-scale, 1)); }   /* 등락금액 */
 #detailTableWrap th:nth-child(8), #detailTableWrap td:nth-child(8) { min-width: calc(74px * var(--col-scale, 1)); }   /* 평가액 */
 #detailTableWrap th:nth-child(9), #detailTableWrap td:nth-child(9) { min-width: calc(54px * var(--col-scale, 1)); }   /* 비중 */
-#detailTableWrap th:nth-child(39), #detailTableWrap td:nth-child(39) { min-width: calc(76px * var(--col-scale, 1)); } /* 시총/AUM */
+#detailTableWrap th:nth-child(40), #detailTableWrap td:nth-child(40) { min-width: calc(76px * var(--col-scale, 1)); } /* 시총/AUM */
 #detailTableWrap th:nth-child(10), #detailTableWrap td:nth-child(10) { min-width: calc(48px * var(--col-scale, 1)); } /* 배당율 */
 #detailTableWrap th:nth-child(11), #detailTableWrap td:nth-child(11) { min-width: calc(72px * var(--col-scale, 1)); } /* 5년 배당성장 */
-#detailTableWrap th:nth-child(40), #detailTableWrap td:nth-child(40) { min-width: calc(60px * var(--col-scale, 1)); } /* 실적일 */
+#detailTableWrap th:nth-child(41), #detailTableWrap td:nth-child(41) { min-width: calc(60px * var(--col-scale, 1)); } /* 실적일 */
 #detailTableWrap th:nth-child(12), #detailTableWrap td:nth-child(12) { min-width: calc(62px * var(--col-scale, 1)); } /* 52주高 */
 #detailTableWrap th:nth-child(13), #detailTableWrap td:nth-child(13) { min-width: calc(58px * var(--col-scale, 1)); } /* 변동성 손익비 */
 #detailTableWrap th:nth-child(14), #detailTableWrap td:nth-child(14) { min-width: calc(58px * var(--col-scale, 1)); } /* 진입 손익비 */
@@ -2111,10 +2111,11 @@ tr.dividend-month-row:hover td {
 #detailTableWrap th:nth-child(26), #detailTableWrap td:nth-child(26),
 #detailTableWrap th:nth-child(27), #detailTableWrap td:nth-child(27) { min-width: calc(56px * var(--col-scale, 1)); } /* P/E */
 #detailTableWrap th:nth-child(28), #detailTableWrap td:nth-child(28) { min-width: calc(40px * var(--col-scale, 1)); } /* P/B */
-#detailTableWrap th:nth-child(n+29):nth-child(-n+36), #detailTableWrap th:nth-child(38),
-#detailTableWrap td:nth-child(n+29):nth-child(-n+36), #detailTableWrap td:nth-child(38) { min-width: calc(58px * var(--col-scale, 1)); } /* 기간 수익률(1주~5년, 10년) */
-#detailTableWrap th:nth-child(37), #detailTableWrap td:nth-child(37) { min-width: calc(64px * var(--col-scale, 1)); } /* 추세 수익률 (5년 오른쪽) */
-#detailTableWrap th:nth-child(41), #detailTableWrap td:nth-child(41) { min-width: calc(54px * var(--col-scale, 1)); } /* 거래 */
+#detailTableWrap th:nth-child(n+29):nth-child(-n+36), #detailTableWrap th:nth-child(39),
+#detailTableWrap td:nth-child(n+29):nth-child(-n+36), #detailTableWrap td:nth-child(39) { min-width: calc(58px * var(--col-scale, 1)); } /* 기간 수익률(1주~5년, 10년=39번) */
+#detailTableWrap th:nth-child(37), #detailTableWrap td:nth-child(37) { min-width: calc(58px * var(--col-scale, 1)); } /* 추세 수익률 (5년 오른쪽) */
+#detailTableWrap th:nth-child(38), #detailTableWrap td:nth-child(38) { min-width: calc(48px * var(--col-scale, 1)); } /* 추세 R² */
+#detailTableWrap th:nth-child(42), #detailTableWrap td:nth-child(42) { min-width: calc(54px * var(--col-scale, 1)); } /* 거래 */
 #detailTableWrap th:nth-child(16),
 #detailTableWrap td:nth-child(16),
 #detailTableWrap th:nth-child(22),
@@ -7127,7 +7128,3 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 .tx-memo-target { color: var(--muted); font-size: 12px; font-weight: 600; }
 #txMemoInput { width: 100%; height: auto; min-height: 112px; padding: 8px 10px; font-size: 13px; line-height: 1.45; }
 #txMemoStatus:empty { display: none; }
-
-/* ── 추세 수익률 칸(2026-10-23): 연율 % 위에 R²를 작게 — 세부내역·관심목록 공용 ─────── */
-.trend-cell { display: inline-flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
-.trend-r2 { color: var(--muted); font-size: 9.5px; font-weight: 500; letter-spacing: -.01em; }

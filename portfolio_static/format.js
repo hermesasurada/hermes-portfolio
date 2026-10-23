@@ -299,14 +299,15 @@ const BETA_ADJ_TOOLTIP = [
    /api/stats 응답의 score·basis(기준 기간)·quality(TR/P)를 표시만 한다.
    기본 케이스(5Y·총수익)는 라벨 생략, 이력이 짧거나 P면 '3Y'·'5Y·P' 형태로 병기. */
 // 이력 길이(3Y·1Y)·배당 반영(P) 각주는 붙이지 않는다(2026-10-23 사용자 지시) — 없는 창은 산식에서 이미 0점이다.
-// 추세 수익률(연율 %) 위에 꾸준함 R²를 작은 글씨로 — 두 값을 같이 봐야 '끝점 효과'가 읽힌다.
-function trendReturnText(value, r2) {
+// 추세 수익률(연율 %)과 꾸준함 R²는 별도 열(2026-10-23 사용자 지시: 5년 → 추세 → R² → 10년).
+function trendReturnText(value) {
+  if (value == null || value === "") return "-";
+  return signedPercentText(value, 1);
+}
+function trendR2Text(value) {
   if (value == null || value === "") return "-";
   const n = Number(value);
-  if (!Number.isFinite(n)) return "-";
-  const r = Number(r2);
-  const r2Text = Number.isFinite(r) ? `<small class="trend-r2" title="R² — 1에 가까울수록 직선처럼 꾸준히 온 가격">R²${r.toFixed(2)}</small>` : "";
-  return `<span class="trend-cell">${signedPercentText(n, 1)}${r2Text}</span>`;
+  return Number.isFinite(n) ? n.toFixed(2) : "-";
 }
 function riskRewardScoreText(v) {
   if (v == null || v === "") return "-";   // Number(null)===0 — 점수 없음이 0.0으로 보이면 안 된다
