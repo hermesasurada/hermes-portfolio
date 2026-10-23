@@ -298,20 +298,14 @@ const BETA_ADJ_TOOLTIP = [
 /* 손익비 산식은 서버(portfolio_core/risk_reward.py)가 단일 진실 —
    /api/stats 응답의 score·basis(기준 기간)·quality(TR/P)를 표시만 한다.
    기본 케이스(5Y·총수익)는 라벨 생략, 이력이 짧거나 P면 '3Y'·'5Y·P' 형태로 병기. */
-function riskRewardScoreText(v, basis, quality) {
+// 이력 길이(3Y·1Y)·배당 반영(P) 각주는 붙이지 않는다(2026-10-23 사용자 지시) — 없는 창은 산식에서 이미 0점이다.
+function riskRewardScoreText(v) {
+  if (v == null || v === "") return "-";   // Number(null)===0 — 점수 없음이 0.0으로 보이면 안 된다
   const n = Number(v);
   if (!Number.isFinite(n)) return "-";
   const { cls } = changeDirection(n);
   const sign = n > 0 ? "+" : "";
-  let mark = "";
-  if (basis && (basis !== "5y" || quality === "P")) {
-    const label = `${basis.toUpperCase()}${quality === "P" ? "·P" : ""}`;
-    const why = basis !== "5y"
-      ? `이력이 짧아 ${basis.toUpperCase()}까지만 반영 — 없는 구간은 0점`
-      : "배당 매핑 실패 또는 이력 미비";
-    mark = ` <small class="history-growth-basis" title="${why}${quality === "P" ? " (P=배당 일부 미반영)" : ""}">${label}</small>`;
-  }
-  return `<span class="${cls}">${sign}${n.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}${mark}</span>`;
+  return `<span class="${cls}">${sign}${n.toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span>`;
 }
 function entryRewardText(v) {
   if (v == null) return "-";   // Number(null)===0 — 값 없음이 0.0으로 보이면 안 된다

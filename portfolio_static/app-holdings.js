@@ -1285,7 +1285,7 @@ function renderTable() {
         : dividendYieldText(r.dividend_yield)}</td>
       <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
       <td class="group-start">${signedPercentText(r.drawdown_52w, 1)}</td>
-      <td>${riskRewardScoreText(r.risk_reward_score, r.risk_reward_basis, r.risk_reward_quality)}</td>
+      <td>${riskRewardScoreText(r.risk_reward_score)}</td>
       <td>${entryRewardText(r.entry_risk_reward)}</td>
       <td>${betaText(r.beta)}</td>
       <td>${betaText(r.beta_adj)}</td>
