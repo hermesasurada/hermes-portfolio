@@ -32,11 +32,12 @@ assert.equal((allHeaders.match(/data-interest-col=/g) || []).length, 61);
 assert.equal((allHeaders.match(/data-interest-sort-key=/g) || []).length, 60);
 const few = run("interestTableHead(visibleInterestColumns([{ rsi_week: 40, rsi_month: 45 }]))");
 assert.match(few, /colspan="2" class="group-start" data-interest-group-head="momentum"/);
-assert.doesNotMatch(few, /data-interest-col="17"/);   // rsi_day(값 없음) 숨김
-assert.match(few, /data-interest-col="18"/);
+assert.doesNotMatch(few, /data-interest-col="16"/);   // rsi_day(값 없음) 숨김
+assert.match(few, /data-interest-col="17"/);
 assert.equal((run("interestEmptyRow('none', INTEREST_COLUMNS)").match(/<td /g) || []).length, 61);
-// 추세 수익률은 변동성 손익비 바로 왼쪽(2026-10-23)
-assert.equal(run("INTEREST_COLUMNS[INTEREST_COLUMNS.findIndex(c=>c.key==='risk_reward_score')-1].key"), 'trend_return');
+// 추세 수익률은 5년 수익률 바로 오른쪽(2026-10-23)
+assert.equal(run("INTEREST_COLUMNS[INTEREST_COLUMNS.findIndex(c=>c.key==='perf_5y')+1].key"), 'trend_return');
+assert.equal(run("INTEREST_COLUMNS[INTEREST_COLUMNS.findIndex(c=>c.key==='trend_return')+1].key"), 'perf_10y');
 assert.match(run("interestEmptyRow('<unsafe>', visibleInterestColumns([]))"), /&lt;unsafe&gt;/);
 run(`
   const testCol = { innerHTML: '' }, testHead = { innerHTML: '' };

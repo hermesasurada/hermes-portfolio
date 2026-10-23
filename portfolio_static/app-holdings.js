@@ -1285,7 +1285,6 @@ function renderTable() {
         : dividendYieldText(r.dividend_yield)}</td>
       <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
       <td class="group-start">${signedPercentText(r.drawdown_52w, 1)}</td>
-      <td>${trendReturnText(r.trend_return, r.trend_r2)}</td>
       <td>${riskRewardScoreText(r.risk_reward_score)}</td>
       <td>${entryRewardText(r.entry_risk_reward)}</td>
       <td>${betaText(r.beta)}</td>
@@ -1310,6 +1309,7 @@ function renderTable() {
       <td>${perfText(r, "perf_1y", 0)}</td>
       <td>${perfText(r, "perf_3y", 1)}</td>
       <td>${perfText(r, "perf_5y", 1)}</td>
+      <td>${trendReturnText(r.trend_return, r.trend_r2)}</td>
       <td>${perfText(r, "perf_10y", 1)}</td>
       <td class="group-start">${marketCapMarkup(r)}</td>
       <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>

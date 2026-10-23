@@ -17,18 +17,19 @@ assert.match(cells[38], /marketCapMarkup\(r\)/);
 assert.match(cells[39], /earningsText\(r.next_earnings_date\)/);
 assert.match(cells[40], /tx-pick/);
 assert.match(headers[9], /dividend_yield/);
-// 추세 수익률(2026-10-23)은 변동성 손익비 바로 왼쪽
-assert.match(headers[12], /data-key="trend_return"/);
-assert.match(cells[12], /trendReturnText\(r.trend_return, r.trend_r2\)/);
-assert.match(headers[13], /risk_reward_score/);
-assert.match(headers[14], /entry_risk_reward/);
+assert.match(headers[12], /risk_reward_score/);
+assert.match(headers[13], /entry_risk_reward/);
 // 매매참고(실험적) 열 폐지(2026-10-16) — 진입손익비 바로 다음이 β
-assert.match(headers[15], /data-key="beta"/);
+assert.match(headers[14], /data-key="beta"/);
 assert.doesNotMatch(html + source, /trade_timing|tradeTimingMarkup/);
-assert.match(headers[17], /rsi_day/);
-assert.match(headers[22], /bb_month/);
-assert.match(headers[23], /ma20_pct/);
-assert.match(headers[29], /perf_1w/);
+assert.match(headers[16], /rsi_day/);
+assert.match(headers[21], /bb_month/);
+assert.match(headers[22], /ma20_pct/);
+assert.match(headers[28], /perf_1w/);
+// 추세 수익률(2026-10-23)은 5년 수익률 바로 오른쪽, 10년 앞
+assert.match(headers[35], /perf_5y/);
+assert.match(headers[36], /data-key="trend_return"/);
+assert.match(cells[36], /trendReturnText\(r.trend_return, r.trend_r2\)/);
 assert.match(headers[37], /perf_10y/);
 const css = read('styles.css');
 // 폭은 --col-scale 배율을 타되 기본값(데스크톱)은 원래 값 그대로다.
