@@ -3474,6 +3474,26 @@ def test_live_chart_point_without_today_row_gets_provisional_candle():
     assert points_today[-1]["candle_close"] == 159.0
 
 
+def test_trend_performance_discounts_endpoint_spikes():
+    """추세 수익률(로그 회귀 기울기)과 R²(2026-10-23): 꾸준한 상승은 CAGR과 비슷하고 R²≈1,
+    횡보 뒤 막판 급등은 CAGR보다 낮고 R²가 뚜렷이 떨어진다. 이력 1년 미만은 없음."""
+    import math
+    from portfolio_core.technical_stats import trend_performance, TREND_MIN_DAYS
+
+    steady = [100 * math.exp(0.20 / 252 * i) for i in range(756)]   # 연 22.1%(e^0.2−1)로 직선 상승
+    out = trend_performance(steady)
+    assert abs(out["trend_return"] - (math.exp(0.20) - 1) * 100) < 0.05
+    assert out["trend_r2"] > 0.999
+
+    spike = [100.0] * 630 + [100 * math.exp(0.60 / 126 * i) for i in range(126)]   # 2.5년 횡보 후 6개월 +82%
+    out = trend_performance(spike)
+    cagr = (spike[-1] / spike[0]) ** (252 / 756) - 1
+    assert out["trend_return"] < cagr * 100          # 끝점 CAGR(약 22%)보다 낮다
+    assert out["trend_r2"] < 0.6                     # 꾸준하지 않다
+    assert trend_performance([100.0] * (TREND_MIN_DAYS - 1)) == {"trend_return": None, "trend_r2": None}
+    assert trend_performance([100.0] * 300)["trend_r2"] is None   # 분산 0 — R² 정의 불가, 수익률 0
+
+
 # --- runner -----------------------------------------------------------------
 def _run() -> int:
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]

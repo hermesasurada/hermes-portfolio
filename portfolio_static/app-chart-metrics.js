@@ -82,6 +82,8 @@ function chartStatMetricRows(payload) {
     ["성과", "5년", chartStatPercent(priceReturnCagr(perf.five_year, 5), 1), priceReturnCagr(perf.five_year, 5), "high"],
     ["성과", "10년", chartStatPercent(priceReturnCagr(perf.ten_year, 10), 1), priceReturnCagr(perf.ten_year, 10), "high"],
     ["위험", "52주 고점 대비", chartStatPercent(s.drawdown_52w), finiteMetric(s.drawdown_52w), "high"],
+    ["위험", "추세 수익률", chartStatPercent(s.trend_return), finiteMetric(s.trend_return), "high"],
+    ["위험", "추세 R²", s.trend_r2 == null ? "-" : Number(s.trend_r2).toFixed(2), finiteMetric(s.trend_r2), "high"],
     ["위험", "변동성 손익비", riskRewardScoreText(s.risk_reward_score), finiteMetric(s.risk_reward_score), "high"],
     ["위험", "진입 손익비", entryRewardText(s.entry_risk_reward), finiteMetric(s.entry_risk_reward), "high"],
     ["위험", "β", betaText(s.beta), finiteMetric(s.beta), "lowAbs"],

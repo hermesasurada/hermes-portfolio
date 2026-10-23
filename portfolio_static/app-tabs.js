@@ -24,6 +24,8 @@ function statsRows(rows) {
       dividend_streak_years: isIndex ? null : stats.dividend_streak_years,
       dividend_streak_floor: isIndex ? null : stats.dividend_streak_floor,
       dividend_growth_streak_years: isIndex ? null : stats.dividend_growth_streak_years,
+      trend_return: stats.trend_return,
+      trend_r2: stats.trend_r2,
       risk_reward_score: stats.risk_reward_score,
       risk_reward_basis: stats.risk_reward_basis,
       risk_reward_quality: stats.risk_reward_quality,

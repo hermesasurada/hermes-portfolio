@@ -44,6 +44,8 @@ const INTEREST_COLUMNS = [
     cell: (r, group) => `${dividendStreakText(r.dividend_growth_streak_years)}` },
   { key: "drawdown_52w", width: 72, label: "52주高 대비", headClass: "interest-leaf-head",
     cell: (r, group) => `${signedPercentText(r.drawdown_52w, 1)}` },
+  { key: "trend_return", width: 64, label: "<span>추세</span><span>수익률</span>", headClass: "indicator-head interest-leaf-head", title: "추세 수익률 = 최근 3년(756거래일) 로그 종가에 직선을 맞춘 기울기의 연율 환산\n기간 수익률(CAGR)은 시작·끝 두 점만 보지만 이 값은 경로 전체를 반영해 막판 급등에 덜 흔들린다\nR² = 가격이 그 직선을 얼마나 따라왔는가(1에 가까울수록 꾸준, 횡보 후 급등은 낮다)\n이력이 3년보다 짧으면 있는 만큼(최소 1년)으로 계산",
+    cell: (r, group) => `${trendReturnText(r.trend_return, r.trend_r2)}` },
   { key: "risk_reward_score", width: 58, label: "<span>변동성</span><span>손익비</span>", headClass: "indicator-head interest-leaf-head", title: "변동성 손익비 = 10 × Σ w(h) × 기간점수(h)\n기간점수(h) = clamp((연율수익(h) − 3%) ÷ max(변동성(h), 바닥), −2, +2)\n · 연율수익: KRW 환산 일간 총수익(배당 재투자)의 산술 연율\n · 변동성: 같은 기간 일간 수익률의 연율 표준편차(상승·하락 모두)\n · 바닥: 주식·ETF·지수 8% / 크립토 20% / FX·채권 3%\n · 창(비겹침): 5Y=3~5년 전 w=0.4 / 3Y=1~3년 전 w=0.3 / 1Y=최근 1년 w=0.3 — 없는 창은 0점(이력 1년이면 최대 30%만 반영)",
     cell: (r, group) => `${riskRewardScoreText(r.risk_reward_score)}` },
   { key: "entry_risk_reward", width: 58, label: "<span>진입</span><span>손익비</span>", headClass: "indicator-head interest-leaf-head", title: "진입 손익비 = clamp(업사이드 ÷ 손절폭 × RSI계수 × 추세계수, 0, 20)\n · 업사이드 = 0.3×(일 볼린저 상단까지 %) + 0.7×min(주 볼린저 상단까지 %, 30) — 음수는 0\n · 손절폭 = max(1.5 × ATR(14) %, 1%)\n · RSI계수 = clamp(1 + (50 − 일RSI)/40 × 0.5, 0.25, 1.4) — 낮을수록 가점\n · 추세계수 = 0.25 + 0.75 × (0.4a + 0.4b + 0.2c)\n     a = clamp((주RSI − 45)/10, 0, 1), b = clamp((50일선 이격% + 2)/4, 0, 1)\n     c = clamp((200일선 이격% + 5)/10, 0, 1)\n200일선이 없으면 a·b를 각각 50% 반영. 주봉 RSI·BB·50일선 등 필수 이력이 없으면 점수 없음(-)",
