@@ -157,7 +157,7 @@ function renderChartStats(payload) {
   }
 
   el.innerHTML = `
-    <div class="cstat-board">
+    <div class="cstat-board" style="--mobile-rows:${Math.ceil(rows.length / 2)}">
       ${statCells.join("")}
     </div>
     ${loaded ? "" : `<div class="chart-stat-loading">통계 불러오는 중…</div>`}
