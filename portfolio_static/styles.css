@@ -6592,14 +6592,20 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .cstat-compare-key small {
     font-size: 9.5px;
   }
+  /* 모바일 지표 표: 2열·26px 행으로 밀도↑(2026-10-23 사용자 지시, 1열 34px에서 높이 1,788px였다).
+     선은 행의 오른쪽·아래 테두리가 그린다 — 보드 자체의 오른쪽·아래 테두리는 겹치지 않게 뺀다. */
   #chartStats .cstat-board {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 26px;
+    border-right: 0;
+    border-bottom: 0;
   }
   #chartStats .cstat-row,
   #chartStats .cstat-row:nth-child(2n),
   #chartStats .cstat-row:nth-child(4n) {
     order: var(--mobile-order, 0);
-    border-right: 0;
+    height: 26px;
+    border-right: 1px solid var(--line);
   }
   #chartStats .cstat-row.empty {
     display: none;
@@ -6607,9 +6613,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   #chartStats .cstat-row:nth-last-child(-n + 2),
   #chartStats .cstat-row:nth-last-child(-n + 4) {
     border-bottom: 1px solid var(--line);
-  }
-  #chartStats .cstat-row:last-child {
-    border-bottom: 0;
   }
   :root[data-theme="dark"] #chartStats .cstat-row:nth-last-child(-n + 2),
   :root[data-theme="dark"] #chartStats .cstat-row:nth-last-child(-n + 4) {
@@ -6623,16 +6626,35 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .cstat-column:last-child {
     border-bottom: 0;
   }
+  /* 컨센서스도 지표 표와 같은 한 줄(이름 | 값) 26px — 칸마다 이름 줄·값 줄 2단(56px)이던 것을 접는다 */
+  .consensus-cell {
+    grid-template-rows: 26px;
+    grid-template-columns: 68px minmax(0, 1fr);   /* 이름 칸 고정('목표가 범위' 약 55px+여백) — 칸마다 경계가 맞게 */
+  }
+  .consensus-k {
+    justify-content: flex-start;
+    padding: 0 6px;
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+    font-size: 11px;
+  }
+  .consensus-v {
+    padding: 0 6px;
+    font-size: 12px;
+  }
+  /* 값 칸 폭을 고정해 행마다 경계가 맞게 — 값 최장(▲127.8%·$41.81B 약 48px)+여백. 이름이 넘치면 말줄임 */
   .cstat-row {
-    grid-template-columns: 108px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 62px;
   }
   .cstat-k {
-    padding-left: 12px;
-    padding-right: 12px;
+    padding-left: 6px;
+    padding-right: 6px;
+    font-size: 11px;
   }
   .cstat-v {
-    padding-left: 12px;
-    padding-right: 12px;
+    padding-left: 6px;
+    padding-right: 6px;
+    font-size: 11.5px;
   }
   :root[data-theme="dark"] .cstat-column {
     border-bottom-color: var(--line);
