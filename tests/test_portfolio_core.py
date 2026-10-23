@@ -3494,6 +3494,30 @@ def test_trend_performance_discounts_endpoint_spikes():
     assert trend_performance([100.0] * 300)["trend_r2"] is None   # 분산 0 — R² 정의 불가, 수익률 0
 
 
+def test_asset_class_ignores_brand_glued_to_korean_company_name():
+    """'BNK금융지주'의 BNK는 BNK자산운용 ETF 브랜드가 아니다(2026-10-23) — 실적일 수집에서 빠지고 있었다."""
+    from portfolio_core.tickers import asset_class
+    assert asset_class("138930.KS", "BNK금융지주") == "stock"
+    assert asset_class("000000.KS", "BNK 미국반도체") == "etf"
+    for name in ("KODEX 200", "RISE AI전력인프라", "KIWOOM 독일DAX", "TIGER 미국S&P500", "ACE KRX금현물"):
+        assert asset_class("000000.KS", name) == "etf", name
+    for name in ("삼성전자", "SK하이닉스", "KB금융", "NAVER", "LG에너지솔루션"):
+        assert asset_class("000000.KS", name) == "stock", name
+
+
+def test_kr_earnings_date_prefers_yahoo_then_investing():
+    """한국 실적일: 야후 캘린더 1순위, 없거나 실패할 때만 Investing.com(2026-10-23)."""
+    from unittest.mock import patch
+    import portfolio_core.collectors as col
+    with patch.object(col, "fetch_yahoo_earnings_date", return_value="2026-10-28"), \
+         patch.object(col, "fetch_investing_kr_earnings_date", side_effect=AssertionError("호출되면 안 된다")):
+        assert col.fetch_kr_earnings_date("005930.KS") == "2026-10-28"
+    with patch.object(col, "fetch_yahoo_earnings_date", side_effect=RuntimeError("yahoo down")), \
+         patch.object(col, "fetch_investing_kr_earnings_date", return_value="2026-11-02"), \
+         patch.object(col.time, "sleep", lambda s: None):
+        assert col.fetch_kr_earnings_date("005930.KS") == "2026-11-02"
+
+
 # --- runner -----------------------------------------------------------------
 def _run() -> int:
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]

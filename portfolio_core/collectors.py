@@ -346,6 +346,20 @@ def fetch_investing_kr_earnings_date(ticker: str) -> str | None:
     return None
 
 
+def fetch_kr_earnings_date(ticker: str) -> str | None:
+    """한국 종목 다음 실적발표일. 야후 캘린더가 1순위(2026-10-23 확인: 삼성전자·SK하이닉스 등 제공),
+    없을 때만 Investing.com을 본다 — Investing 검색 API가 한국 종목에 빈 결과만 돌려줘
+    한국 실적일이 사실상 수집되지 않고 있었다(111종목 중 4건, 그나마 ETF 오분류)."""
+    try:
+        found = fetch_yahoo_earnings_date(ticker)
+    except Exception:
+        found = None
+    if found:
+        return found
+    time.sleep(0.8)   # Investing.com 요청 간격
+    return fetch_investing_kr_earnings_date(ticker)
+
+
 def fetch_fx_price(label: str) -> CollectedPrice | None:
     symbol = fx_yahoo_symbol(label)
     return fetch_yahoo_price(symbol, cache_ticker=label, currency="FX")

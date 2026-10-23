@@ -153,7 +153,13 @@ def asset_class(ticker: str, name: str) -> str:
         return "crypto"
     upper_name = (name or "").upper()
     upper_ticker = ticker.upper()
-    name_tokens = set(re.findall(r"[A-Z0-9]+", upper_name))
+    # 영문 조각 바로 뒤에 한글이 붙으면 회사명 일부다 — 'BNK금융지주'의 BNK를 BNK자산운용 ETF 브랜드로
+    # 오인해 ETF로 분류했다(2026-10-23, 실적일 수집 제외·연금계좌 범위 오판). ETF는 'BNK 미국…'처럼 띈다.
+    name_tokens = {
+        match.group(0)
+        for match in re.finditer(r"[A-Z0-9]+", upper_name)
+        if not re.match(r"[가-힣]", upper_name[match.end():match.end() + 1])
+    }
     if upper_ticker in US_ETF_TICKERS or any(token in name_tokens for token in ETF_BRANDS):
         return "etf"
     return "stock"

@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import math
 import re
-import time
 
-from .collectors import fetch_history_rows, fetch_investing_kr_earnings_date, fetch_yahoo_earnings_date
+from .collectors import fetch_history_rows, fetch_kr_earnings_date, fetch_yahoo_earnings_date
 from .corporate_actions import refresh_stock_splits
 from .db import connect, ensure_ticker_metadata_columns
 from .fundamentals import fetch_fundamentals
@@ -53,8 +52,7 @@ def hydrate_ticker(ticker: str, years: int = 10) -> dict:
         if category == "overseas":
             earnings = fetch_yahoo_earnings_date(ticker)
         elif category == "kr" and asset_class(ticker, name or "") == "stock":
-            time.sleep(0.8)
-            earnings = fetch_investing_kr_earnings_date(ticker)
+            earnings = fetch_kr_earnings_date(ticker)   # 야후 우선, 없을 때만 Investing.com
         else:
             earnings = None
         update_earnings_dates([(ticker, earnings)])

@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-import time
 import urllib.error
 from pathlib import Path
 
@@ -12,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from portfolio_core.collectors import (
     CollectedPrice,
     fetch_history_rows,
-    fetch_investing_kr_earnings_date,
+    fetch_kr_earnings_date,
     fetch_price,
     fetch_yahoo_earnings_date,
     fetch_yahoo_prices_batch,
@@ -39,7 +38,6 @@ from portfolio_core.price_store import (
 from portfolio_core.technical_stats import refresh_technical_stats_cache
 from portfolio_core.tickers import asset_class
 
-KR_EARNINGS_DELAY_SECONDS = 0.8
 # 신규 추적 종목 과거 이력 자동 백필: 이력이 이 행수 미만이고 아직 백필한 적
 # 없으면 1회 전체 이력을 받아 채운다. (crypto/stock 지표 계산용)
 HISTORY_BACKFILL_MIN_ROWS = 60
@@ -167,8 +165,7 @@ def collect_earnings_dates(
     for ticker in due_tickers:
         try:
             if ticker.endswith((".KS", ".KQ")):
-                time.sleep(KR_EARNINGS_DELAY_SECONDS)
-                earnings_date = fetch_investing_kr_earnings_date(ticker)
+                earnings_date = fetch_kr_earnings_date(ticker)   # 야후 우선, 없을 때만 Investing.com
             else:
                 earnings_date = fetch_yahoo_earnings_date(ticker)
         except urllib.error.HTTPError as exc:
