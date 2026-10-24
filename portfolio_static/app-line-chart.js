@@ -98,18 +98,53 @@ function syncChartBottomControls(visible = Boolean(chartTicker || performanceCha
   control.classList.toggle("hidden", !visible);
 }
 
+// 표시 기간에 맞는 차트 단위(2026-10-24 사용자 지시): 주봉은 3년 이상, 월봉은 10년 이상 기간에서만.
+const CHART_INTERVAL_ORDER = ["day", "week", "month"];
+const CHART_INTERVAL_MIN_YEARS = { day: 0, week: 3, month: 10 };
+// 사용자가 고른 단위 — 기간이 짧아 자동으로 내려가도 기억했다가 기간이 길어지면 되살린다.
+let chartIntervalPreference = null;
+
+function chartDisplayedYears() {
+  const range = chartRanges.find(item => item.key === chartRange);
+  if (range?.months) return range.months / 12;
+  if (range?.ytd) return 1;
+  if (chartRange === "custom") {
+    const start = chartDateObject(chartCustomRange.start);
+    const end = chartDateObject(chartCustomRange.end) || new Date();
+    return start ? (end - start) / (365.25 * 86400000) : 0;
+  }
+  const extent = currentChartRangeExtent();   // 전체·최대: 실제 이력 길이
+  return extent ? extent.months / 12 : 0;
+}
+
+function allowedChartIntervals() {
+  const years = chartDisplayedYears() + 0.01;   // 3Y·10Y 프리셋이 경계값에서 떨어지지 않게
+  return CHART_INTERVAL_ORDER.filter(interval => years >= CHART_INTERVAL_MIN_YEARS[interval]);
+}
+
+function enforceChartInterval() {
+  if (chartIntervalPreference == null) chartIntervalPreference = chartInterval;
+  const allowed = allowedChartIntervals();
+  chartInterval = allowed.includes(chartIntervalPreference) ? chartIntervalPreference : allowed[allowed.length - 1];
+}
+
 function syncChartIntervalControl() {
   const toggle = document.getElementById("chartIntervalToggle");
   if (!toggle) return;
-  const order = ["day", "week", "month"];
   const labels = { day: "일", week: "주", month: "월" };
-  const next = order[(order.indexOf(chartInterval) + 1) % order.length];
+  const allowed = allowedChartIntervals();
+  const next = allowed[(allowed.indexOf(chartInterval) + 1) % allowed.length];
   toggle.classList.toggle("hidden", !chartTicker || performanceChartOpen);
   document.getElementById("chartUnitControls")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
   toggle.textContent = labels[chartInterval] || "일";
   toggle.setAttribute("aria-pressed", "true");
-  toggle.setAttribute("aria-label", `현재 ${labels[chartInterval] || "일"} 단위, 클릭하면 ${labels[next]}`);
-  toggle.title = `차트 단위: ${labels[chartInterval] || "일"} → ${labels[next]}`;
+  toggle.disabled = allowed.length < 2;
+  toggle.setAttribute("aria-label", allowed.length < 2
+    ? `현재 ${labels[chartInterval] || "일"} 단위 — 주 단위는 3년 이상, 월 단위는 10년 이상 기간에서 선택`
+    : `현재 ${labels[chartInterval] || "일"} 단위, 클릭하면 ${labels[next]}`);
+  toggle.title = allowed.length < 2
+    ? "주 단위는 기간 3년 이상, 월 단위는 10년 이상에서 선택할 수 있다"
+    : `차트 단위: ${labels[chartInterval] || "일"} → ${labels[next]}${allowed.includes("month") ? "" : " (월 단위는 10년 이상)"}`;
 }
 
 function initChartIntervalControl() {
@@ -117,8 +152,9 @@ function initChartIntervalControl() {
   if (!toggle) return;
   syncChartIntervalControl();
   toggle.addEventListener("click", () => {
-    const order = ["day", "week", "month"];
-    chartInterval = order[(order.indexOf(chartInterval) + 1) % order.length];
+    const allowed = allowedChartIntervals();
+    chartInterval = allowed[(allowed.indexOf(chartInterval) + 1) % allowed.length];
+    chartIntervalPreference = chartInterval;
     storageSet(detailStorage.chartInterval, chartInterval);
     syncChartIntervalControl();
     if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
@@ -1356,6 +1392,9 @@ function bindChartInteractions(points, payload, geometry) {
 
 function renderLineChart(payload) {
   syncChartBottomControls(true);
+  // 기간이 정해진 뒤 단위를 맞춘다 — 전체 기간이 10년 미만이면 월봉→주봉 등으로 자동 하향.
+  if (!chartComparePayloads.length) normalizeChartRangeForPayloads([payload], false, "all");
+  enforceChartInterval();
   syncChartIntervalControl();
   if (chartComparePayloads.length) {
     renderCompareLineChart(payload);

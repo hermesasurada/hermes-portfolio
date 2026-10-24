@@ -29,7 +29,9 @@ ctx.document = {getElementById: id => elements[id] ||= {
   classList:{toggle() {}}, setAttribute() {}, addEventListener(_, fn) {this.click = fn;},
 }};
 Object.assign(ctx, {chartTicker:'ASML', performanceChartOpen:false,
-  chartPayload:{points}, detailStorage:{chartInterval:'interval'}, storageSet() {}});
+  chartPayload:{points}, detailStorage:{chartInterval:'interval'}, storageSet() {},
+  // 주봉은 3년·월봉은 10년 이상 기간에서만 선택된다(2026-10-24) — 세 단위를 모두 돌려 보려면 10Y
+  chartRange:'10y', chartRanges:[{key:'10y', months:120}], chartComparePayloads:[], chartCustomRange:{}});
 vm.runInContext(fs.readFileSync('portfolio_static/app-line-chart.js', 'utf8'), ctx);
 ctx.renderLineChart = payload => {ctx.rendered = ctx.aggregateChartPoints(payload.points);};
 ctx.initChartIntervalControl();
