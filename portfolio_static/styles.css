@@ -6916,7 +6916,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .screen-rows { display: grid; gap: 8px; }
 .screen-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 72px 32px;
+  grid-template-columns: 20px minmax(0, 1.6fr) minmax(0, 1fr) 72px 32px;
   gap: 6px;
   align-items: center;
 }
@@ -6950,9 +6950,20 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .screen-actions .screen-actions-gap { flex: 1; }
 /* 조건은 보관한 채 적용만 끈 상태 — 켜짐(active, 파랑)과 구별되게 점선·흐린 글자 */
 #interestScreenButton.screen-off { border-style: dashed; color: var(--muted); }
+/* 조건별 적용 체크(2026-10-24) — 끈 조건은 남겨 두되 흐리게 */
+.screen-row input.screen-enabled { width: 16px; height: 16px; padding: 0; margin: 0; accent-color: var(--brand); cursor: pointer; }
+.screen-row-off :is(select, .screen-value-wrap) { opacity: .45; }
 @media (max-width: 520px) {
-  .screen-row { grid-template-columns: minmax(0, 1fr) 64px 32px; }
-  .screen-row .screen-field { grid-column: 1 / -1; }
+  .screen-row { grid-template-columns: 20px minmax(0, 1fr) 64px 32px; }
+  .screen-row .screen-enabled { grid-row: 1 / span 2; }
+  .screen-row .screen-field { grid-column: 2 / -1; }
+  /* 하단 버튼 2×2 고정: 위 초기화·적용 해제, 아래 취소·적용(해제 버튼이 숨으면 그 칸만 빈다) */
+  .screen-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .screen-actions .screen-actions-gap { display: none; }
+  #interestScreenReset { grid-area: 1 / 1; }
+  #interestScreenDisable { grid-area: 1 / 2; }
+  #interestScreenCancel { grid-area: 2 / 1; }
+  #interestScreenApply { grid-area: 2 / 2; }
 }
 
 /* 차트 오른쪽 끝 선 이름표(전환·기준·20·50·200) — 선택한 선의 색으로. 한글인 전환·기준만 한 단계 작게 */

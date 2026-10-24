@@ -49,7 +49,7 @@ run(`saveInterestScreen([
 ])`);
 const saved = run('interestScreenConditions');
 assert.equal(saved.length, 5);
-assert.equal(JSON.stringify(saved[0]), JSON.stringify({key: 'rsi_day', op: 'lte', value: 30}));
+assert.equal(JSON.stringify(saved[0]), JSON.stringify({key: 'rsi_day', op: 'lte', value: 30, enabled: true}));
 run('interestScreenConditions = []; loadInterestScreen()');
 assert.equal(run('interestScreenConditions').length, 5);
 // 깨진 저장값은 조용히 비운다
@@ -71,4 +71,14 @@ assert.equal(run('interestScreenEnabled'), false);
 assert.equal(run('interestScreenConditions').length, 1);
 run('setInterestScreenEnabled(true)');
 assert.deepEqual(run('applyInterestScreen(__rows)').map(r => r.ticker), ['A', 'D']);
+// 조건별 적용(2026-10-24): 끈 조건은 저장되지만 거르지 않는다 — 옛 저장값(enabled 없음)은 켜짐
+run("storageSet(detailStorage.interestScreen, JSON.stringify([{key:'rsi_day',op:'lte',value:30}])); loadInterestScreen()");
+assert.equal(run('interestScreenConditions[0].enabled'), true);
+run("saveInterestScreen([{key:'rsi_day',op:'lte',value:30}, {key:'perf_1y',op:'gte',value:0, enabled:false}]); setInterestScreenEnabled(true)");
+assert.deepEqual(run('applyInterestScreen(__rows)').map(r => r.ticker), ['A', 'D']);   // perf_1y 조건(끔)은 무시
+assert.equal(run('interestScreenConditions').length, 2);
+run('loadInterestScreen()');
+assert.equal(run('interestScreenConditions[1].enabled'), false);
+run("saveInterestScreen([{key:'rsi_day',op:'lte',value:30, enabled:false}])");
+assert.equal(run('applyInterestScreen(__rows)').length, 4);   // 전부 끄면 거르지 않음
 console.log('interest screen ok');

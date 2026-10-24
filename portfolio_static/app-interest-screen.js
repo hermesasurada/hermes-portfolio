@@ -81,7 +81,7 @@ function passesInterestScreen(row, conditions = interestScreenConditions) {
 
 // 실제로 거르는 데 쓰는 조건 — 적용을 해제하면 비어 있다(저장된 조건은 그대로).
 function activeInterestScreenConditions() {
-  return interestScreenEnabled ? interestScreenConditions : [];
+  return interestScreenEnabled ? interestScreenConditions.filter(condition => condition.enabled !== false) : [];
 }
 
 function applyInterestScreen(rows) {
@@ -100,7 +100,7 @@ function loadInterestScreen() {
   interestScreenConditions = (Array.isArray(saved) ? saved : [])
     .filter(validInterestScreenCondition)
     .slice(0, INTEREST_SCREEN_MAX)
-    .map(({ key, op, value }) => ({ key, op, value: Number(value) }));
+    .map(normalizeInterestScreenCondition);
   interestScreenEnabled = storageGet(detailStorage.interestScreenEnabled) !== "false";
 }
 
@@ -110,10 +110,15 @@ function setInterestScreenEnabled(enabled) {
   syncInterestScreenButton();
 }
 
+// 조건별 적용 여부(enabled, 2026-10-24) — 없으면 켜짐(이전 저장값 호환)
+function normalizeInterestScreenCondition({ key, op, value, enabled }) {
+  return { key, op, value: Number(value), enabled: enabled !== false };
+}
+
 function saveInterestScreen(conditions) {
   interestScreenConditions = conditions.filter(validInterestScreenCondition)
     .slice(0, INTEREST_SCREEN_MAX)
-    .map(({ key, op, value }) => ({ key, op, value: Number(value) }));
+    .map(normalizeInterestScreenCondition);
   storageSet(detailStorage.interestScreen, JSON.stringify(interestScreenConditions));
   syncInterestScreenButton();
 }
@@ -121,7 +126,8 @@ function saveInterestScreen(conditions) {
 function interestScreenSummary(conditions = interestScreenConditions) {
   return conditions.map(condition => {
     const field = interestScreenField(condition.key);
-    return `${field?.label || condition.key} ${condition.value}${field?.unit || ""} ${INTEREST_SCREEN_OPS[condition.op]}`;
+    const text = `${field?.label || condition.key} ${condition.value}${field?.unit || ""} ${INTEREST_SCREEN_OPS[condition.op]}`;
+    return condition.enabled === false ? `${text}(끔)` : text;
   }).join(" · ");
 }
 
@@ -129,14 +135,17 @@ function syncInterestScreenButton() {
   const button = document.getElementById("interestScreenButton");
   if (!button) return;
   const count = interestScreenConditions.length;
-  const on = count > 0 && interestScreenEnabled;
-  button.textContent = !count ? "스크리닝" : on ? `스크리닝 ${count}` : `스크리닝 ${count}·꺼짐`;
+  const active = activeInterestScreenConditions().length;
+  const on = active > 0;
+  // 일부 조건만 켜져 있으면 '켜진 수/전체'
+  const shown = active === count ? `${count}` : `${active}/${count}`;
+  button.textContent = !count ? "스크리닝" : on ? `스크리닝 ${shown}` : `스크리닝 ${count}·꺼짐`;
   button.classList.toggle("active", on);
-  button.classList.toggle("screen-off", count > 0 && !interestScreenEnabled);
+  button.classList.toggle("screen-off", count > 0 && !on);
   button.title = !count ? "항목별 조건으로 종목 거르기(최대 5개, 모두 만족)"
     : on ? `스크리닝 적용 중 — ${interestScreenSummary()}`
     : `스크리닝 꺼짐(조건 보관 중) — ${interestScreenSummary()}`;
-  button.setAttribute("aria-label", !count ? "스크리닝" : on ? `스크리닝 조건 ${count}개 적용 중` : `스크리닝 조건 ${count}개 보관, 적용 해제됨`);
+  button.setAttribute("aria-label", !count ? "스크리닝" : on ? `스크리닝 조건 ${count}개 중 ${active}개 적용 중` : `스크리닝 조건 ${count}개 보관, 적용 해제됨`);
   syncInterestScreenDisableButton();
 }
 
@@ -157,7 +166,9 @@ function renderInterestScreenRows() {
   host.innerHTML = interestScreenDraft.length
     ? interestScreenDraft.map((condition, index) => {
       const field = interestScreenField(condition.key);
-      return `<div class="screen-row" data-screen-index="${index}">
+      const enabled = condition.enabled !== false;
+      return `<div class="screen-row${enabled ? "" : " screen-row-off"}" data-screen-index="${index}">
+        <input class="screen-enabled" type="checkbox"${enabled ? " checked" : ""} aria-label="조건 ${index + 1} 적용" title="이 조건 적용(끄면 보관만)">
         <select class="screen-field" aria-label="조건 ${index + 1} 항목">${interestScreenFieldOptions(condition.key)}</select>
         <span class="screen-value-wrap">
           <input class="screen-value" type="number" step="any" inputmode="decimal" value="${esc(condition.value ?? "")}" aria-label="조건 ${index + 1} 값" placeholder="값">
@@ -177,11 +188,14 @@ function renderInterestScreenRows() {
 function syncInterestScreenPreview() {
   const status = document.getElementById("interestScreenStatus");
   if (!status) return;
-  const valid = interestScreenDraft.filter(validInterestScreenCondition);
+  const switchedOn = interestScreenDraft.filter(condition => condition.enabled !== false);
+  const valid = switchedOn.filter(validInterestScreenCondition);
   const total = interestPreScreenRows.length;
   const matched = valid.length ? interestPreScreenRows.filter(row => passesInterestScreen(row, valid)).length : total;
-  const incomplete = interestScreenDraft.length - valid.length;
+  const incomplete = switchedOn.length - valid.length;
+  const off = interestScreenDraft.length - switchedOn.length;
   status.textContent = `현재 그룹 ${total}종목 중 ${matched}종목 일치`
+    + (off ? ` · 꺼 둔 조건 ${off}개 제외` : "")
     + (incomplete ? ` · 값이 비어 있는 조건 ${incomplete}개는 빼고 셈` : "")
     + (interestScreenStatsPending ? " · 지표를 불러오는 중이라 늘어날 수 있음" : "");
 }
@@ -194,7 +208,7 @@ function syncInterestScreenDisableButton() {
 
 function openInterestScreenModal() {
   interestScreenDraft = interestScreenConditions.map(condition => ({ ...condition }));
-  if (!interestScreenDraft.length) interestScreenDraft.push({ key: "rsi_day", op: "lte", value: "" });
+  if (!interestScreenDraft.length) interestScreenDraft.push({ key: "rsi_day", op: "lte", value: "", enabled: true });
   renderInterestScreenRows();
   document.getElementById("interestScreenModal")?.showModal();
 }
@@ -211,7 +225,7 @@ function initInterestScreen() {
   document.getElementById("interestScreenCancel")?.addEventListener("click", closeInterestScreenModal);
   document.getElementById("interestScreenAdd")?.addEventListener("click", () => {
     if (interestScreenDraft.length >= INTEREST_SCREEN_MAX) return;
-    interestScreenDraft.push({ key: "perf_1y", op: "gte", value: "" });
+    interestScreenDraft.push({ key: "perf_1y", op: "gte", value: "", enabled: true });
     renderInterestScreenRows();
     document.querySelector("#interestScreenRows .screen-row:last-child .screen-field")?.focus();
   });
@@ -245,7 +259,10 @@ function initInterestScreen() {
     if (!row) return;
     const condition = interestScreenDraft[Number(row.dataset.screenIndex)];
     if (!condition) return;
-    if (event.target.classList.contains("screen-field")) {
+    if (event.target.classList.contains("screen-enabled")) {
+      condition.enabled = event.target.checked;
+      row.classList.toggle("screen-row-off", !condition.enabled);
+    } else if (event.target.classList.contains("screen-field")) {
       condition.key = event.target.value;
       row.querySelector(".screen-unit").textContent = interestScreenField(condition.key)?.unit || "";
     } else if (event.target.classList.contains("screen-op")) {
