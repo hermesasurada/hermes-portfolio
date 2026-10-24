@@ -62,4 +62,13 @@ assert.equal(run('applyInterestScreen(__rows)').length, 4);
 run("interestScreenConditions = [{key:'rsi_day',op:'lte',value:30}]");
 assert.deepEqual(run('applyInterestScreen(__rows)').map(r => r.ticker), ['A', 'D']);
 assert.equal(run('interestPreScreenRows').length, 4);
+// 적용 해제(2026-10-24): 조건은 남기고 거르기만 끈다 — 저장·복원되고, '적용'이 다시 켠다
+run("saveInterestScreen([{key:'rsi_day',op:'lte',value:30}]); setInterestScreenEnabled(false)");
+assert.equal(run('applyInterestScreen(__rows)').length, 4);
+assert.equal(run('interestScreenConditions').length, 1);
+run('interestScreenEnabled = true; loadInterestScreen()');
+assert.equal(run('interestScreenEnabled'), false);
+assert.equal(run('interestScreenConditions').length, 1);
+run('setInterestScreenEnabled(true)');
+assert.deepEqual(run('applyInterestScreen(__rows)').map(r => r.ticker), ['A', 'D']);
 console.log('interest screen ok');

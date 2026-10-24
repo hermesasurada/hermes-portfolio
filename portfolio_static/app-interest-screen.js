@@ -26,7 +26,8 @@ const INTEREST_SCREEN_LABELS = {
 };
 const INTEREST_SCREEN_OPS = { gte: "이상", lte: "이하" };
 
-let interestScreenConditions = [];   // [{key, op, value}] — 적용 중인 조건
+let interestScreenConditions = [];   // [{key, op, value}] — 저장된 조건
+let interestScreenEnabled = true;    // false면 조건은 남겨 둔 채 거르지 않는다(2026-10-24 사용자 지시)
 let interestScreenDraft = [];        // 팝업에서 편집 중인 조건
 let interestPreScreenRows = [];      // 스크리닝 직전 행(팝업의 '일치 종목 수' 미리보기용)
 let interestScreenStatsPending = false;   // 지표(RSI·수익률 등)를 아직 불러오는 중
@@ -78,9 +79,15 @@ function passesInterestScreen(row, conditions = interestScreenConditions) {
   });
 }
 
+// 실제로 거르는 데 쓰는 조건 — 적용을 해제하면 비어 있다(저장된 조건은 그대로).
+function activeInterestScreenConditions() {
+  return interestScreenEnabled ? interestScreenConditions : [];
+}
+
 function applyInterestScreen(rows) {
   interestPreScreenRows = rows;
-  return interestScreenConditions.length ? rows.filter(row => passesInterestScreen(row)) : rows;
+  const active = activeInterestScreenConditions();
+  return active.length ? rows.filter(row => passesInterestScreen(row, active)) : rows;
 }
 
 function loadInterestScreen() {
@@ -94,6 +101,13 @@ function loadInterestScreen() {
     .filter(validInterestScreenCondition)
     .slice(0, INTEREST_SCREEN_MAX)
     .map(({ key, op, value }) => ({ key, op, value: Number(value) }));
+  interestScreenEnabled = storageGet(detailStorage.interestScreenEnabled) !== "false";
+}
+
+function setInterestScreenEnabled(enabled) {
+  interestScreenEnabled = Boolean(enabled);
+  storageSet(detailStorage.interestScreenEnabled, String(interestScreenEnabled));
+  syncInterestScreenButton();
 }
 
 function saveInterestScreen(conditions) {
@@ -115,10 +129,15 @@ function syncInterestScreenButton() {
   const button = document.getElementById("interestScreenButton");
   if (!button) return;
   const count = interestScreenConditions.length;
-  button.textContent = count ? `스크리닝 ${count}` : "스크리닝";
-  button.classList.toggle("active", count > 0);
-  button.title = count ? `스크리닝 적용 중 — ${interestScreenSummary()}` : "항목별 조건으로 종목 거르기(최대 5개, 모두 만족)";
-  button.setAttribute("aria-label", count ? `스크리닝 조건 ${count}개 적용 중` : "스크리닝");
+  const on = count > 0 && interestScreenEnabled;
+  button.textContent = !count ? "스크리닝" : on ? `스크리닝 ${count}` : `스크리닝 ${count}·꺼짐`;
+  button.classList.toggle("active", on);
+  button.classList.toggle("screen-off", count > 0 && !interestScreenEnabled);
+  button.title = !count ? "항목별 조건으로 종목 거르기(최대 5개, 모두 만족)"
+    : on ? `스크리닝 적용 중 — ${interestScreenSummary()}`
+    : `스크리닝 꺼짐(조건 보관 중) — ${interestScreenSummary()}`;
+  button.setAttribute("aria-label", !count ? "스크리닝" : on ? `스크리닝 조건 ${count}개 적용 중` : `스크리닝 조건 ${count}개 보관, 적용 해제됨`);
+  syncInterestScreenDisableButton();
 }
 
 function interestScreenFieldOptions(selected) {
@@ -167,6 +186,12 @@ function syncInterestScreenPreview() {
     + (interestScreenStatsPending ? " · 지표를 불러오는 중이라 늘어날 수 있음" : "");
 }
 
+// '적용 해제'는 저장된 조건이 있고 지금 적용 중일 때만 — 끈 뒤에는 '적용'이 다시 켠다.
+function syncInterestScreenDisableButton() {
+  const disable = document.getElementById("interestScreenDisable");
+  if (disable) disable.classList.toggle("hidden", !(interestScreenConditions.length && interestScreenEnabled));
+}
+
 function openInterestScreenModal() {
   interestScreenDraft = interestScreenConditions.map(condition => ({ ...condition }));
   if (!interestScreenDraft.length) interestScreenDraft.push({ key: "rsi_day", op: "lte", value: "" });
@@ -196,8 +221,15 @@ function initInterestScreen() {
     closeInterestScreenModal();
     render();
   });
+  // 조건은 지우지 않고 적용만 끈다
+  document.getElementById("interestScreenDisable")?.addEventListener("click", () => {
+    setInterestScreenEnabled(false);
+    closeInterestScreenModal();
+    render();
+  });
   document.getElementById("interestScreenApply")?.addEventListener("click", () => {
     saveInterestScreen(interestScreenDraft);
+    setInterestScreenEnabled(true);
     closeInterestScreenModal();
     render();
   });

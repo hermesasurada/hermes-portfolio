@@ -12,6 +12,7 @@ const detailStorage = {
   interestHeldOnly: "portfolio.detail.interestHeldOnly",
   interestAssetType: "portfolio.detail.interestAssetType",
   interestScreen: "portfolio.detail.interestScreen",   // 관심목록 스크리닝 조건(2026-10-07)
+  interestScreenEnabled: "portfolio.detail.interestScreenEnabled",   // 조건은 둔 채 적용만 끄기(2026-10-24)
   tagFilter: "portfolio.detail.tagFilter",             // 목록 태그 필터 선택(2026-10-12)
   currencyFilter: "portfolio.detail.currencyFilter",
   chartInterval: "portfolio.chart.interval",

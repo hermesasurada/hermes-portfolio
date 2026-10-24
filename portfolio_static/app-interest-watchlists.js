@@ -661,7 +661,7 @@ function renderInterestMainTable() {
   loadQuotesForRows(baseRows.filter(consensusCandidate).map(row => row.ticker), scheduleInterestMainTable);
   document.getElementById("tableTitle").textContent = group.name;
   // 스크리닝 중이면 '일치 / 전체'로 — 몇 종목이 걸러졌는지 보이게
-  document.getElementById("rowCount").textContent = interestScreenConditions.length
+  document.getElementById("rowCount").textContent = activeInterestScreenConditions().length
     ? `${rows.length} / ${interestPreScreenRows.length} rows`
     : `${rows.length} rows`;
   const suppressIndexHighlight = interestGroupIsIndex(group);
@@ -677,7 +677,7 @@ function renderInterestMainTable() {
     renderInterestRowsWindow(true);
   } else {
     interestVirtual = null;
-    body.innerHTML = interestEmptyRow(interestScreenConditions.length && interestPreScreenRows.length
+    body.innerHTML = interestEmptyRow(activeInterestScreenConditions().length && interestPreScreenRows.length
       ? (interestScreenStatsPending ? "지표 불러오는 중…" : "조건에 맞는 종목 없음")
       : nameFilterValue()
       ? "명칭 검색 결과가 없습니다."

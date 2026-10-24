@@ -6948,6 +6948,8 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .screen-add:disabled { opacity: 0.45; cursor: default; }
 .screen-status { color: var(--ink); font-size: 12px; font-weight: 700; min-height: 16px; }
 .screen-actions .screen-actions-gap { flex: 1; }
+/* 조건은 보관한 채 적용만 끈 상태 — 켜짐(active, 파랑)과 구별되게 점선·흐린 글자 */
+#interestScreenButton.screen-off { border-style: dashed; color: var(--muted); }
 @media (max-width: 520px) {
   .screen-row { grid-template-columns: minmax(0, 1fr) 64px 32px; }
   .screen-row .screen-field { grid-column: 1 / -1; }
