@@ -943,13 +943,15 @@ function initInterestWatchlists() {
       const ticker = unregister.dataset.interestUnregister;
       const item = group?.items.find(row => row.ticker === ticker);
       if (!group?.fixed || !item) return;
-      if (!window.confirm(`'${item.name || item.ticker}' 종목을 수집 대상에서 제외할까요?\n시세·배당 이력이 삭제됩니다.`)) return;
-      mutateInterestWatchlist(async () => {
-        const payload = await apiUnregisterCollectedTicker(item.ticker);
-        if (data?.tickers) data.tickers = data.tickers.filter(row => row.ticker !== item.ticker);
-        if (typeof statsData === "object" && statsData) delete statsData[item.ticker];
-        return payload;
-      }, "수집 대상에서 제외하는 중...", true);
+      // 막힌 종목은 확인창을 띄우기 전에 이유부터 알려 준다(2026-10-25 — 거래 이력 있는 VCX가 말없이 실패했다)
+      apiCheckUnregisterCollectedTicker(item.ticker).then(check => {
+        if (check?.blocked) {
+          window.alert(`'${item.name || item.ticker}' 종목은 삭제할 수 없습니다.\n\n${check.blocked}`);
+          return;
+        }
+        if (!window.confirm(`'${item.name || item.ticker}' 종목을 수집 대상에서 제외할까요?\n시세·배당 이력이 삭제됩니다.`)) return;
+        unregisterCollectedItem(item);
+      }).catch(err => window.alert(err.message || String(err)));
       return;
     }
     const remove = event.target.closest("[data-interest-main-remove]");
@@ -963,6 +965,15 @@ function initInterestWatchlists() {
       true
     );
   });
+
+  function unregisterCollectedItem(item) {
+    mutateInterestWatchlist(async () => {
+      const payload = await apiUnregisterCollectedTicker(item.ticker);
+      if (data?.tickers) data.tickers = data.tickers.filter(row => row.ticker !== item.ticker);
+      if (typeof statsData === "object" && statsData) delete statsData[item.ticker];
+      return payload;
+    }, "수집 대상에서 제외하는 중...", true);
+  }
 
   // 헤더는 표시 열이 바뀔 때 재생성된다. 상위 요소에서 한 번만 위임한다.
   document.getElementById("interestTableWrap").addEventListener("click", event => {

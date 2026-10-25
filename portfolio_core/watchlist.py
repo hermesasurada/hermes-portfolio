@@ -145,39 +145,48 @@ def purge_untracked_collected_data(tickers: Iterable[str]) -> int:
     return len(orphans)
 
 
+def _unregister_block_reason(conn, ticker: str) -> str | None:
+    """수집 대상에서 뺄 수 없는 이유(없으면 None). 삭제와 사전 확인(check)이 같은 판정을 쓴다."""
+    protected = _protected_collection_reason(ticker, None)
+    if protected:
+        return f"{protected} 종목은 수집 대상에서 제외할 수 없습니다."
+    row = conn.execute(
+        "SELECT ticker, COALESCE(category, '') AS category FROM tickers WHERE UPPER(ticker) = ?",
+        (ticker,),
+    ).fetchone()
+    if not row:
+        return "수집 대상에서 종목을 찾지 못했습니다."
+    protected = _protected_collection_reason(ticker, row["category"])
+    if protected:
+        return f"{protected} 종목은 수집 대상에서 제외할 수 없습니다."
+    if conn.execute("SELECT 1 FROM interest_watchlist_items WHERE UPPER(ticker) = ?", (ticker,)).fetchone():
+        return "관심그룹에 들어 있는 종목은 기타에서만 제외할 수 있습니다."
+    if conn.execute("SELECT 1 FROM holdings WHERE UPPER(ticker) = ? AND qty > 0", (ticker,)).fetchone():
+        return "보유 중인 종목은 수집 대상에서 제외할 수 없습니다."
+    tx = conn.execute(
+        "SELECT COUNT(*) AS n, MIN(trade_date) AS first, MAX(trade_date) AS last FROM transactions WHERE UPPER(ticker) = ?",
+        (ticker,),
+    ).fetchone()
+    if tx and tx["n"]:
+        span = tx["first"] if tx["first"] == tx["last"] else f"{tx['first']}~{tx['last']}"
+        return (f"거래 이력 {tx['n']}건({span})이 있어 수집 대상에서 제외할 수 없습니다. "
+                "거래내역의 현재가·수익률과 차트 매매 표시가 이 종목 시세를 쓰기 때문입니다. "
+                "거래내역에서 해당 거래를 지우면 제외할 수 있습니다.")
+    return None
+
+
 def unregister_collected_ticker(payload: dict) -> dict:
-    """기타 관심목록의 종목을 수집 대상에서 빼고 시세·배당 이력을 삭제한다."""
+    """기타 관심목록의 종목을 수집 대상에서 빼고 시세·배당 이력을 삭제한다.
+    payload['check']가 참이면 지우지 않고 막힌 이유만 돌려준다({"blocked": 이유|None}, 2026-10-25)."""
     ticker = normalize_lookup_ticker(payload.get("ticker") or "")
     if not ticker:
         raise ValueError("종목을 선택해야 합니다.")
-    protected = _protected_collection_reason(ticker, None)
-    if protected:
-        raise ValueError(f"{protected} 종목은 수집 대상에서 제외할 수 없습니다.")
     with connect() as conn:
-        row = conn.execute(
-            "SELECT ticker, COALESCE(category, '') AS category FROM tickers WHERE UPPER(ticker) = ?",
-            (ticker,),
-        ).fetchone()
-        if not row:
-            raise ValueError("수집 대상에서 종목을 찾지 못했습니다.")
-        protected = _protected_collection_reason(ticker, row["category"])
-        if protected:
-            raise ValueError(f"{protected} 종목은 수집 대상에서 제외할 수 없습니다.")
-        if conn.execute(
-            "SELECT 1 FROM interest_watchlist_items WHERE UPPER(ticker) = ?",
-            (ticker,),
-        ).fetchone():
-            raise ValueError("관심그룹에 들어 있는 종목은 기타에서만 제외할 수 있습니다.")
-        if conn.execute(
-            "SELECT 1 FROM holdings WHERE UPPER(ticker) = ? AND qty > 0",
-            (ticker,),
-        ).fetchone():
-            raise ValueError("보유 중인 종목은 수집 대상에서 제외할 수 없습니다.")
-        if conn.execute(
-            "SELECT 1 FROM transactions WHERE UPPER(ticker) = ?",
-            (ticker,),
-        ).fetchone():
-            raise ValueError("거래 이력이 있는 종목은 수집 대상에서 제외할 수 없습니다.")
+        reason = _unregister_block_reason(conn, ticker)
+        if payload.get("check"):
+            return {"ticker": ticker, "blocked": reason}
+        if reason:
+            raise ValueError(reason)
         purge_ticker_collected_data(conn, ticker)
         conn.execute("DELETE FROM holdings WHERE UPPER(ticker) = ?", (ticker,))
         conn.execute("DELETE FROM tickers WHERE UPPER(ticker) = ?", (ticker,))

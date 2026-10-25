@@ -2852,11 +2852,14 @@ def test_unregister_collected_ticker_purges_prices_and_rejects_protected():
     conn.row_factory = sqlite3.Row
     conn.execute("CREATE TABLE tickers (ticker TEXT PRIMARY KEY, name TEXT, category TEXT)")
     conn.execute("CREATE TABLE holdings (ticker TEXT, qty REAL)")
-    conn.execute("CREATE TABLE transactions (ticker TEXT)")
+    conn.execute("CREATE TABLE transactions (ticker TEXT, trade_date TEXT)")
     for table in watchlist_module.TICKER_DATA_TABLES:
         conn.execute(f"CREATE TABLE IF NOT EXISTS {table} (ticker TEXT)")
     conn.execute("INSERT INTO tickers VALUES ('MRNA', 'Moderna', 'overseas')")
     conn.execute("INSERT INTO tickers VALUES ('NVDA', 'NVIDIA', 'overseas')")
+    conn.execute("INSERT INTO tickers VALUES ('VCX', 'Fundrise', 'overseas')")
+    conn.execute("INSERT INTO transactions VALUES ('VCX', '2026-03-24')")
+    conn.execute("INSERT INTO transactions VALUES ('VCX', '2026-03-26')")
     conn.execute("INSERT INTO daily_prices VALUES ('MRNA')")
     conn.execute("INSERT INTO daily_prices VALUES ('NVDA')")
     conn.execute("INSERT INTO dividend_events VALUES ('MRNA')")
@@ -2890,6 +2893,18 @@ def test_unregister_collected_ticker_purges_prices_and_rejects_protected():
             assert "관심그룹" in str(exc)
         else:
             raise AssertionError("grouped ticker was unregistered")
+
+        # 거래 이력이 있으면 막히고, 이유에 건수·기간과 풀 방법이 담긴다(2026-10-25)
+        try:
+            watchlist_module.unregister_collected_ticker({"ticker": "VCX"})
+        except ValueError as exc:
+            assert "거래 이력 2건(2026-03-24~2026-03-26)" in str(exc) and "지우면" in str(exc)
+        else:
+            raise AssertionError("ticker with transactions was unregistered")
+        # check: 지우지 않고 막힌 이유만 돌려준다 — 가능한 종목은 None, 아무것도 지우지 않는다
+        assert "거래 이력" in watchlist_module.unregister_collected_ticker({"ticker": "VCX", "check": True})["blocked"]
+        assert watchlist_module.unregister_collected_ticker({"ticker": "mrna", "check": True}) == {"ticker": "MRNA", "blocked": None}
+        assert conn.execute("SELECT 1 FROM tickers WHERE ticker = 'MRNA'").fetchone() is not None
 
         result = watchlist_module.unregister_collected_ticker({"ticker": "mrna"})
         assert result == {"groups": []}

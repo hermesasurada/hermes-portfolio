@@ -149,6 +149,15 @@ function apiAddWatchlist(tickers) {
   });
 }
 
+// 지우지 않고 막힌 이유만 묻는다 — {blocked: 이유|null}
+function apiCheckUnregisterCollectedTicker(ticker) {
+  return fetchJson("/api/watchlist/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ticker, check: true }),
+  });
+}
+
 function apiUnregisterCollectedTicker(ticker) {
   return fetchJson("/api/watchlist/delete", {
     method: "POST",
