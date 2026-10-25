@@ -20,6 +20,7 @@ from portfolio_core.cash_flows import add_cash_flow, delete_cash_flow, list_cash
 from portfolio_core.company_profiles import load_company_profile
 from portfolio_core.payload_compact import compact_chart_payload, compact_performance_payload
 from portfolio_core.charts import load_account_performance, load_price_chart
+from portfolio_core.price_since import load_price_since
 from portfolio_core.performance_snapshots import load_account_snapshots, rebuild_account_snapshots
 from portfolio_core.constants import (
     KOREAN_ETF_BRANDS,
@@ -440,6 +441,14 @@ class Handler(BaseHTTPRequestHandler):
             end=(query.get("end") or [None])[0],
         ))
 
+    def api_price_since(self, query: dict[str, list[str]]) -> dict:
+        """기준 시각(since, ISO) 이후 등락률 묶음 — 지식증류 뷰어의 '리포트 생성 이후' 열(2026-10-25)."""
+        since = (query.get("since") or [""])[0]
+        try:
+            return load_price_since(self.query_values(query, "tickers"), since)
+        except ValueError as exc:
+            return {"error": str(exc), "items": {}}
+
     def api_account_performance(self, query: dict[str, list[str]]) -> dict:
         return compact_performance_payload(load_account_performance(
             self.query_values(query, "account_ids"),
@@ -583,6 +592,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/company-profile": self.api_company_profile,
                 "/api/diagnostics": self.api_diagnostics,
                 "/api/chart": self.api_chart,
+                "/api/price-since": self.api_price_since,
                 "/api/account-performance": self.api_account_performance,
                 "/api/performance/snapshots": self.api_performance_snapshots,
                 "/api/cash-flows": self.api_cash_flows,
