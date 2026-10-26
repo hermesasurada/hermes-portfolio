@@ -77,6 +77,11 @@ function apiFetchTransactions(accountIds, allAccounts) {
   return fetchJson(`/api/transactions${query}`);
 }
 
+// 한 종목의 전 계좌 거래(종목 차트 '내역' 팝업, 2026-10-26)
+function apiFetchTickerTransactions(ticker) {
+  return fetchJson(`/api/transactions?ticker=${encodeURIComponent(ticker || "")}`);
+}
+
 function apiSaveTransaction(payload) {
   return fetchJson("/api/transactions", {
     method: "POST",

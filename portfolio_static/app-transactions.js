@@ -175,6 +175,84 @@ function confirmTradeSave(payload) {
   });
 }
 
+// ── 종목 차트 '내역' 팝업(2026-10-26 사용자 지시) ─────────────────────────────
+// 그 종목의 전 계좌 거래를 모아 본다. 아래 거래내역 패널(선택 계좌 기준)과 별개.
+// 숨긴 거래는 흐리게 보여 주되 요약 합계에서는 뺀다(패널의 숨김 의미와 같게).
+function tickerTransactionSummary(rows) {
+  const visible = (rows || []).filter(tx => !transactionIsHidden(tx));
+  const side = kind => {
+    const list = visible.filter(tx => String(tx.side).toUpperCase() === kind);
+    const qty = list.reduce((sum, tx) => sum + Number(tx.qty || 0), 0);
+    const amount = list.reduce((sum, tx) => sum + Number(tx.qty || 0) * Number(tx.price || 0), 0);
+    return { count: list.length, qty, avg: qty > 0 ? amount / qty : null };
+  };
+  const dates = visible.map(tx => tx.trade_date).filter(Boolean).sort();
+  return {
+    buy: side("BUY"), sell: side("SELL"),
+    hidden: (rows || []).length - visible.length,
+    first: dates[0] || null, last: dates[dates.length - 1] || null,
+    currency: visible[0]?.currency || rows?.[0]?.currency || "",
+  };
+}
+
+function tickerTransactionsSummaryMarkup(rows, ticker) {
+  const s = tickerTransactionSummary(rows);
+  if (!s.buy.count && !s.sell.count) return s.hidden ? `<span class="flat">숨긴 거래 ${s.hidden}건만 있음</span>` : "";
+  const part = (label, cls, item) => item.count
+    ? `<span class="ticker-tx-stat"><span class="change-cell pct-chip ${cls}">${label}</span> ${item.count}건 · ${tradeQtyText(item.qty, ticker)}주 · 평균 ${unitMoney(item.avg, s.currency, ticker)}</span>`
+    : "";
+  const period = s.first === s.last ? s.first : `${s.first} ~ ${s.last}`;
+  return [part("매수", "up", s.buy), part("매도", "down", s.sell),
+    `<span class="ticker-tx-stat flat">${esc(period)}${s.hidden ? ` · 숨김 ${s.hidden}건 제외` : ""}</span>`].join("");
+}
+
+function tickerTransactionsMarkup(rows, ticker) {
+  if (!rows?.length) return `<div class="ticker-tx-empty flat">이 종목의 거래내역이 없습니다.</div>`;
+  const body = rows.map(tx => {
+    const buy = String(tx.side).toUpperCase() === "BUY";
+    const hidden = transactionIsHidden(tx);
+    const memo = String(tx.memo || "").trim();
+    return `<tr class="${hidden ? "tx-hidden-row" : ""}">
+      <td>${esc(tx.trade_date)}</td>
+      <td class="ticker-tx-account">${esc(`${tx.member || ""} · ${tx.account_name || tx.account_type || ""}`)}</td>
+      <td><span class="change-cell pct-chip ${buy ? "up" : "down"}">${buy ? "매수" : "매도"}</span>${hidden ? ` <span class="flat ticker-tx-hidden">숨김</span>` : ""}</td>
+      <td>${unitMoney(tx.price, tx.currency, ticker)}</td>
+      <td>${tradeQtyText(tx.qty || 0, ticker)}</td>
+      <td>${money((tx.qty || 0) * (tx.price || 0), tx.currency)}</td>
+      <td class="ticker-tx-memo"${memo ? ` title="${esc(memo)}"` : ""}>${memo ? esc(memo) : ""}</td>
+    </tr>`;
+  }).join("");
+  return `<div class="dividend-history-table-wrap ticker-tx-table-wrap"><table class="dividend-history-table ticker-tx-table">
+    <thead><tr><th>거래일</th><th>계좌</th><th>유형</th><th>단가</th><th>수량</th><th>금액</th><th>메모</th></tr></thead>
+    <tbody>${body}</tbody></table></div>`;
+}
+
+async function openTickerTransactions(ticker, name) {
+  const modal = document.getElementById("tickerTxModal");
+  if (!modal || !ticker) return;
+  document.getElementById("tickerTxTitle").textContent = `${name || ticker} 거래내역`;
+  document.getElementById("tickerTxTicker").textContent = ticker;
+  const summary = document.getElementById("tickerTxSummary");
+  const body = document.getElementById("tickerTxBody");
+  summary.innerHTML = "";
+  body.innerHTML = `<div class="ticker-tx-empty flat">불러오는 중…</div>`;
+  if (!modal.open) modal.showModal();
+  try {
+    const rows = (await apiFetchTickerTransactions(ticker)).transactions || [];
+    summary.innerHTML = tickerTransactionsSummaryMarkup(rows, ticker);
+    body.innerHTML = tickerTransactionsMarkup(rows, ticker);
+  } catch (err) {
+    body.innerHTML = `<div class="ticker-tx-empty error">${esc(err.message || String(err))}</div>`;
+  }
+}
+
+function initTickerTransactionsModal() {
+  const modal = document.getElementById("tickerTxModal");
+  if (!modal) return;
+  document.getElementById("tickerTxClose")?.addEventListener("click", () => modal.close());
+  modal.addEventListener("click", event => { if (event.target === modal) modal.close(); });
+}
+
 function updateTradeScope() {
   const accounts = visibleAccounts();
   const accountText = selectionMode === "all" ? "전체 계좌" : accounts.length === 1 ? `${accounts[0].memberName} · ${accounts[0].name}` : `${accounts.length}개 계좌`;

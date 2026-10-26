@@ -80,6 +80,7 @@ function renderChartRangeButtons() {
           <span class="chart-control-label">거래</span>
           <button class="chart-range-btn marker-toggle buy ${chartShowBuys ? "active" : ""}" type="button" data-marker-toggle="buy" aria-label="매수 마커" title="${chartInterval === "day" ? "매수 마커" : "일 단위에서만 표시"}" aria-pressed="${chartShowBuys}" ${chartInterval === "day" ? "" : "disabled"}><i></i><span class="chart-marker-full">매수</span><span class="chart-marker-short">B</span></button>
           <button class="chart-range-btn marker-toggle sell ${chartShowSells ? "active" : ""}" type="button" data-marker-toggle="sell" aria-label="매도 마커" title="${chartInterval === "day" ? "매도 마커" : "일 단위에서만 표시"}" aria-pressed="${chartShowSells}" ${chartInterval === "day" ? "" : "disabled"}><i></i><span class="chart-marker-full">매도</span><span class="chart-marker-short">S</span></button>
+          <button class="chart-range-btn chart-tx-history-btn" type="button" data-chart-tx-history aria-haspopup="dialog" aria-controls="tickerTxModal" title="이 종목의 전 계좌 거래내역">내역</button>
         </span>
       ` : ""}
     </div>
@@ -794,6 +795,10 @@ function bindLineChartControls(payload) {
           storageSet(detailStorage.chartShowIchimoku, String(chartShowIchimoku));
         }
         renderLineChart(payload);
+        return;
+      }
+      if (btn.dataset.chartTxHistory != null) {
+        openTickerTransactions(payload.ticker, payload.name);
         return;
       }
       if (btn.dataset.markerToggle != null) {

@@ -539,6 +539,7 @@ initChartIntervalControl();
 initChartNameEditor();
 initTradeSideToggle();
 initTxMemoEditor();
+initTickerTransactionsModal();
 initTradeApplyToggle();
 initInterestWatchlists();
 initTableScrollNudges();

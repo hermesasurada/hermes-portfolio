@@ -767,6 +767,19 @@
       <div class="status" id="chartInterestStatus" aria-live="polite"></div>
     </form>
   </dialog>
+  <dialog class="watch-modal ticker-tx-modal" id="tickerTxModal" aria-labelledby="tickerTxTitle">
+    <form method="dialog" class="modal-card ticker-tx-card">
+      <div class="modal-head">
+        <div class="dividend-history-title">
+          <strong id="tickerTxTitle">거래내역</strong>
+          <span id="tickerTxTicker">-</span>
+        </div>
+        <button class="ghost-btn" id="tickerTxClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <div class="ticker-tx-summary" id="tickerTxSummary"></div>
+      <div class="ticker-tx-body" id="tickerTxBody"></div>
+    </form>
+  </dialog>
   <dialog class="watch-modal dividend-history-modal" id="dividendHistoryModal">
     <form method="dialog" class="modal-card dividend-history-card">
       <div class="modal-head">
