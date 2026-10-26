@@ -206,12 +206,19 @@ function tickerTransactionsSummaryMarkup(rows, ticker) {
     `<span class="ticker-tx-stat flat">${esc(period)}${s.hidden ? ` · 숨김 ${s.hidden}건 제외` : ""}</span>`].join("");
 }
 
-function tickerTransactionsMarkup(rows, ticker) {
+// 현재대비 = 거래 단가 대비 현재가 등락률(2026-10-26, 메모 칸 대신). 현재가는 차트에 보이는 가격.
+function tickerTransactionChangePct(tx, currentPrice) {
+  const price = Number(tx?.price);
+  const current = Number(currentPrice);
+  if (currentPrice == null || !Number.isFinite(current) || !Number.isFinite(price) || price <= 0) return null;
+  return (current - price) / price * 100;
+}
+
+function tickerTransactionsMarkup(rows, ticker, currentPrice = null) {
   if (!rows?.length) return `<div class="ticker-tx-empty flat">이 종목의 거래내역이 없습니다.</div>`;
   const body = rows.map(tx => {
     const buy = String(tx.side).toUpperCase() === "BUY";
     const hidden = transactionIsHidden(tx);
-    const memo = String(tx.memo || "").trim();
     return `<tr class="${hidden ? "tx-hidden-row" : ""}">
       <td>${esc(tx.trade_date)}</td>
       <td class="ticker-tx-account">${esc(`${tx.member || ""} · ${tx.account_name || tx.account_type || ""}`)}</td>
@@ -219,15 +226,17 @@ function tickerTransactionsMarkup(rows, ticker) {
       <td>${unitMoney(tx.price, tx.currency, ticker)}</td>
       <td>${tradeQtyText(tx.qty || 0, ticker)}</td>
       <td>${money((tx.qty || 0) * (tx.price || 0), tx.currency)}</td>
-      <td class="ticker-tx-memo"${memo ? ` title="${esc(memo)}"` : ""}>${memo ? esc(memo) : ""}</td>
+      <td>${changePercentText(tickerTransactionChangePct(tx, currentPrice), true)}</td>
     </tr>`;
   }).join("");
+  const nowText = currentPrice != null && Number.isFinite(Number(currentPrice))
+    ? `현재가 ${unitMoney(Number(currentPrice), rows[0]?.currency, ticker).replace(/<[^>]+>/g, "")} 기준` : "현재가 없음";
   return `<div class="dividend-history-table-wrap ticker-tx-table-wrap"><table class="dividend-history-table ticker-tx-table">
-    <thead><tr><th>거래일</th><th>계좌</th><th>유형</th><th>단가</th><th>수량</th><th>금액</th><th>메모</th></tr></thead>
+    <thead><tr><th>거래일</th><th>계좌</th><th>유형</th><th>단가</th><th>수량</th><th>금액</th><th title="거래 단가 대비 현재가 등락 · ${esc(nowText)}">현재대비</th></tr></thead>
     <tbody>${body}</tbody></table></div>`;
 }
 
-async function openTickerTransactions(ticker, name) {
+async function openTickerTransactions(ticker, name, currentPrice = null) {
   const modal = document.getElementById("tickerTxModal");
   if (!modal || !ticker) return;
   document.getElementById("tickerTxTitle").textContent = `${name || ticker} 거래내역`;
@@ -240,7 +249,8 @@ async function openTickerTransactions(ticker, name) {
   try {
     const rows = (await apiFetchTickerTransactions(ticker)).transactions || [];
     summary.innerHTML = tickerTransactionsSummaryMarkup(rows, ticker);
-    body.innerHTML = tickerTransactionsMarkup(rows, ticker);
+    const price = currentPrice != null && Number.isFinite(Number(currentPrice)) ? Number(currentPrice) : currentPriceForTicker(ticker);
+    body.innerHTML = tickerTransactionsMarkup(rows, ticker, price);
   } catch (err) {
     body.innerHTML = `<div class="ticker-tx-empty error">${esc(err.message || String(err))}</div>`;
   }

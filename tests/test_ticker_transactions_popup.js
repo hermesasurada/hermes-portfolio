@@ -20,12 +20,18 @@ assert.equal(s.hidden, 1);
 assert.equal(s.first, '2025-01-02');
 assert.equal(s.last, '2026-10-07');
 
-const html = run('tickerTransactionsMarkup(__rows, "NVDA")');
+const html = run('tickerTransactionsMarkup(__rows, "NVDA", 200)');
 assert.equal((html.match(/<tr class=/g) || []).length, 4);   // 숨긴 거래도 행으로는 보인다
 assert.equal((html.match(/tx-hidden-row/g) || []).length, 1);
 assert.match(html, /Claire · 해외주식/);
-assert.match(html, /&lt;b&gt;x&lt;\/b&gt;/);                // 메모는 이스케이프
-assert.doesNotMatch(html, /<b>x<\/b>/);
+// 메모 칸은 없고(2026-10-26), 현재대비 = (현재가 − 거래 단가) / 거래 단가
+assert.doesNotMatch(html, /메모|x<\/b>|일부 차익/);
+assert.match(html, /<th[^>]*>현재대비<\/th>/);
+assert.equal(run('tickerTransactionChangePct({price: 100}, 200)'), 100);
+assert.equal(run('Math.round(tickerTransactionChangePct({price: 237.2}, 200) * 10) / 10'), -15.7);
+assert.equal(run('tickerTransactionChangePct({price: 100}, null)'), null);
+assert.equal(run('tickerTransactionChangePct({price: 0}, 50)'), null);
+assert.match(html, /▲<\/span>100%/);   // 단가 100 → 현재가 200
 assert.match(run('tickerTransactionsSummaryMarkup(__rows, "NVDA")'), /숨김 1건 제외/);
 assert.match(run('tickerTransactionsMarkup([], "NVDA")'), /거래내역이 없습니다/);
 // 차트 컨트롤 '거래' 묶음에 내역 버튼(소스 검사)

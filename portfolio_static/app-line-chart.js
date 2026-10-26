@@ -798,7 +798,7 @@ function bindLineChartControls(payload) {
         return;
       }
       if (btn.dataset.chartTxHistory != null) {
-        openTickerTransactions(payload.ticker, payload.name);
+        openTickerTransactions(payload.ticker, payload.name, payload.current_price);   // 차트에 보이는 현재가 기준
         return;
       }
       if (btn.dataset.markerToggle != null) {
