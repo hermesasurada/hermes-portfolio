@@ -1,6 +1,6 @@
-"""SA(Seeking Alpha) 배당선언 기사 → 임시 배당 이벤트(2026-10-28 사용자 지시).
+"""SA(Seeking Alpha) 배당선언·배당인상 기사 → 임시 배당 이벤트(2026-10-28 사용자 지시).
 
-sa-news 서비스가 받아 두는 'X declares $0.52 dividend' 기사는 미국 발표 직후(한국 새벽)에 들어온다. 포트폴리오의
+sa-news 서비스가 받아 두는 'X declares $0.52 dividend'·'X raises dividend by 16.4% to $0.78' 기사는 미국 발표 직후(한국 새벽)에 들어온다. 포트폴리오의
 자체 배당 수집(하루 한 번 07:17, 미국은 Polygon 권위)보다 대개 하루쯤 빠르다(2026-10-28 실측: WFC·ETN·CTAS·WMB가
 SA에 02~04시에 들어왔는데 07:17 수집의 Polygon에는 아직 없었다). 그 사이를 SA 값으로 채운다.
 
@@ -38,6 +38,12 @@ _MONTHS = {m: i for i, m in enumerate(
 _DATE = r"([A-Z][a-z]{2,8}\.?\s+\d{1,2}(?:,\s*\d{4})?)"
 _AMOUNT_RE = re.compile(r"\bdeclares\s+\[?\$(\d+(?:\.\d+)?)/(?:share|ADS)\b", re.I)
 _TITLE_AMOUNT_RE = re.compile(r"\bdeclares\s+\$(\d+(?:\.\d+)?)(?:/(?:share|ADS))?\b", re.I)
+# 배당인상 기사(2026-10-28 사용자 지시) — 'Visa raises dividend by 16.4% to $0.78', 'raises quarterly dividend to $1.65'.
+# 본문은 배당선언 기사와 같은 'declares $0.78/share … Payable … ex-div …' 줄이라 제목 금액만 'to $X'에서 읽는다.
+_RAISE_VERBS = r"(?:raises|lifts|boosts|hikes|increases|ups)"
+_TITLE_RAISE_RE = re.compile(
+    r"\b" + _RAISE_VERBS + r"\s+(?:its\s+)?(?:quarterly\s+|monthly\s+|semi-?annual\s+|annual\s+)?dividend\b"
+    r"[^$]*?\bto\s+\$(\d+(?:\.\d+)?)\b", re.I)
 _PAY_RE = re.compile(r"\bPayable\s+" + _DATE)
 _RECORD_RE = re.compile(r"\bof record\s+" + _DATE)
 _EX_RE = re.compile(r"\bex-div(?:idend)?(?:\s+date)?\s+" + _DATE, re.I)
@@ -64,7 +70,7 @@ def parse_declaration(title: str, text: str, article_day: date) -> dict | None:
     """배당선언 기사 본문 → {amount, pay_date, record_date, ex_date, declaration_date}. 못 읽으면 None."""
     body = text or ""
     amount_m = _AMOUNT_RE.search(body)
-    title_m = _TITLE_AMOUNT_RE.search(title or "")
+    title_m = _TITLE_AMOUNT_RE.search(title or "") or _TITLE_RAISE_RE.search(title or "")
     pay_m, ex_m = _PAY_RE.search(body), _EX_RE.search(body)
     if not (amount_m and title_m and pay_m and ex_m):
         return None
@@ -87,6 +93,10 @@ def parse_declaration(title: str, text: str, article_day: date) -> dict | None:
     return event
 
 
+_RAISE_SQL = "(" + " OR ".join(f"original_title LIKE '%{v} %dividend%'" for v in
+                                  ("raises", "lifts", "boosts", "hikes", "increases", "ups")) + ")"
+
+
 def _sa_rows(days: int) -> list[sqlite3.Row]:
     if not SA_DB_PATH.is_file():
         return []
@@ -96,7 +106,7 @@ def _sa_rows(days: int) -> list[sqlite3.Row]:
     try:
         return conn.execute(
             "SELECT id, ticker, original_title, email_time_et, source_text FROM articles "
-            "WHERE original_title LIKE '%declares%dividend%' AND email_time_et >= ? "
+            "WHERE (original_title LIKE '%declares%dividend%' OR " + _RAISE_SQL + ") AND email_time_et >= ? "
             "AND COALESCE(source_text, '') != '' ORDER BY id",
             (since,),
         ).fetchall()

@@ -45,6 +45,26 @@ class ParseTests(unittest.TestCase):
         self.assertIsNone(sa_dividends.parse_declaration("WFC: Wells Fargo declares $0.50 dividend", no_ex, date(2026, 10, 28)))
 
 
+class RaiseTitleTests(unittest.TestCase):
+    """배당인상 기사(2026-10-28) — 제목 'raises dividend by N% to $X', 본문은 배당선언과 같은 형식."""
+    V_BODY = ("Oct 27, 2026, 10:23 PM ET[Visa Inc. (V) Stock](x)\n"
+              "*   Visa ([V](x)) declares $0.78/share quarterly dividend, 16.4% increase from prior dividend of $0.67.\n"
+              "*   Payable Dec. 1; for shareholders of record Nov. 10; ex-div Nov. 10.\n")
+
+    def test_raise_titles_parse(self):
+        for title in ("Visa raises dividend by 16.4% to $0.78", "V: Visa lifts quarterly dividend by 16% to  $0.78/share",
+                      "Visa raises dividend to $0.78, announces $30B buyback"):
+            ev = sa_dividends.parse_declaration(title, self.V_BODY, date(2026, 10, 28))
+            self.assertEqual((ev["amount"], ev["ex_date"], ev["pay_date"], ev["declaration_date"]),
+                             (0.78, "2026-11-10", "2026-12-01", "2026-10-27"), title)
+
+    def test_raise_title_amount_must_match_body(self):
+        self.assertIsNone(sa_dividends.parse_declaration("Visa raises dividend by 20% to $0.80", self.V_BODY, date(2026, 10, 28)))
+        # 본문에 날짜가 없는 짧은 기사(LMT·IBKR 사례)는 넣지 않는다
+        self.assertIsNone(sa_dividends.parse_declaration("LMT: Lockheed Martin raises dividend by 4.3% to $3.60",
+                                                         "Lockheed Martin raises its dividend 4.3% to $3.60.", date(2026, 10, 11)))
+
+
 class ArticleDayTests(unittest.TestCase):
     def test_kst_receipt_time_maps_to_us_eastern_date(self):
         self.assertEqual(sa_dividends._article_day_et("2026-10-28 02:40 KST"), date(2026, 10, 27))
@@ -112,6 +132,16 @@ class ImportTests(unittest.TestCase):
         sa_dividends.import_recent(days=3)
         self.assertEqual(len(self.rows("ETN")), 1)
         self.assertEqual(self.rows("NVDA"), [])
+
+    def test_declare_and_raise_articles_for_same_dividend_keep_one_row(self):
+        sa = sqlite3.connect(self.sa_path)
+        today = datetime.now().strftime("%Y-%m-%d") + " 04:10 KST"
+        sa.execute("INSERT INTO articles VALUES (4, 'WST', 'WST: West Pharmaceutical raises dividend by 4% to $0.26', ?, ?)",
+                   (today, article_body("0.26", "Nov. 18", "Nov. 11", "Nov. 9")))
+        sa.commit()
+        sa.close()
+        sa_dividends.import_recent(days=3)
+        self.assertEqual(self.rows("WST"), [{"ex_date": "2026-11-09", "pay_date": "2026-11-18", "amount": 0.26, "source": "sa"}])
 
     def test_dry_run_writes_nothing(self):
         stats = sa_dividends.import_recent(days=3, dry_run=True)
