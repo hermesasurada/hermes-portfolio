@@ -31,7 +31,7 @@
 - 관심목록 고정열은 CSS sticky만(로고·종목명, 삭제 열 고정 금지). 종목명 `left`는 `--interest-logo-col`. 셀은 `overflow: hidden`, 등락 열은 세션 배지 자리 `padding-right: 9px`.
 - 표는 기본 12행 + 헤더만 보이고 안에서 스크롤. 높이는 `syncTableViewportRows()`가 실측(rAF 금지). 테스트 `test_table_viewport_rows.js`.
 - 배당 탭: 당월 포함 3개월만 펼침(`dividendMonthCollapsed`), 매달 1~5일은 전월부터 표시(서버 `dividend_list_start`), '오늘' 마커는 지급일<오늘과 그 이후 사이(`isPastPayment`). 배당 수량은 **배당락일 기준 보유분**(`entitled_quantity`, 배당락 뒤 매도는 받고 매수는 못 받음; 미국 거래는 미국 장 날짜로 기록). 테스트 `test_dividend_month_collapse.js`, `test_dividend_today_marker.js`.
-- 배당 탭 주당배당금·목록 배당율: 분기배당 개별 기업의 공시 증액=빨강 굵게, 공시 전 다음 회차 증액 예상(작년 같은 분기 증액)=주황 굵게(`dividend_raise.py`, 목록은 stats `dividend_raise`). 테스트 `test_dividend_raise.py`, `test_dividend_raise_marker.js`.
+- 배당 탭 주당배당금·목록 배당율: 분기배당 개별 기업의 공시 증액=빨강 굵게(그 회차 지급 전이면 파랑 굵게), 공시 전 다음 회차 증액 예상(작년 같은 분기 증액)=주황 굵게(`dividend_raise.py`, 목록은 stats `dividend_raise`). 테스트 `test_dividend_raise.py`, `test_dividend_raise_marker.js`.
 - '배당 포함' 토글(`detailStorage.dividendReturns`): 기간 수익률을 서버 `performance_tr`로, 품질 P는 `perfText`가 흐리게. 테스트 `test_dividend_returns.js`.
 - 관심목록 스크리닝(`app-interest-screen.js`): 수치 열 조건 최대 5개 AND, 표에 보이는 단위로 입력(소수 보관 열은 %÷100, 시총 B$), 값 없음은 탈락(배당율만 0%), 저장은 `detailStorage.interestScreen`. 테스트 `test_interest_screen.js`.
 - **종목 태그**(2026-10-12, `app-ticker-tags.js`·서버 `ticker_tags.py`·표 `ticker_tags`): 종목(티커)마다 자유 태그, 서버 저장이라 기기 공통. 편집은 차트 헤더(태그 칩 + ✎, 입력 `#반도체 #CPU`, 쓰던 태그 제안), 종목당 10개·20자. 필터는 컨트롤 영역 '태그'(섹터와 같은 패널, **선택한 태그 중 하나라도 가진 종목 = OR**)로 세부내역·배당·관심목록에 공통 적용, 선택은 `detailStorage.tagFilter`(이 브라우저). 차트의 태그 칩을 누르면 그 태그로 거른 목록으로 돌아간다. **목록에는 태그를 보이지 않는다**(2026-10-15 사용자 지시 — 칩은 차트 헤더에서만, 차트 헤더의 태그는 로고 밑 별도 행). 수집 대상에서 빼도 태그는 남는다. 테스트 `test_ticker_tags.js`, `test_ticker_tags_clean_store_and_count`.

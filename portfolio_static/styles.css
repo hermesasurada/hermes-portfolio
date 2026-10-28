@@ -1977,11 +1977,16 @@ tr.dividend-today-row:hover td {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-/* 분기배당 기업 증액: 확정=빨강(상승색), 공시 전 예상=주황. 배당 탭 주당배당금·목록 배당율 공용,
+/* 분기배당 기업 증액: 확정=빨강(상승색), 공시됐지만 지급 전=파랑(하락색 토큰), 공시 전 예상=주황. 배당 탭 주당배당금·목록 배당율 공용,
    배당율 링크 위에서도 색이 유지되도록 링크 규칙 뒤에 둔다. */
 .dividend-raise-confirmed,
 .stat-yield-link.dividend-raise-confirmed:hover {
   color: var(--up);
+  font-weight: 700;
+}
+.dividend-raise-declared,
+.stat-yield-link.dividend-raise-declared:hover {
+  color: var(--down);
   font-weight: 700;
 }
 .dividend-raise-expected,
