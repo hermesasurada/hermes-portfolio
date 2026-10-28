@@ -32,6 +32,11 @@ assert.equal(run('Math.round(tickerTransactionChangePct({price: 237.2}, 200) * 1
 assert.equal(run('tickerTransactionChangePct({price: 100}, null)'), null);
 assert.equal(run('tickerTransactionChangePct({price: 0}, 50)'), null);
 assert.match(html, /▲<\/span>100%/);   // 단가 100 → 현재가 200
+// 날짜는 YY.MM.DD, 현재대비 칸이 금액 앞(2026-10-28)
+assert.match(html, /<td>26\.10\.07<\/td>/);
+assert.doesNotMatch(html, /2026-10-07/);
+assert.match(html, /<th>수량<\/th><th[^>]*>현재대비<\/th><th>금액<\/th>/);
+assert.match(run('tickerTransactionsSummaryMarkup(__rows, "NVDA")'), /25\.01\.02 ~ 26\.10\.07/);
 assert.match(run('tickerTransactionsSummaryMarkup(__rows, "NVDA")'), /숨김 1건 제외/);
 assert.match(run('tickerTransactionsMarkup([], "NVDA")'), /거래내역이 없습니다/);
 // 차트 컨트롤 '거래' 묶음에 내역 버튼(소스 검사)

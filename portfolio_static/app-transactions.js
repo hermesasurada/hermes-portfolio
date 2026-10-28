@@ -201,12 +201,13 @@ function tickerTransactionsSummaryMarkup(rows, ticker) {
   const part = (label, cls, item) => item.count
     ? `<span class="ticker-tx-stat"><span class="change-cell pct-chip ${cls}">${label}</span> ${item.count}건 · ${tradeQtyText(item.qty, ticker)}주 · 평균 ${unitMoney(item.avg, s.currency, ticker)}</span>`
     : "";
-  const period = s.first === s.last ? s.first : `${s.first} ~ ${s.last}`;
+  const period = s.first === s.last ? shortDateText(s.first) : `${shortDateText(s.first)} ~ ${shortDateText(s.last)}`;
   return [part("매수", "up", s.buy), part("매도", "down", s.sell),
     `<span class="ticker-tx-stat flat">${esc(period)}${s.hidden ? ` · 숨김 ${s.hidden}건 제외` : ""}</span>`].join("");
 }
 
 // 현재대비 = 거래 단가 대비 현재가 등락률(2026-10-26, 메모 칸 대신). 현재가는 차트에 보이는 가격.
+// 표·요약 날짜는 YY.MM.DD로 줄이고, 현재대비는 금액 앞 칸(2026-10-28 사용자 지시).
 function tickerTransactionChangePct(tx, currentPrice) {
   const price = Number(tx?.price);
   const current = Number(currentPrice);
@@ -220,19 +221,19 @@ function tickerTransactionsMarkup(rows, ticker, currentPrice = null) {
     const buy = String(tx.side).toUpperCase() === "BUY";
     const hidden = transactionIsHidden(tx);
     return `<tr class="${hidden ? "tx-hidden-row" : ""}">
-      <td>${esc(tx.trade_date)}</td>
+      <td>${shortDateText(tx.trade_date)}</td>
       <td class="ticker-tx-account">${esc(`${tx.member || ""} · ${tx.account_name || tx.account_type || ""}`)}</td>
       <td><span class="change-cell pct-chip ${buy ? "up" : "down"}">${buy ? "매수" : "매도"}</span>${hidden ? ` <span class="flat ticker-tx-hidden">숨김</span>` : ""}</td>
       <td>${unitMoney(tx.price, tx.currency, ticker)}</td>
       <td>${tradeQtyText(tx.qty || 0, ticker)}</td>
-      <td>${money((tx.qty || 0) * (tx.price || 0), tx.currency)}</td>
       <td>${changePercentText(tickerTransactionChangePct(tx, currentPrice), true)}</td>
+      <td>${money((tx.qty || 0) * (tx.price || 0), tx.currency)}</td>
     </tr>`;
   }).join("");
   const nowText = currentPrice != null && Number.isFinite(Number(currentPrice))
     ? `현재가 ${unitMoney(Number(currentPrice), rows[0]?.currency, ticker).replace(/<[^>]+>/g, "")} 기준` : "현재가 없음";
   return `<div class="dividend-history-table-wrap ticker-tx-table-wrap"><table class="dividend-history-table ticker-tx-table">
-    <thead><tr><th>거래일</th><th>계좌</th><th>유형</th><th>단가</th><th>수량</th><th>금액</th><th title="거래 단가 대비 현재가 등락 · ${esc(nowText)}">현재대비</th></tr></thead>
+    <thead><tr><th>거래일</th><th>계좌</th><th>유형</th><th>단가</th><th>수량</th><th title="거래 단가 대비 현재가 등락 · ${esc(nowText)}">현재대비</th><th>금액</th></tr></thead>
     <tbody>${body}</tbody></table></div>`;
 }
 
