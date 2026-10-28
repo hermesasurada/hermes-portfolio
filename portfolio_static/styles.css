@@ -7177,3 +7177,4 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 .ticker-tx-table .tx-hidden-row td { opacity: .5; }
 .ticker-tx-hidden { font-size: 10.5px; }
 .ticker-tx-empty { padding: 18px 4px; font-size: 13px; text-align: center; }
+.ticker-tx-more { align-self: center; flex: 0 0 auto; margin-top: 8px; font-size: 12px; }

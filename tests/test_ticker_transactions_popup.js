@@ -45,6 +45,12 @@ assert.deepEqual(json('tickerTransactionsRecent([{trade_date: "2025-10-28"}, {tr
 assert.match(run('tickerTransactionsSummaryMarkup(tickerTransactionsRecent(__rows, "2026-10-28"), "NVDA", 2)'), /1년 전 2건 생략/);
 assert.match(run('tickerTransactionsMarkup([], "NVDA", null, 3)'), /최근 1년 거래내역이 없습니다/);
 assert.match(run('tickerTransactionsSummaryMarkup([], "NVDA", 3)'), /최근 1년 거래 없음 · 1년 전 3건 생략/);
+// 1년 단위 확장: years=2면 2024-10-28 이상, 생략분이 있으면 '1년 더 보기' 버튼
+assert.deepEqual(json('tickerTransactionsRecent(__rows, "2026-10-28", 2).map(tx => tx.id)'), [3, 2, 1]);
+assert.match(run('tickerTransactionsMarkup(tickerTransactionsRecent(__rows, "2026-10-28"), "NVDA", 200, 2)'), /data-ticker-tx-more[^>]*>1년 더 보기 <span class="flat">\(이전 2건\)/);
+assert.doesNotMatch(html, /data-ticker-tx-more/);
+assert.match(run('tickerTransactionsMarkup([], "NVDA", null, 3)'), /data-ticker-tx-more/);
+assert.match(run('tickerTransactionsSummaryMarkup([], "NVDA", 1, 2)'), /최근 2년 거래 없음 · 2년 전 1건 생략/);
 // 차트 컨트롤 '거래' 묶음에 내역 버튼(소스 검사)
 assert.match(h.readStatic('app-line-chart.js'), /data-chart-tx-history/);
 console.log('ticker transactions popup ok');

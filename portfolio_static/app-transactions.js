@@ -178,9 +178,12 @@ function confirmTradeSave(payload) {
 // ── 종목 차트 '내역' 팝업(2026-10-26 사용자 지시) ─────────────────────────────
 // 그 종목의 전 계좌 거래를 모아 본다. 아래 거래내역 패널(선택 계좌 기준)과 별개.
 // 숨긴 거래는 흐리게 보여 주되 요약 합계에서는 뺀다(패널의 숨김 의미와 같게).
-// 최근 1년 거래만 보여 준다(2026-10-28 사용자 지시) — 기준은 오늘에서 1년 전 같은 날짜 이상.
-function tickerTransactionsRecent(rows, today = todayLocal()) {
-  const since = `${Number(today.slice(0, 4)) - 1}${today.slice(4, 10)}`;
+// 처음엔 최근 1년 거래만, '1년 더 보기'로 1년씩 넓힌다(2026-10-28 사용자 지시).
+// 기준은 오늘에서 N년 전 같은 날짜 이상.
+let tickerTxView = null;   // {ticker, rows(전체), price, years}
+
+function tickerTransactionsRecent(rows, today = todayLocal(), years = 1) {
+  const since = `${Number(today.slice(0, 4)) - years}${today.slice(4, 10)}`;
   return (rows || []).filter(tx => String(tx.trade_date || "") >= since);
 }
 
@@ -201,12 +204,12 @@ function tickerTransactionSummary(rows) {
   };
 }
 
-function tickerTransactionsSummaryMarkup(rows, ticker, olderCount = 0) {
+function tickerTransactionsSummaryMarkup(rows, ticker, olderCount = 0, years = 1) {
   const s = tickerTransactionSummary(rows);
-  const older = olderCount ? ` · 1년 전 ${olderCount}건 생략` : "";
+  const older = olderCount ? ` · ${years}년 전 ${olderCount}건 생략` : "";
   if (!s.buy.count && !s.sell.count) {
     if (s.hidden) return `<span class="flat">숨긴 거래 ${s.hidden}건만 있음${older}</span>`;
-    return older ? `<span class="flat">최근 1년 거래 없음${older}</span>` : "";
+    return older ? `<span class="flat">최근 ${years}년 거래 없음${older}</span>` : "";
   }
   const part = (label, cls, item) => item.count
     ? `<span class="ticker-tx-stat"><span class="change-cell pct-chip ${cls}">${label}</span> ${item.count}건 · ${tradeQtyText(item.qty, ticker)}주 · 평균 ${unitMoney(item.avg, s.currency, ticker)}</span>`
@@ -225,8 +228,16 @@ function tickerTransactionChangePct(tx, currentPrice) {
   return (current - price) / price * 100;
 }
 
-function tickerTransactionsMarkup(rows, ticker, currentPrice = null, olderCount = 0) {
-  if (!rows?.length) return `<div class="ticker-tx-empty flat">${olderCount ? "최근 1년 거래내역이 없습니다." : "이 종목의 거래내역이 없습니다."}</div>`;
+function tickerTransactionsMoreMarkup(olderCount) {
+  return olderCount
+    ? `<button class="ghost-btn ticker-tx-more" type="button" data-ticker-tx-more>1년 더 보기 <span class="flat">(이전 ${olderCount}건)</span></button>`
+    : "";
+}
+
+function tickerTransactionsMarkup(rows, ticker, currentPrice = null, olderCount = 0, years = 1) {
+  if (!rows?.length) {
+    return `<div class="ticker-tx-empty flat">${olderCount ? `최근 ${years}년 거래내역이 없습니다.` : "이 종목의 거래내역이 없습니다."}</div>${tickerTransactionsMoreMarkup(olderCount)}`;
+  }
   const body = rows.map(tx => {
     const buy = String(tx.side).toUpperCase() === "BUY";
     const hidden = transactionIsHidden(tx);
@@ -244,7 +255,7 @@ function tickerTransactionsMarkup(rows, ticker, currentPrice = null, olderCount 
     ? `현재가 ${unitMoney(Number(currentPrice), rows[0]?.currency, ticker).replace(/<[^>]+>/g, "")} 기준` : "현재가 없음";
   return `<div class="dividend-history-table-wrap ticker-tx-table-wrap"><table class="dividend-history-table ticker-tx-table">
     <thead><tr><th>거래일</th><th>계좌</th><th>유형</th><th>단가</th><th>수량</th><th title="거래 단가 대비 현재가 등락 · ${esc(nowText)}">현재대비</th><th>금액</th></tr></thead>
-    <tbody>${body}</tbody></table></div>`;
+    <tbody>${body}</tbody></table></div>${tickerTransactionsMoreMarkup(olderCount)}`;
 }
 
 async function openTickerTransactions(ticker, name, currentPrice = null) {
@@ -258,20 +269,33 @@ async function openTickerTransactions(ticker, name, currentPrice = null) {
   body.innerHTML = `<div class="ticker-tx-empty flat">불러오는 중…</div>`;
   if (!modal.open) modal.showModal();
   try {
+    tickerTxView = null;
     const allRows = (await apiFetchTickerTransactions(ticker)).transactions || [];
-    const rows = tickerTransactionsRecent(allRows);
-    const olderCount = allRows.length - rows.length;
-    summary.innerHTML = tickerTransactionsSummaryMarkup(rows, ticker, olderCount);
     const price = currentPrice != null && Number.isFinite(Number(currentPrice)) ? Number(currentPrice) : currentPriceForTicker(ticker);
-    body.innerHTML = tickerTransactionsMarkup(rows, ticker, price, olderCount);
+    tickerTxView = { ticker, rows: allRows, price, years: 1 };
+    renderTickerTransactionsView();
   } catch (err) {
     body.innerHTML = `<div class="ticker-tx-empty error">${esc(err.message || String(err))}</div>`;
   }
 }
 
+function renderTickerTransactionsView() {
+  if (!tickerTxView) return;
+  const { ticker, rows: allRows, price, years } = tickerTxView;
+  const rows = tickerTransactionsRecent(allRows, todayLocal(), years);
+  const olderCount = allRows.length - rows.length;
+  document.getElementById("tickerTxSummary").innerHTML = tickerTransactionsSummaryMarkup(rows, ticker, olderCount, years);
+  document.getElementById("tickerTxBody").innerHTML = tickerTransactionsMarkup(rows, ticker, price, olderCount, years);
+}
+
 function initTickerTransactionsModal() {
   const modal = document.getElementById("tickerTxModal");
   if (!modal) return;
+  modal.addEventListener("click", event => {
+    if (!event.target.closest("[data-ticker-tx-more]") || !tickerTxView) return;
+    tickerTxView.years += 1;
+    renderTickerTransactionsView();
+  });
   document.getElementById("tickerTxClose")?.addEventListener("click", () => modal.close());
   modal.addEventListener("click", event => { if (event.target === modal) modal.close(); });
 }
