@@ -241,7 +241,7 @@ function renderDividendTable() {
       <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
       <td class="dividend-target" title="${esc(item.row.target || item.row.member || "-")}"><span class="dividend-target-icon" aria-label="${esc(item.row.target || item.row.member || "-")}">${esc(targetInitial(item.row.target || item.row.member))}</span></td>
       <td class="dividend-name" title="${esc(item.row.name || item.row.ticker || "-")}"><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(item.row.name || item.row.ticker || "-")}</a></td>
-      <td>${dividendAmountText(item.row.amount, item.row.currency)}</td>
+      <td>${dividendAmountCell(item.row)}</td>
       <td>${dividendQtyCell(item.row)}</td>
       <td>${dividendMoneyText(item.row.gross, item.row.currency)}</td>
       <td class="tax-dividend">${taxMoneyText(item.row.tax, item.row.currency)}</td>
@@ -534,6 +534,30 @@ function dividendQtyCell(row) {
   const exDate = row.ex_date ? dividendDateText(row.ex_date) : "배당락일";
   const title = `배당락일(${exDate}) 기준 ${fmt2.format(qty)}주 · 지금 보유 ${fmt2.format(holding)}주 — 배당락 뒤 거래는 이번 배당에 반영하지 않음`;
   return `<span class="dividend-qty-adjusted" title="${esc(title)}">${text}</span>`;
+}
+
+// 분기배당 기업의 증액 표시(2026-10-28 사용자 지시, 판정은 서버 dividend_raise.py):
+// 공시된 배당이 직전·작년 같은 분기보다 늘었으면 빨강 굵게, 공시 전 다음 회차가 작년 이맘때 증액
+// 회차였으면(연 1회 인상 주기) 주황 굵게. 툴팁에 근거를 적는다.
+function dividendRaisePctText(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? `${n >= 0 ? "+" : ""}${n.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}%` : "";
+}
+function dividendAmountCell(row) {
+  const text = dividendAmountText(row.amount, row.currency);
+  const marker = row.raise_marker;
+  if (!marker) return text;
+  if (marker.kind === "confirmed") {
+    const parts = [`직전 회차(${dividendDateText(marker.previous_date)}) 대비 ${dividendRaisePctText(marker.pct)}`];
+    if (marker.yoy_pct != null) parts.push(`작년 같은 분기 대비 ${dividendRaisePctText(marker.yoy_pct)}`);
+    return `<span class="dividend-raise-confirmed" title="${esc(`배당 증액 확정 — ${parts.join(", ")}`)}">${text}</span>`;
+  }
+  if (marker.kind === "expected") {
+    const raised = String(marker.raised_date || "").slice(0, 7).replace("-", ".");
+    const title = `다음 회차 증액 예상 — 작년 같은 분기(${raised})에 ${dividendRaisePctText(marker.pct)} 증액, 아직 공시 전(금액은 최근 배당 기준)`;
+    return `<span class="dividend-raise-expected" title="${esc(title)}">${text}</span>`;
+  }
+  return text;
 }
 
 function dividendMonthKey(row) {

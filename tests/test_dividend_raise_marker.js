@@ -1,0 +1,30 @@
+// 배당 탭 주당배당금 증액 표시: 확정=빨강 굵게, 공시 전 예상=주황 굵게, 툴팁에 근거.
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const h = require('./harness');
+const ctx = h.loadScripts(h.createContext());
+const body = h.element();
+const others = new Map();
+ctx.document.getElementById = id => (id === 'dividendRows' ? body : (others.get(id) || others.set(id, h.element()).get(id)));
+ctx.todayLocal = () => '2026-10-28';
+ctx.schedulePcFrozenColumns = () => {};
+ctx.scheduleTableViewportRows = () => {};
+ctx.dividendSelectionKey = () => 'k';
+const row = (ticker, pay, marker) => ({ticker, name: ticker, pay_date: pay, ex_date: pay, amount: 1.5, qty: 1, gross: 1, net: 1, net_krw: 1000, currency: 'USD', raise_marker: marker});
+ctx.__rows = [
+  row('UP', '2026-10-30', {kind: 'confirmed', pct: 10, yoy_pct: 12.5, previous_date: '2026-07-15', year_ago_date: '2025-10-15'}),
+  row('SOON', '2026-11-20', {kind: 'expected', pct: 10.2, raised_date: '2025-11-20'}),
+  row('FLAT', '2026-11-25', null),
+];
+h.evaluate(ctx, `dividendLoadKey = 'k'; dividendData = {rows: __rows}; sortState.dividend = {key: 'pay_date', dir: 1}; dividendMonthOverrides = new Map();`);
+ctx.renderDividendTable();
+const tr = ticker => body.innerHTML.split('<tr').find(part => part.includes(`data-chart-ticker="${ticker}"`));
+assert.match(tr('UP'), /class="dividend-raise-confirmed" title="배당 증액 확정 — 직전 회차\(07\/15\) 대비 \+10%, 작년 같은 분기 대비 \+12\.5%"/);
+assert.match(tr('SOON'), /class="dividend-raise-expected" title="다음 회차 증액 예상 — 작년 같은 분기\(2025\.11\)에 \+10\.2% 증액/);
+assert.doesNotMatch(tr('FLAT'), /dividend-raise-/);
+
+const css = fs.readFileSync(require('node:path').join(__dirname, '../portfolio_static/styles.css'), 'utf8');
+assert.match(css, /\.dividend-raise-confirmed \{\s*color: var\(--up\);\s*font-weight: 700;/);
+assert.match(css, /\.dividend-raise-expected \{\s*color: var\(--raise-expected\);\s*font-weight: 700;/);
+assert.equal((css.match(/--raise-expected: #/g) || []).length, 2, '라이트·다크 토큰 모두 정의');
+console.log('Dividend raise marker: confirmed raises red-bold, expected raises orange-bold with reasons');

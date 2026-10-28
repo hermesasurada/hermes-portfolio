@@ -43,6 +43,7 @@
   --buy: #0284c7;
   --sell: #e5484d;
   --warn: #b7791f;
+  --raise-expected: #ea580c;  /* 배당 증액 예상(주황) */
   --focus: #2563eb;
   --focus-soft: rgba(37, 99, 235, .18);
   /* interactive surfaces */
@@ -141,6 +142,7 @@
     --buy: #38bdf8;
     --sell: #fb7185;
     --warn: #fbbf24;
+    --raise-expected: #fb923c;
     --focus: #60a5fa;
     --focus-soft: rgba(96, 165, 250, .24);
     --accent-soft: #112f53;
@@ -1777,6 +1779,15 @@ th:first-child, td:first-child { text-align: left; }
   padding-right: 6px;
   font-size: 12.5px;
   white-space: nowrap;
+}
+/* 분기배당 기업 증액: 확정=빨강(상승색), 공시 전 예상=주황 */
+.dividend-raise-confirmed {
+  color: var(--up);
+  font-weight: 700;
+}
+.dividend-raise-expected {
+  color: var(--raise-expected);
+  font-weight: 700;
 }
 #dividendTableWrap .indicator-head {
   line-height: 1.05;

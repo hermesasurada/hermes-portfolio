@@ -10,6 +10,7 @@ from datetime import date, timedelta
 from .constants import DIVIDEND_LOOKAHEAD_DAYS
 from .dates import positive_float, today_kst
 from .db import connect
+from .dividend_raise import annotate_raise_markers, load_regular_series
 from .dividend_schedule import consolidated_dividend_events, event_schedule_date
 from .prices import fx_rates, latest_prices
 from .queries import clean_account_ids, load_holding_rows
@@ -146,6 +147,7 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
             """,
             tickers if tickers else [],
         ).fetchall()
+        regular_series, raise_eligible = load_regular_series(conn, tickers)
 
     holdings_by_ticker: dict[str, list[dict]] = {}
     for holding in holdings:
@@ -158,6 +160,8 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
         event for event in consolidated_dividend_events(event_rows, history_rows)
         if start <= (event_schedule_date(event) or start) <= end
     ]
+    # 분기배당 기업의 증액(확정·예정) 표시 — 개별 기업만(ETF 분배금 제외)
+    annotate_raise_markers(dividend_events, regular_series, _today(), raise_eligible)
     for event in dividend_events:
         stats = stats_by_ticker.get(event["ticker"])
         currency = event["currency"] or ticker_currency(event["ticker"])
@@ -200,6 +204,7 @@ def load_dividends(account_ids: list[str] | None = None) -> dict:
                     "dividend_yield": stats["dividend_yield"] if stats else None,
                     "dividend_growth_5y": stats["dividend_growth_5y"] if stats else None,
                     "source": event["source"],
+                    "raise_marker": event.get("raise_marker"),
                 }
             )
     rows.sort(key=lambda row: (row["pay_date"] or "", row["ex_date"] or "", row["ticker"], row["account_id"]))
