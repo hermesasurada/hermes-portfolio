@@ -16,6 +16,7 @@ from .dividend_sources import (
     _stockanalysis_attempt_due,
 )
 from .dividend_pipeline import normalize_dividend_events
+from .sa_dividends import drop_superseded
 from .dates import today_kst
 from .listing_dates import before_listing, ensure_listing_dates, load_listing_dates
 from .tickers import ticker_currency
@@ -102,6 +103,11 @@ def refresh_dividend_events(tickers: list[str]) -> None:
             # 병합본을 주므로, 정상 수집된 경우 기존 이벤트를 통째로 교체한다.
             if _kr_dividend_candidate(ticker) and events and "_error" not in str(status or ""):
                 conn.execute("DELETE FROM dividend_events WHERE ticker = ?", (ticker,))
+            # SA 배당선언으로 먼저 넣은 임시 행(source='sa')은 자체 수집이 같은 배당(배당락일 ±7일)을 가져오면 지운다 —
+            # SA의 배당락일이 하루 어긋나도(WST) 사본이 남지 않게(sa_dividends 모듈 설명, 2026-10-28).
+            if not _kr_dividend_candidate(ticker):        # SA는 미국 달러 배당만 넣는다
+                drop_superseded(conn, ticker, [e["ex_date"] for e in events
+                                               if e.get("ex_date") and str(e.get("source") or "") != "sa"])
             for event in events:
                 if not event.get("ex_date") or not _in_retention_window(event):
                     continue

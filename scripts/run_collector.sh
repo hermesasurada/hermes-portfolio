@@ -12,6 +12,11 @@ case "$job" in
     log_name=portfolio-dividends.log
     command=("$python" collect_prices.py --dividends-only)
     ;;
+  sa-dividends)
+    # SA 배당선언 기사 → 임시 배당 이벤트(2026-10-28, portfolio_core/sa_dividends.py). sa-collect(:00·:30) 뒤.
+    log_name=portfolio-sa-dividends.log
+    command=("$python" -m portfolio_core.sa_dividends --days 7)
+    ;;
   price-crypto)
     log_name=portfolio-price-crypto.log
     command=("$python" collect_quotes.py --category crypto)

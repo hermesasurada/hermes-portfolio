@@ -104,3 +104,5 @@
 ## 종목 섹터 (2026-10-28)
 - 한국 종목 섹터는 네이버 종목 상세의 KRX 업종명(`upJongName`)을 `fundamentals.naver_sector`로 받아 `store_ticker_sector`가 tickers.sector에 저장한다(그 전엔 yfinance 경로만 저장해 한국 전 종목이 비어 있었고 증류 점수표 섹터 결측 61건의 원인). ETF(type EF)는 '기타'로 오므로 저장하지 않는다. 빈 값은 기존 값을 지우지 않는다. 2026-10-28 112개 백필(ETF 51개는 빈 채 유지). 테스트 `test_naver_sector_is_stored_for_korean_tickers`.
 
+
+- **SA 배당선언 → 임시 배당 이벤트**(2026-10-28 사용자 지시, `portfolio_core/sa_dividends.py`, hermes 크론 `Portfolio SA Dividends` 80df99c16662 `20,50 * * * *` → `scripts/run_collector.sh sa-dividends`): sa-news(`~/projects/sa-news/sa_news.db`, 읽기 전용)의 최근 7일 'X declares $… dividend' 기사 본문에서 금액·지급일·기준일·배당락일·선언일을 규칙으로 읽어 `dividend_events`에 `source='sa'`로 넣는다. 자체 수집(07:17 일배치, 미국은 Polygon)보다 대개 하루 빠르다. **자체 수집 값이 언제나 이긴다**: 같은 종목 배당락일 ±7일 안에 `sa`가 아닌 행이 있으면 넣지 않고, `dividend_refresh`가 그 배당을 가져오면 ±7일 안의 `sa` 행을 지운다(SA 배당락일이 하루 틀린 WST 사례 — 키가 갈려 사본이 남지 않게, 읽기 시 병합은 이른 날짜를 남겨 틀린 쪽이 보였다). 수집 종목·USD만(`$…/share|ADS`), 제목·본문 금액 일치, 지급일·배당락일 필수 — 유로·대만달러, HSBC 같은 서술형 ADR 공시, 한국 종목은 넣지 않는다. 선언일은 본문 'Oct 27, 2026, 2:49 PM ET', 없으면(sa_api 본문) 수신 시각을 미국 동부 날짜로. sa 저장소는 고치지 않는다.

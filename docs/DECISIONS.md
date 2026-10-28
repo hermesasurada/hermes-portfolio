@@ -120,3 +120,9 @@ CLAUDE.md에서 옮겨 온 상세 근거·사고 이력·데이터 보정 기록
 ## 크론/운영
 - `collect_quotes.py`(분 단위 시세), `collect_prices.py`(일배치), `collect_prices.py --dividends-only`(배당 일배치), `portfolio_healthcheck.py`.
 - 로고: 신규 종목은 hydrate가 자동 수집. 일괄은 `download_portfolio_logos.py`(core cache_logo 위임, 기본 보존 모드). 다크 로고 분류는 `detect_dark_logos.py`(/usr/bin/python3, PIL) — json 갱신 시 mtime으로 자동 반영(재시작 불필요).
+
+## SA 배당선언 임시 반영 (2026-10-28)
+- 근거: 3개월(7월 말~10월) SA 배당선언 80건 중 70건이 수집 종목. 둘 다 있는 39건 중 37건이 금액·배당락일·지급일 일치, 불일치는 WST(SA 배당락일 11-09 vs Polygon 11-10, 기준일 11-11 — SA 쪽 오기로 보임)와 NOK(유로 배당·ADR 지급일 차이).
+- 속도: WFC·ETN·CTAS·WMB가 SA에 10-28 02~04시(KST) 들어왔는데 같은 날 07:17 수집의 Polygon에는 없었다 → 자체 반영은 다음 날 07:17. SA로 약 하루 앞당김.
+- 충돌 설계: (종목, 배당락일) 키가 갈라지는 WST형 사본을 읽기 병합(`dedupe_dividend_event_rows` ②)에 맡기면 정보가 같을 때 이른 날짜(틀린 SA)가 남는다 → 쓰기 시점에 정리(자체 수집이 오면 ±7일 `sa` 행 삭제, 자체 행이 있으면 SA 미반영).
+- 도입 때 반영: HCA·WFC·CTAS·WMB·ETN 5건(보유 종목 아님, 배당 이력·연간 집계에 표시).
