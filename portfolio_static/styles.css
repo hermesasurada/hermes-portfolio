@@ -43,7 +43,7 @@
   --buy: #0284c7;
   --sell: #e5484d;
   --warn: #b7791f;
-  --raise-expected: #ea580c;  /* 배당 증액 예상(주황) */
+  --raise-expected: #d48806;  /* 배당 증액 예상(주황~노랑 사이 호박색, 빨강과 구분) */
   --focus: #2563eb;
   --focus-soft: rgba(37, 99, 235, .18);
   /* interactive surfaces */
@@ -142,7 +142,7 @@
     --buy: #38bdf8;
     --sell: #fb7185;
     --warn: #fbbf24;
-    --raise-expected: #fb923c;
+    --raise-expected: #fbb124;
     --focus: #60a5fa;
     --focus-soft: rgba(96, 165, 250, .24);
     --accent-soft: #112f53;
