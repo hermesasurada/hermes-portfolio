@@ -343,11 +343,11 @@ function renderDividendHistory(payload) {
         <thead>
           <tr>
             <th>귀속연도</th>
-            <th>연간배당</th>
+            <th><span class="label-full">연간배당</span><span class="label-short">연간</span></th>
             <th>성장률</th>
             <th>기준일</th>
             <th>지급일</th>
-            <th>주당배당금</th>
+            <th><span class="label-full">주당배당금</span><span class="label-short">주당</span></th>
           </tr>
         </thead>
         <tbody>
@@ -380,7 +380,7 @@ function renderDividendHistory(payload) {
                 <span class="history-annual-anchor history-amount-anchor">
                   <span class="history-amount">${dividendAmountText(row.amount, payload.currency)}</span>
                   ${row.estimated_amount != null && row.estimated_amount > row.amount
-                    ? `<span class="history-estimate">예상 ${dividendMoneyText(row.estimated_amount, payload.currency)}</span>`
+                    ? `<span class="history-estimate" title="예상 연간배당"><span class="label-full">예상 ${dividendMoneyText(row.estimated_amount, payload.currency)}</span><span class="label-short">(${dividendMoneyText(row.estimated_amount, payload.currency)})</span></span>`
                     : ""}
                 </span>
               </td>`;

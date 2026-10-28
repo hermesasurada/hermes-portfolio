@@ -5348,6 +5348,9 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     white-space: nowrap;
   }
   .dividend-history-stats .cstat-v small { display: none; }   /* 인상일·전년 금액은 표에 이미 있다 */
+  /* 좁은 표: 헤더 '연간배당·주당배당금' → '연간·주당', 예상 연간배당은 '예상' 글자 없이 괄호만(파랑 굵게 유지) */
+  .dividend-history-table .label-full { display: none; }
+  .dividend-history-table .label-short { display: inline; }
 }
 
 .dividend-history-stats .cstat-v small {
