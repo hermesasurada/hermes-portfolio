@@ -189,22 +189,71 @@ def annotate_raise_markers(
         )
         if upcoming is None:
             continue
-        target = _event_key_date(upcoming)
-        year_ago = _same_period_reference(series, {"date": target})
-        if year_ago is None:
-            continue
-        year_ago_index = series.index(year_ago)
-        info = raise_info(series, year_ago_index, tolerance)
-        if info is None:
-            continue
-        raised_since = any(
-            raise_info(series, index, tolerance) is not None
-            for index in range(year_ago_index + 1, len(series))
-            if (target - series[index]["date"]).days < EXPECTED_MIN_GAP_DAYS
-        )
-        if raised_since:
-            continue
-        upcoming["raise_marker"] = {"kind": "expected", "pct": info["pct"], "raised_date": year_ago["date"].isoformat()}
+        expected = expected_raise(series, _event_key_date(upcoming), tolerance)
+        if expected:
+            upcoming["raise_marker"] = expected
+
+
+def expected_raise(series: list[dict], target: date, tolerance: float) -> dict | None:
+    """target(공시 전 회차의 날짜)이 증액 예상 회차면 {kind: expected, pct, raised_date}.
+    작년 같은 분기가 증액 회차였고, 그 뒤 EXPECTED_MIN_GAP_DAYS 안에 또 증액하지 않았어야 한다."""
+    year_ago = _same_period_reference(series, {"date": target})
+    if year_ago is None:
+        return None
+    year_ago_index = series.index(year_ago)
+    info = raise_info(series, year_ago_index, tolerance)
+    if info is None:
+        return None
+    raised_since = any(
+        raise_info(series, index, tolerance) is not None
+        for index in range(year_ago_index + 1, len(series))
+        if (target - series[index]["date"]).days < EXPECTED_MIN_GAP_DAYS
+    )
+    if raised_since:
+        return None
+    return {"kind": "expected", "pct": info["pct"], "raised_date": year_ago["date"].isoformat()}
+
+
+def ticker_raise_status(ticker: str, series: list[dict], today: date) -> dict | None:
+    """목록 배당율 칸용 종목 상태(2026-10-28 사용자 지시 '리스트에 배당율에도 적용').
+    가장 최근 공시 회차가 증액이면 confirmed(다음 회차가 공시될 때까지 유지), 아니면 그다음
+    회차(최근 회차 + 간격 중앙값)가 증액 예상 회차인지 본다."""
+    if not series or not is_quarterly_payer(ticker, series, today):
+        return None
+    if (today - series[-1]["date"]).days > ACTIVE_PAYER_DAYS:
+        return None
+    tolerance = FX_RAISE_TOLERANCE if fx_converted_amounts(series) else RAISE_TOLERANCE
+    info = raise_info(series, len(series) - 1, tolerance)
+    if info:
+        return {"kind": "confirmed", **info, "date": series[-1]["date"].isoformat()}
+    dates = [event["date"] for event in series[-5:]]
+    gaps = [(right - left).days for left, right in zip(dates, dates[1:])]
+    target = series[-1]["date"] + timedelta(days=round(median(gaps)))
+    return expected_raise(series, target, tolerance)
+
+
+# 전 종목 상태는 배당 이벤트·분할·종목 목록이 바뀔 때만 다시 계산한다(전체 약 0.25초).
+_STATUS_CACHE: dict[str, Any] = {"key": None, "status": {}}
+
+
+def dividend_raise_status(conn: Any, tickers: list[str], today: date) -> dict[str, dict]:
+    key = (
+        today.isoformat(),
+        tuple(conn.execute("SELECT COUNT(*), MAX(fetched_at), TOTAL(amount) FROM dividend_events").fetchone()),
+        tuple(conn.execute("SELECT COUNT(*), TOTAL(ratio) FROM stock_splits").fetchone()),
+        tuple(conn.execute("SELECT COUNT(*), GROUP_CONCAT(ticker) FROM tickers").fetchone()),
+    )
+    if _STATUS_CACHE["key"] != key:
+        all_tickers = [row[0] for row in conn.execute("SELECT ticker FROM tickers")]
+        series, eligible = load_regular_series(conn, all_tickers)
+        status = {}
+        for ticker in eligible:
+            marker = ticker_raise_status(ticker, series.get(ticker) or [], today)
+            if marker:
+                status[ticker] = marker
+        _STATUS_CACHE.update(key=key, status=status)
+    status = _STATUS_CACHE["status"]
+    return {ticker: status[ticker] for ticker in tickers if ticker in status}
 
 
 def load_regular_series(conn: Any, tickers: list[str]) -> tuple[dict[str, list[dict]], set[str]]:

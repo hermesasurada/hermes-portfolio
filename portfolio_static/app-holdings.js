@@ -1280,9 +1280,7 @@ function renderTable() {
       <td>${noPosition ? "-" : changeKrwText(r.change_krw, { zeroWhenFlat: isHolidayPreviousSession(r) })}</td>
       <td>${noPosition ? "-" : valueMarkup(r)}</td>
       <td>${noPosition ? "-" : weightText(r.weight_pct)}</td>
-      <td>${Number(r.dividend_yield) > 0
-        ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(r.ticker)}" title="배당 이력 보기">${dividendYieldText(r.dividend_yield)}</button>`
-        : dividendYieldText(r.dividend_yield)}</td>
+      <td>${dividendYieldMarkup(r)}</td>
       <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
       <td class="group-start">${signedPercentText(r.drawdown_52w, 1)}</td>
       <td>${riskRewardScoreText(r.risk_reward_score)}</td>

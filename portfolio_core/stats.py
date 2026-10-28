@@ -5,6 +5,7 @@ from .tickers import normalize_tickers
 from datetime import datetime, timedelta
 
 from .db import connect
+from .dividend_raise import dividend_raise_status
 from .fundamentals import fetch_fundamentals
 from .paths import KST
 from .prices import build_market_snapshot, latest_prices
@@ -49,6 +50,7 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
         # The stats tab must stay read-only/low-latency. Fundamental refreshes
         # and RSI/BB/performance refreshes are handled by price/watchlist jobs.
         fundamentals = fetch_fundamentals(conn, clean_tickers, refresh_stale=False)
+        raise_status = dividend_raise_status(conn, clean_tickers, datetime.now(KST).date())
         if apply_extended:
             placeholders = ",".join("?" for _ in clean_tickers)
             ticker_rows = conn.execute(
@@ -131,6 +133,7 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
             merged.get("bb_upper_week_pct"),
             merged.get("ma200_pct"),
         )
+        merged["dividend_raise"] = raise_status.get(ticker)   # 분기배당 기업 증액 확정·예상(목록 배당율 강조)
         merged.pop("trade_timing", None)   # 매매참고(실험적) 폐지(2026-10-16) — 옛 캐시에 남은 값은 내보내지 않는다
         stats[ticker] = merged
 

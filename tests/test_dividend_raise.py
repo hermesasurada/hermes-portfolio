@@ -7,6 +7,7 @@ from portfolio_core.dividend_raise import (
     fx_converted_amounts,
     is_dividend_raise_candidate,
     is_quarterly_payer,
+    ticker_raise_status,
 )
 
 TODAY = date(2026, 10, 28)
@@ -110,6 +111,28 @@ class ExpectedRaiseTests(unittest.TestCase):
         rows = [event("X", "2026-12-22", "estimated-history")]
         annotate_raise_markers(rows, {"X": s}, TODAY, {"X"})
         self.assertNotIn("raise_marker", rows[0])
+
+
+class TickerStatusTests(unittest.TestCase):
+    """목록 배당율 칸 — 가장 최근 공시 회차가 증액이면 confirmed, 아니면 다음 회차 증액 예상."""
+
+    def test_latest_declared_raise_is_confirmed(self):
+        s = quarterly("2025-09-20", [0.59, 0.59, 0.59, 0.59, 0.65])
+        self.assertEqual(ticker_raise_status("X", s, TODAY)["kind"], "confirmed")
+
+    def test_confirmed_clears_once_next_same_amount_is_declared(self):
+        s = quarterly("2025-06-20", [0.59, 0.59, 0.59, 0.59, 0.65, 0.65])
+        self.assertIsNone(ticker_raise_status("X", s, TODAY))
+
+    def test_next_quarter_after_last_years_raise_is_expected(self):
+        s = series(("2025-06-20", 0.59), ("2025-09-22", 0.59), ("2025-12-22", 0.65),
+                   ("2026-03-23", 0.65), ("2026-06-22", 0.65), ("2026-09-21", 0.65))
+        status = ticker_raise_status("AVGO", s, TODAY)
+        self.assertEqual((status["kind"], status["raised_date"]), ("expected", "2025-12-22"))
+
+    def test_stopped_payer_is_ignored(self):
+        s = quarterly("2024-01-10", [0.5, 0.5, 0.5, 0.5, 0.6])
+        self.assertIsNone(ticker_raise_status("X", s, TODAY))
 
 
 class CandidateTests(unittest.TestCase):

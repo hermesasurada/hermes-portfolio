@@ -33,9 +33,7 @@ const INTEREST_COLUMNS = [
   { key: "market_cap_usd", width: 76, label: "시총/AUM", headClass: "group-start interest-leaf-head", cellClass: "group-start",
     cell: (r, group) => `${marketCapMarkup(r)}` },
   { key: "dividend_yield", width: 54, label: "배당율", headClass: "interest-leaf-head",
-    cell: (r, group) => `${Number(r.dividend_yield) > 0
-        ? `<button class="stat-yield-link" type="button" data-dividend-history="${esc(r.ticker)}">${dividendYieldText(r.dividend_yield)}</button>`
-        : dividendYieldText(r.dividend_yield)}` },
+    cell: (r, group) => dividendYieldMarkup(r) },
   { key: "dividend_growth_5y", width: 78, label: "<span>배당성장</span><span>(5년)</span>", headClass: "indicator-head interest-leaf-head",
     cell: (r, group) => `${signedPercentText(r.dividend_growth_5y, 1)}` },
   { key: "dividend_streak_years", width: 54, label: "<span>연속</span><span>지급</span>", headClass: "indicator-head interest-leaf-head", title: "상장 이래 배당을 거른 해 없이 지급한 연속 연수(완결 연도 기준, 미국 상장만). +는 이력 한계(1962)로 실제는 더 긺",

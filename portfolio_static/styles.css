@@ -1780,15 +1780,6 @@ th:first-child, td:first-child { text-align: left; }
   font-size: 12.5px;
   white-space: nowrap;
 }
-/* 분기배당 기업 증액: 확정=빨강(상승색), 공시 전 예상=주황 */
-.dividend-raise-confirmed {
-  color: var(--up);
-  font-weight: 700;
-}
-.dividend-raise-expected {
-  color: var(--raise-expected);
-  font-weight: 700;
-}
 #dividendTableWrap .indicator-head {
   line-height: 1.05;
   white-space: normal;
@@ -1985,6 +1976,18 @@ tr.dividend-today-row:hover td {
   color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+/* 분기배당 기업 증액: 확정=빨강(상승색), 공시 전 예상=주황. 배당 탭 주당배당금·목록 배당율 공용,
+   배당율 링크 위에서도 색이 유지되도록 링크 규칙 뒤에 둔다. */
+.dividend-raise-confirmed,
+.stat-yield-link.dividend-raise-confirmed:hover {
+  color: var(--up);
+  font-weight: 700;
+}
+.dividend-raise-expected,
+.stat-yield-link.dividend-raise-expected:hover {
+  color: var(--raise-expected);
+  font-weight: 700;
 }
 .dividend-month-row td,
 tbody tr.dividend-month-row:nth-child(even) td,

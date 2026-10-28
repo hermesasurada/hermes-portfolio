@@ -20,6 +20,7 @@ function statsRows(rows) {
       market_cap_usd: toUsd(marketCap, row.currency),
       aum: isEtf ? stats.aum : null,
       dividend_yield: isIndex ? null : stats.dividend_yield,
+      dividend_raise: isIndex ? null : stats.dividend_raise,
       dividend_growth_5y: isIndex ? null : stats.dividend_growth_5y,
       dividend_streak_years: isIndex ? null : stats.dividend_streak_years,
       dividend_streak_floor: isIndex ? null : stats.dividend_streak_floor,
@@ -536,28 +537,14 @@ function dividendQtyCell(row) {
   return `<span class="dividend-qty-adjusted" title="${esc(title)}">${text}</span>`;
 }
 
-// 분기배당 기업의 증액 표시(2026-10-28 사용자 지시, 판정은 서버 dividend_raise.py):
-// 공시된 배당이 직전·작년 같은 분기보다 늘었으면 빨강 굵게, 공시 전 다음 회차가 작년 이맘때 증액
-// 회차였으면(연 1회 인상 주기) 주황 굵게. 툴팁에 근거를 적는다.
-function dividendRaisePctText(value) {
-  const n = Number(value);
-  return Number.isFinite(n) ? `${n >= 0 ? "+" : ""}${n.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}%` : "";
-}
+// 배당 탭 주당배당금의 증액 표시(색·문구는 format.js dividendRaiseClass/Title 공용).
+// 예상 행의 금액은 최근 배당을 옮긴 추정이라 툴팁에 밝힌다.
 function dividendAmountCell(row) {
   const text = dividendAmountText(row.amount, row.currency);
-  const marker = row.raise_marker;
-  if (!marker) return text;
-  if (marker.kind === "confirmed") {
-    const parts = [`직전 회차(${dividendDateText(marker.previous_date)}) 대비 ${dividendRaisePctText(marker.pct)}`];
-    if (marker.yoy_pct != null) parts.push(`작년 같은 분기 대비 ${dividendRaisePctText(marker.yoy_pct)}`);
-    return `<span class="dividend-raise-confirmed" title="${esc(`배당 증액 확정 — ${parts.join(", ")}`)}">${text}</span>`;
-  }
-  if (marker.kind === "expected") {
-    const raised = String(marker.raised_date || "").slice(0, 7).replace("-", ".");
-    const title = `다음 회차 증액 예상 — 작년 같은 분기(${raised})에 ${dividendRaisePctText(marker.pct)} 증액, 아직 공시 전(금액은 최근 배당 기준)`;
-    return `<span class="dividend-raise-expected" title="${esc(title)}">${text}</span>`;
-  }
-  return text;
+  const cls = dividendRaiseClass(row.raise_marker);
+  if (!cls) return text;
+  const title = dividendRaiseTitle(row.raise_marker) + (row.raise_marker.kind === "expected" ? "(금액은 최근 배당 기준)" : "");
+  return `<span class="${cls}" title="${esc(title)}">${text}</span>`;
 }
 
 function dividendMonthKey(row) {
