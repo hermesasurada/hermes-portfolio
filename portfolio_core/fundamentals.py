@@ -273,6 +273,23 @@ def normalize_pe(value) -> float | None:
     return number if number > 0 else None
 
 
+def naver_sector(raw: dict | None) -> str:
+    """네이버 종목 상세 응답의 KRX 업종명(upJongName). ETF 등 없으면 빈 문자열."""
+    if not isinstance(raw, dict) or raw.get("type") == "EF":   # ETF는 업종이 '기타'로 와서 저장하지 않는다
+        return ""
+    return str(raw.get("upJongName") or "").strip()
+
+
+def store_ticker_sector(conn: sqlite3.Connection, ticker: str, sector: str) -> None:
+    """섹터는 정적 속성이라 tickers에 저장한다. 빈 값은 기존 값을 지우지 않는다."""
+    if not sector:
+        return
+    conn.execute(
+        "UPDATE tickers SET sector = ? WHERE ticker = ? AND COALESCE(sector, '') <> ?",
+        (sector, ticker, sector),
+    )
+
+
 def fetch_naver_fundamentals(ticker: str) -> tuple[dict, dict]:
     code = kr_ticker_code(ticker)
     url = f"https://stock.naver.com/api/domestic/detail/{quote(code)}/detail?codeType=KRX"
@@ -360,6 +377,9 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
                 data, raw = fetch_naver_fundamentals(ticker)
                 source = "naver"
                 fetched = True
+                # 한국 종목의 업종은 네이버 응답의 upJongName(KRX 업종명). 2026-10-28까지 yfinance 경로만 저장해
+                # 한국 전 종목의 섹터가 비어 있었다(증류 점수표 섹터 결측 61건).
+                store_ticker_sector(conn, ticker, naver_sector(raw))
             else:
                 symbol = normalize_yfinance_symbol(ticker)
                 if symbol:
@@ -400,12 +420,7 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
                     raw = {"info": info}
                     fetched = True
                     # GICS 섹터는 정적 속성이라 tickers에 저장 (관심목록 섹터 컬럼·필터용)
-                    sector = str(info.get("sector") or "").strip()
-                    if sector:
-                        conn.execute(
-                            "UPDATE tickers SET sector = ? WHERE ticker = ? AND COALESCE(sector, '') <> ?",
-                            (sector, ticker, sector),
-                        )
+                    store_ticker_sector(conn, ticker, str(info.get("sector") or "").strip())
         except Exception as exc:
             print(f"[stats] fundamentals failed for {ticker}: {exc}")
             if stale:

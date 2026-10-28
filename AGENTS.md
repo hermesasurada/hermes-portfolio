@@ -101,3 +101,6 @@
 
 - `GET /api/price-since?since=<ISO datetime>&tickers=A,B,...` (`portfolio_core/price_since.py`, max 800 tickers) serves the knowledge-distillation viewer's '생성 후' column. Per ticker: `base_date`/`base_price` = the last `daily_prices` close that was already final at `since` (close final at KST: Asia same day 16:00, Europe next day 01:00, US next day 06:00 — `base_cutoff_date`), `current_price` = the same snapshot price the holdings/chart views use (`build_market_snapshot`, regular price when present), `change_pct`. A date-only `since` means 23:59 KST that day. It adds no external calls of its own. Tests: `tests/test_price_since.py`.
 
+## 종목 섹터 (2026-10-28)
+- 한국 종목 섹터는 네이버 종목 상세의 KRX 업종명(`upJongName`)을 `fundamentals.naver_sector`로 받아 `store_ticker_sector`가 tickers.sector에 저장한다(그 전엔 yfinance 경로만 저장해 한국 전 종목이 비어 있었고 증류 점수표 섹터 결측 61건의 원인). ETF(type EF)는 '기타'로 오므로 저장하지 않는다. 빈 값은 기존 값을 지우지 않는다. 2026-10-28 112개 백필(ETF 51개는 빈 채 유지). 테스트 `test_naver_sector_is_stored_for_korean_tickers`.
+

@@ -1072,6 +1072,20 @@ def test_parse_collector_categories():
     assert parse_categories(["all"]) == ["fx", "crypto", "overseas", "kr", "index"]
 
 
+def test_naver_sector_is_stored_for_korean_tickers():
+    # 2026-10-28: 한국 종목은 네이버 경로라 섹터가 비어 있었다 — upJongName을 저장한다. 빈 값은 기존 값을 지우지 않는다.
+    assert fundamentals_module.naver_sector({"upJongName": "반도체와반도체장비"}) == "반도체와반도체장비"
+    assert fundamentals_module.naver_sector({"type": "EF", "upJongName": "기타"}) == ""
+    assert fundamentals_module.naver_sector(None) == ""
+    conn = sqlite3.connect(":memory:")
+    conn.execute("CREATE TABLE tickers (ticker TEXT, sector TEXT)")
+    conn.execute("INSERT INTO tickers VALUES ('005930.KS', NULL)")
+    fundamentals_module.store_ticker_sector(conn, "005930.KS", "반도체와반도체장비")
+    fundamentals_module.store_ticker_sector(conn, "005930.KS", "")
+    assert conn.execute("SELECT sector FROM tickers WHERE ticker='005930.KS'").fetchone()[0] == "반도체와반도체장비"
+    conn.close()
+
+
 def test_read_only_fundamentals_serve_stale_cache():
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
