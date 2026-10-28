@@ -98,6 +98,18 @@ class ExpectedRaiseTests(unittest.TestCase):
         self.assertEqual(rows[0]["raise_marker"]["raised_date"], "2025-12-22")
         self.assertNotIn("raise_marker", rows[1])   # 다음 회차 하나만
 
+    def test_not_expected_until_last_declared_dividend_is_paid(self):
+        # LLY식: 2026-11-13 배당락·12-10 지급 회차가 아직 지급 전이면 다음 회차(2월) 주황 표시 안 함
+        s = series(("2025-08-15", 1.5), ("2025-11-14", 1.5), ("2026-02-13", 1.73),
+                   ("2026-05-15", 1.73), ("2026-08-14", 1.73), ("2026-11-13", 1.73))
+        for pay, shown in (("2026-12-10", False), ("2026-10-28", False), ("2026-10-27", True)):
+            s[-1]["pay_date"] = date.fromisoformat(pay)
+            today = date(2026, 10, 28) if pay != "2026-12-10" else TODAY
+            rows = [event("LLY", "2027-02-13", "estimated-history")]
+            annotate_raise_markers(rows, {"LLY": s}, today, {"LLY"})
+            self.assertEqual("raise_marker" in rows[0], shown, pay)
+            self.assertEqual(ticker_raise_status("LLY", s, today) is not None, shown, pay)
+
     def test_not_expected_when_raise_quarter_is_further_away(self):
         s = series(("2025-06-20", 0.59), ("2025-09-22", 0.59), ("2025-12-22", 0.65),
                    ("2026-03-23", 0.65), ("2026-06-22", 0.65), ("2026-09-21", 0.65))

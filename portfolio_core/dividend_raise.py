@@ -72,6 +72,7 @@ def regular_dividend_series(ticker: str, event_rows: list, split_rows: list[dict
             events.append({
                 "date": event_date,
                 "ex_date": parse_iso_date(event["ex_date"]),
+                "pay_date": parse_iso_date(event["pay_date"]),
                 "amount": amount,
                 "raw_amount": component_amount,
                 "is_final": False,
@@ -189,14 +190,20 @@ def annotate_raise_markers(
         )
         if upcoming is None:
             continue
-        expected = expected_raise(series, _event_key_date(upcoming), tolerance)
+        expected = expected_raise(series, _event_key_date(upcoming), tolerance, today)
         if expected:
             upcoming["raise_marker"] = expected
 
 
-def expected_raise(series: list[dict], target: date, tolerance: float) -> dict | None:
+def expected_raise(series: list[dict], target: date, tolerance: float, today: date) -> dict | None:
     """target(공시 전 회차의 날짜)이 증액 예상 회차면 {kind: expected, pct, raised_date}.
-    작년 같은 분기가 증액 회차였고, 그 뒤 EXPECTED_MIN_GAP_DAYS 안에 또 증액하지 않았어야 한다."""
+    작년 같은 분기가 증액 회차였고, 그 뒤 EXPECTED_MIN_GAP_DAYS 안에 또 증액하지 않았어야 한다.
+    마지막 공시 회차의 지급일이 아직 지나지 않았으면(오늘 지급 포함) 표시하지 않는다(2026-10-28
+    사용자 지시) — 그 배당을 받고 난 뒤에야 다음 회차 증액이 관심사다. 지급일이 없으면 배당락일로 본다."""
+    last = series[-1]
+    last_payment = last.get("pay_date") or last.get("ex_date") or last["date"]
+    if last_payment >= today:
+        return None
     year_ago = _same_period_reference(series, {"date": target})
     if year_ago is None:
         return None
@@ -229,7 +236,7 @@ def ticker_raise_status(ticker: str, series: list[dict], today: date) -> dict | 
     dates = [event["date"] for event in series[-5:]]
     gaps = [(right - left).days for left, right in zip(dates, dates[1:])]
     target = series[-1]["date"] + timedelta(days=round(median(gaps)))
-    return expected_raise(series, target, tolerance)
+    return expected_raise(series, target, tolerance, today)
 
 
 # 전 종목 상태는 배당 이벤트·분할·종목 목록이 바뀔 때만 다시 계산한다(전체 약 0.25초).
