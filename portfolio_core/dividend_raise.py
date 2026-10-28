@@ -2,8 +2,6 @@
 
 - confirmed: 공시(수집)된 배당이 직전 정기 회차보다 늘었고 작년 같은 분기보다도 많다 → 빨강 굵게.
   작년 비교는 한국식 '소액 분기 + 대액 기말'에서 기말 회차가 매년 증액으로 잡히는 것을 막는다.
-- declared: confirmed 조건을 만족하지만 그 회차의 지급일이 아직 지나지 않았다(오늘 지급 포함) → 파랑 굵게
-  (2026-10-28 사용자 지시 — 주황 제외 조건과 같은 '지급 전' 기간). 지급일이 지나면 빨강으로 바뀐다.
 - expected: 아직 공시 전인 다음 회차(추정 행)인데 작년 같은 분기에 증액했고, 그 뒤로 증액이
   없었다(연 1회 인상 주기) → 주황 굵게. 금액은 최근 배당을 그대로 쓴 추정이라 실제는 더 클 수 있다.
 
@@ -155,17 +153,6 @@ def _matching_index(series: list[dict], target: date) -> int | None:
     return best[1] if best else None
 
 
-def payment_date(event: dict) -> date:
-    """회차의 지급일 — 없으면 배당락일, 그것도 없으면 기준 날짜."""
-    return event.get("pay_date") or event.get("ex_date") or event["date"]
-
-
-def raise_marker(event: dict, info: dict, today: date) -> dict:
-    """증액 회차 표시 — 지급 전(오늘 지급 포함)이면 declared(파랑), 지급 뒤면 confirmed(빨강)."""
-    paid_on = payment_date(event)
-    return {"kind": "declared" if paid_on >= today else "confirmed", **info, "pay_date": paid_on.isoformat()}
-
-
 def _is_estimated(event: dict) -> bool:
     source = str(event.get("source") or "")
     return source.startswith("estimated-history") or "+history" in source
@@ -175,7 +162,7 @@ def annotate_raise_markers(
     events: list[dict], series_by_ticker: dict[str, list[dict]], today: date, eligible: set[str],
 ) -> None:
     """배당 목록 이벤트에 raise_marker를 단다(제자리 수정). eligible은 개별 기업 티커.
-    confirmed/declared: {kind, pct, yoy_pct, previous_date, year_ago_date} — declared는 지급 전
+    confirmed: {kind, pct, yoy_pct, previous_date, year_ago_date}
     expected:  {kind, pct(작년 증액률), raised_date(작년 증액 회차)}"""
     by_ticker: dict[str, list[dict]] = {}
     for event in events:
@@ -193,7 +180,7 @@ def annotate_raise_markers(
             index = _matching_index(series, key_date)
             info = raise_info(series, index, tolerance) if index is not None else None
             if info:
-                event["raise_marker"] = raise_marker(series[index], info, today)
+                event["raise_marker"] = {"kind": "confirmed", **info}
         if (today - series[-1]["date"]).days > ACTIVE_PAYER_DAYS:
             continue
         upcoming = next(
@@ -213,7 +200,9 @@ def expected_raise(series: list[dict], target: date, tolerance: float, today: da
     작년 같은 분기가 증액 회차였고, 그 뒤 EXPECTED_MIN_GAP_DAYS 안에 또 증액하지 않았어야 한다.
     마지막 공시 회차의 지급일이 아직 지나지 않았으면(오늘 지급 포함) 표시하지 않는다(2026-10-28
     사용자 지시) — 그 배당을 받고 난 뒤에야 다음 회차 증액이 관심사다. 지급일이 없으면 배당락일로 본다."""
-    if payment_date(series[-1]) >= today:
+    last = series[-1]
+    last_payment = last.get("pay_date") or last.get("ex_date") or last["date"]
+    if last_payment >= today:
         return None
     year_ago = _same_period_reference(series, {"date": target})
     if year_ago is None:
@@ -234,7 +223,7 @@ def expected_raise(series: list[dict], target: date, tolerance: float, today: da
 
 def ticker_raise_status(ticker: str, series: list[dict], today: date) -> dict | None:
     """목록 배당율 칸용 종목 상태(2026-10-28 사용자 지시 '리스트에 배당율에도 적용').
-    가장 최근 공시 회차가 증액이면 confirmed(지급 전이면 declared, 다음 회차가 공시될 때까지 유지), 아니면 그다음
+    가장 최근 공시 회차가 증액이면 confirmed(다음 회차가 공시될 때까지 유지), 아니면 그다음
     회차(최근 회차 + 간격 중앙값)가 증액 예상 회차인지 본다."""
     if not series or not is_quarterly_payer(ticker, series, today):
         return None
@@ -243,7 +232,7 @@ def ticker_raise_status(ticker: str, series: list[dict], today: date) -> dict | 
     tolerance = FX_RAISE_TOLERANCE if fx_converted_amounts(series) else RAISE_TOLERANCE
     info = raise_info(series, len(series) - 1, tolerance)
     if info:
-        return {**raise_marker(series[-1], info, today), "date": series[-1]["date"].isoformat()}
+        return {"kind": "confirmed", **info, "date": series[-1]["date"].isoformat()}
     dates = [event["date"] for event in series[-5:]]
     gaps = [(right - left).days for left, right in zip(dates, dates[1:])]
     target = series[-1]["date"] + timedelta(days=round(median(gaps)))

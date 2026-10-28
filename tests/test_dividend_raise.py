@@ -41,16 +41,6 @@ class ConfirmedRaiseTests(unittest.TestCase):
         self.assertAlmostEqual(marker["pct"], (0.65 / 0.59 - 1) * 100)
         self.assertAlmostEqual(marker["yoy_pct"], (0.65 / 0.59 - 1) * 100)
 
-    def test_raise_before_payment_is_declared_until_paid(self):
-        # 동일 '지급 전' 기간: 증액 공시 회차의 지급일이 오늘 이후(오늘 포함)면 declared(파랑), 지나면 confirmed
-        s = quarterly("2025-09-20", [0.59, 0.59, 0.59, 0.59, 0.65])
-        for pay, kind in (("2026-11-10", "declared"), ("2026-10-28", "declared"), ("2026-10-27", "confirmed")):
-            s[-1]["pay_date"] = date.fromisoformat(pay)
-            rows = [event("X", s[-1]["date"].isoformat())]
-            annotate_raise_markers(rows, {"X": s}, TODAY, {"X"})
-            self.assertEqual((rows[0]["raise_marker"]["kind"], rows[0]["raise_marker"]["pay_date"]), (kind, pay))
-            self.assertEqual(ticker_raise_status("X", s, TODAY)["kind"], kind, pay)
-
     def test_same_amount_after_raise_is_not_marked(self):
         s = quarterly("2025-09-20", [0.59, 0.65, 0.65, 0.65, 0.65])
         rows = [event("X", s[-1]["date"].isoformat())]

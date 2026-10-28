@@ -243,24 +243,22 @@ function dividendYieldText(v) {
   if (v == null || !Number.isFinite(Number(v)) || Number(v) === 0) return "-";
   return `${fmt2.format(Number(v))}%`;
 }
-// 분기배당 기업 증액 표시(2026-10-28, 판정은 서버 dividend_raise.py): 공시된 배당 증액은 빨강 굵게
-// (그 회차 지급 전이면 파랑 굵게), 공시 전 다음 회차 증액 예상(작년 같은 분기 증액)은 주황 굵게. 배당 탭 주당배당금과 목록 배당율이 같이 쓴다.
+// 분기배당 기업 증액 표시(2026-10-28, 판정은 서버 dividend_raise.py): 공시된 배당 증액은 빨강 굵게,
+// 공시 전 다음 회차 증액 예상(작년 같은 분기 증액)은 주황 굵게. 배당 탭 주당배당금과 목록 배당율이 같이 쓴다.
 function dividendRaisePctText(value) {
   const n = Number(value);
   return Number.isFinite(n) ? `${n >= 0 ? "+" : ""}${n.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}%` : "";
 }
 function dividendRaiseClass(marker) {
   if (marker?.kind === "confirmed") return "dividend-raise-confirmed";
-  if (marker?.kind === "declared") return "dividend-raise-declared";
   if (marker?.kind === "expected") return "dividend-raise-expected";
   return "";
 }
 function dividendRaiseTitle(marker) {
-  if (marker?.kind === "confirmed" || marker?.kind === "declared") {
+  if (marker?.kind === "confirmed") {
     const parts = [`직전 회차(${dividendDateText(marker.previous_date)}) 대비 ${dividendRaisePctText(marker.pct)}`];
     if (marker.yoy_pct != null) parts.push(`작년 같은 분기 대비 ${dividendRaisePctText(marker.yoy_pct)}`);
-    const head = marker.kind === "declared" ? `배당 증액 공시, 지급 전(${dividendDateText(marker.pay_date)} 지급)` : "배당 증액 확정";
-    return `${head} — ${parts.join(", ")}`;
+    return `배당 증액 확정 — ${parts.join(", ")}`;
   }
   if (marker?.kind === "expected") {
     const raised = String(marker.raised_date || "").slice(0, 7).replace("-", ".");
