@@ -1457,6 +1457,31 @@ def test_jpm_october_raise_groups_four_equal_quarters():
     assert _active_dividend_year(date(2026, 10, 1), 9) == 2027
 
 
+def test_aph_october_paid_dividend_is_the_final():
+    """APH는 10월에 인상을 결의해 12월 기준일·1월 지급 회차부터 반영한다 → 12월~익년 9월이 한 배당년도,
+    9월 기준일(10월 지급) 회차가 결산배당(2026-10-28 사용자 지적 '1월이 아닌 10월')."""
+    from portfolio_core.dividend_history import FISCAL_END_MONTH_OVERRIDES, _mark_fiscal_finals
+
+    assert FISCAL_END_MONTH_OVERRIDES.get("APH") == 11
+    rows = [
+        {"record_date": ex, "ex_date": ex, "pay_date": pay, "declaration_date": None,
+         "amount": amount, "source": "test"}
+        for ex, pay, amount in [
+            ("2024-12-17", "2025-01-08", 0.165), ("2025-03-18", "2025-04-09", 0.165),
+            ("2025-06-17", "2025-07-09", 0.165), ("2025-09-16", "2025-10-08", 0.165),
+            ("2025-12-16", "2026-01-07", 0.25), ("2026-03-23", "2026-04-14", 0.25),
+        ]
+    ]
+    events, _ = _attributed_history_events(rows, "APH", False, 11)
+    annual = _aggregate_annual_dividends(events)
+    _mark_fiscal_finals(annual, {2025})
+    assert [event["date"].isoformat() for event in annual[2025]["events"]] == [
+        "2024-12-17", "2025-03-18", "2025-06-17", "2025-09-16"]
+    final = next(event for event in annual[2025]["events"] if event["is_final"])
+    assert final["date"].isoformat() == "2025-09-16"
+    assert [event["date"].isoformat() for event in annual[2026]["events"]][0] == "2025-12-16"
+
+
 def test_stockanalysis_fills_foreign_pay_dates_without_touching_amounts():
     """해외 종목 지급일은 StockAnalysis에서 가져오되 **금액은 건드리지 않는다**.
 
