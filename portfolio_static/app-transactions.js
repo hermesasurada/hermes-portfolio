@@ -178,6 +178,12 @@ function confirmTradeSave(payload) {
 // ── 종목 차트 '내역' 팝업(2026-10-26 사용자 지시) ─────────────────────────────
 // 그 종목의 전 계좌 거래를 모아 본다. 아래 거래내역 패널(선택 계좌 기준)과 별개.
 // 숨긴 거래는 흐리게 보여 주되 요약 합계에서는 뺀다(패널의 숨김 의미와 같게).
+// 최근 1년 거래만 보여 준다(2026-10-28 사용자 지시) — 기준은 오늘에서 1년 전 같은 날짜 이상.
+function tickerTransactionsRecent(rows, today = todayLocal()) {
+  const since = `${Number(today.slice(0, 4)) - 1}${today.slice(4, 10)}`;
+  return (rows || []).filter(tx => String(tx.trade_date || "") >= since);
+}
+
 function tickerTransactionSummary(rows) {
   const visible = (rows || []).filter(tx => !transactionIsHidden(tx));
   const side = kind => {
@@ -195,15 +201,19 @@ function tickerTransactionSummary(rows) {
   };
 }
 
-function tickerTransactionsSummaryMarkup(rows, ticker) {
+function tickerTransactionsSummaryMarkup(rows, ticker, olderCount = 0) {
   const s = tickerTransactionSummary(rows);
-  if (!s.buy.count && !s.sell.count) return s.hidden ? `<span class="flat">숨긴 거래 ${s.hidden}건만 있음</span>` : "";
+  const older = olderCount ? ` · 1년 전 ${olderCount}건 생략` : "";
+  if (!s.buy.count && !s.sell.count) {
+    if (s.hidden) return `<span class="flat">숨긴 거래 ${s.hidden}건만 있음${older}</span>`;
+    return older ? `<span class="flat">최근 1년 거래 없음${older}</span>` : "";
+  }
   const part = (label, cls, item) => item.count
     ? `<span class="ticker-tx-stat"><span class="change-cell pct-chip ${cls}">${label}</span> ${item.count}건 · ${tradeQtyText(item.qty, ticker)}주 · 평균 ${unitMoney(item.avg, s.currency, ticker)}</span>`
     : "";
   const period = s.first === s.last ? shortDateText(s.first) : `${shortDateText(s.first)} ~ ${shortDateText(s.last)}`;
   return [part("매수", "up", s.buy), part("매도", "down", s.sell),
-    `<span class="ticker-tx-stat flat">${esc(period)}${s.hidden ? ` · 숨김 ${s.hidden}건 제외` : ""}</span>`].join("");
+    `<span class="ticker-tx-stat flat">${esc(period)}${s.hidden ? ` · 숨김 ${s.hidden}건 제외` : ""}${older}</span>`].join("");
 }
 
 // 현재대비 = 거래 단가 대비 현재가 등락률(2026-10-26, 메모 칸 대신). 현재가는 차트에 보이는 가격.
@@ -215,8 +225,8 @@ function tickerTransactionChangePct(tx, currentPrice) {
   return (current - price) / price * 100;
 }
 
-function tickerTransactionsMarkup(rows, ticker, currentPrice = null) {
-  if (!rows?.length) return `<div class="ticker-tx-empty flat">이 종목의 거래내역이 없습니다.</div>`;
+function tickerTransactionsMarkup(rows, ticker, currentPrice = null, olderCount = 0) {
+  if (!rows?.length) return `<div class="ticker-tx-empty flat">${olderCount ? "최근 1년 거래내역이 없습니다." : "이 종목의 거래내역이 없습니다."}</div>`;
   const body = rows.map(tx => {
     const buy = String(tx.side).toUpperCase() === "BUY";
     const hidden = transactionIsHidden(tx);
@@ -248,10 +258,12 @@ async function openTickerTransactions(ticker, name, currentPrice = null) {
   body.innerHTML = `<div class="ticker-tx-empty flat">불러오는 중…</div>`;
   if (!modal.open) modal.showModal();
   try {
-    const rows = (await apiFetchTickerTransactions(ticker)).transactions || [];
-    summary.innerHTML = tickerTransactionsSummaryMarkup(rows, ticker);
+    const allRows = (await apiFetchTickerTransactions(ticker)).transactions || [];
+    const rows = tickerTransactionsRecent(allRows);
+    const olderCount = allRows.length - rows.length;
+    summary.innerHTML = tickerTransactionsSummaryMarkup(rows, ticker, olderCount);
     const price = currentPrice != null && Number.isFinite(Number(currentPrice)) ? Number(currentPrice) : currentPriceForTicker(ticker);
-    body.innerHTML = tickerTransactionsMarkup(rows, ticker, price);
+    body.innerHTML = tickerTransactionsMarkup(rows, ticker, price, olderCount);
   } catch (err) {
     body.innerHTML = `<div class="ticker-tx-empty error">${esc(err.message || String(err))}</div>`;
   }

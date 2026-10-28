@@ -39,6 +39,12 @@ assert.match(html, /<th>수량<\/th><th[^>]*>현재대비<\/th><th>금액<\/th>/
 assert.match(run('tickerTransactionsSummaryMarkup(__rows, "NVDA")'), /25\.01\.02 ~ 26\.10\.07/);
 assert.match(run('tickerTransactionsSummaryMarkup(__rows, "NVDA")'), /숨김 1건 제외/);
 assert.match(run('tickerTransactionsMarkup([], "NVDA")'), /거래내역이 없습니다/);
+// 최근 1년만(2026-10-28): 오늘 2026-10-28 → 2025-10-28 이상
+assert.deepEqual(json('tickerTransactionsRecent(__rows, "2026-10-28").map(tx => tx.id)'), [3, 2]);
+assert.deepEqual(json('tickerTransactionsRecent([{trade_date: "2025-10-28"}, {trade_date: "2025-10-27"}], "2026-10-28").map(tx => tx.trade_date)'), ['2025-10-28']);
+assert.match(run('tickerTransactionsSummaryMarkup(tickerTransactionsRecent(__rows, "2026-10-28"), "NVDA", 2)'), /1년 전 2건 생략/);
+assert.match(run('tickerTransactionsMarkup([], "NVDA", null, 3)'), /최근 1년 거래내역이 없습니다/);
+assert.match(run('tickerTransactionsSummaryMarkup([], "NVDA", 3)'), /최근 1년 거래 없음 · 1년 전 3건 생략/);
 // 차트 컨트롤 '거래' 묶음에 내역 버튼(소스 검사)
 assert.match(h.readStatic('app-line-chart.js'), /data-chart-tx-history/);
 console.log('ticker transactions popup ok');
