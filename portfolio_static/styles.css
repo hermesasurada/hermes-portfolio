@@ -6893,6 +6893,12 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     font-weight: 700;
   }
   .chart-bottom-controls .chart-indicator-caption { padding-left: 2px; }
+  /* 성과차트는 보조지표가 없어 한 줄(nowrap) — 100% 폭 줄바꿈 요소가 남으면 기간·부드럽게
+     버튼을 화면 왼쪽 밖으로 밀어낸다(2026-10-29 '모바일 성과차트 기간선택 없음') */
+  .chart-bottom-controls.perf-mode .chart-controls-break,
+  .chart-bottom-controls.perf-mode .chart-indicator-caption {
+    display: none;
+  }
   /* 두 줄이 된 만큼 버튼을 한 단계 낮게(30 → 26px) */
   .chart-bottom-controls:not(.perf-mode) .chart-head-toggle,
   .chart-bottom-controls:not(.perf-mode) .chart-range-btn {
