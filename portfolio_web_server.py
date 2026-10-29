@@ -12,6 +12,7 @@ import mimetypes
 import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import lan_guard  # 로컬·Tailscale 외 접속 차단(2026-10-30)
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
 from urllib.request import Request, urlopen
@@ -654,6 +655,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(message)s")
     initialize_schema()
     server = ThreadingHTTPServer((args.host, args.port), Handler)
+    lan_guard.guard_http_server(server)
     print(f"Serving portfolio web page on http://{args.host}:{args.port}")
     print(f"DB: {DB_PATH}")
     server.serve_forever()
