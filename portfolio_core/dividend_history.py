@@ -22,7 +22,7 @@ from .dates import parse_iso_date, positive_float, today_kst
 from .db import connect, ensure_stats_cache_table
 from .dividend_refresh import dividend_history_start
 from .dividend_schedule import estimated_jp_pay_date
-from .tickers import ticker_currency, normalize_tickers
+from .tickers import asset_class, ticker_currency, normalize_tickers
 
 # 공용 헬퍼 위임 — 테스트가 _today를 바꿔 '오늘'을 고정한다
 _today = today_kst
@@ -210,6 +210,7 @@ def _dividend_attribution(
     ticker: str,
     anchor_month: int | None = None,
     fiscal_end_month: int | None = None,
+    deferred_final: bool = False,
 ) -> tuple[date | None, int | None, bool]:
     entitlement_date = _entitlement_date(event)
     if entitlement_date is None:
@@ -224,14 +225,17 @@ def _dividend_attribution(
     if is_korean:
         is_final = entitlement_date.month == 12
         attributed_year = entitlement_date.year
-        # 결산배당 기준일을 다음 해로 옮긴 한국 기업: 연초 이사회 결의 + 1~3월
+        # 결산배당 기준일을 다음 해로 옮긴 한국 기업: 연초 이사회 결의 + 1~4월 초
         # 기준일이면 직전 사업연도 결산배당으로 귀속한다.
+        # 공시일이 없거나(yfinance 이력) 주총 뒤 결의(LG전자 3/31)인 회차는 deferred_final —
+        # 회차 배치로 판정한 결과 — 로도 귀속한다.
+        # 결의가 1~2월이면 기준일이 4월 초여도(SK 2026-04-01) 결산배당이다.
         if (
-            entitlement_date.month <= 3
+            entitlement_date.month <= 4
             and declaration_date is not None
             and declaration_date.year == entitlement_date.year
             and declaration_date.month <= 2
-        ):
+        ) or (entitlement_date.month <= 3 and deferred_final):
             attributed_year -= 1
             is_final = True
         return entitlement_date, attributed_year, is_final
@@ -495,6 +499,30 @@ def _mark_special_dividends(events: list[dict]) -> None:
             regular.append(event)
 
 
+def _korean_deferred_final_dates(event_rows: list) -> set[date]:
+    """결산배당 기준일을 이듬해 1~3월로 옮긴 한국 기업(삼성화재 2024~)의 결산배당 회차를 배치로 찾는다.
+    그해 첫 회차가 1~3월이고, 직전 해 12월 회차가 없고, 그보다 앞선 배당 이력이 있으면
+    직전 사업연도 결산배당으로 본다. 매년 12월 기준일이 있는 분기배당 기업의 3월 중간배당은
+    걸리지 않는다(2026-10-30 — 공시일 없는 2024·2025년 3월분이 그해 몫으로 잡혀 2025년에
+    두 해치가 합쳐지고 2023년이 비었다)."""
+    dates = sorted({d for d in (_entitlement_date(event) for event in event_rows) if d is not None})
+    december_years = {d.year for d in dates if d.month == 12}
+    seen_years: set[int] = set()
+    deferred: set[date] = set()
+    for index, d in enumerate(dates):
+        first_of_year = d.year not in seen_years
+        seen_years.add(d.year)
+        if first_of_year and index > 0 and d.month <= 3 and d.year - 1 not in december_years:
+            deferred.add(d)
+    # 이력의 첫 회차는 비교할 앞 회차가 없다 — 이듬해 같은 시기 회차가 이연 결산이면 같은 패턴으로 본다
+    # (HD한국조선해양 2025-02·2026-02가 한 해에 몰렸다).
+    if dates and dates[0].month <= 3 and any(
+        d.year == dates[0].year + 1 and abs(d.month - dates[0].month) <= 1 for d in deferred
+    ):
+        deferred.add(dates[0])
+    return deferred
+
+
 def _attributed_history_events(
     event_rows: list,
     ticker: str,
@@ -502,6 +530,7 @@ def _attributed_history_events(
     fiscal_end_month: int | None,
     splits: list[dict] | None = None,
     calendar_year: bool = False,
+    korean_fund: bool = False,
 ) -> tuple[list[dict], int]:
     """DB 행 → 귀속연도가 매겨진 이벤트 목록 + 결산배당 횟수."""
     # 해외 역년결산/신규배당 종목의 anchor — 오버라이드 우선, 없으면 가장 이른 배당 회차의 월
@@ -516,12 +545,15 @@ def _attributed_history_events(
                 anchor_month = first_date.month
                 break
 
+    # ETF 분배금은 결산배당이 아니다 — 1월 분배를 직전 해로 넘기지 않는다
+    deferred_finals = _korean_deferred_final_dates(event_rows) if is_korean and not korean_fund else set()
     events = []
     splits = splits or []
     final_dividend_count = 0
     for event in event_rows:
         entitlement_date, attributed_year, is_final = _dividend_attribution(
-            event, ticker, anchor_month, fiscal_end_month
+            event, ticker, anchor_month, fiscal_end_month,
+            deferred_final=_entitlement_date(event) in deferred_finals,
         )
         if entitlement_date is None or attributed_year is None:
             continue
@@ -950,6 +982,7 @@ def load_dividend_history(ticker: str) -> dict:
     events, final_dividend_count = _attributed_history_events(
         event_rows, ticker_row["ticker"], is_korean, fiscal_end_month, split_rows,
         calendar_year=monthly_distribution,
+        korean_fund=is_korean and asset_class(ticker_row["ticker"], ticker_row["name"]) == "etf",
     )
     annual = _aggregate_annual_dividends(events)
 

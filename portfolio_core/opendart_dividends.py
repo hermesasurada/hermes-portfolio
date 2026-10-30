@@ -116,11 +116,23 @@ def _corp_map() -> dict[str, str]:
 _stock_code = kr_ticker_code   # 공용 헬퍼 위임
 
 
+def _corp_lookup(code: str) -> tuple[str | None, str]:
+    """(corp_code, 주식종류). 우선주(끝자리 5, 1우)는 corpCode.xml에 따로 없어서 보통주(끝자리 0)
+    회사의 공시를 쓰고 '종류주식' 배당금을 읽는다(2026-10-30 — 삼성화재우·삼성전자우 누락).
+    2우B(7)·3우B(9) 등은 공시의 종류주식 한 줄이 어느 종류인지 보장되지 않아 대상에서 뺀다."""
+    corp_map = _corp_map()
+    if code in corp_map:
+        return corp_map[code], "common"
+    if re.fullmatch(r"\d{5}5", code) and code[:5] + "0" in corp_map:
+        return corp_map[code[:5] + "0"], "preferred"
+    return None, "common"
+
+
 def is_opendart_candidate(ticker: str) -> bool:
     if not _api_key():
         return False
     code = _stock_code(ticker)
-    return bool(re.fullmatch(r"\d{6}", code)) and code in _corp_map()
+    return bool(re.fullmatch(r"\d{6}", code)) and _corp_lookup(code)[0] is not None
 
 
 def _prev_business_day(d: date) -> date:
@@ -130,7 +142,7 @@ def _prev_business_day(d: date) -> date:
     return d
 
 
-def _parse_decision(rcept_no: str) -> dict | None:
+def _parse_decision(rcept_no: str, share_class: str = "common") -> dict | None:
     """현금ㆍ현물배당결정 공시 원문에서 배당 정보 추출."""
     key = _api_key()
     raw = _get(f"{_API}/document.xml?crtfc_key={key}&rcept_no={urllib.parse.quote(rcept_no)}")
@@ -146,7 +158,10 @@ def _parse_decision(rcept_no: str) -> dict | None:
     jong = grab(r"배당종류\s*([가-힣]+배당)")
     if jong and "현금" not in jong:  # 주식배당 등은 제외
         return None
-    amount_text = grab(r"1주당 배당금\(원\)\s*보통주식\s*([\d,]+)")
+    if share_class == "preferred":
+        amount_text = grab(r"1주당 배당금\(원\)\s*보통주식\s*[\d,\-]+\s*종류주식\s*([\d,]+)")
+    else:
+        amount_text = grab(r"1주당 배당금\(원\)\s*보통주식\s*([\d,]+)")
     record = grab(r"배당기준일\s*(\d{4}-\d{2}-\d{2})")
     pay = grab(r"배당금지급 예정일자\s*(\d{4}-\d{2}-\d{2})")
     if not amount_text or not record:
@@ -165,7 +180,7 @@ def fetch_opendart_dividends(ticker: str) -> list[dict]:
     if not key:
         return []
     code = _stock_code(ticker)
-    corp_code = _corp_map().get(code)
+    corp_code, share_class = _corp_lookup(code)
     if not corp_code:
         return []
     today = datetime.now(KST).date()
@@ -186,7 +201,7 @@ def fetch_opendart_dividends(ticker: str) -> list[dict]:
     by_record: dict[str, dict] = {}
     for filing in sorted(filings, key=lambda x: x.get("rcept_dt") or "", reverse=True):
         time.sleep(_DOC_PACING_SECONDS)
-        info = _parse_decision(filing["rcept_no"])
+        info = _parse_decision(filing["rcept_no"], share_class)
         if not info:
             continue
         record = info["record"]
