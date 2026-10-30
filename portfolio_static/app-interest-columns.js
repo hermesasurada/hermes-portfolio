@@ -143,7 +143,8 @@ const INTEREST_COLUMNS = [
   { key: "rating_rank", width: 66, label: "투자의견", headClass: "interest-leaf-head", group: "consensus",
     cell: (r, group) => `${ratingChipMarkup(r.rating_label)}` },
   // 맨 끝 칸: 찐관심 별 + 삭제(2026-10-30 별을 종목명 앞에서 이리로 옮김)
-  { key: "delete", width: 64, label: "", headClass: "group-start interest-leaf-head interest-delete-col", ariaLabel: "찐관심·삭제", cellClass: "group-start interest-delete-col", always: true,
+  // 버튼 두 개(26px×2)+칸 여백이 들어가야 해서 좁은 화면 축소(--col-scale)에서 뺀다 — 64px·축소 때 ×가 잘렸다
+  { key: "delete", width: 76, noScale: true, label: "", headClass: "group-start interest-leaf-head interest-delete-col", ariaLabel: "찐관심·삭제", cellClass: "group-start interest-delete-col", always: true,
     cell: (r, group) => `<span class="row-actions">${favoriteStarMarkup(r)}${isProtectedInterestItem(r, group)
         ? ""
         : group.fixed
@@ -204,6 +205,7 @@ function renderInterestFrame(table, columns) {
   table.dataset.columnKey = key;
   const columnWidth = column => column.key === "name"
     ? "var(--ticker-name-width, 165px)"
+    : column.noScale ? `${column.width}px`
     // 폭의 권위는 여전히 colgroup. 좁은 화면에서 한 번에 줄일 수 있도록 --col-scale만 곱한다
     // (기본 1 = 원래 폭). 종목명 열은 내용 폭으로 이미 측정돼 있어 그대로 둔다.
     : `calc(${column.width}px * var(--col-scale, 1))`;

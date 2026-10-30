@@ -744,8 +744,9 @@ function renderInterestMainTable() {
   // 표 전체 폭도 colgroup과 같은 --col-scale을 타야 한다. 여기만 원래 합을 쓰면
   // fixed 레이아웃이 남는 폭을 열마다 비례 배분해 축소가 통째로 무효가 된다.
   // 종목명 열은 내용 폭으로 측정된 값이라 배율에서 제외한다.
-  const scaled = columns.reduce((width, column) => width + (column.key === "name" ? 0 : column.width), 0);
-  table.style.width = `calc(${scaled}px * var(--col-scale, 1) + ${nameWidth}px)`;
+  const scaled = columns.reduce((width, column) => width + (column.key === "name" || column.noScale ? 0 : column.width), 0);
+  const fixed = columns.reduce((width, column) => width + (column.noScale ? column.width : 0), 0);
+  table.style.width = `calc(${scaled}px * var(--col-scale, 1) + ${nameWidth + fixed}px)`;
   table.style.minWidth = "100%";
   // 관심목록은 pc-frozen(JS)을 쓰지 않아 그쪽 후처리를 타지 않는다 — 10행 뷰포트
   // 높이는 여기서 직접 잡아 준다(그리기 전에 재면 행 높이가 0이라 rAF 뒤에).
