@@ -6665,9 +6665,10 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     padding: 0 6px;
     font-size: 12px;
   }
-  /* 값 칸 폭을 고정해 행마다 경계가 맞게 — 값 최장(▲127.8%·$41.81B 약 48px)+여백. 이름이 넘치면 말줄임 */
+  /* 이름 칸 폭을 고정해 행마다 경계가 맞게 — 이름 최장('5년 배당성장률'·'52주 고점 대비' 76px)+여백 12px.
+     값 칸 62px 고정·이름 칸 나머지(107px)였을 땐 이름 칸이 넓고 값($504.9B·▲216.1%)이 잘렸다(2026-10-30 사용자 지시) */
   .cstat-row {
-    grid-template-columns: minmax(0, 1fr) 62px;
+    grid-template-columns: 88px minmax(0, 1fr);
   }
   .cstat-k {
     padding-left: 6px;
