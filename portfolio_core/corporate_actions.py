@@ -31,14 +31,35 @@ def entitlement_date(event: Any) -> date | None:
     )
 
 
+def is_spinoff_factor(ratio: float | None) -> bool:
+    """야후 분할표의 '분사 조정계수'(GE 1.253, MMM 1.196, FDX 1.241, HON 0.9535 …)인가.
+
+    실제 분할·무상증자는 2:1, 1:10, 3:2, 5:4, 6:5(1.2), 23:20(1.15)처럼 비율(또는 역수)×20이
+    정수이거나 ×3이 정수(4:3, 1:3)다. 분사 계수는 그렇지 않다. 야후 가격 이력은 이 계수로도
+    조정돼 있어 총수익(배당 재투자) 계산엔 그대로 쓰되, 배당이력 팝업·증액 판정의 '주당배당금'은
+    실제 지급액이어야 하므로 표시 계산에서는 뺀다(2026-10-30 — GE 2023년 0.32가 0.255로 보였다).
+    """
+    value = positive_float(ratio)
+    if not value:
+        return False
+    for candidate in (value, 1.0 / value):
+        if abs(candidate * 20 - round(candidate * 20)) <= 0.002:
+            return False
+        if abs(candidate * 3 - round(candidate * 3)) <= 0.002:
+            return False
+    return True
+
+
 def split_adjusted_amount(
     amount: float,
     event_date: date,
     source: str | None,
     splits: list[dict],
+    display: bool = False,
 ) -> tuple[float, float]:
     """미조정 소스의 주당 배당금을 이후 분할 누적비로 나눠 현재 주식 단위로.
-    (조정된 금액, 적용 비율) 반환 — daily_prices의 분할보정 가격과 단위 일치."""
+    (조정된 금액, 적용 비율) 반환 — daily_prices의 분할보정 가격과 단위 일치.
+    display=True면 분사 조정계수(is_spinoff_factor)는 적용하지 않는다(실제 지급액 표시용)."""
     unadjusted = str(source or "").lower() in UNADJUSTED_DIVIDEND_SOURCES
     factor = 1.0
     for split in splits:
@@ -46,9 +67,31 @@ def split_adjusted_amount(
             continue
         split_date = parse_iso_date(split["split_date"])
         ratio = positive_float(split["ratio"])
+        if display and is_spinoff_factor(ratio):
+            continue
         if split_date and split_date > event_date and ratio:
             factor *= ratio
     return (amount / factor, factor) if abs(factor - 1.0) > 1e-12 else (amount, 1.0)
+
+
+DUPLICATE_SPLIT_DAYS = 10
+
+
+def dedupe_split_rows(splits: list[tuple[str, float]]) -> list[tuple[str, float]]:
+    """야후가 같은 분할을 며칠 차이로 두 번 주는 경우(MUD 2026-03-05·03-10 0.1, NVDS 2023-08-09·08-15 0.2)
+    첫 건만 남긴다. 그대로 두면 배당 분할보정이 두 번 걸려 10배·5배 틀어진다(2026-10-30)."""
+    kept: list[tuple[str, float]] = []
+    for split_date, ratio in sorted(splits):
+        day = parse_iso_date(split_date)
+        duplicate = any(
+            abs(float(ratio) / float(prev_ratio) - 1) < 0.001
+            and day is not None and (prev_day := parse_iso_date(prev_date)) is not None
+            and abs((day - prev_day).days) <= DUPLICATE_SPLIT_DAYS
+            for prev_date, prev_ratio in kept
+        )
+        if not duplicate:
+            kept.append((split_date, float(ratio)))
+    return kept
 
 
 def _split_source(split: Any) -> str:
@@ -236,7 +279,7 @@ def refresh_stock_splits(tickers: Iterable[str], force: bool = False) -> dict[st
     for ticker in due:
         now = now_kst_text()
         try:
-            splits = fetch_yahoo_stock_splits(ticker)
+            splits = dedupe_split_rows(fetch_yahoo_stock_splits(ticker))
             with connect() as conn:
                 ensure_stock_split_tables(conn)
                 existing_count = conn.execute(

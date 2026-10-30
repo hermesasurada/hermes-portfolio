@@ -15,6 +15,7 @@ from .corporate_actions import (
 )
 from .dates import parse_iso_date, positive_float, shift_months
 from .db import connect, ensure_technical_stats_cache_table
+from .listing_dates import load_listing_dates
 from .indicators import (
     atr_percent,
     bollinger_distance_pct,
@@ -66,15 +67,46 @@ def trend_performance(daily: list[float]) -> dict[str, float | None]:
     }
 
 
+# 접미사별 현지 기준지수 — 같은 날짜 수익률을 비교하므로 같은 시간대의 지수여야 한다.
+# 2026-10-30: 일본·대만·유럽 종목을 S&P 500과 비교하니 상관 중앙값이 0.06·0.13·0.19로
+# β가 0에 붙고(미쓰비시상사 β −0.01·β″ 2.78) β″만 변동성 배수로 남았다.
+BETA_BENCHMARK_BY_SUFFIX = {
+    ".T": "NIKKEI225",
+    ".TW": "TAIWAN",
+    ".HK": "HANGSENG",
+    ".SS": "SHANGHAI",
+    ".SZ": "SHANGHAI",
+    ".L": "FTSE100",
+    **{suffix: "EUROSTOXX50" for suffix in (".PA", ".DE", ".F", ".MI", ".MC", ".AS", ".BR", ".SW", ".ST", ".OL", ".CO", ".HE", ".LS", ".VI", ".IR")},
+}
+BETA_BENCHMARK_LABELS = {
+    "SP500": "S&P 500",
+    BETA_ADJ_KR_BENCHMARK: "KODEX 200TR",
+    "NIKKEI225": "Nikkei 225",
+    "TAIWAN": "Taiwan Weighted",
+    "HANGSENG": "Hang Seng",
+    "SHANGHAI": "Shanghai Composite",
+    "FTSE100": "FTSE 100",
+    "EUROSTOXX50": "Euro Stoxx 50",
+}
+
+
 def beta_benchmark(ticker: str) -> str:
-    """β·β″ 공통 기준지수. 한국 종목은 국내 지수(KODEX 200TR)를 쓴다.
+    """β·β″ 공통 기준지수. 한국은 KODEX 200TR, 그 밖의 해외 상장지는 현지 지수, 미국은 S&P 500.
 
     2026-09-19 사용자 지시로 β까지 통일했다. 그전에는 β만 S&P 500이라
     삼성전자 상관이 0.12로 베타가 사실상 잡음이었고(한국장이 먼저 닫혀
     같은 날짜의 두 수익률이 다른 정보를 담는다), β와 β″의 분모가 달라
     'β = 상관계수 × β″' 관계도 깨졌다. 같은 지수로 맞추면 둘 다 성립한다.
+    같은 이유로 2026-10-30부터 일본·대만·홍콩·중국·영국·유럽도 현지 지수를 쓴다.
     """
-    return BETA_ADJ_KR_BENCHMARK if is_korean_stock_ticker(ticker.strip().upper()) else BETA_BENCHMARK
+    clean = ticker.strip().upper()
+    if is_korean_stock_ticker(clean):
+        return BETA_ADJ_KR_BENCHMARK
+    if "." in clean:
+        suffix = "." + clean.rsplit(".", 1)[1]
+        return BETA_BENCHMARK_BY_SUFFIX.get(suffix, BETA_BENCHMARK)
+    return BETA_BENCHMARK
 
 
 # 예전 이름 — 외부에서 참조하던 코드가 있으면 그대로 동작하게 남긴다.
@@ -558,6 +590,11 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
         ).fetchall()
         for row in rows:
             grouped[row["ticker"]].append(row)
+        # 상장일 이전 가격(SPAC 합병 전 10달러대, DELL의 추적주 DVMT 등)은 그 종목의 가격이 아니다 —
+        # 수익률·추세·β·손익비에 넣지 않는다(2026-10-30: OKLO 3·5년 수익률이 전부 SPAC 가격이었다).
+        for ticker, list_date in load_listing_dates(conn, clean_tickers).items():
+            if list_date and grouped.get(ticker):
+                grouped[ticker] = [row for row in grouped[ticker] if row["date"] >= list_date]
 
         # 총수익(배당 재투자) 시계열 재료 — 배당·분할·FX·배당수익률 일괄 로딩
         ticker_placeholders = placeholders(clean_tickers)

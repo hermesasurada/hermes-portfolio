@@ -25,6 +25,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+from .market_calendar import korea_equity_calendar_day
 from .paths import KST, LOGO_DIR
 from .tickers import kr_ticker_code
 
@@ -136,10 +137,22 @@ def is_opendart_candidate(ticker: str) -> bool:
 
 
 def _prev_business_day(d: date) -> date:
+    """기준일 직전 KRX 거래일 — 주말과 공휴일(광복절·대체휴일 등)을 모두 건너뛴다(2026-10-30)."""
     d -= timedelta(days=1)
-    while d.weekday() >= 5:  # 토(5)·일(6) 건너뜀
+    while korea_equity_calendar_day(d)["status"] != "open":
         d -= timedelta(days=1)
     return d
+
+
+# 지주사가 자회사(은행·SKT·SK하이닉스 등)의 배당을 알리는 공시 — 보고서 이름에 같은
+# '현금ㆍ현물배당결정'이 들어가지만 그 자회사 1주당 금액이라 모회사 배당이 아니다
+# (2026-10-30: JB·BNK·신한·하나·우리·HD현대·LS·SK·SK스퀘어 등 11종목에 섞여 들어갔다).
+SUBSIDIARY_FILING_MARKERS = ("자회사", "종속회사")
+
+
+def is_own_dividend_filing(report_nm: str | None) -> bool:
+    name = str(report_nm or "")
+    return "현금ㆍ현물배당결정" in name and not any(marker in name for marker in SUBSIDIARY_FILING_MARKERS)
 
 
 def _parse_decision(rcept_no: str, share_class: str = "common") -> dict | None:
@@ -193,10 +206,7 @@ def fetch_opendart_dividends(ticker: str) -> list[dict]:
     data = json.loads(_get(list_url).decode("utf-8"))
     if data.get("status") != "000":
         return []
-    filings = [
-        x for x in data.get("list", [])
-        if "현금ㆍ현물배당결정" in (x.get("report_nm") or "")
-    ]
+    filings = [x for x in data.get("list", []) if is_own_dividend_filing(x.get("report_nm"))]
     # 같은 배당(배당기준일)의 정정은 최신 접수건이 우선 → record_date별 최신만
     by_record: dict[str, dict] = {}
     for filing in sorted(filings, key=lambda x: x.get("rcept_dt") or "", reverse=True):

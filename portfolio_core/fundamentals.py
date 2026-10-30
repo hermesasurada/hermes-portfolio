@@ -52,14 +52,12 @@ def history_backed_dividend_yield(
     ticker: str,
     current_price=None,
 ) -> float | None:
-    """한국 종목의 시세 원천이 배당값을 비워도 수집된 배당이력으로 보완한다.
+    """시세 원천이 배당값을 비우면 수집된 배당이력으로 보완한다(2026-10-30부터 해외도).
 
     배당이력의 귀속연도·지급주기·특별배당 판정은 dividends 모듈의 기존
     연환산 로직을 그대로 사용한다. 따라서 단순히 최근 지급액을 4배 하는
     것보다 연배당·반기배당과 확정된 향후 배당을 정확히 반영한다.
     """
-    if not is_korean_stock_ticker(ticker):
-        return None
     price = finite_float(current_price)
     if price is None or price <= 0:
         try:
@@ -88,13 +86,64 @@ def history_backed_dividend_yield(
     return dividend_yield_from_run_rate(summary.get("annualized_run_rate"), price)
 
 
+MONTHLY_ETF_YIELD_DIVERGENCE = 2.0   # 야후 후행 배당율이 최근 12개월 분배 기준의 2배 넘게 어긋나면 이력값
+
+
+def monthly_distribution_history_yield(
+    conn: sqlite3.Connection, ticker: str, name: str | None, current_price=None, etf: bool | None = None,
+) -> float | None:
+    """월분배 ETF는 분배금이 몇 달 만에 크게 바뀌는데 야후 dividendYield는 후행이다
+    (BITO 28.6% 표시, 최근 12개월 실제 1.3% — 2026-10-30). 이력 run-rate를 돌려준다(월분배 ETF만)."""
+    if not (etf if etf is not None else asset_class(ticker, name or "") == "etf"):
+        return None
+    try:
+        from .dividend_history import load_dividend_history
+
+        summary = load_dividend_history(ticker).get("summary") or {}
+    except (KeyError, TypeError, ValueError, sqlite3.Error):
+        return None
+    if summary.get("frequency") != 12:
+        return None
+    price = finite_float(current_price)
+    if price is None or price <= 0:
+        row = conn.execute(
+            "SELECT close FROM daily_prices WHERE ticker = ? AND close > 0 ORDER BY date DESC LIMIT 1", (ticker,),
+        ).fetchone()
+        price = finite_float(row["close"]) if row else None
+    return dividend_yield_from_run_rate(summary.get("annualized_run_rate"), price)
+
+
 def apply_history_dividend_yield(
     conn: sqlite3.Connection,
     ticker: str,
     data: dict,
     current_price=None,
+    name: str | None = None,
+    collected: bool = False,
+    etf: bool | None = None,
 ) -> dict:
-    if finite_float(data.get("dividend_yield")) is not None:
+    """collected=True(방금 수집해 저장하는 길)에서만 해외 종목의 이력 폴백·월분배 ETF 보정을 한다 —
+    읽기 경로(/api/stats)는 배당 없는 종목 수백 개의 배당이력을 매 요청마다 읽을 수 없다. 한국 종목의
+    네이버 결측 폴백은 예전대로 읽기 경로에서도 동작한다."""
+    current = finite_float(data.get("dividend_yield"))
+    # 야후는 레버리지·단일종목 ETF의 분배를 0으로 주는 일이 잦다(TSL 이력 43%, UBRL 19%) — ETF의 0은 결측으로 본다
+    # (name은 한글 노출명칭일 수 있어 브랜드 판정이 안 된다 — 수집부가 야후 quoteType으로 판정한 etf를 넘긴다)
+    is_etf = etf if etf is not None else asset_class(ticker, name or "") == "etf"
+    if current == 0 and collected and not is_korean_stock_ticker(ticker) and is_etf:
+        current = None
+    if current is not None:
+        if not collected or is_korean_stock_ticker(ticker):
+            return data
+        history = monthly_distribution_history_yield(conn, ticker, name, current_price, etf=is_etf)
+        if history is None or history <= 0:
+            return data
+        ratio = max(current, history) / min(current, history) if min(current, history) > 0 else float("inf")
+        if ratio <= MONTHLY_ETF_YIELD_DIVERGENCE:
+            return data
+        result = dict(data)
+        result["dividend_yield"] = history
+        return result
+    if not collected and not is_korean_stock_ticker(ticker):
         return data
     derived = history_backed_dividend_yield(conn, ticker, current_price)
     if derived is None:
@@ -211,7 +260,15 @@ def load_stats_cache_items(
             "next_earnings_date": row["next_earnings_date"],
         }
         if row["source"] == "yfinance":
+            stored_yield = item["dividend_yield"]
             item.update(yfinance_profile_metrics(row["raw_json"]))
+            # 수집 시점에 이력으로 바로잡은 배당율(월분배 ETF 후행치 교정·야후 0/결측 폴백)은 raw 재검증이
+            # 덮어쓰면 안 된다 — raw 값이 없거나 0이거나 저장값과 2배 넘게 다르면 저장값을 쓴다(2026-10-30).
+            raw_yield = item["dividend_yield"]
+            if stored_yield is not None and (
+                not raw_yield or max(stored_yield, raw_yield) / min(stored_yield, raw_yield) > MONTHLY_ETF_YIELD_DIVERGENCE
+            ):
+                item["dividend_yield"] = stored_yield
         result[row["ticker"]] = item
     return result
 
@@ -353,13 +410,13 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
     for ticker in tickers:
         cached = cached_items.get(ticker)
         if cached:
-            cached = apply_history_dividend_yield(conn, ticker, cached)
+            cached = apply_history_dividend_yield(conn, ticker, cached, name=ticker_meta.get(ticker, {}).get("name"))
             cached["next_earnings_date"] = earnings_by_ticker.get(ticker)
             result[ticker] = cached
             continue
         stale = stale_items.get(ticker)
         if stale:
-            stale = apply_history_dividend_yield(conn, ticker, stale)
+            stale = apply_history_dividend_yield(conn, ticker, stale, name=ticker_meta.get(ticker, {}).get("name"))
             stale["next_earnings_date"] = earnings_by_ticker.get(ticker)
             if not refresh_stale:
                 result[ticker] = stale
@@ -372,6 +429,7 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
         source = "unknown"
         raw: dict | None = None
         fetched = False
+        collected_etf: bool | None = None
         try:
             if is_korean_stock_ticker(ticker):
                 data, raw = fetch_naver_fundamentals(ticker)
@@ -391,6 +449,7 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
                     meta_name = ticker_meta.get(ticker, {}).get("name")
                     quote_type = str(info.get("quoteType") or "").upper()
                     is_etf = quote_type == "ETF" or asset_class(ticker, info_name or meta_name or "") == "etf"
+                    collected_etf = is_etf
                     aum = None
                     if is_etf:
                         aum = finite_float(info.get("totalAssets"))
@@ -429,7 +488,10 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
         if fetched:
             data["next_earnings_date"] = earnings_by_ticker.get(ticker)
             current_price = parse_number(raw.get("nowPrice")) if source == "naver" and raw else None
-            data = apply_history_dividend_yield(conn, ticker, data, current_price)
+            data = apply_history_dividend_yield(
+                conn, ticker, data, current_price, name=ticker_meta.get(ticker, {}).get("name"),
+                collected=True, etf=collected_etf,
+            )
             save_stats_cache_item(conn, ticker, source, data, raw)
             # 펀더멘털 네트워크 조회는 종목 수에 따라 오래 걸린다. 종목별로
             # 커밋해 분 단위 가격 스냅샷의 SQLite 쓰기를 장시간 막지 않는다.

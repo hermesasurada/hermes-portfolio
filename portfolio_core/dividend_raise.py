@@ -68,7 +68,7 @@ def regular_dividend_series(ticker: str, event_rows: list, split_rows: list[dict
         for component_amount, special_override in _dividend_components(
             ticker, event_date, float(event["amount"])
         ):
-            amount, _factor = split_adjusted_amount(component_amount, event_date, event["source"], split_rows)
+            amount, _factor = split_adjusted_amount(component_amount, event_date, event["source"], split_rows, display=True)
             events.append({
                 "date": event_date,
                 "ex_date": parse_iso_date(event["ex_date"]),

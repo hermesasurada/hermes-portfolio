@@ -270,6 +270,9 @@ def _kr_history_attempt_due(ticker: str, status: str | None) -> bool:
     return _kr_dividend_candidate(ticker) and _source_attempt_due("kr_history", status)
 
 
+NASDAQ_NONCASH_MULTIPLE = 40
+
+
 def _fetch_nasdaq_dividends(ticker: str) -> list[dict]:
     url = f"https://api.nasdaq.com/api/quote/{ticker}/dividends?assetclass=stocks"
     headers = {
@@ -281,6 +284,10 @@ def _fetch_nasdaq_dividends(ticker: str) -> list[dict]:
         payload = json.loads(resp.read().decode("utf-8"))
     rows = (((payload.get("data") or {}).get("dividends") or {}).get("rows") or [])
     events = []
+    amounts = sorted(
+        value for value in (_amount_from_text(row.get("amount")) for row in rows) if value and value > 0
+    )
+    typical = amounts[len(amounts) // 2] if amounts else None
     for row in rows:
         ex_date = _date_from_us_text(row.get("exOrEffDate"))
         amount = _amount_from_text(row.get("amount"))
@@ -288,6 +295,10 @@ def _fetch_nasdaq_dividends(ticker: str) -> list[dict]:
             continue
         dividend_type = str(row.get("type") or "").lower()
         if dividend_type and "cash" not in dividend_type:
+            continue
+        # 분사 분배(HON 2026-06-29 110.505달러 = 항공 사업 주식 가치)를 'Cash'로 적어 준다 —
+        # 통상 배당의 40배가 넘는 건은 현금배당이 아니다(2026-10-30). 특별배당은 그 안에 든다(COST 15×).
+        if typical and amount > NASDAQ_NONCASH_MULTIPLE * typical:
             continue
         events.append(
             {
@@ -584,6 +595,10 @@ def _fetch_yahoo_dividends(ticker: str) -> list[dict]:
             "currency": currency,
             "source": "yf-calendar",
         }
+        # 캘린더의 'Dividend Date'가 지난 회차 지급일인 채 남아 있을 때가 있다(RO.SW 2026-03-12 배당락에
+        # 2025-03-31 지급) — 배당락일보다 앞선 지급일은 버린다(2026-10-30).
+        if pay_date and pay_date < ex_date:
+            pay_date = None
         event["pay_date"] = pay_date or event.get("pay_date")
         event["source"] = "yf-calendar"
         events[ex_date] = event
@@ -744,4 +759,27 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
     if _polygon_candidate(ticker) and _polygon_api_key():
         _collect_source(ticker, "polygon", _fetch_polygon_dividends, events, sources)
 
-    return normalize_dividend_events(ticker, list(events.values())), "+".join(sources) or "none"
+    return normalize_dividend_events(ticker, _drop_shadowed_calendar_events(events)), "+".join(sources) or "none"
+
+
+def _drop_shadowed_calendar_events(events: dict[str, dict]) -> list[dict]:
+    """야후 캘린더가 폴리곤과 하루 다른 배당락일로 같은 배당을 또 주면(TGT·PCAR 2026-11) 캘린더 행을 버린다.
+    캘린더 행은 지급일이 지난 회차 것일 때도 있어(TGT 11-11 배당락에 09-01 지급) 남기면 해로울 뿐이다."""
+    confirmed: list[date] = []
+    for event in events.values():
+        if event.get("source") != "yf-calendar":
+            try:
+                confirmed.append(date.fromisoformat(str(event.get("ex_date"))))
+            except (TypeError, ValueError):
+                pass
+    kept = []
+    for event in events.values():
+        if event.get("source") == "yf-calendar" and confirmed:
+            try:
+                ex = date.fromisoformat(str(event.get("ex_date")))
+            except (TypeError, ValueError):
+                ex = None
+            if ex is not None and any(abs((ex - day).days) <= 3 for day in confirmed):
+                continue
+        kept.append(event)
+    return kept

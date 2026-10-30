@@ -51,8 +51,16 @@ def ticker_currency(ticker: str) -> str:
         return "KRW"
     if ticker.endswith(KOREAN_SUFFIXES):
         return "KRW"
-    if ticker.endswith((".PA", ".DE")):
+    # .MI/.MC/.OL/.ST를 몰라 USD로 돌려줬고, 그 값이 yfinance 배당 행의 통화로 저장돼
+    # ENEL·IBE·LDO(EUR)·KOG(NOK)·SAAB(SEK) 배당 80행이 USD로 적혔다(2026-10-30).
+    if ticker.endswith((".PA", ".DE", ".MI", ".MC", ".AS", ".BR", ".HE", ".LS", ".VI", ".IR", ".F")):
         return "EUR"
+    if ticker.endswith(".OL"):
+        return "NOK"
+    if ticker.endswith(".ST"):
+        return "SEK"
+    if ticker.endswith(".CO"):
+        return "DKK"
     if ticker.endswith(".L"):
         return "GBP"
     if ticker.endswith(".SW"):

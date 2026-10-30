@@ -312,7 +312,7 @@ function betaText(v) {
 }
 /* β·β″ 설명은 여기 한 곳에서만 쓴다 — 관심목록 헤더, 계좌표 헤더, 종목 상세 지표가
    같은 문구를 공유한다. 산식의 단일 진실은 서버(technical_stats.py::beta_stats). */
-const BETA_BENCHMARK_NOTE = "기준지수: 한국 종목은 KODEX 200TR(278530.KS), 그 외는 S&P 500";
+const BETA_BENCHMARK_NOTE = "기준지수: 한국 KODEX 200TR(278530.KS) · 일본 Nikkei 225 · 대만 Taiwan Weighted · 홍콩 Hang Seng · 중국 Shanghai · 영국 FTSE 100 · 유럽 Euro Stoxx 50 · 그 외 S&P 500 (같은 시간대 지수끼리 비교)";
 const BETA_TOOLTIP = [
   "지수와 같이 움직인 정도 · 최근 252거래일(약 1년) 일간 수익률",
   "공분산(종목, 지수) ÷ 지수 분산",

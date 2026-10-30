@@ -1177,6 +1177,10 @@ def test_ticker_currency():
     assert ticker_currency("005930.KS") == "KRW"
     assert ticker_currency("000660.KQ") == "KRW"
     assert ticker_currency("ASML.PA") == "EUR"
+    assert ticker_currency("ENEL.MI") == "EUR"
+    assert ticker_currency("IBE.MC") == "EUR"
+    assert ticker_currency("KOG.OL") == "NOK"
+    assert ticker_currency("SAAB-B.ST") == "SEK"
     assert ticker_currency("7203.T") == "JPY"
     assert ticker_currency("AAPL") == "USD"
 
@@ -3417,8 +3421,16 @@ def test_beta_korean_benchmark_cache_routing():
 
     for ticker in ("005930.KS", "0167Z0.KS", "278530.KS", "000660.KQ", " 005930.ks "):
         assert technical.beta_benchmark(ticker) == "278530.KS"
-    for ticker in ("AAPL", "4063.T", "KOSPI", "BTCKRW"):
+    for ticker in ("AAPL", "KOSPI", "BTCKRW", "BRK-B"):
         assert technical.beta_benchmark(ticker) == "SP500"
+    # 2026-10-30: 해외 상장지는 같은 시간대의 현지 지수
+    assert technical.beta_benchmark("4063.T") == "NIKKEI225"
+    assert technical.beta_benchmark("2330.TW") == "TAIWAN"
+    assert technical.beta_benchmark("0700.HK") == "HANGSENG"
+    assert technical.beta_benchmark("300750.SZ") == "SHANGHAI"
+    assert technical.beta_benchmark("RR.L") == "FTSE100"
+    for ticker in ("SU.PA", "SAP.DE", "ENEL.MI", "IBE.MC", "KOG.OL", "SAAB-B.ST", "RO.SW"):
+        assert technical.beta_benchmark(ticker) == "EUROSTOXX50"
 
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row

@@ -286,6 +286,11 @@ def _dividend_frequency(
         if current_year - 3 <= year < current_year and count > 0
     ]
     count_hint = max(recent_counts, default=0)
+    # 회차 수가 간격 판정보다 높은 주기를 가리키면 최근 3년 중 두 해 이상이 그 수를 뒷받침해야 한다.
+    # 귀속연도 재라벨이 반기배당 회차를 한 해에 3개 몰아넣어(미쓰비시상사 2023, 고마쓰 2025) 일본
+    # 반기배당 10종목이 분기배당으로 잡히고 연환산이 2배였다(2026-10-30).
+    if interval_hint is not None and count_hint and sum(1 for count in recent_counts if count >= count_hint) < 2:
+        count_hint = max((count for count in recent_counts if count < count_hint), default=0)
     count_hint = 12 if count_hint >= 8 else 4 if count_hint >= 3 else 2 if count_hint == 2 else 1 if count_hint else None
     return max(interval_hint or 1, count_hint or 1)
 
@@ -573,7 +578,7 @@ def _attributed_history_events(
             if distribution_type == "capital_gain" and special_override is None:
                 special_override = True
             amount, split_factor = split_adjusted_amount(
-                component_amount, entitlement_date, event["source"], splits
+                component_amount, entitlement_date, event["source"], splits, display=True
             )
             events.append(
                 {
@@ -634,7 +639,10 @@ def _attributed_history_events(
                 amount = float(event["amount"])
                 same_cycle = _same_dividend_cycle_amount(amount, previous_amount)
                 new_dividend_year = bool(cycle) and event["date"].month == raise_month
-                if cycle and (len(cycle) >= 4 or not same_cycle or new_dividend_year):
+                # 직전 회차와 300일 넘게 떨어진 회차는 새 해다 — 연배당이 몇 년 동결이면(CCJ 0.08×4년,
+                # LDO.MI 0.14×3년, 로레알 2019·2020) 같은 금액 묶음이 여러 해를 한 행으로 합쳤다(2026-10-30).
+                annual_gap = bool(cycle) and (event["date"] - cycle[-1]["date"]).days > 300
+                if cycle and (len(cycle) >= 4 or not same_cycle or new_dividend_year or annual_gap):
                     label_year = cycle[0]["date"].year
                     for item in cycle:
                         item["year"] = label_year
@@ -967,7 +975,7 @@ def load_dividend_history(ticker: str) -> dict:
                 if special_override is True:
                     continue
                 amount, _factor = split_adjusted_amount(
-                    component_amount, event_date, event["source"], split_rows
+                    component_amount, event_date, event["source"], split_rows, display=True
                 )
                 adjusted_events.append({"date": event_date, "amount": amount})
         adjusted_events.sort(key=lambda item: item["date"])

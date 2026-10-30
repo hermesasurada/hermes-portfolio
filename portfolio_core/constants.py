@@ -29,6 +29,9 @@ FX_DEFAULT_RATES = {
     "AUD": 950.0,
     "SGD": 1130.0,
     "HKD": 185.0,
+    "NOK": 140.0,
+    "SEK": 150.0,
+    "DKK": 225.0,
     "KRW": 1.0,
 }
 CRYPTO_MARKETS = {
