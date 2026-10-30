@@ -33,6 +33,13 @@ SPECIAL_GROUP_BY_CATEGORY = {
     "index": "주요 지수",
     "fx": "환율",
 }
+# 즐겨찾기 그룹 — 목록 종목명 옆 별(★)로만 넣고 빼는 고정 그룹(2026-10-30 사용자 지시).
+# 삭제·이름변경 불가, 없으면 첫 별 클릭 때 만든다.
+FAVORITE_GROUP_NAME = "찐관심"
+
+
+def is_favorite_group(group_name: str | None) -> bool:
+    return str(group_name or "").casefold() == FAVORITE_GROUP_NAME.casefold()
 
 
 def initial_group_name(ticker: str, name: str, category: str | None, currency: str | None) -> str:
@@ -301,6 +308,7 @@ def load_interest_watchlists() -> dict:
         {
             "id": int(row["id"]),
             "name": row["name"],
+            **({"favorite": True} if is_favorite_group(row["name"]) else {}),
             "items": by_group.get(int(row["id"]), []),
         }
         for row in groups
@@ -363,11 +371,14 @@ def rename_interest_group(payload: dict) -> dict:
     if len(name) > 40:
         raise ValueError("그룹명은 40자 이내로 입력해야 합니다.")
     with connect() as conn:
-        if not conn.execute(
-            "SELECT 1 FROM interest_watchlist_groups WHERE id = ?",
+        group = conn.execute(
+            "SELECT name FROM interest_watchlist_groups WHERE id = ?",
             (group_id,),
-        ).fetchone():
+        ).fetchone()
+        if not group:
             raise ValueError("그룹을 찾지 못했습니다.")
+        if is_favorite_group(group["name"]):
+            raise ValueError(f"{FAVORITE_GROUP_NAME} 그룹은 이름을 바꿀 수 없습니다.")
         duplicate = conn.execute(
             """
             SELECT 1
@@ -425,6 +436,8 @@ def delete_interest_group(payload: dict) -> dict:
             raise ValueError("그룹을 찾지 못했습니다.")
         if protected_group_required_category(group["name"]):
             raise ValueError("지수/환율 그룹은 삭제할 수 없습니다.")
+        if is_favorite_group(group["name"]):
+            raise ValueError(f"{FAVORITE_GROUP_NAME} 그룹은 삭제할 수 없습니다.")
         conn.execute("DELETE FROM interest_watchlist_items WHERE group_id = ?", (group_id,))
         conn.execute("DELETE FROM interest_watchlist_groups WHERE id = ?", (group_id,))
         conn.commit()
@@ -474,6 +487,37 @@ def add_interest_item(payload: dict) -> dict:
             """,
             (group_id, ticker, next_order, now_text()),
         )
+        conn.commit()
+    return load_interest_watchlists()
+
+
+def set_favorite_item(payload: dict) -> dict:
+    """별 토글 — favorite=true면 찐관심에 넣고 false면 뺀다. 이미 그 상태면 그대로 둔다."""
+    ticker = str(payload.get("ticker") or "").strip().upper()
+    favorite = payload.get("favorite")
+    if not ticker or not isinstance(favorite, bool):
+        raise ValueError("종목과 즐겨찾기 상태가 필요합니다.")
+    with connect() as conn:
+        ticker_row = conn.execute(
+            "SELECT ticker, COALESCE(category, '') AS category FROM tickers WHERE UPPER(ticker) = ?",
+            (ticker,),
+        ).fetchone()
+        if favorite:
+            if not ticker_row:
+                raise ValueError("가격수집 대상에 등록된 종목만 추가할 수 있습니다.")
+            if str(ticker_row["category"] or "").lower() in {"index", "fx"}:
+                raise ValueError("지수/환율 항목은 즐겨찾기할 수 없습니다.")
+            insert_interest_item_if_missing(conn, ensure_group_by_name(conn, FAVORITE_GROUP_NAME), ticker_row["ticker"])
+        else:
+            conn.execute(
+                """
+                DELETE FROM interest_watchlist_items
+                WHERE UPPER(ticker) = ? AND group_id IN (
+                    SELECT id FROM interest_watchlist_groups WHERE name = ? COLLATE NOCASE
+                )
+                """,
+                (ticker, FAVORITE_GROUP_NAME),
+            )
         conn.commit()
     return load_interest_watchlists()
 

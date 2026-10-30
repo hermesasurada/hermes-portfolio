@@ -44,6 +44,7 @@
   --sell: #e5484d;
   --warn: #b7791f;
   --raise-expected: #c9a000;  /* 배당 증액 예상(노랑에 가까운 황금색, 빨강과 구분) */
+  --favorite: #f0a500;  /* 찐관심 별 */
   --focus: #2563eb;
   --focus-soft: rgba(37, 99, 235, .18);
   /* interactive surfaces */
@@ -143,6 +144,7 @@
     --sell: #fb7185;
     --warn: #fbbf24;
     --raise-expected: #facc15;
+    --favorite: #fbbf24;
     --focus: #60a5fa;
     --focus-soft: rgba(96, 165, 250, .24);
     --accent-soft: #112f53;
@@ -2286,11 +2288,42 @@ th.pc-frozen-edge {
 .asset-icon .fallback-text { position: relative; z-index: 0; }
 .asset-icon.has-image .fallback-text { visibility: hidden; }
 .ticker-text {
-  display: grid;
-  gap: 2px;
+  display: flex;
+  align-items: flex-start;
+  gap: 3px;
   min-width: 0;
   max-width: 220px;
   flex: 1 1 auto;
+}
+/* 종목명 앞 별 — 누르면 찐관심에 넣고 뺀다(관심목록 팝업 대신, 2026-10-30) */
+.fav-star {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 17px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 17px;
+  cursor: pointer;
+  opacity: .35;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+tr:hover .fav-star,
+.fav-star:focus-visible {
+  opacity: .8;
+}
+.fav-star:hover {
+  color: var(--favorite);
+  opacity: 1;
+}
+.fav-star.on {
+  color: var(--favorite);
+  opacity: 1;
+}
+.fav-star:disabled {
+  cursor: progress;
 }
 .ticker-link {
   height: auto;

@@ -42,6 +42,7 @@ from portfolio_core.interest_watchlists import (
     load_interest_watchlists,
     reorder_interest_groups,
     rename_interest_group,
+    set_favorite_item,
 )
 from portfolio_core.paths import DB_PATH, LOGO_DIR
 from portfolio_core.portfolio import load_portfolio as load_portfolio_data
@@ -544,6 +545,9 @@ class Handler(BaseHTTPRequestHandler):
     def post_interest_item(self) -> dict:
         return add_interest_item(self.read_json())
 
+    def post_interest_favorite(self) -> dict:
+        return set_favorite_item(self.read_json())
+
     def post_interest_item_delete(self) -> dict:
         return delete_interest_item(self.read_json())
 
@@ -636,6 +640,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/interest-watchlists/groups/delete": self.post_interest_group_delete,
                 "/api/interest-watchlists/items": self.post_interest_item,
                 "/api/interest-watchlists/items/delete": self.post_interest_item_delete,
+                "/api/interest-watchlists/favorite": self.post_interest_favorite,
                 "/api/tickers/display-name": self.post_ticker_display_name,
                 "/api/tags": self.post_ticker_tags,
             }

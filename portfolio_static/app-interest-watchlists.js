@@ -112,8 +112,49 @@ function resolveInterestTicker(value) {
   return ticker ? ticker : null;
 }
 
-function interestGroupIcon(name, fixed = false) {
+// 찐관심 — 목록 종목명 앞 별로만 넣고 빼는 고정 그룹(서버가 favorite 표시, 2026-10-30)
+function favoriteInterestGroup() {
+  return interestWatchlists.find(group => group.favorite) || null;
+}
+
+let favoriteTickerCache = { source: null, set: new Set() };
+function favoriteTickerSet() {
+  if (favoriteTickerCache.source !== interestWatchlists) {
+    const items = favoriteInterestGroup()?.items || [];
+    favoriteTickerCache = { source: interestWatchlists, set: new Set(items.map(item => String(item.ticker).toUpperCase())) };
+  }
+  return favoriteTickerCache.set;
+}
+
+const favoritePending = new Set();
+function favoriteStarMarkup(row) {
+  const category = String(row?.category || "").toLowerCase();
+  if (!interestWatchlistsLoaded || !row?.ticker || category === "index" || category === "fx") return "";
+  const on = favoriteTickerSet().has(String(row.ticker).toUpperCase());
+  const label = on ? "찐관심에서 빼기" : "찐관심에 추가";
+  return `<button class="fav-star${on ? " on" : ""}" type="button" data-favorite-ticker="${esc(row.ticker)}"
+    aria-pressed="${on}" aria-label="${esc(row.name || row.ticker)} ${label}" title="${label}"
+    ${favoritePending.has(row.ticker) ? "disabled" : ""}>${on ? "★" : "☆"}</button>`;
+}
+
+async function toggleFavorite(ticker) {
+  if (!ticker || favoritePending.has(ticker)) return;
+  const next = !favoriteTickerSet().has(String(ticker).toUpperCase());
+  favoritePending.add(ticker);
+  document.querySelectorAll(`[data-favorite-ticker="${CSS.escape(ticker)}"]`).forEach(button => { button.disabled = true; });
+  try {
+    applyInterestWatchlistPayload(await apiSetFavorite(ticker, next));
+  } catch (err) {
+    window.alert(err.message || String(err));
+  } finally {
+    favoritePending.delete(ticker);
+    document.querySelectorAll(`[data-favorite-ticker="${CSS.escape(ticker)}"]`).forEach(button => { button.disabled = false; });
+  }
+}
+
+function interestGroupIcon(name, fixed = false, favorite = false) {
   if (fixed) return "…";
+  if (favorite) return "★";
   const text = String(name || "");
   if (text.includes("지수")) return "📈";
   if (text.includes("환율")) return "₩";
@@ -138,8 +179,9 @@ function isProtectedInterestItem(row, group = activeInterestGroup()) {
 
 function interestGroupMarkup(group) {
   const active = group.id === activeInterestGroupId;
-  const icon = interestGroupIcon(group.name, group.fixed);
-  const protectedGroup = isProtectedInterestGroup(group);
+  const icon = interestGroupIcon(group.name, group.fixed, group.favorite);
+  // 찐관심은 별로만 관리하는 고정 그룹 — 이름변경·삭제 없음(순서 이동만)
+  const protectedGroup = isProtectedInterestGroup(group) || Boolean(group.favorite);
   // 가상 "기타" 그룹 — 선택만 가능, 이름변경·삭제·이동 컨트롤 없음.
   if (group.fixed) {
     return `
@@ -173,7 +215,9 @@ function interestGroupMarkup(group) {
             title="드래그하여 순서 변경">
         <span aria-hidden="true">⠿</span>
       </span>
-      <button class="interest-icon-btn" type="button" data-interest-rename="${group.id}" aria-label="${esc(group.name)} 이름 변경" title="이름 변경">✎</button>
+      ${group.favorite
+        ? '<span class="interest-icon-placeholder" aria-hidden="true"></span>'
+        : `<button class="interest-icon-btn" type="button" data-interest-rename="${group.id}" aria-label="${esc(group.name)} 이름 변경" title="이름 변경">✎</button>`}
       ${protectedGroup
         ? '<span class="interest-icon-placeholder" aria-hidden="true"></span>'
         : `<button class="interest-icon-btn danger" type="button" data-interest-group-delete="${group.id}" aria-label="${esc(group.name)} 삭제" title="그룹 삭제">×</button>`}
@@ -915,6 +959,10 @@ function initInterestWatchlists() {
       setInterestStatus("'기타'는 자동 분류 그룹이라 직접 추가할 수 없습니다.", true, true);
       return;
     }
+    if (group?.favorite) {
+      setInterestStatus(`'${group.name}'은 목록의 종목명 앞 별(☆)로 추가합니다.`, true, true);
+      return;
+    }
     if (!group || !ticker) {
       setInterestStatus("가격수집 대상에서 종목을 정확히 선택하세요.", true, true);
       return;
@@ -935,6 +983,15 @@ function initInterestWatchlists() {
   });
   document.getElementById("interestBulkList")?.addEventListener("change", syncInterestBulkCount);
   document.getElementById("interestBulkApply")?.addEventListener("click", applyInterestBulkSelection);
+
+  // 별은 계좌·관심목록 행 어디에나 있으니 문서에서 한 번만 위임한다.
+  document.addEventListener("click", event => {
+    const star = event.target.closest?.("[data-favorite-ticker]");
+    if (!star) return;
+    event.preventDefault();
+    event.stopPropagation();
+    toggleFavorite(star.dataset.favoriteTicker);
+  }, true);
 
   document.getElementById("interestRows")?.addEventListener("click", event => {
     const unregister = event.target.closest("[data-interest-unregister]");

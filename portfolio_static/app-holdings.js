@@ -1043,10 +1043,10 @@ function syncDetailTabs() {
   syncTagFilterControl();
   document.getElementById("chartNameEdit")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
   if (!chartTicker || performanceChartOpen) closeChartNameEditor();
-  // '기타'(자동 분류 가상 그룹)는 직접 추가 불가 → 추가 폼 숨김
+  // '기타'(자동 분류 가상 그룹)는 직접 추가 불가, 찐관심은 종목명 앞 별로만 추가 → 추가 폼 숨김
   document.getElementById("interestMainItemForm")?.classList.toggle(
     "hidden",
-    showingChart || !showingInterest || showingFxInterest || Boolean(activeInterestGroup()?.fixed)
+    showingChart || !showingInterest || showingFxInterest || Boolean(activeInterestGroup()?.fixed || activeInterestGroup()?.favorite)
   );
   syncMobileFilterIndicator();
   // 탭·차트 전환으로 표가 숨겨지면 그 표의 스크롤 화살표도 함께 내린다
@@ -1266,7 +1266,7 @@ function renderTable() {
     <tr class="${tableRowClass(r)}">
       <td class="logo-cell">${companyProfileLogo(r)}</td>
       <td>
-        <span class="ticker-text">
+        <span class="ticker-text">${favoriteStarMarkup(r)}
           <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
             <span class="asset-name">${esc(r.name)}</span>
             <span class="ticker-symbol">${esc(r.ticker)}</span>

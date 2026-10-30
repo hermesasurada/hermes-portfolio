@@ -207,6 +207,14 @@ function apiReorderInterestGroups(groupIds) {
   });
 }
 
+function apiSetFavorite(ticker, favorite) {
+  return fetchJson("/api/interest-watchlists/favorite", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ticker, favorite }),
+  });
+}
+
 function apiAddInterestItem(groupId, ticker) {
   return fetchJson("/api/interest-watchlists/items", {
     method: "POST",
