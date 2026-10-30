@@ -15,7 +15,7 @@ const INTEREST_COLUMNS = [
   { key: "logo", width: 40, label: "", headClass: "logo-col interest-leaf-head", ariaHidden: true, cellClass: "logo-cell", always: true,
     cell: (r, group) => `${companyProfileLogo(r)}` },
   { key: "name", width: 165, label: "<span data-interest-sort-key=\"ticker\">티커</span><span class=\"name-head-sep\">·</span><span data-interest-sort-key=\"name\">종목</span>", headClass: "name-head interest-leaf-head", always: true,
-    cell: (r, group) => `<span class="ticker-text">${favoriteStarMarkup(r)}
+    cell: (r, group) => `<span class="ticker-text">
           <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
             <span class="asset-name">${esc(r.name)}</span>
             <span class="interest-ticker-meta">
@@ -142,12 +142,13 @@ const INTEREST_COLUMNS = [
     cell: (r, group) => `${buyStrengthMarkup(r.buy_strength)}` },
   { key: "rating_rank", width: 66, label: "투자의견", headClass: "interest-leaf-head", group: "consensus",
     cell: (r, group) => `${ratingChipMarkup(r.rating_label)}` },
-  { key: "delete", width: 40, label: "", headClass: "group-start interest-leaf-head interest-delete-col", ariaLabel: "삭제", cellClass: "group-start interest-delete-col", always: true,
-    cell: (r, group) => `${isProtectedInterestItem(r, group)
+  // 맨 끝 칸: 찐관심 별 + 삭제(2026-10-30 별을 종목명 앞에서 이리로 옮김)
+  { key: "delete", width: 64, label: "", headClass: "group-start interest-leaf-head interest-delete-col", ariaLabel: "찐관심·삭제", cellClass: "group-start interest-delete-col", always: true,
+    cell: (r, group) => `<span class="row-actions">${favoriteStarMarkup(r)}${isProtectedInterestItem(r, group)
         ? ""
         : group.fixed
           ? `<button class="interest-row-delete" type="button" data-interest-unregister="${esc(r.ticker)}" aria-label="${esc(r.name)} 수집 제외" title="수집 대상에서 제외">×</button>`
-          : `<button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button>`}` },
+          : `<button class="interest-row-delete" type="button" data-interest-main-remove="${esc(r.ticker)}" aria-label="${esc(r.name)} 삭제" title="관심목록에서 삭제">×</button>`}</span>` },
 ].map((column, index) => ({
   ...column, index,
   numeric: !["logo", "name", "rating_rank", "delete"].includes(column.key),

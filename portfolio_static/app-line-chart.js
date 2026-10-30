@@ -558,6 +558,7 @@ function renderChartIdentity(payload) {
   document.getElementById("chartName").textContent = row.name || row.ticker || "";
   document.getElementById("chartNameEdit")?.classList.toggle("hidden", !row.ticker || performanceChartOpen);
   document.getElementById("chartInterestOpen")?.classList.toggle("hidden", !row.ticker);
+  renderChartFavorite();
   renderChartExternalLinks(row);
   renderChartPriceSummary(payload);
 }
@@ -688,7 +689,8 @@ function chartInterestGroups(ticker) {
   const meta = findTickerMeta(key) || {};
   const category = String(meta.category || "").toLowerCase();
   return (interestWatchlists || [])
-    .filter(group => !group.fixed && group.id > 0)
+    // 찐관심은 이름 옆 별로만 넣고 뺀다 — 팝업에서는 뺀다
+    .filter(group => !group.fixed && !group.favorite && group.id > 0)
     .map(group => ({
       ...group,
       checked: group.items?.some(item => String(item.ticker || "").toUpperCase() === key) || false,

@@ -1,4 +1,4 @@
-// 찐관심 별(2026-10-30): 목록 종목명 앞 ☆/★, 찐관심 그룹은 이름변경·삭제·추가 폼 없음.
+// 찐관심 별(2026-10-30): 목록 맨 끝 칸·개별종목 이름 옆 ☆/★, 찐관심 그룹은 이름변경·삭제·추가 폼·차트 팝업 없음.
 const assert = require('node:assert/strict');
 const h = require('./harness');
 const ctx = h.loadScripts(h.createContext());
@@ -23,13 +23,27 @@ assert.doesNotMatch(fav, /data-interest-rename=|data-interest-group-delete=/);
 assert.match(fav, /data-interest-drag="16"/);
 assert.match(ctx.interestGroupMarkup(h.evaluate(ctx, 'interestWatchlists[0]')), /data-interest-group-delete="3"/);
 
-// 목록 이름 칸 두 곳 모두 별을 붙인다
+// 관심목록 맨 끝 칸: 별이 삭제 버튼 앞
+const deleteColumn = h.evaluate(ctx, 'INTEREST_COLUMNS.find(c => c.key === "delete")');
+const usGroup = h.evaluate(ctx, 'interestWatchlists[0]');
+assert.match(deleteColumn.cell({ticker: 'AAPL', name: 'Apple'}, usGroup),
+  /^<span class="row-actions"><button class="fav-star"[\s\S]*<\/button><button class="interest-row-delete"[^>]*data-interest-main-remove="AAPL"/);
 const fs = require('node:fs');
 const path = require('node:path');
-for (const file of ['app-holdings.js', 'app-interest-columns.js']) {
-  const source = fs.readFileSync(path.join(__dirname, '../portfolio_static', file), 'utf8');
-  assert.match(source, /<span class="ticker-text">\$\{favoriteStarMarkup\(r\)\}/, file);
-}
 const holdings = fs.readFileSync(path.join(__dirname, '../portfolio_static/app-holdings.js'), 'utf8');
+assert.match(holdings, /<td><span class="row-actions">\$\{favoriteStarMarkup\(r\)\}\$\{r\.is_watchlist \? "" : `<button class="ghost-btn tx-pick"/);
+assert.doesNotMatch(holdings + fs.readFileSync(path.join(__dirname, '../portfolio_static/app-interest-columns.js'), 'utf8'),
+  /ticker-text">\$\{favoriteStarMarkup/);
+
+// 개별종목 페이지: 이름 옆 별, 차트 관심목록 팝업에는 찐관심 없음
+const slot = ctx.document.getElementById('chartFavorite');
+ctx.findTickerMeta = t => (t === 'NVDA' ? {ticker: 'NVDA', name: 'NVIDIA', category: 'us'} : null);
+h.evaluate(ctx, 'chartTicker = "NVDA"; performanceChartOpen = false;');
+ctx.renderChartFavorite();
+assert.match(slot.innerHTML, /fav-star on[^>]*data-favorite-ticker="NVDA"/);
+h.evaluate(ctx, 'chartTicker = "UNKNOWN";');
+ctx.renderChartFavorite();
+assert.equal(slot.innerHTML, '');
+assert.deepEqual(h.plain(ctx.chartInterestGroups('NVDA')).map(g => g.name), ['미국']);
 assert.match(holdings, /activeInterestGroup\(\)\?\.fixed \|\| activeInterestGroup\(\)\?\.favorite/);
-console.log('Interest favorite: star markup, protected favorite group and hidden add form');
+console.log('Interest favorite: row-end and chart-page stars, protected favorite group, hidden add form and popup entry');

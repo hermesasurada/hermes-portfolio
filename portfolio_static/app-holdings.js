@@ -1266,7 +1266,7 @@ function renderTable() {
     <tr class="${tableRowClass(r)}">
       <td class="logo-cell">${companyProfileLogo(r)}</td>
       <td>
-        <span class="ticker-text">${favoriteStarMarkup(r)}
+        <span class="ticker-text">
           <a class="ticker-link" href="${esc(chartHref(r.ticker))}" data-chart-ticker="${esc(r.ticker)}">
             <span class="asset-name">${esc(r.name)}</span>
             <span class="ticker-symbol">${esc(r.ticker)}</span>
@@ -1312,7 +1312,7 @@ function renderTable() {
       <td>${perfText(r, "perf_10y", 1)}</td>
       <td class="group-start">${marketCapMarkup(r)}</td>
       <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
-      <td>${r.is_watchlist ? "-" : `<button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button>`}</td>
+      <td><span class="row-actions">${favoriteStarMarkup(r)}${r.is_watchlist ? "" : `<button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button>`}</span></td>
     </tr>
   `;
   }).join("") || detailTagEmptyRow();

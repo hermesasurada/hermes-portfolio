@@ -112,7 +112,7 @@ function resolveInterestTicker(value) {
   return ticker ? ticker : null;
 }
 
-// 찐관심 — 목록 종목명 앞 별로만 넣고 빼는 고정 그룹(서버가 favorite 표시, 2026-10-30)
+// 찐관심 — 목록 맨 끝 칸·개별종목 이름 옆 별로만 넣고 빼는 고정 그룹(서버가 favorite 표시, 2026-10-30)
 function favoriteInterestGroup() {
   return interestWatchlists.find(group => group.favorite) || null;
 }
@@ -135,6 +135,15 @@ function favoriteStarMarkup(row) {
   return `<button class="fav-star${on ? " on" : ""}" type="button" data-favorite-ticker="${esc(row.ticker)}"
     aria-pressed="${on}" aria-label="${esc(row.name || row.ticker)} ${label}" title="${label}"
     ${favoritePending.has(row.ticker) ? "disabled" : ""}>${on ? "★" : "☆"}</button>`;
+}
+
+// 개별종목 페이지 이름 옆 별 — 가격수집 대상(지수·환율 제외)일 때만
+function renderChartFavorite() {
+  const slot = document.getElementById("chartFavorite");
+  if (!slot) return;
+  const ticker = typeof chartTicker === "string" && !performanceChartOpen ? chartTicker : "";
+  const meta = ticker ? findTickerMeta(ticker) : null;
+  slot.innerHTML = meta ? favoriteStarMarkup({ ...meta, ticker: meta.ticker || ticker }) : "";
 }
 
 async function toggleFavorite(ticker) {
@@ -265,6 +274,7 @@ function applyInterestWatchlistPayload(payload) {
   interestWatchlistsLoaded = true;
   normalizeActiveInterestGroup();
   renderInterestWatchlists();
+  renderChartFavorite();
   if (data) render();
 }
 
