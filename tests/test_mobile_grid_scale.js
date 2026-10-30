@@ -92,8 +92,11 @@ assert.ok(scaledWidths >= 20, `계좌표 컬럼 폭이 배율을 타지 않는�
 const columnsJs = fs.readFileSync(path.join(__dirname, '../portfolio_static/app-interest-columns.js'), 'utf8');
 assert.match(columnsJs, /calc\(\$\{column\.width\}px \* var\(--col-scale, 1\)\)/, 'colgroup 폭이 배율을 타야 한다');
 const watchlistsJs = fs.readFileSync(path.join(__dirname, '../portfolio_static/app-interest-watchlists.js'), 'utf8');
-assert.match(watchlistsJs, /table\.style\.width = `calc\(\$\{scaled\}px \* var\(--col-scale, 1\) \+ \$\{nameWidth\}px\)`/,
+assert.match(watchlistsJs, /table\.style\.width = `calc\(\$\{scaled\}px \* var\(--col-scale, 1\) \+ \$\{nameWidth \+ fixed\}px\)`/,
   '표 전체 폭이 배율을 타지 않으면 fixed 레이아웃이 축소를 되돌린다');
+// 맨 끝 별+삭제 칸은 버튼 두 개가 들어가야 해서 축소에서 뺀다(축소 때 ×가 잘렸다, 2026-10-30)
+assert.match(columnsJs, /key: "delete", width: \d+, noScale: true/);
+assert.match(columnsJs, /column\.noScale \? `\$\{column\.width\}px`/);
 
 // 좌우 여백도 줄이되 0으로 붙이지는 않는다.
 const padX = Number(mobile.match(/--grid-pad-x, ([\d.]+)px/)[1]);
