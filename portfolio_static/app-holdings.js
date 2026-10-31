@@ -334,6 +334,7 @@ function aggregateRows(rows) {
         change: r.change,
         change_pct: r.change_pct,
         current_price_krw: r.current_price_krw,
+        cost_basis: null,
         has_position: false,
         memberSet: new Set(),
         accountSet: new Set()
@@ -345,6 +346,7 @@ function aggregateRows(rows) {
       g.value += r.value || 0;
       g.value_krw += r.value_krw || 0;
       g.change_krw += r.change_krw || 0;
+      if (r.cost_basis != null) g.cost_basis = (g.cost_basis || 0) + r.cost_basis;
       g.has_position = true;
     }
     g.memberSet.add(r.memberName);
@@ -357,6 +359,7 @@ function aggregateRows(rows) {
     delete r.accountSet;
     const positionFields = r.has_position ? {} : {
       qty: null,
+      cost_basis: null,
       value: null,
       value_krw: null,
       change_krw: null,
@@ -909,6 +912,7 @@ function filteredRows(options = {}) {
       display_change_pct: holdingChangePct(row),
       change_krw: holdingChangeKrw(row, fxAdjusted),
       current_price_krw: holdingUnitKrw(row),
+      cost_basis: Number(row.avg_price) > 0 && Number(row.qty) > 0 ? Number(row.avg_price) * Number(row.qty) : null,
       next_earnings_date: row.next_earnings_date || null
     }));
   rows = enrichRows(rows);
@@ -1282,6 +1286,7 @@ function renderTable() {
       <td>${noPosition ? "-" : weightText(r.weight_pct)}</td>
       <td>${dividendYieldMarkup(r)}</td>
       <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
+      <td>${noPosition ? "-" : yieldOnCostMarkup(r)}</td>
       <td class="group-start">${signedPercentText(r.drawdown_52w, 1)}</td>
       <td>${riskRewardScoreText(r.risk_reward_score)}</td>
       <td>${entryRewardText(r.entry_risk_reward)}</td>

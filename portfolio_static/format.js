@@ -274,6 +274,20 @@ function dividendYieldMarkup(row) {
   const cls = dividendRaiseClass(row.dividend_raise);
   return `<button class="stat-yield-link${cls ? ` ${cls}` : ""}" type="button" data-dividend-history="${esc(row.ticker)}" title="${esc(note ? `${note} · 배당 이력 보기` : "배당 이력 보기")}">${text}</button>`;
 }
+// 계좌표 '평단 배당율(추정)': 현재 배당율로 되짚은 연간 주당배당금(배당율 × 현재가)을 내 평단가에 댄다.
+// 평단가는 원가 ÷ 수량이라 여러 계좌를 합친 행은 수량 가중 평단가가 된다. 배당율이 0이면 0.
+function yieldOnCost(dividendYield, currentPrice, costBasis, qty) {
+  if (dividendYield == null || costBasis == null || qty == null) return null;
+  const y = Number(dividendYield), price = Number(currentPrice), cost = Number(costBasis), q = Number(qty);
+  if (!Number.isFinite(y) || !(price > 0) || !(cost > 0) || !(q > 0)) return null;
+  return y * price / (cost / q);
+}
+function yieldOnCostMarkup(row) {
+  const text = dividendYieldText(row.yield_on_cost);
+  if (text === "-") return text;
+  const avg = Number(row.cost_basis) / Number(row.qty);
+  return `<span title="${esc(`평단가 ${dividendAmountText(avg, row.currency)} 기준 · 현재가 기준 배당율 ${dividendYieldText(row.dividend_yield)}`)}">${text}</span>`;
+}
 function dividendCurrencyPrefix(currency) {
   return {
     USD: "$",

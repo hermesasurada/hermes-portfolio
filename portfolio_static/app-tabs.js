@@ -22,6 +22,7 @@ function statsRows(rows) {
       dividend_yield: isIndex ? null : stats.dividend_yield,
       dividend_raise: isIndex ? null : stats.dividend_raise,
       dividend_growth_5y: isIndex ? null : stats.dividend_growth_5y,
+      yield_on_cost: isIndex ? null : yieldOnCost(stats.dividend_yield, row.current_price, row.cost_basis, row.qty),
       dividend_streak_years: isIndex ? null : stats.dividend_streak_years,
       dividend_streak_floor: isIndex ? null : stats.dividend_streak_floor,
       dividend_growth_streak_years: isIndex ? null : stats.dividend_growth_streak_years,
