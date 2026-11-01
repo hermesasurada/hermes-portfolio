@@ -41,10 +41,11 @@ const summary = ctx.performanceReturnSummary({twr_basis:'full'}, ret);
 assert.match(summary, /perf-return-caption">6M 수익률/);
 // 계좌만 크게 두지 않는다 — 계좌·고정환율·지수가 같은 격자 행(2026-11-01 사용자 지시)
 assert.doesNotMatch(summary, /perf-return-value/);
-const rows = summary.match(/<span class="perf-return-row[^"]*">[\s\S]*?<\/b><\/span>/g);
+const rows = summary.match(/<span class="perf-return-row(?!s)[^"]*">[\s\S]*?<\/b><\/span>/g);
 assert.equal(rows.length, 4);
-assert.match(rows[0], /perf-return-row account"><i style="background:var\(--brand\)"><\/i><span>선택 계좌<\/span><b class="down">-11\.9%/);
-assert.match(rows[1], /account"><i class="dashed"[^>]*><\/i><span>고정환율<\/span><b class="down">-6\.1%/);
+assert.ok(rows.every(row => row.startsWith('<span class="perf-return-row">')), '계좌·지수 같은 모양');
+assert.match(rows[0], /perf-return-row"><i style="background:var\(--brand\)"><\/i><span>선택 계좌<\/span><b class="down">-11\.9%/);
+assert.match(rows[1], /perf-return-row"><i class="dashed" style="color:var\(--brand\)"><\/i><span>고정환율<\/span><b class="down">-6\.1%/);
 assert.match(rows[2], /<span>S&amp;P 500<\/span><b class="up">\+4\.8%/);
 assert.match(rows[3], /<span>코스피<\/span><b class="down">-17\.4%/);
 assert.match(summary, /2026\.05\.01 – 2026\.10\.31 · 시간가중/);
@@ -53,8 +54,13 @@ assert.match(ctx.performanceReturnSummary({}, ret), /기준 확인 필요/);
 const focused = ctx.performanceReturnSummary({twr_basis:'full'}, ret, 'account-1');
 assert.match(focused, /<span>Ray · 해외주식<\/span><b class="up">\+4\.3%/);
 assert.doesNotMatch(focused, /고정환율/);
-assert.equal((focused.match(/perf-return-row"/g) || []).length, 2);   // 지수 칸은 그대로
+assert.equal((focused.match(/perf-return-row"/g) || []).length, 3);   // 강조 계좌 + 지수 둘(지수 칸은 그대로)
 assert.equal(ctx.performanceReturnSummary({}, []), '');
+// 모바일은 오버레이를 플롯 위 띠로 내려 선과 겹치지 않는다.
+const perfCss = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
+const mobileCss = h.mediaBlocks(perfCss, '(max-width: 980px)').map(block => block.text).join('\n');
+assert.match(mobileCss, /\.perf-return-summary \{\s*position: static;\s*order: -1;/);
+assert.doesNotMatch(perfCss, /perf-return-row\.account/);
 // 표시 기간 줄은 오버레이로 합쳐 범례 호스트에 다시 두지 않는다.
 assert.doesNotMatch(fs.readFileSync(path.join(root, 'app-charts.js'), 'utf8'), /perf-overview|performanceOverview/);
 function node(key) {

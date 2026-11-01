@@ -6857,6 +6857,9 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .perf-return-summary {
   position: absolute;
   top: 0;
+  /* 플롯 왼쪽 위 안쪽 — 위치는 JS가 viewBox 여백 비율로 넘긴다(margin %는 폭 기준이라 세로도 맞는다) */
+  left: calc(var(--perf-plot-left, 6%) + 10px);
+  margin-top: calc(var(--perf-plot-top, 2%) + 10px);
   z-index: 2;
   display: grid;
   justify-items: start;
@@ -6873,9 +6876,8 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 /* 계좌·고정환율·비교지수 수익률 — 같은 크기의 두 칸 격자 */
 .perf-return-rows { display: grid; grid-template-columns: repeat(2, auto); gap: 2px 16px; margin: 2px 0 3px; }
 .perf-return-row { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; white-space: nowrap; }
-.perf-return-row.account { color: var(--ink); font-weight: 600; }
 .perf-return-row i { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
-.perf-return-row i.dashed { width: 10px; height: 0; border-radius: 0; border-top: 2px dashed; }
+.perf-return-row i.dashed { width: 12px; height: 2px; border-radius: 0; background: repeating-linear-gradient(90deg, currentColor 0 3px, transparent 3px 5px); }
 .perf-return-row b { margin-left: auto; padding-left: 8px; font-family: var(--grid-num-font); font-weight: 700; }
 .perf-empty-label { color: var(--muted); padding: 6px 0; }
 .perf-legend-item { min-height: 30px; height: auto; padding: 4px 8px; }
@@ -6937,7 +6939,19 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .perf-legend-section { align-items: flex-start; }
   .perf-group-label { flex: 0 0 44px; padding-top: 6px; }
   .perf-legend { gap: 6px; }
-  .perf-return-summary { padding: 5px 8px 6px; }
+  /* 모바일: 오버레이가 선을 가리므로 플롯 위 띠로(차트 상자 안 맨 위, 흐름 배치) */
+  .perf-return-summary {
+    position: static;
+    order: -1;
+    margin: 0;
+    padding: 7px 10px 6px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: none;
+    backdrop-filter: none;
+  }
+  .perf-return-rows { justify-self: stretch; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .perf-return-caption, .perf-return-meta { font-size: 10px; }
   .perf-return-row { font-size: 10.5px; }
   .perf-return-rows { gap: 1px 10px; }
