@@ -153,6 +153,7 @@ function performanceBasisText(payload) {
 // 표시 기간의 최종 수익률 — 차트 왼쪽 위 안쪽에 겹쳐 둔다(2026-11-01 사용자 지시).
 // 예전 차트 위 '표시 기간 · 시간가중 수익률 · 시작점 = 0%' 줄을 여기로 합쳤다.
 // 계좌 칩으로 선을 강조하면 그 계좌 값을, 고정환율 선이 있으면 그 값도 함께 보인다.
+// 켜 둔 비교지수의 같은 기간 수익률도 작게 함께 싣는다(2026-11-01 사용자 지시).
 function performanceReturnSummary(payload, series = [], focusKey = null) {
   const target = (focusKey && series.find(item => item.key === focusKey && !item.fixed))
     || series.find(item => item.primary);
@@ -167,8 +168,17 @@ function performanceReturnSummary(payload, series = [], focusKey = null) {
   const fixedHtml = Number.isFinite(fixedLast)
     ? `<span class="perf-return-fixed">고정환율 <b class="${changeDirection(fixedLast).cls}">${esc(pctChartLabel1(fixedLast))}</b></span>`
     : "";
+  const indexKeys = new Set(PERF_INDEX_META.map(([key]) => key));
+  const indexHtml = series
+    .filter(item => indexKeys.has(item.key) && item.points.length >= 2)
+    .map(item => {
+      const close = item.points[item.points.length - 1].close;
+      return `<span class="perf-return-index"><i style="background:${item.color}"></i><span>${esc(item.name)}</span><b class="${changeDirection(close).cls}">${esc(pctChartLabel1(close))}</b></span>`;
+    })
+    .join("");
   return `<span class="perf-return-caption"><i style="background:${target.color}"></i>${esc(target.name)}${rangeLabel ? ` · ${esc(rangeLabel)}` : ""}</span>`
     + `<strong class="perf-return-value ${cls}">${esc(pctChartLabel1(last.close))}</strong>${fixedHtml}`
+    + (indexHtml ? `<span class="perf-return-indexes" aria-label="비교지수 같은 기간 수익률">${indexHtml}</span>` : "")
     + `<span class="perf-return-meta">${esc(chartFullDateLabel(points[0].date))} – ${esc(chartFullDateLabel(last.date))} · ${esc(performanceBasisText(payload))}</span>`;
 }
 

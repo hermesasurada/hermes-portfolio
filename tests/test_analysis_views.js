@@ -34,6 +34,8 @@ const ret = [
   {key:'portfolio', primary:true, name:'선택 계좌', color:'var(--brand)', points:[{date:'2026-05-01', close:0}, {date:'2026-10-31', close:-11.94}]},
   {key:'portfolio-fixed', base:'portfolio', fixed:true, name:'선택 계좌 · 고정환율', color:'var(--brand)', points:[{date:'2026-05-01', close:0}, {date:'2026-10-31', close:-6.1}]},
   {key:'account-1', name:'Ray · 해외주식', color:'#7c3aed', points:[{date:'2026-05-01', close:0}, {date:'2026-10-30', close:4.25}]},
+  {key:'SP500', name:'S&P 500', color:'#c026d3', points:[{date:'2026-05-01', close:0}, {date:'2026-10-31', close:4.8}]},
+  {key:'KOSPI', name:'코스피', color:'#d97706', points:[{date:'2026-05-01', close:0}, {date:'2026-10-31', close:-17.4}]},
 ];
 const summary = ctx.performanceReturnSummary({twr_basis:'full'}, ret);
 assert.match(summary, /선택 계좌 · 6M/);
@@ -47,6 +49,11 @@ assert.match(focused, /Ray · 해외주식 · 6M/);
 assert.match(focused, /perf-return-value up">\+4\.3%/);
 assert.doesNotMatch(focused, /고정환율/);
 assert.equal(ctx.performanceReturnSummary({}, []), '');
+// 켜 둔 비교지수도 같은 기간 수익률을 작게 싣는다(계좌를 강조해도 그대로).
+assert.match(summary, /perf-return-index"><i style="background:#c026d3"><\/i><span>S&amp;P 500<\/span><b class="up">\+4\.8%/);
+assert.match(summary, /<span>코스피<\/span><b class="down">-17\.4%/);
+assert.equal((focused.match(/perf-return-index"/g) || []).length, 2);
+assert.doesNotMatch(ctx.performanceReturnSummary({}, ret.slice(0, 3)), /perf-return-indexes/);
 // 표시 기간 줄은 오버레이로 합쳐 범례 호스트에 다시 두지 않는다.
 assert.doesNotMatch(fs.readFileSync(path.join(root, 'app-charts.js'), 'utf8'), /perf-overview|performanceOverview/);
 function node(key) {
