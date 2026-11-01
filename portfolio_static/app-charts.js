@@ -146,12 +146,40 @@ function performanceSeries(payload) {
 // 끄든 켜든 항상 자리에 있고 클릭으로 토글된다(꺼진 것도 보여야 다시 켤 수 있다).
 let performanceFocusKey = null;
 
-function performanceOverview(payload, series = []) {
-  const points = series.find(item => item.primary)?.points || [];
-  const period = points.length ? `${points[0].date} — ${points[points.length - 1].date}` : "표시 기간 없음";
-  const basis = payload?.twr_basis === "full" ? "시간가중 수익률" : payload?.twr_basis === "securities" ? "시간가중 · 증권 기준" : "수익률 기준 확인 필요";
-  return `<div class="perf-overview"><span class="perf-period"><span>표시 기간</span><time>${esc(period)}</time></span><span class="perf-basis">${esc(basis)}</span><span class="perf-baseline">각 시리즈 시작점 = 0%</span></div>`;
+function performanceBasisText(payload) {
+  return payload?.twr_basis === "full" ? "시간가중" : payload?.twr_basis === "securities" ? "시간가중 · 증권 기준" : "수익률 기준 확인 필요";
 }
+
+// 표시 기간의 최종 수익률 — 차트 왼쪽 위 안쪽에 겹쳐 둔다(2026-11-01 사용자 지시).
+// 예전 차트 위 '표시 기간 · 시간가중 수익률 · 시작점 = 0%' 줄을 여기로 합쳤다.
+// 계좌 칩으로 선을 강조하면 그 계좌 값을, 고정환율 선이 있으면 그 값도 함께 보인다.
+function performanceReturnSummary(payload, series = [], focusKey = null) {
+  const target = (focusKey && series.find(item => item.key === focusKey && !item.fixed))
+    || series.find(item => item.primary);
+  const points = target?.points || [];
+  if (points.length < 2) return "";
+  const last = points[points.length - 1];
+  const { cls } = changeDirection(last.close);
+  const fixedPoints = series.find(item => item.fixed && item.base === target.key)?.points || [];
+  const fixedLast = fixedPoints[fixedPoints.length - 1]?.close;
+  const range = chartRanges.find(item => item.key === chartRange);
+  const rangeLabel = chartRange === "custom" ? "지정 기간" : range?.label || "";
+  const fixedHtml = Number.isFinite(fixedLast)
+    ? `<span class="perf-return-fixed">고정환율 <b class="${changeDirection(fixedLast).cls}">${esc(pctChartLabel1(fixedLast))}</b></span>`
+    : "";
+  return `<span class="perf-return-caption"><i style="background:${target.color}"></i>${esc(target.name)}${rangeLabel ? ` · ${esc(rangeLabel)}` : ""}</span>`
+    + `<strong class="perf-return-value ${cls}">${esc(pctChartLabel1(last.close))}</strong>${fixedHtml}`
+    + `<span class="perf-return-meta">${esc(chartFullDateLabel(points[0].date))} – ${esc(chartFullDateLabel(last.date))} · ${esc(performanceBasisText(payload))}</span>`;
+}
+
+function syncPerformanceReturnSummary() {
+  const host = document.getElementById?.("perfReturnSummary");
+  if (!host || !performancePayload) return;
+  const html = performanceReturnSummary(performancePayload, performanceRenderedSeries, performanceFocusKey);
+  host.innerHTML = html;
+  host.classList.toggle("hidden", !html);
+}
+let performanceRenderedSeries = [];
 
 function applyPerformanceFocus() {
   document.querySelectorAll("[data-perf-focus]").forEach(button => {
@@ -162,6 +190,7 @@ function applyPerformanceFocus() {
     line.classList.toggle("perf-dimmed", Boolean(performanceFocusKey && base !== performanceFocusKey));
     line.classList.toggle("perf-focused", base === performanceFocusKey);
   });
+  syncPerformanceReturnSummary();
 }
 
 function renderPerformanceLegend(series = []) {
@@ -183,7 +212,7 @@ function renderPerformanceLegend(series = []) {
   const fxChip = `<button class="perf-legend-item perf-fx-toggle${fxOn ? " active" : ""}${fxAvailable ? "" : " unavailable"}" type="button" data-perf-fx="1" aria-pressed="${fxOn ? "true" : "false"}" title="${fxOn ? "고정환율 선 숨기기" : "고정환율 선 표시"} · 기준일 환율로 고정해 환율 변동을 걷어낸 시간가중 수익률(점선)"><i class="dashed" style="border-color:${fxOn ? "var(--brand)" : "var(--chart-axis)"}"></i>고정환율</button>`;
   // 고정환율 칩은 계좌 줄에 함께 둔다 — 계좌 선에 딸린 옵션이라 별도 '환율' 줄을
   // 만들면 한 줄을 통째로 쓰면서도 칩은 하나뿐이었다(2026-09-16 사용자 지시).
-  return `<div class="perf-legend-groups"><div class="perf-legend-section"><span class="perf-group-label">계좌 · 강조</span><div class="perf-legend" role="group" aria-label="계좌 선 강조와 고정환율 표시">${accountChips || '<span class="perf-empty-label">표시할 계좌 없음</span>'}${fxChip}</div></div><div class="perf-legend-section"><span class="perf-group-label">비교지수</span><div class="perf-legend" role="group" aria-label="비교지수 표시">${indexChips}</div></div></div>`;
+  return `<div class="perf-legend-groups"><div class="perf-legend-section"><span class="perf-group-label" title="계좌 칩을 누르면 그 선을 강조">계좌</span><div class="perf-legend" role="group" aria-label="계좌 선 강조와 고정환율 표시">${accountChips || '<span class="perf-empty-label">표시할 계좌 없음</span>'}${fxChip}</div></div><div class="perf-legend-section"><span class="perf-group-label">비교지수</span><div class="perf-legend" role="group" aria-label="비교지수 표시">${indexChips}</div></div></div>`;
 }
 
 function bindPerformanceHover(series, geometry) {
@@ -261,7 +290,8 @@ function renderPerformanceChart(payload) {
 
   if (!series.length || !series[0]?.points.length) {
     document.getElementById("chartMeta").textContent = `${payload?.holdings_count || 0}개 종목`;
-    syncPerformanceLegendHost(performanceOverview(payload) + renderPerformanceLegend());
+    performanceRenderedSeries = [];
+    syncPerformanceLegendHost(renderPerformanceLegend());
     document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">성과 차트 데이터 없음</div>`;
     renderChartRangeControls();
     bindPerformanceChartControls();
@@ -311,7 +341,8 @@ function renderPerformanceChart(payload) {
     })
     , 13);
   // (#3) 범례에 색·이름만 두고 %는 선 끝으로. 지수 on/off도 이 범례가 겸한다.
-  syncPerformanceLegendHost(performanceOverview(payload, series) + renderPerformanceLegend(series));
+  performanceRenderedSeries = series;
+  syncPerformanceLegendHost(renderPerformanceLegend(series));
   document.getElementById("chartCanvas").innerHTML = `
     <svg class="line-chart perf-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="계좌 기간 성과 차트">
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
@@ -342,8 +373,11 @@ function renderPerformanceChart(payload) {
         ${series.map(item => `<circle id="perfDot-${item.key}" class="perf-hover-dot" r="3.6" cx="0" cy="0" style="stroke:${item.color}"></circle>`).join("")}
       </g>
     </svg>
+    <div id="perfReturnSummary" class="perf-return-summary hidden" title="각 선의 시작점 = 0%"
+      style="left:calc(${(pad.left / width * 100).toFixed(3)}% + 10px);margin-top:calc(${(pad.top / width * 100).toFixed(3)}% + 10px)"></div>
     <div id="compareTooltip" class="compare-tooltip hidden" aria-hidden="true"></div>
   `;
+  syncPerformanceReturnSummary();
   renderChartRangeControls();
   bindPerformanceHover(series, { width, height, pad, plotW, plotH, minTime, maxTime, xForTime, yFor });
   bindPerformanceChartControls();

@@ -28,11 +28,27 @@ assert.ok(fxAt > legend.indexOf('perf-account-focus') && fxAt < indexAt, '고정
 assert.match(legend, /선택 &lt;계좌>/);
 assert.match(legend, /data-perf-focus="portfolio"/);
 assert.equal((legend.match(/data-index=/g) || []).length, 4);
-assert.match(ctx.performanceOverview({twr_basis:'full'}, series), /시간가중 수익률/);
-assert.match(ctx.performanceOverview({twr_basis:'securities'}, series), /증권 기준/);
-assert.match(ctx.performanceOverview({}, []), /표시 기간 없음/);
-assert.match(ctx.performanceOverview({}, []), /기준 확인 필요/);
-assert.match(ctx.performanceOverview({}, series), /2026-01-02 — 2026-09-04/);
+// 표시 기간 최종 수익률 오버레이(2026-11-01) — 기간·수익률 기준을 함께 싣고, 강조한 계좌로 바뀐다.
+h.evaluate(ctx, 'chartRange = "6m";');
+const ret = [
+  {key:'portfolio', primary:true, name:'선택 계좌', color:'var(--brand)', points:[{date:'2026-05-01', close:0}, {date:'2026-10-31', close:-11.94}]},
+  {key:'portfolio-fixed', base:'portfolio', fixed:true, name:'선택 계좌 · 고정환율', color:'var(--brand)', points:[{date:'2026-05-01', close:0}, {date:'2026-10-31', close:-6.1}]},
+  {key:'account-1', name:'Ray · 해외주식', color:'#7c3aed', points:[{date:'2026-05-01', close:0}, {date:'2026-10-30', close:4.25}]},
+];
+const summary = ctx.performanceReturnSummary({twr_basis:'full'}, ret);
+assert.match(summary, /선택 계좌 · 6M/);
+assert.match(summary, /perf-return-value down">-11\.9%/);
+assert.match(summary, /고정환율 <b class="down">-6\.1%/);
+assert.match(summary, /2026\.05\.01 – 2026\.10\.31 · 시간가중/);
+assert.match(ctx.performanceReturnSummary({twr_basis:'securities'}, ret), /증권 기준/);
+assert.match(ctx.performanceReturnSummary({}, ret), /기준 확인 필요/);
+const focused = ctx.performanceReturnSummary({twr_basis:'full'}, ret, 'account-1');
+assert.match(focused, /Ray · 해외주식 · 6M/);
+assert.match(focused, /perf-return-value up">\+4\.3%/);
+assert.doesNotMatch(focused, /고정환율/);
+assert.equal(ctx.performanceReturnSummary({}, []), '');
+// 표시 기간 줄은 오버레이로 합쳐 범례 호스트에 다시 두지 않는다.
+assert.doesNotMatch(fs.readFileSync(path.join(root, 'app-charts.js'), 'utf8'), /perf-overview|performanceOverview/);
 function node(key) {
   return {dataset:{perfFocus:key, perfSeries:key}, attrs:{},
     classList:{ toggle(name, on) { this[name] = on; } },
