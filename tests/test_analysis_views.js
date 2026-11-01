@@ -38,22 +38,23 @@ const ret = [
   {key:'KOSPI', name:'코스피', color:'#d97706', points:[{date:'2026-05-01', close:0}, {date:'2026-10-31', close:-17.4}]},
 ];
 const summary = ctx.performanceReturnSummary({twr_basis:'full'}, ret);
-assert.match(summary, /선택 계좌 · 6M/);
-assert.match(summary, /perf-return-value down">-11\.9%/);
-assert.match(summary, /고정환율 <b class="down">-6\.1%/);
+assert.match(summary, /perf-return-caption">6M 수익률/);
+// 계좌만 크게 두지 않는다 — 계좌·고정환율·지수가 같은 격자 행(2026-11-01 사용자 지시)
+assert.doesNotMatch(summary, /perf-return-value/);
+const rows = summary.match(/<span class="perf-return-row[^"]*">[\s\S]*?<\/b><\/span>/g);
+assert.equal(rows.length, 4);
+assert.match(rows[0], /perf-return-row account"><i style="background:var\(--brand\)"><\/i><span>선택 계좌<\/span><b class="down">-11\.9%/);
+assert.match(rows[1], /account"><i class="dashed"[^>]*><\/i><span>고정환율<\/span><b class="down">-6\.1%/);
+assert.match(rows[2], /<span>S&amp;P 500<\/span><b class="up">\+4\.8%/);
+assert.match(rows[3], /<span>코스피<\/span><b class="down">-17\.4%/);
 assert.match(summary, /2026\.05\.01 – 2026\.10\.31 · 시간가중/);
 assert.match(ctx.performanceReturnSummary({twr_basis:'securities'}, ret), /증권 기준/);
 assert.match(ctx.performanceReturnSummary({}, ret), /기준 확인 필요/);
 const focused = ctx.performanceReturnSummary({twr_basis:'full'}, ret, 'account-1');
-assert.match(focused, /Ray · 해외주식 · 6M/);
-assert.match(focused, /perf-return-value up">\+4\.3%/);
+assert.match(focused, /<span>Ray · 해외주식<\/span><b class="up">\+4\.3%/);
 assert.doesNotMatch(focused, /고정환율/);
+assert.equal((focused.match(/perf-return-row"/g) || []).length, 2);   // 지수 칸은 그대로
 assert.equal(ctx.performanceReturnSummary({}, []), '');
-// 켜 둔 비교지수도 같은 기간 수익률을 작게 싣는다(계좌를 강조해도 그대로).
-assert.match(summary, /perf-return-index"><i style="background:#c026d3"><\/i><span>S&amp;P 500<\/span><b class="up">\+4\.8%/);
-assert.match(summary, /<span>코스피<\/span><b class="down">-17\.4%/);
-assert.equal((focused.match(/perf-return-index"/g) || []).length, 2);
-assert.doesNotMatch(ctx.performanceReturnSummary({}, ret.slice(0, 3)), /perf-return-indexes/);
 // 표시 기간 줄은 오버레이로 합쳐 범례 호스트에 다시 두지 않는다.
 assert.doesNotMatch(fs.readFileSync(path.join(root, 'app-charts.js'), 'utf8'), /perf-overview|performanceOverview/);
 function node(key) {

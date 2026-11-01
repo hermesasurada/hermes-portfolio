@@ -152,33 +152,31 @@ function performanceBasisText(payload) {
 
 // 표시 기간의 최종 수익률 — 차트 왼쪽 위 안쪽에 겹쳐 둔다(2026-11-01 사용자 지시).
 // 예전 차트 위 '표시 기간 · 시간가중 수익률 · 시작점 = 0%' 줄을 여기로 합쳤다.
-// 계좌 칩으로 선을 강조하면 그 계좌 값을, 고정환율 선이 있으면 그 값도 함께 보인다.
-// 켜 둔 비교지수의 같은 기간 수익률도 작게 함께 싣는다(2026-11-01 사용자 지시).
+// 계좌·고정환율·켜 둔 비교지수를 같은 크기의 한 격자로 나란히 싣는다(계좌만 크게 두지 않는다).
+// 계좌 칩으로 선을 강조하면 계좌 칸이 그 계좌 값으로 바뀐다.
+function performanceReturnRow(name, color, close, { dashed = false, account = false } = {}) {
+  const marker = dashed ? `<i class="dashed" style="border-color:${color}"></i>` : `<i style="background:${color}"></i>`;
+  return `<span class="perf-return-row${account ? " account" : ""}">${marker}<span>${esc(name)}</span><b class="${changeDirection(close).cls}">${esc(pctChartLabel1(close))}</b></span>`;
+}
+
 function performanceReturnSummary(payload, series = [], focusKey = null) {
   const target = (focusKey && series.find(item => item.key === focusKey && !item.fixed))
     || series.find(item => item.primary);
   const points = target?.points || [];
   if (points.length < 2) return "";
+  const lastClose = item => item.points[item.points.length - 1].close;
   const last = points[points.length - 1];
-  const { cls } = changeDirection(last.close);
-  const fixedPoints = series.find(item => item.fixed && item.base === target.key)?.points || [];
-  const fixedLast = fixedPoints[fixedPoints.length - 1]?.close;
+  const fixed = series.find(item => item.fixed && item.base === target.key && item.points.length >= 2);
+  const indexKeys = new Set(PERF_INDEX_META.map(([key]) => key));
+  const rows = [performanceReturnRow(target.name, target.color, last.close, { account: true })];
+  if (fixed) rows.push(performanceReturnRow("고정환율", fixed.color, lastClose(fixed), { dashed: true, account: true }));
+  series
+    .filter(item => indexKeys.has(item.key) && item.points.length >= 2)
+    .forEach(item => rows.push(performanceReturnRow(item.name, item.color, lastClose(item))));
   const range = chartRanges.find(item => item.key === chartRange);
   const rangeLabel = chartRange === "custom" ? "지정 기간" : range?.label || "";
-  const fixedHtml = Number.isFinite(fixedLast)
-    ? `<span class="perf-return-fixed">고정환율 <b class="${changeDirection(fixedLast).cls}">${esc(pctChartLabel1(fixedLast))}</b></span>`
-    : "";
-  const indexKeys = new Set(PERF_INDEX_META.map(([key]) => key));
-  const indexHtml = series
-    .filter(item => indexKeys.has(item.key) && item.points.length >= 2)
-    .map(item => {
-      const close = item.points[item.points.length - 1].close;
-      return `<span class="perf-return-index"><i style="background:${item.color}"></i><span>${esc(item.name)}</span><b class="${changeDirection(close).cls}">${esc(pctChartLabel1(close))}</b></span>`;
-    })
-    .join("");
-  return `<span class="perf-return-caption"><i style="background:${target.color}"></i>${esc(target.name)}${rangeLabel ? ` · ${esc(rangeLabel)}` : ""}</span>`
-    + `<strong class="perf-return-value ${cls}">${esc(pctChartLabel1(last.close))}</strong>${fixedHtml}`
-    + (indexHtml ? `<span class="perf-return-indexes" aria-label="비교지수 같은 기간 수익률">${indexHtml}</span>` : "")
+  return `<span class="perf-return-caption">${rangeLabel ? `${esc(rangeLabel)} ` : ""}수익률</span>`
+    + `<span class="perf-return-rows">${rows.join("")}</span>`
     + `<span class="perf-return-meta">${esc(chartFullDateLabel(points[0].date))} – ${esc(chartFullDateLabel(last.date))} · ${esc(performanceBasisText(payload))}</span>`;
 }
 
