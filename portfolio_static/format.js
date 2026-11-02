@@ -196,8 +196,9 @@ function changeKrwText(v, { zeroWhenFlat = false } = {}) {
   const { cls, arrow } = changeDirection(v);
   return `<span class="change-cell ${cls}"><span aria-hidden="true">${arrow}</span>${krwRoundedMan(Math.abs(v))}</span>`;
 }
+// 계좌표 비중은 소수 첫째 자리까지 고정(2026-11-03 사용자 지시) — 4.3%·12.0%처럼 자릿수를 맞춘다.
 function weightText(pct) {
-  return Number.isFinite(pct) ? `${fmt2.format(pct)}%` : "-";
+  return Number.isFinite(pct) ? `${fmt1.format(pct)}%` : "-";
 }
 function earningsText(dateText) {
   const display = earningsDisplayDate(dateText);

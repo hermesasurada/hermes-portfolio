@@ -27,4 +27,9 @@ const holdings = read('app-holdings.js');
 assert.match(holdings, /cost_basis: Number\(row\.avg_price\) > 0 && Number\(row\.qty\) > 0 \? Number\(row\.avg_price\) \* Number\(row\.qty\) : null/);
 assert.match(holdings, /if \(r\.cost_basis != null\) g\.cost_basis = \(g\.cost_basis \|\| 0\) \+ r\.cost_basis;/);
 assert.match(read('app.js'), /"yield_on_cost"/);
+// 계좌표 비중은 소수 첫째 자리 고정
+assert.equal(ctx.weightText(4.256), '4.3%');
+assert.equal(ctx.weightText(12), '12.0%');
+assert.equal(ctx.weightText(0.04), '0.0%');
+assert.equal(ctx.weightText(null), '-');
 console.log('Yield on cost uses current yield x price over weighted average cost.');
