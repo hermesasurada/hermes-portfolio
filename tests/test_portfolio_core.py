@@ -1427,6 +1427,32 @@ def test_nvda_march_dividend_closes_fiscal_year():
         assert final["date"].month == 3
 
 
+def test_nintendo_march_fiscal_groups_september_interim_with_march_final():
+    """닌텐도는 3월 결산 — 9월 기준일·12월 지급 중간배당과 이듬해 3월 기준일·6월 지급 결산배당이
+    한 사업연도다(2026-11-03 사용자 지시). 역년으로 묶으면 3월 결산배당이 같은 해 9월 중간배당과
+    붙고 9월분이 결산배당으로 표시됐다."""
+    from portfolio_core.dividend_history import FISCAL_END_MONTH_OVERRIDES
+
+    assert FISCAL_END_MONTH_OVERRIDES.get("7974.T") == 3
+    rows = [
+        {"record_date": None, "ex_date": ex, "pay_date": pay, "declaration_date": None,
+         "amount": amount, "source": "yf-history"}
+        for ex, pay, amount in [
+            ("2024-03-28", "2024-06-28", 131.0), ("2024-09-27", "2024-12-02", 35.0),
+            ("2025-03-28", "2025-06-30", 85.0), ("2025-09-29", "2025-12-01", 42.0),
+            ("2026-03-30", "2026-06-29", 177.0),
+        ]
+    ]
+    events, _ = _attributed_history_events(rows, "7974.T", False, 3)
+    annual = _aggregate_annual_dividends(events)
+    _mark_fiscal_finals(annual, {2025, 2026})
+    assert sorted(e["amount"] for e in annual[2026]["events"]) == [42.0, 177.0]
+    assert sorted(e["amount"] for e in annual[2025]["events"]) == [35.0, 85.0]
+    for year in (2025, 2026):
+        final = next(e for e in annual[year]["events"] if e["is_final"])
+        assert final["date"].month == 3 and final["date"].year == year
+
+
 def test_jpm_october_raise_groups_four_equal_quarters():
     """JPM은 10월 회차부터 인상분을 지급한다 → 10월~익년 7월이 한 배당년도.
 
