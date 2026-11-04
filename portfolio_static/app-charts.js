@@ -470,6 +470,7 @@ async function openPerformanceChart() {
   chartTicker = null;
   chartPayload = null;
   syncDetailTabs();
+  syncChartEtfButton(null);
   document.getElementById("chartIcon").innerHTML = `<span class="asset-icon">%</span>`;
   document.getElementById("chartTicker").textContent = "성과";
   document.getElementById("chartName").textContent = "";

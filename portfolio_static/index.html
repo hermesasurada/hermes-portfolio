@@ -358,6 +358,7 @@
                   <button class="chart-name-edit-btn hidden" id="chartNameEdit" type="button"
                     aria-label="노출명칭 수정" title="노출명칭 수정">&#9998;</button>
                   <span class="chart-favorite" id="chartFavorite"></span>
+                  <button class="chart-etf-btn hidden" id="chartEtfHoldings" type="button" aria-haspopup="dialog" aria-controls="etfHoldingsModal" title="이 ETF의 구성종목">구성종목</button>
                 </span>
                 <form class="chart-name-edit-form hidden" id="chartNameEditForm">
                   <input id="chartNameInput" type="text" maxlength="80" autocomplete="off" aria-label="노출명칭">
@@ -782,6 +783,19 @@
       <div class="ticker-tx-body" id="tickerTxBody"></div>
     </form>
   </dialog>
+  <dialog class="watch-modal ticker-tx-modal etf-holdings-modal" id="etfHoldingsModal" aria-labelledby="etfHoldingsTitle">
+    <form method="dialog" class="modal-card ticker-tx-card">
+      <div class="modal-head">
+        <div class="dividend-history-title">
+          <strong id="etfHoldingsTitle">구성종목</strong>
+          <span id="etfHoldingsTicker">-</span>
+        </div>
+        <button class="ghost-btn" id="etfHoldingsClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <div class="ticker-tx-summary" id="etfHoldingsSummary"></div>
+      <div class="ticker-tx-body" id="etfHoldingsBody"></div>
+    </form>
+  </dialog>
   <dialog class="watch-modal dividend-history-modal" id="dividendHistoryModal">
     <form method="dialog" class="modal-card dividend-history-card">
       <div class="modal-head">
@@ -954,6 +968,7 @@
   <script src="/static/chart-utils.js"></script>
   <script src="/static/app-consensus.js"></script>
   <script src="/static/app-company-profile.js"></script>
+  <script src="/static/app-etf-holdings.js"></script>
   <script src="/static/app-interest-columns.js"></script>
   <script src="/static/app-tabs.js"></script>
   <script src="/static/app-charts.js"></script>

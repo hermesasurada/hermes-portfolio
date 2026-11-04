@@ -78,6 +78,10 @@ function apiFetchTransactions(accountIds, allAccounts) {
 }
 
 // 한 종목의 전 계좌 거래(종목 차트 '내역' 팝업, 2026-10-26)
+function apiFetchEtfHoldings(ticker) {
+  return fetchJson(`/api/etf-holdings?ticker=${encodeURIComponent(ticker || "")}`);
+}
+
 function apiFetchTickerTransactions(ticker) {
   return fetchJson(`/api/transactions?ticker=${encodeURIComponent(ticker || "")}`);
 }

@@ -29,6 +29,7 @@ from portfolio_core.constants import (
     LOCAL_MARKET_SUFFIXES,
 )
 from portfolio_core.db import connect, initialize_schema
+from portfolio_core.etf_holdings import etf_holdings_available, load_etf_holdings, load_etf_universe
 from portfolio_core.queries import load_collection_diagnostics, load_ticker_directory
 from portfolio_core.schedule import load_schedule
 from portfolio_core.logos import KR_ETF_BRAND_SOURCES, SVG_PREFERRED_LOGOS, is_dark_logo
@@ -426,6 +427,12 @@ class Handler(BaseHTTPRequestHandler):
     def api_company_profile(self, query: dict[str, list[str]]) -> dict:
         return load_company_profile((query.get("ticker") or [""])[0])
 
+    def api_etf_holdings(self, query: dict[str, list[str]]) -> dict:
+        return load_etf_holdings((query.get("ticker") or [""])[0])
+
+    def api_etf_universe(self, query: dict[str, list[str]]) -> dict:
+        return load_etf_universe()
+
     def api_diagnostics(self, query: dict[str, list[str]]) -> dict:
         # 수집 상태 진단 (실패/지연 노출). DB 전용.
         with connect() as conn:
@@ -435,13 +442,15 @@ class Handler(BaseHTTPRequestHandler):
         ticker = (query.get("ticker") or [""])[0]
         us_extended = (query.get("us_extended") or ["0"])[0] in {"1", "true", "yes", "on"}
         # 화면 정밀도를 넘는 실수 자릿수는 응답 경계에서만 줄인다(payload_compact).
-        return compact_chart_payload(load_price_chart(
+        payload = compact_chart_payload(load_price_chart(
             ticker,
             us_extended=us_extended,
             range_key=(query.get("range") or [None])[0],
             start=(query.get("start") or [None])[0],
             end=(query.get("end") or [None])[0],
         ))
+        payload["has_etf_holdings"] = etf_holdings_available(ticker, payload.get("name") or "")
+        return payload
 
     def api_price_since(self, query: dict[str, list[str]]) -> dict:
         """기준 시각(since, ISO) 이후 등락률 묶음 — 지식증류 뷰어의 '리포트 생성 이후' 열(2026-10-25)."""
@@ -595,6 +604,8 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/quote": self.api_quote,
                 "/api/tickers": self.api_tickers,
                 "/api/company-profile": self.api_company_profile,
+                "/api/etf-holdings": self.api_etf_holdings,
+                "/api/etf-universe": self.api_etf_universe,
                 "/api/diagnostics": self.api_diagnostics,
                 "/api/chart": self.api_chart,
                 "/api/price-since": self.api_price_since,

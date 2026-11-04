@@ -559,6 +559,7 @@ function renderChartIdentity(payload) {
   document.getElementById("chartNameEdit")?.classList.toggle("hidden", !row.ticker || performanceChartOpen);
   document.getElementById("chartInterestOpen")?.classList.toggle("hidden", !row.ticker);
   renderChartFavorite();
+  syncChartEtfButton(payload);
   renderChartExternalLinks(row);
   renderChartPriceSummary(payload);
 }
