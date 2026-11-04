@@ -1008,6 +1008,8 @@ function syncDetailTabs() {
   document.getElementById("interestTableWrap").classList.toggle("hidden", showingChart || !showingInterest);
   document.getElementById("chartView").classList.toggle("hidden", !showingChart);
   document.getElementById("chartBack").classList.toggle("hidden", !showingChart);
+  // 구성종목·네이버 증권은 차트 밖 툴바에 있어 목록으로 돌아오면 직접 치운다
+  if (!chartTicker && typeof clearChartExternalLinks === "function") clearChartExternalLinks();
   // 성과 차트는 아이콘·이름('% 성과')이 툴바 타이틀과 겹친다. 헤드 줄 전체를 숨겨
   // 범례 위(헤드 margin)와 아래 여백이 어긋나지 않게 한다.
   document.querySelector("#chartView .chart-head")?.classList.toggle("hidden", performanceChartOpen);

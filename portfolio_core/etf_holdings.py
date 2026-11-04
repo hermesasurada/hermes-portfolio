@@ -53,10 +53,18 @@ def load_etf_universe() -> dict:
                      if row["ticker"] in known or asset_class(row["ticker"], row["name"] or "") == "etf"]}
 
 
-def _row(item: dict) -> dict:
+def _list_names() -> dict[str, str]:
+    """관심목록에 보이는 명칭. 그룹 밖 종목도 관심목록 '기타'에 나오므로 tickers 전체가 대상이다."""
+    with connect() as conn:
+        rows = conn.execute("SELECT ticker, COALESCE(NULLIF(display_name, ''), name) AS name FROM tickers").fetchall()
+    return {row["ticker"]: row["name"] for row in rows if row["name"]}
+
+
+def _row(item: dict, names: dict[str, str] | None = None) -> dict:
+    symbol = str(item.get("symbol") or "")
     return {
-        "symbol": str(item.get("symbol") or ""),
-        "name": str(item.get("name") or ""),
+        "symbol": symbol,
+        "name": (names or {}).get(symbol) or str(item.get("name") or ""),
         "weight": item.get("weight"),
         "estimated": bool(item.get("weight_estimated")),
         "type": str(item.get("type") or ""),
@@ -68,6 +76,7 @@ def load_etf_holdings(ticker: str) -> dict:
     entry = _entry(clean)
     if entry is None:
         return {"ticker": clean, "found": False, "items": [], "others": []}
+    names = _list_names()
     return {
         "ticker": clean,
         "found": True,
@@ -75,6 +84,6 @@ def load_etf_holdings(ticker: str) -> dict:
         "url": str(entry.get("url") or ""),
         "as_of": str(entry.get("as_of") or ""),
         "complete": bool(entry.get("complete")),
-        "items": [_row(item) for item in entry["items"]],
+        "items": [_row(item, names) for item in entry["items"]],
         "others": [_row(item) for item in entry.get("others") or []],
     }

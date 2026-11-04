@@ -1,4 +1,4 @@
-// ETF 구성종목 팝업(2026-11-04 사용자 지시): 세부페이지 상단 버튼 → 수집 캐시 조회.
+// ETF 구성종목 팝업(2026-11-04 사용자 지시): 상단 툴바 버튼 → 수집 캐시 조회.
 // 수집은 hermes 크론(etf-holdings-weekly)이 맡고, 버튼 표시는 차트 응답의 has_etf_holdings를 따른다.
 let etfHoldingsRequest = 0;
 
@@ -32,24 +32,34 @@ function etfHoldingsSummaryMarkup(data) {
   return stats.filter(Boolean).map(text => `<span class="ticker-tx-stat">${text}</span>`).join("");
 }
 
-function etfHoldingsRowMarkup(row, rank, rowClass = "") {
+function etfHoldingsRowMarkup(row, rank, cumulative, rowClass = "") {
   return `<tr${rowClass ? ` class="${rowClass}"` : ""}>
     <td>${rank}</td>
     <td class="etf-holdings-name">${esc(row.name)}</td>
     <td class="etf-holdings-symbol">${esc(row.symbol || "-")}</td>
     <td${row.estimated ? ` title="CU 수량과 현재가로 환산한 추정 비중"` : ""}>${etfWeightText(row)}</td>
+    <td class="etf-holdings-cumulative">${etfWeightText(cumulative)}</td>
   </tr>`;
 }
 
 function etfHoldingsTableMarkup(data) {
   const others = data.others || [];
-  const rows = data.items.map((row, index) => etfHoldingsRowMarkup(row, index + 1));
+  // 누적은 표 순서대로 끝까지 더한다. 비중이 없는 행은 '-'이고 합계를 건드리지 않는다.
+  let total = 0;
+  let estimated = false;
+  const rowMarkup = (row, rank, rowClass) => {
+    if (row.weight == null) return etfHoldingsRowMarkup(row, rank, { weight: null }, rowClass);
+    total += Number(row.weight);
+    estimated = estimated || Boolean(row.estimated);
+    return etfHoldingsRowMarkup(row, rank, { weight: total, estimated }, rowClass);
+  };
+  const rows = data.items.map((row, index) => rowMarkup(row, index + 1));
   if (others.length) {
-    rows.push(`<tr class="etf-holdings-group"><td colspan="4">현금·채권·파생 등</td></tr>`);
-    others.forEach(row => rows.push(etfHoldingsRowMarkup(row, "", "etf-holdings-other")));
+    rows.push(`<tr class="etf-holdings-group"><td colspan="5">현금·채권·파생 등</td></tr>`);
+    others.forEach(row => rows.push(rowMarkup(row, "", "etf-holdings-other")));
   }
   return `<div class="dividend-history-table-wrap ticker-tx-table-wrap"><table class="dividend-history-table etf-holdings-table">
-    <thead><tr><th>#</th><th>종목</th><th>티커</th><th>비중</th></tr></thead>
+    <thead><tr><th>#</th><th>종목</th><th>티커</th><th>비중</th><th>누적</th></tr></thead>
     <tbody>${rows.join("")}</tbody></table></div>`;
 }
 

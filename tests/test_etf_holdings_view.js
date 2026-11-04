@@ -16,6 +16,12 @@ const table = run(`etfHoldingsTableMarkup(${data})`);
 assert.match(table, /&lt;b&gt;NVIDIA&lt;\/b&gt;/);
 assert.match(table, /현금·채권·파생 등/);
 assert.match(table, /etf-holdings-other/);
+assert.match(table, /<th>누적<\/th>/);
+// 누적: 표 순서대로 끝까지 더하고, 비중 없는 행은 '-'로 두며 합계를 건드리지 않는다
+const cumulative = [...table.matchAll(/etf-holdings-cumulative">([^<]*)</g)].map(match => match[1]);
+assert.deepEqual(cumulative, ['30.0%', '-', '31.0%']);
+const estimatedTable = run(`etfHoldingsTableMarkup({items: [{name: "A", weight: 5, estimated: true}, {name: "B", weight: 5}], others: []})`);
+assert.deepEqual([...estimatedTable.matchAll(/etf-holdings-cumulative">([^<]*)</g)].map(match => match[1]), ['약 5.00%', '약 10.0%']);
 const summary = run(`etfHoldingsSummaryMarkup(${data})`);
 assert.match(summary, /href="https:\/\/x\.test\/f\?a=1&amp;b=2"/);
 assert.match(summary, /전체 3개/);

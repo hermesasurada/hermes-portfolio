@@ -7276,16 +7276,11 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 #txMemoInput { width: 100%; height: auto; min-height: 112px; padding: 8px 10px; font-size: 13px; line-height: 1.45; }
 #txMemoStatus:empty { display: none; }
 
-/* ── ETF 구성종목(2026-11-04): 세부페이지 상단 버튼 → 팝업. 표는 배당이력·내역 팝업 스타일 재사용 ── */
-.chart-etf-btn {
-  flex: 0 0 auto; height: 22px; min-height: 22px; margin-left: 2px; padding: 0 8px;
-  border: 1px solid var(--line); border-radius: var(--radius-sm); background: transparent;
-  color: var(--muted); font-family: inherit; font-size: 11.5px; font-weight: 500; white-space: nowrap;
-}
-.chart-etf-btn:hover, .chart-etf-btn:focus-visible { border-color: var(--brand); color: var(--brand); }
+/* ── ETF 구성종목(2026-11-04): 상단 툴바 버튼 → 팝업. 표는 배당이력·내역 팝업 스타일 재사용 ── */
 .etf-holdings-table td.etf-holdings-name { max-width: 300px; text-align: left; white-space: normal; overflow-wrap: anywhere; }
 .etf-holdings-table td.etf-holdings-symbol { color: var(--muted); text-align: left; }
 .etf-holdings-table th:nth-child(2), .etf-holdings-table th:nth-child(3) { text-align: left; }
+.etf-holdings-table td.etf-holdings-cumulative { color: var(--muted); }
 .etf-holdings-table .etf-holdings-group td { color: var(--muted); font-size: 11px; font-weight: 600; text-align: left; }
 .etf-holdings-table .etf-holdings-other td { opacity: .7; }
 .etf-holdings-source { color: inherit; text-decoration: underline; text-underline-offset: 2px; }

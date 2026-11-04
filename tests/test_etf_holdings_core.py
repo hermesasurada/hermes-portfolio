@@ -17,6 +17,9 @@ class EtfHoldingsCacheTests(unittest.TestCase):
         patcher = mock.patch.object(E, "cache_path", return_value=self.path)
         patcher.start()
         self.addCleanup(patcher.stop)
+        names = mock.patch.object(E, "_list_names", return_value={})
+        names.start()
+        self.addCleanup(names.stop)
         E._loaded = (0, {})
 
     def write(self, data, stamp):
@@ -35,6 +38,16 @@ class EtfHoldingsCacheTests(unittest.TestCase):
         self.assertTrue(got["found"] and got["complete"])
         self.assertTrue(got["items"][0]["estimated"])
         self.assertEqual(got["others"][0]["name"], "Cash")
+
+    def test_list_names_replace_exact_tickers_only(self):
+        self.write({"SMH": {"items": [{"symbol": "005930.KS", "name": "Samsung Electronics Co Ltd", "weight": 3},
+                                      {"symbol": "2382.HK", "name": "Sunny Optical", "weight": 2},
+                                      {"symbol": "", "name": "No Ticker", "weight": 1}],
+                            "others": [{"symbol": "005930.KS", "name": "005930 Swap", "type": "derivative"}]}}, 100)
+        with mock.patch.object(E, "_list_names", return_value={"005930.KS": "삼성전자", "2382.TW": "Quanta Computer"}):
+            got = E.load_etf_holdings("SMH")
+        self.assertEqual([row["name"] for row in got["items"]], ["삼성전자", "Sunny Optical", "No Ticker"])
+        self.assertEqual(got["others"][0]["name"], "005930 Swap")
 
     def test_internal_keys_and_empty_entries_are_hidden(self):
         self.write({"_symbols": {"items": [1]}, "AAA": {"items": []}}, 100)

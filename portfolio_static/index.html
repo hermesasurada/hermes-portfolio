@@ -193,6 +193,7 @@
             <strong id="tableTitle">전체</strong>
             <button class="ghost-btn hidden" id="chartBack" type="button">목록</button>
             <button class="ghost-btn chart-interest-open hidden" id="chartInterestOpen" type="button">관심목록</button>
+            <button class="ghost-btn hidden" id="chartEtfHoldings" type="button" aria-haspopup="dialog" aria-controls="etfHoldingsModal" title="이 ETF의 구성종목">구성종목</button>
             <a class="ghost-btn chart-link-btn chart-naver-link hidden" id="chartNaverLink" target="_blank" rel="noopener noreferrer" title="네이버 증권에서 보기">네이버 증권</a>
             <span class="filter-toggle-control hidden" id="performanceDetailControl">
               <label class="toggle-switch" for="performanceDetailToggle">
@@ -358,7 +359,6 @@
                   <button class="chart-name-edit-btn hidden" id="chartNameEdit" type="button"
                     aria-label="노출명칭 수정" title="노출명칭 수정">&#9998;</button>
                   <span class="chart-favorite" id="chartFavorite"></span>
-                  <button class="chart-etf-btn hidden" id="chartEtfHoldings" type="button" aria-haspopup="dialog" aria-controls="etfHoldingsModal" title="이 ETF의 구성종목">구성종목</button>
                 </span>
                 <form class="chart-name-edit-form hidden" id="chartNameEditForm">
                   <input id="chartNameInput" type="text" maxlength="80" autocomplete="off" aria-label="노출명칭">

@@ -425,6 +425,7 @@ function renderChartExternalLinks(payload) {
 }
 
 function clearChartExternalLinks() {
+  syncChartEtfButton(null);
   const el = document.getElementById("chartNaverLink");
   if (el) {
     el.classList.add("hidden");
