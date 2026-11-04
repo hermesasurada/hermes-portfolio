@@ -377,15 +377,57 @@ function txTickerCell(tx) {
   `;
 }
 
-// 메모가 있는 거래만 종목명 옆에 아이콘 — 누르면 메모만 고치는 팝업(2026-10-16 사용자 지시).
-// 메모가 없는 거래는 관리 칸의 '메모' 버튼으로 새로 단다(모든 행 같은 자리, 메모 있으면 강조).
+// 메모가 있는 거래만 종목명 옆에 아이콘 — 읽기 전용 툴팁(2026-11-04 사용자 지시, 이전에는 편집 팝업).
+// 마우스는 올리면 보이고, 누르면 고정된다. 터치는 누르면 보인다. 다시 누르거나 바깥을 누르면 닫힌다.
+// 메모 작성·수정은 관리 칸의 '메모' 버튼으로만 한다(모든 행 같은 자리, 메모 있으면 강조).
 // 행 편집(txEditRow)은 메모를 다루지 않는다.
 function txMemoButton(tx) {
   const memo = String(tx?.memo || "").trim();
   if (!memo) return "";
-  return `<button class="tx-memo-btn" type="button" data-tx-memo="${tx.id}" title="${esc(memo)}" aria-label="메모 보기·편집">`
+  return `<button class="tx-memo-btn" type="button" data-tx-memo-tip="${esc(memo)}" aria-label="메모 보기" aria-expanded="false" aria-controls="txMemoTip">`
     + `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.5h7.5L13 5v8.5H3z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M5.5 7.5h5M5.5 10h3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`
     + `</button>`;
+}
+
+let txMemoTipAnchor = null;
+let txMemoTipPinned = false;
+
+function hideTxMemoTip() {
+  const tip = document.getElementById("txMemoTip");
+  txMemoTipAnchor?.setAttribute("aria-expanded", "false");
+  txMemoTipAnchor = null;
+  txMemoTipPinned = false;
+  if (tip?.matches(":popover-open")) tip.hidePopover();
+}
+
+function showTxMemoTip(button, pinned) {
+  hideTxMemoTip();
+  const tip = document.getElementById("txMemoTip");
+  tip.textContent = button.dataset.txMemoTip;
+  txMemoTipAnchor = button;
+  txMemoTipPinned = pinned;
+  button.setAttribute("aria-expanded", "true");
+  tip.showPopover();
+  const rect = button.getBoundingClientRect();
+  const size = tip.getBoundingClientRect();
+  const gap = 10;
+  tip.style.left = `${Math.max(gap, Math.min(rect.left, window.innerWidth - size.width - gap))}px`;
+  const below = rect.bottom + 6;
+  const top = below + size.height <= window.innerHeight - gap ? below : rect.top - size.height - 6;
+  tip.style.top = `${Math.max(gap, top)}px`;
+}
+
+function bindTxMemoTip(button) {
+  button.addEventListener("click", () => {
+    if (txMemoTipAnchor === button && txMemoTipPinned) hideTxMemoTip();
+    else showTxMemoTip(button, true);
+  });
+  button.addEventListener("pointerenter", event => {
+    if (event.pointerType === "mouse" && !txMemoTipPinned) showTxMemoTip(button, false);
+  });
+  button.addEventListener("pointerleave", event => {
+    if (event.pointerType === "mouse" && !txMemoTipPinned) hideTxMemoTip();
+  });
 }
 
 let txMemoEditingId = null;
@@ -432,6 +474,13 @@ function initTxMemoEditor() {
   document.getElementById("txMemoCancel")?.addEventListener("click", () => modal?.close());
   modal?.addEventListener("click", event => { if (event.target === modal) modal.close(); });
   modal?.addEventListener("close", () => { txMemoEditingId = null; });
+  const tip = document.getElementById("txMemoTip");
+  document.addEventListener("click", event => {
+    if (txMemoTipAnchor && !txMemoTipAnchor.contains(event.target) && !tip.contains(event.target)) hideTxMemoTip();
+  });
+  document.addEventListener("keydown", event => { if (event.key === "Escape") hideTxMemoTip(); });
+  document.addEventListener("scroll", event => { if (!tip.contains(event.target)) hideTxMemoTip(); }, true);
+  window.addEventListener("resize", hideTxMemoTip);
 }
 
 function txApplyToHoldings(tx) {
@@ -541,6 +590,8 @@ function txViewRow(tx, endingQty) {
 }
 
 function bindTransactionRowActions(tbody) {
+  hideTxMemoTip();   // 표를 다시 그리면 기준 아이콘이 사라진다
+  tbody.querySelectorAll("[data-tx-memo-tip]").forEach(bindTxMemoTip);
   tbody.querySelectorAll("[data-tx-edit]").forEach(btn => btn.addEventListener("click", () => {
     editingTxId = Number(btn.dataset.txEdit);
     renderTransactions(transactionRows, false);

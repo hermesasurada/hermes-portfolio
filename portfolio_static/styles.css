@@ -7256,7 +7256,7 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 /* ── 거래 메모(2026-10-16) ─────────────────────────────────────────────────── */
 /* 입력: 거래 입력 팝업의 선택 메모칸. note(원장 감사 기록)와 별개인 transactions.memo */
 .trade-dialog-card textarea { height: auto; min-height: 50px; padding: 6px 8px; font-size: 11.5px; line-height: 1.4; }
-/* 목록: 메모가 있는 거래만 종목명 옆 아이콘 → 메모만 고치는 팝업 */
+/* 목록: 메모가 있는 거래만 종목명 옆 아이콘 → 읽기 전용 툴팁. 작성·수정은 관리 칸 메모 버튼의 팝업 */
 .tx-memo-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 18px; height: 18px; margin-left: 4px; padding: 0; vertical-align: -3px;
@@ -7264,6 +7264,13 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 }
 .tx-memo-btn svg { width: 14px; height: 14px; }
 .tx-memo-btn:hover, .tx-memo-btn:focus-visible { color: var(--brand); background: var(--brand-soft); }
+.tx-memo-tip {
+  position: fixed; inset: auto; margin: 0; box-sizing: border-box;
+  max-width: min(320px, calc(100vw - 20px)); max-height: min(240px, calc(100dvh - 20px)); overflow: auto;
+  padding: 8px 10px; border: 1px solid var(--chart-tooltip-border); border-radius: var(--radius-sm);
+  background: var(--chart-tooltip-bg); color: var(--ink); box-shadow: var(--shadow);
+  font-size: 12.5px; line-height: 1.5; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere;
+}
 .tx-action-btn.has-memo { border-color: var(--brand); color: var(--brand); }
 .tx-memo-target { color: var(--muted); font-size: 12px; font-weight: 600; }
 #txMemoInput { width: 100%; height: auto; min-height: 112px; padding: 8px 10px; font-size: 13px; line-height: 1.45; }

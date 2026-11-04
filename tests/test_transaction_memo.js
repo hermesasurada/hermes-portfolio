@@ -1,4 +1,4 @@
-// 거래 메모(2026-10-16): 메모가 있는 거래만 목록 종목명 옆 아이콘, 행 편집은 메모를 다루지 않고,
+// 거래 메모(2026-10-16): 메모가 있는 거래만 목록 종목명 옆 아이콘(읽기 전용 툴팁, 2026-11-04), 행 편집은 메모를 다루지 않고,
 // 저장 확인창은 메모가 있을 때만 메모 줄을 보인다.
 const assert = require('node:assert/strict');
 const h = require('./harness');
@@ -8,15 +8,16 @@ const run = code => h.evaluate(ctx, code);
 assert.equal(run('txMemoButton({id: 1, memo: null})'), '');
 assert.equal(run('txMemoButton({id: 1, memo: "   "})'), '');
 const btn = run('txMemoButton({id: 7, memo: "<b>실적 전</b> 분할매수"})');
-assert.match(btn, /data-tx-memo="7"/);
-assert.match(btn, /title="&lt;b&gt;실적 전&lt;\/b&gt; 분할매수"/);   // 툴팁은 이스케이프
+assert.match(btn, /data-tx-memo-tip="&lt;b&gt;실적 전&lt;\/b&gt; 분할매수"/);   // 툴팁은 이스케이프
+assert.doesNotMatch(btn, /data-tx-memo="|title=/);   // 아이콘은 편집 팝업을 열지 않고, 기본 title과 겹치지 않는다
 
 // 목록 행: 보기 행만 아이콘, 편집 행은 메모 없음
 ctx.currentPriceForTicker = () => null;
 ctx.txTickerCell = tx => tx.ticker;
 const tx = '{id: 7, trade_date: "2026-10-16", ticker: "AAPL", name: "Apple", side: "BUY", qty: 1, price: 100, currency: "USD", memo: "메모"}';
 const view = run(`txViewRow(${tx}, null)`);
-assert.equal((view.match(/data-tx-memo="7"/g) || []).length, 2);   // 종목명 아이콘 + 관리 칸 버튼
+assert.equal((view.match(/data-tx-memo="7"/g) || []).length, 1);   // 편집 진입은 관리 칸 버튼뿐
+assert.equal((view.match(/data-tx-memo-tip=/g) || []).length, 1);   // 종목명 아이콘은 읽기 전용 툴팁
 assert.match(view, /tx-action-btn has-memo/);
 // 메모 없는 거래도 관리 칸 버튼으로 새로 달 수 있다
 const bare = run(`txViewRow({...${tx}, memo: null}, null)`);
