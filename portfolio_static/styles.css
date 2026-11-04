@@ -6300,7 +6300,12 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     text-align: left;
   }
   .summary { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
-  .layout { grid-template-columns: 1fr; }
+  /* 한 단 화면은 전광판을 계좌/관심목록 선택기 위로 올린다(2026-11-04 사용자 지시). 전광판이 .main-col 안에 있어
+     열을 풀고 순서로 옮긴다. 풀린 항목 사이 간격은 .layout gap이 맡으므로 전광판·거래내역의 자체 여백을 없앤다. */
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .main-col { display: contents; }
+  .hero-strip { order: -1; margin-bottom: 0; }
+  .transaction-panel { margin-top: 0; }
   #interestSidebarPane {
     max-height: none;
   }
