@@ -1258,7 +1258,7 @@ function renderTable() {
   if (!chartTicker) {
     document.getElementById("tableTitle").textContent = selectionMode === "all" ? "전체 계좌" : selected.length === 1 ? `${selected[0].memberName} · ${selected[0].name}` : selected.length > 1 ? `${selected.length}개 계좌` : "선택 없음";
   }
-  document.getElementById("rowCount").textContent = `${rows.length} rows`;
+  document.getElementById("rowCountValue").textContent = rows.length;
   document.getElementById("holdings").innerHTML = rows.map(r => {
     const noPosition = !hasPosition(r);
     // 직전 렌더 대비 현재가가 바뀐 종목만 가격 셀에 펄스 (정렬·필터 재렌더는 가격 동일→펄스 없음)

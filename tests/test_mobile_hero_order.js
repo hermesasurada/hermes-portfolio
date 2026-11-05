@@ -9,7 +9,7 @@ const base = h.withoutMediaBlocks(css, '(max-width: 980px)');
 assert.match(mobile, /\.main-col \{ display: contents; \}/);
 assert.match(mobile, /\.hero-strip \{ order: -1; margin-bottom: 0; \}/);
 // 풀린 항목이 넓은 표에 밀려 트랙을 넓히지 않도록 0부터 시작한다
-assert.match(mobile, /\.layout \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+assert.match(mobile, /\.layout \{ grid-template-columns: minmax\(0, 1fr\); gap: 8px; \}/);
 // 간격을 gap이 맡으므로 거래내역 여백이 겹치면 안 된다
 assert.match(mobile, /\.transaction-panel \{ margin-top: 0; \}/);
 assert.doesNotMatch(base, /\.main-col \{[^}]*display: contents/);

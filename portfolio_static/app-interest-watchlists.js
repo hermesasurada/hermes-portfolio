@@ -715,9 +715,9 @@ function renderInterestMainTable() {
   loadQuotesForRows(baseRows.filter(consensusCandidate).map(row => row.ticker), scheduleInterestMainTable);
   document.getElementById("tableTitle").textContent = group.name;
   // 스크리닝 중이면 '일치 / 전체'로 — 몇 종목이 걸러졌는지 보이게
-  document.getElementById("rowCount").textContent = activeInterestScreenConditions().length
-    ? `${rows.length} / ${interestPreScreenRows.length} rows`
-    : `${rows.length} rows`;
+  document.getElementById("rowCountValue").textContent = activeInterestScreenConditions().length
+    ? `${rows.length} / ${interestPreScreenRows.length}`
+    : rows.length;
   const suppressIndexHighlight = interestGroupIsIndex(group);
   const table = body.closest("table");
   const columns = visibleInterestColumns(rows, suppressIndexHighlight);
