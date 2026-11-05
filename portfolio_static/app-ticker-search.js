@@ -126,6 +126,7 @@ function initTickerSearch() {
   document.getElementById("tickerSearchOpen").addEventListener("click", () => {
     input.value = "";
     renderTickerSearchResults("");
+    resetWatchLookup();
     modal.showModal();
     input.focus();
     loadTickerSearchDirectory();
@@ -134,7 +135,10 @@ function initTickerSearch() {
   modal.addEventListener("click", event => {
     if (event.target === modal) modal.close();
   });
-  input.addEventListener("input", () => renderTickerSearchResults(input.value));
+  input.addEventListener("input", () => {
+    renderTickerSearchResults(input.value);
+    resetWatchLookup();
+  });
   input.addEventListener("keydown", event => {
     if (event.key === "ArrowDown") {
       event.preventDefault();
@@ -146,7 +150,8 @@ function initTickerSearch() {
         : tickerSearchActiveIndex - 1);
     } else if (event.key === "Enter") {
       event.preventDefault();
-      openTickerSearchResult(tickerSearchActiveIndex >= 0 ? tickerSearchActiveIndex : 0);
+      if (tickerSearchMatches.length) openTickerSearchResult(tickerSearchActiveIndex >= 0 ? tickerSearchActiveIndex : 0);
+      else document.getElementById("watchLookup").click();   // 목록에 없으면 새 종목으로 찾는다
     }
   });
   results.addEventListener("click", event => {

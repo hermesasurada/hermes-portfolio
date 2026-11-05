@@ -22,10 +22,25 @@ function setWatchStatus(message, error = false) {
   const el = document.getElementById("watchStatus");
   el.textContent = message || "";
   el.classList.toggle("error", error);
+  syncWatchPanel();
+}
+
+// 새 종목 등록 영역은 입력값이나 진행 중인 내용이 있을 때만 검색 결과 아래에 펼친다.
+function syncWatchPanel() {
+  const query = document.getElementById("tickerSearchInput")?.value.trim();
+  const status = document.getElementById("watchStatus")?.textContent;
+  document.getElementById("watchPanel")?.classList
+    .toggle("hidden", !(query || status || watchLookupResult || watchPending.length));
+}
+
+function resetWatchLookup() {
+  setWatchStatus("");
+  renderWatchLookup(null);
 }
 
 function updateWatchHint() {
   const hint = document.getElementById("watchHint");
+  syncWatchPanel();
   if (!hint) return;
   if (watchPending.length > 0) {
     hint.textContent = `${watchPending.length}개 종목이 적용 대기 중입니다.`;
@@ -61,15 +76,7 @@ function renderWatchLookup(item = null) {
 }
 
 function initWatchlistControls() {
-  const modal = document.getElementById("watchModal");
-  const input = document.getElementById("watchTickerInput");
-  document.getElementById("watchlistOpen").addEventListener("click", () => {
-    setWatchStatus("");
-    renderWatchLookup(null);
-    modal.showModal();
-    input.focus();
-  });
-  document.getElementById("watchClose").addEventListener("click", () => modal.close());
+  const input = document.getElementById("tickerSearchInput");
   document.getElementById("watchLookup").addEventListener("click", async () => {
     const query = input.value.trim();
     if (!query) return;
@@ -83,12 +90,6 @@ function initWatchlistControls() {
       setWatchStatus(err.message || String(err), true);
     }
   });
-  input.addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      document.getElementById("watchLookup").click();
-    }
-  });
   document.getElementById("watchAdd").addEventListener("click", () => {
     if (!watchLookupResult) return;
     if (!watchPending.some(item => item.ticker === watchLookupResult.ticker)) {
@@ -96,6 +97,7 @@ function initWatchlistControls() {
       renderWatchPending();
     }
     input.value = "";
+    renderTickerSearchResults("");
     renderWatchLookup(null);
   });
   document.getElementById("watchApply").addEventListener("click", async () => {

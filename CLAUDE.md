@@ -13,7 +13,8 @@
 - **상승=빨강(`--up`), 하락=파랑(`--down`)**. 변경 금지.
 - 표 세로 스크롤바 숨김·가로만: `::-webkit-scrollbar { width:0; height:8px }`. 축 pseudo에 width 금지, 표준 `scrollbar-width` 선언 금지(webkit이 전체 무시).
 - 모바일(≤980px) 표 글자 크기는 `--grid-fs`·`--grid-fs-sub`·`--grid-fs-chip`·`--grid-fs-tiny` 네 변수로만. 개별 px 금지. 테스트 `test_mobile_grid_scale.js`.
-- 모바일 헤더(2026-11-05): 980px 이하는 `v2`·도움말 없이 로고와 메뉴를 한 줄로. 480px 이하는 `Portfolio` 글자를 빼고 메뉴를 아이콘(`.nav-icon`, 버튼 `aria-label` 필수)으로, 345px 이하는 로고까지 뺀다. PC는 그대로.
+- 상단 헤더(2026-11-05): 버튼은 전 폭에서 한 모양(30px, 테두리, 켜짐은 `--brand-soft`)으로 오른쪽 정렬, `연장`은 스위치 없는 버튼. 980px 이하는 `v2`·도움말 없이 제목과 메뉴를 한 줄로, 480px 이하는 일정·입출금을 아이콘(`.nav-icon`, 버튼 `aria-label` 필수)으로, 345px 이하는 로고를 뺀다.
+- 종목 검색과 관리종목은 대화상자 하나(`#tickerSearchModal`). 목록에 없으면 `새 종목 찾기`·Enter로 조회해 추가한다. 성과는 사이드바 세 번째 탭(`data-sidebar-tab="performance"`)이고 저장하지 않는 화면 상태라 `performanceChartOpen`에서 파생한다.
 - 모바일 배치(2026-11-05): 360px 폭에서 툴바는 제목 줄+컨트롤 줄 두 줄(관심목록은 추가 폼 포함 세 줄). 행 수는 제목 옆 숫자(`rowCountValue`, `rows`는 PC만). **세로 여백·행 높이 축소는 사용자 지시로 원복**했으므로, 밀도는 줄 배치로만 높이고 여백·행 높이는 건드리지 않는다. 규칙은 styles.css 끝 블록, 테스트 `test_mobile_density.js`.
 - 모바일 표 밀도는 가로 위주: 행 높이 `--list-row-height` 40px 유지, `--col-scale`(0.84)·`--grid-pad-x`로 열을 더 담는다. **`--col-scale`은 계좌표 CSS·관심목록 colgroup·JS 표 전체 폭 세 곳이 함께** 타야 한다. `thead th` 높이 규칙에 `:is()`로 #id 섞지 말 것.
 - 색은 CSS 토큰만(브랜드색 예외). 테마 '화이트·슬레이트', 평면, Pretendard. 표·사이드바·히어로 숫자는 `--grid-num-font`(tnum), `--chart-num-font`(Roboto Mono)는 차트 축·툴팁 전용. 카드화 금지.

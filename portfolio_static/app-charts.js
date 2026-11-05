@@ -465,6 +465,7 @@ async function reloadPerformanceChart({ skeleton = false } = {}) {
 async function openPerformanceChart() {
   rememberListScroll();
   performanceChartOpen = true;
+  syncSidebarTabs();
   discardHiddenListRowsForChart();
   syncTransactionPanel();
   chartTicker = null;
@@ -541,6 +542,7 @@ async function openChart(ticker) {
   if (chartTicker === cleanTicker && chartLoadInFlight) return;
   rememberListScroll();
   performanceChartOpen = false;
+  syncSidebarTabs();
   performanceLoadToken += 1;
   syncPerformanceTitle("");   // 성과 → 종목 차트로 넘어갈 때 툴바 타이틀도 함께 내린다
   syncPerformanceLegendHost("");
@@ -608,6 +610,7 @@ function closeChart(updateHash = true) {
   chartPayload = null;
   chartComparePayloads = [];
   performanceChartOpen = false;
+  syncSidebarTabs();
   performanceLoadInFlight = null;
   performancePayload = null;
   syncPerformanceTitle("");

@@ -325,10 +325,6 @@ function initUsPriceControls() {
 // app-watchlist.js loaded separately.
 document.getElementById("chartBack").addEventListener("click", closeChart);
 initCashFlowsModal();
-document.getElementById("performanceOpen").addEventListener("click", () => {
-  history.pushState(null, "", "#performance");
-  openPerformanceChart();
-});
 document.getElementById("performanceDetailToggle").addEventListener("change", () => {
   syncFilterToggleControls();
   if (performanceChartOpen) reloadPerformanceChart();

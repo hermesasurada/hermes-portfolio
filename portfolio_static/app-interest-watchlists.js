@@ -79,14 +79,28 @@ function setInterestStatus(message = "", error = false, main = false) {
   el.classList.toggle("error", error);
 }
 
+// 성과 탭은 저장하지 않는 화면 상태다. 성과가 계좌 선택을 따르므로 계좌 목록을 보여 주고, 닫으면 있던 탭으로 돌아간다.
 function syncSidebarTabs() {
+  const current = performanceChartOpen ? "performance" : activeSidebarTab;
+  const pane = performanceChartOpen ? "accounts" : activeSidebarTab;
   document.querySelectorAll("[data-sidebar-tab]").forEach(btn => {
-    const active = btn.dataset.sidebarTab === activeSidebarTab;
+    const active = btn.dataset.sidebarTab === current;
     btn.classList.toggle("active", active);
     btn.setAttribute("aria-selected", String(active));
   });
-  document.getElementById("accountSidebarPane")?.classList.toggle("hidden", activeSidebarTab !== "accounts");
-  document.getElementById("interestSidebarPane")?.classList.toggle("hidden", activeSidebarTab !== "interest");
+  document.getElementById("accountSidebarPane")?.classList.toggle("hidden", pane !== "accounts");
+  document.getElementById("interestSidebarPane")?.classList.toggle("hidden", pane !== "interest");
+}
+
+// 모바일은 차트가 바로 보이게 패널을 접고, 성과 화면에서 다시 누르면 계좌 선택을 펼치거나 접는다.
+function openPerformanceTab() {
+  if (window.matchMedia("(max-width: 980px)").matches) {
+    mobileAccountsCollapsed = performanceChartOpen ? !mobileAccountsCollapsed : true;
+    syncMobileCollapsePanels();
+  }
+  if (performanceChartOpen) return;
+  history.pushState(null, "", "#performance");
+  openPerformanceChart();
 }
 
 function trackedTickerOptions() {
@@ -813,10 +827,15 @@ function initInterestWatchlists() {
 
   document.querySelectorAll("[data-sidebar-tab]").forEach(btn => {
     btn.addEventListener("click", () => {
+      if (btn.dataset.sidebarTab === "performance") {
+        openPerformanceTab();
+        return;
+      }
       const nextTab = btn.dataset.sidebarTab === "interest" ? "interest" : "accounts";
       const mobile = window.matchMedia("(max-width: 980px)").matches;
+      const leavingPerformance = performanceChartOpen;
       // 모바일에서 현재 선택된 탭을 다시 누르면 화살표와 동일하게 접는다.
-      if (mobile && nextTab === activeSidebarTab && !mobileAccountsCollapsed) {
+      if (mobile && !leavingPerformance && nextTab === activeSidebarTab && !mobileAccountsCollapsed) {
         mobileAccountsCollapsed = true;
         syncMobileCollapsePanels();
         return;
@@ -828,6 +847,7 @@ function initInterestWatchlists() {
         mobileAccountsCollapsed = false;
         syncMobileCollapsePanels();
       }
+      if (leavingPerformance) closeChart();   // 주소의 #performance까지 지워 새로고침에 되살아나지 않게
       if (activeSidebarTab === "interest") {
         if (chartTicker || performanceChartOpen) closeChart(false);
         loadInterestWatchlists().catch(() => {});
