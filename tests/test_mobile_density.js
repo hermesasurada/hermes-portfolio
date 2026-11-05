@@ -16,10 +16,19 @@ assert.match(mobile, /#nameFilterControl \{ flex: 1 1 90px;/);   // 150px면 필
 // 'rows'는 PC에서만. 값은 rowCountValue에 쓰고 단위는 CSS로 숨긴다
 assert.match(html, /id="rowCount"><span id="rowCountValue">0<\/span><span class="row-count-unit"> rows<\/span>/);
 assert.match(mobile, /\.row-count-unit \{ display: none; \}/);
-assert.match(mobile, /\.controls \{ justify-content: flex-start; gap: 8px 4px; \}/);   // 헤더 두 줄은 가로 간격으로만
+assert.match(mobile, /\.controls \{[^}]*gap: 8px 4px;/);   // 줄 간격은 원래 값, 가로 간격만 줄인다
 for (const file of ['app-tabs.js', 'app-holdings.js', 'app-interest-watchlists.js']) {
   assert.doesNotMatch(h.readStatic(file), /getElementById\("rowCount"\)\.textContent/, file);
 }
 // 추가·일괄 버튼 글자가 세로로 꺾이지 않는다
 assert.match(mobile, /\.interest-main-form button \{ flex: 0 0 auto;[^}]*white-space: nowrap;/);
+// 모바일 헤더 한 줄: 버전·도움말을 빼고, 폰 폭(480px 이하)은 메뉴를 아이콘으로 바꾼다. PC는 그대로
+assert.match(mobile, /\.service-brand em, \.help-icon-btn \{ display: none; \}/);
+const phone = h.mediaBlocks(css, '(max-width: 480px)').map(block => block.text).join('\n');
+assert.match(phone, /\.controls \{[^}]*flex-wrap: nowrap;/);
+assert.match(phone, /\.controls \.ctrl-group \.ghost-btn \.nav-icon \{ display: block; \}/);
+assert.match(h.withoutMediaBlocks(css, '(max-width: 980px)'), /\.nav-icon \{ display: none;/);
+for (const id of ['watchlistOpen', 'scheduleOpen', 'performanceOpen', 'cashFlowsOpen']) {
+  assert.match(html, new RegExp(`id="${id}"[^>]*aria-label="[^"]+"[^>]*><svg class="nav-icon"`), id);   // 아이콘만 보여도 이름이 남는다
+}
 console.log('mobile density ok');

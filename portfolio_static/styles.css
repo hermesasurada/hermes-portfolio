@@ -384,6 +384,7 @@ h1 {
 }
 .theme-btn > .theme-icon { font-size: 12.5px; line-height: 1; }
 .label-short { display: none; }
+.nav-icon { display: none; width: 18px; height: 18px; flex: 0 0 18px; }
 .auto-refresh-control,
 .us-price-control,
 .filter-toggle-control,
@@ -6067,8 +6068,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .modal-card { box-shadow: var(--shadow); }
 .mobile-filters-toggle { display: none; }
 @media (max-width: 980px) {
-  .bar { position: relative; }
-  .controls .ctrl-group[aria-label="환경"] { position: absolute; top: 12px; right: 10px; padding: 0; }
   .mobile-filters-toggle { display: inline-flex; align-items: center; height: 32px; font-size: 12px; }
   .mobile-filters-toggle[aria-expanded="true"], .mobile-filters-toggle.active { background: var(--brand-soft); color: var(--brand); border-color: var(--brand); }
   .title-tools:not(.filters-expanded) :is(#interestSectorControl, #tagFilterControl, #currencyFilterControl) { display: none; }
@@ -6189,14 +6188,15 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     min-height: 28px;
   }
   .bar {
-    grid-template-columns: 1fr;
+    display: flex;
+    gap: 8px;
     padding-left: 10px;
     padding-right: 10px;
   }
   main {
     padding: 10px 8px 32px;
   }
-  .controls { justify-content: flex-start; gap: 8px 4px; }
+  .controls { flex: 1 1 auto; justify-content: space-between; gap: 8px 4px; min-width: 0; }
   /* 좁은 화면: 그룹 구분선 없이 평탄하게 줄바꿈 */
   .ctrl-group { border-right: 0; padding: 0; }
   .ctrl-group {
@@ -7320,4 +7320,25 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 
   .interest-main-form { width: 100%; margin-left: 0; }
   .interest-main-form button { flex: 0 0 auto; padding: 0 10px; white-space: nowrap; }
+}
+
+/* ── 모바일 헤더 한 줄(2026-11-05 사용자 지시): 버전·도움말을 빼고 메뉴와 같은 줄에 둔다.
+   폰 폭에서는 메뉴를 아이콘으로 바꾸고 로고만 남긴다. PC는 그대로. ── */
+@media (max-width: 980px) {
+  .service-brand { flex: 0 0 auto; }
+  .service-brand em, .help-icon-btn { display: none; }
+}
+@media (max-width: 480px) {
+  .service-name { display: none; }
+  .bar { gap: 6px; }
+  .controls { column-gap: 2px; flex-wrap: nowrap; }
+  .ctrl-group { gap: 2px; }
+  .auto-refresh-control .cycle-toggle-btn { min-width: 42px; }
+  .controls .us-price-control { padding-inline: 2px; }
+  .controls .ctrl-group .ghost-btn { width: 30px; min-width: 30px; padding: 0; justify-content: center; }
+  .controls .ctrl-group .ghost-btn > span { display: none; }
+  .controls .ctrl-group .ghost-btn .nav-icon { display: block; }
+}
+@media (max-width: 345px) {
+  .service-brand { display: none; }   /* 가장 좁은 폭: 메뉴를 살리고 로고를 뺀다 */
 }
