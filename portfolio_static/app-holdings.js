@@ -470,7 +470,19 @@ function renderCurrencyFilter() {
     ...currencies.map(currency => `<option value="${esc(currency)}">${esc(currency)}</option>`),
   ].join("");
   select.value = currencies.includes(saved) ? saved : "all";
+  renderCurrencySegments(currencies, select.value);
   syncFilterToggleControls();
+}
+
+// PC는 같은 값을 바로 고르는 버튼으로 보인다. 통화가 하나뿐이면 고를 것이 없어 숨긴다(CSS).
+function renderCurrencySegments(currencies, selected) {
+  const segments = document.getElementById("currencySegments");
+  if (!segments) return;
+  segments.innerHTML = ["all", ...currencies].map(value => {
+    const active = value === selected;
+    return `<button class="seg-btn${active ? " active" : ""}" type="button" data-currency="${esc(value)}" aria-pressed="${active}">${value === "all" ? "전체" : esc(value)}</button>`;
+  }).join("");
+  segments.classList.toggle("single-option", currencies.length < 2);
 }
 
 // ── 가로 스크롤 오버레이 화살표 (PC 전용, CSS가 모바일에서 숨김) ──────────
@@ -1025,6 +1037,7 @@ function syncDetailTabs() {
     showingChart || (!showingInterest && activeDetailTab !== "detail")
   );
   document.getElementById("currencyFilterControl")?.classList.toggle("hidden", showingChart || showingFxInterest);
+  document.getElementById("currencySegments")?.classList.toggle("hidden", showingChart || showingFxInterest);
   document.getElementById("rowCount")?.classList.toggle("hidden", showingChart);
   document.getElementById("visibleRowsControl")?.classList.toggle("hidden", showingChart);
   // '보유종목만' 필터는 관심목록 페이지에서만 노출(환율 그룹 제외 — FX는 보유개념 없음)

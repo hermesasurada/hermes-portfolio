@@ -7316,8 +7316,9 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 /* 종목 검색 대화상자 안의 새 종목 등록 영역 */
 .ticker-search-add { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
 
-/* ── 관심목록 종목 유형(2026-11-05 사용자 지시): PC는 한 번에 고르고, 모바일은 줄 폭 때문에 순환 버튼을 둔다 ── */
-.interest-asset-segments { height: 30px; }
-.interest-asset-segments .seg-btn { height: 24px; }
-@media (min-width: 981px) { #interestAssetTypeToggle { display: none; } }
-@media (max-width: 980px) { .interest-asset-segments { display: none; } }
+/* ── 종목 유형·통화(2026-11-05 사용자 지시): PC는 한 번에 고르고, 모바일은 줄 폭 때문에 순환 버튼·선택 상자를 둔다 ── */
+:is(.interest-asset-segments, .currency-segments) { height: 30px; }
+:is(.interest-asset-segments, .currency-segments) .seg-btn { height: 24px; }
+.currency-segments.single-option { display: none; }
+@media (min-width: 981px) { #interestAssetTypeToggle, #currencyFilterControl { display: none; } }
+@media (max-width: 980px) { .interest-asset-segments, .currency-segments { display: none; } }

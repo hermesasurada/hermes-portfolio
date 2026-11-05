@@ -50,6 +50,15 @@ assert.equal(h.evaluate(ctx, 'interestAssetType'), 'etf');
 assert.equal(ctx.localStorage.getItem('portfolio.detail.interestAssetType'), 'etf');
 assert.equal(ctx.document.getElementById('interestAssetTypeToggle').textContent, 'ETF');
 const css = h.readStatic('styles.css');
-assert.match(css, /@media \(min-width: 981px\) \{ #interestAssetTypeToggle \{ display: none; \} \}/);
-assert.match(css, /@media \(max-width: 980px\) \{ \.interest-asset-segments \{ display: none; \} \}/);
+assert.match(css, /@media \(min-width: 981px\) \{ #interestAssetTypeToggle, #currencyFilterControl \{ display: none; \} \}/);
+assert.match(css, /@media \(max-width: 980px\) \{ \.interest-asset-segments, \.currency-segments \{ display: none; \} \}/);
+// 통화 버튼(2026-11-05): 선택 상자와 같은 값을 보이고, 목록에 통화가 하나면 숨긴다
+const segments = ctx.document.getElementById('currencySegments');
+ctx.renderCurrencySegments(['KRW', 'USD'], 'USD');
+assert.equal((segments.innerHTML.match(/class="seg-btn/g) || []).length, 3);
+assert.match(segments.innerHTML, /class="seg-btn active"[^>]*data-currency="USD"[^>]*aria-pressed="true">USD</);
+assert.match(segments.innerHTML, /data-currency="all"[^>]*aria-pressed="false">전체</);
+assert.equal(segments.classList.contains('single-option'), false);
+ctx.renderCurrencySegments(['USD'], 'all');
+assert.equal(segments.classList.contains('single-option'), true);
 console.log('Watchlist asset cycle: ETF/stock filtering, renamed ETFs, other filters, persistence, special groups and migrated selection OK');
