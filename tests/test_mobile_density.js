@@ -40,4 +40,7 @@ assert.match(css, /\.sidebar-tabs \{[^}]*repeat\(3, minmax\(0, 1fr\)\)/);
 const sidebar = h.readStatic('app-interest-watchlists.js');
 assert.match(sidebar, /const current = performanceChartOpen \? "performance" : activeSidebarTab;/);
 assert.match(sidebar, /const nextTab = btn\.dataset\.sidebarTab === "interest" \? "interest" : "accounts";/);   // 저장값에 성과가 섞이지 않는다
+// 아이콘은 버튼 가운데, 패널 접기는 탭 재선택으로만
+assert.match(phone, /\.controls \.ctrl-group \.ghost-btn \{ display: inline-grid; place-items: center;/);
+assert.doesNotMatch(html, /accountCollapseToggle/);
 console.log('mobile density ok');

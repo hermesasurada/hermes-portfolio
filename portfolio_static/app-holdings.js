@@ -535,17 +535,7 @@ function syncTableScrollNudges() {
 }
 
 function syncMobileCollapsePanels() {
-  const accountPanel = document.getElementById("accountPanel");
-  const accountToggle = document.getElementById("accountCollapseToggle");
-  const panelName = typeof activeSidebarTab !== "undefined" && activeSidebarTab === "interest"
-    ? "관심목록"
-    : "계좌";
-  accountPanel?.classList.toggle("mobile-collapsed", mobileAccountsCollapsed);
-  if (accountToggle) {
-    accountToggle.setAttribute("aria-expanded", String(!mobileAccountsCollapsed));
-    accountToggle.setAttribute("aria-label", mobileAccountsCollapsed ? `${panelName} 펼치기` : `${panelName} 접기`);
-    accountToggle.title = mobileAccountsCollapsed ? `${panelName} 펼치기` : `${panelName} 접기`;
-  }
+  document.getElementById("accountPanel")?.classList.toggle("mobile-collapsed", mobileAccountsCollapsed);
 }
 
 // 종목별 직전 렌더 현재가 — 가격 변동 셀 펄스 판정용

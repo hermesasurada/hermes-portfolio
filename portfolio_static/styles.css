@@ -927,59 +927,34 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
 .sidebar-panel-head {
   padding: 8px;
 }
+/* 화면을 가르는 주 탐색이라 표 안의 보조 탭보다 강하게: 브랜드색 띠, 선택 탭은 채움(2026-11-05 사용자 지시). */
 .sidebar-tabs {
   min-width: 0;
   flex: 1;
-  height: 32px;
+  height: 44px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   padding: 4px;
-  background: var(--surface-2);
+  background: var(--brand-soft);
 }
 .sidebar-tab {
   width: 100%;
-  height: 24px;
+  height: 36px;
   padding: 0 10px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 6px;
   background: transparent;
-  color: var(--muted);
-  font-size: 12px;
+  color: var(--brand);
+  font-size: 14px;
 }
 .sidebar-tab:hover:not(.active) {
   background: var(--panel);
-  color: var(--ink);
 }
 .sidebar-tab.active {
-  background: var(--panel);
-  color: var(--brand);
+  background: var(--button-active);
+  color: var(--button-active-ink);
   box-shadow: none;
-}
-.mobile-collapse-toggle {
-  display: none;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--muted);
-}
-.mobile-collapse-toggle::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(45deg) translate(-1px, -1px);
-}
-.mobile-collapse-toggle[aria-expanded="false"]::before {
-  transform: rotate(-45deg) translate(-1px, -1px);
-}
-.mobile-collapse-toggle:hover {
-  background: var(--surface-2);
-  color: var(--ink);
 }
 .section { overflow: hidden; }
 .section h2 {
@@ -6580,18 +6555,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .compare-rsi-end-label {
     stroke-width: 4px;
   }
-  .mobile-collapse-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  /* whole header line is the collapse hit target on mobile */
-  .mobile-collapse-panel .mobile-panel-head {
-    cursor: pointer;
-  }
-  .mobile-collapse-panel .mobile-panel-head:hover {
-    background: var(--surface-2);
-  }
   .mobile-collapse-panel.mobile-collapsed .mobile-collapse-body {
     display: none;
   }
@@ -7347,7 +7310,7 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
   .controls { gap: 3px; flex-wrap: nowrap; }
   .ctrl-group { gap: 3px; }
   .controls .ctrl-group :is(.cycle-toggle-btn, .us-price-control) { padding: 0 4px; font-size: 11px; }
-  .controls .ctrl-group .ghost-btn { width: 30px; min-width: 30px; padding: 0; justify-content: center; }
+  .controls .ctrl-group .ghost-btn { display: inline-grid; place-items: center; width: 30px; min-width: 30px; padding: 0; }
   .controls .ctrl-group .ghost-btn > span { display: none; }
   .controls .ctrl-group .ghost-btn .nav-icon { display: block; }
 }
