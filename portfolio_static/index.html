@@ -227,6 +227,11 @@
               </label>
             </span>
             <button class="ghost-btn hidden" id="interestAssetTypeToggle" type="button" title="종목 유형: 전체 → ETF → 개별주" aria-label="종목 유형: 전체">전체</button>
+            <div class="segmented interest-asset-segments hidden" id="interestAssetTypeSegments" role="group" aria-label="종목 유형">
+              <button class="seg-btn active" type="button" data-asset-type="all" aria-pressed="true">전체</button>
+              <button class="seg-btn" type="button" data-asset-type="stock" aria-pressed="false">개별주</button>
+              <button class="seg-btn" type="button" data-asset-type="etf" aria-pressed="false">ETF</button>
+            </div>
             <button class="ghost-btn hidden" id="interestScreenButton" type="button" aria-haspopup="dialog" aria-controls="interestScreenModal">스크리닝</button>
             <span class="currency-filter-control visible-rows-control" id="visibleRowsControl">
               <label for="visibleRowsInput">행 수</label>

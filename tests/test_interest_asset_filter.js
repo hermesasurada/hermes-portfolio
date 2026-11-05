@@ -43,4 +43,13 @@ ctx.localStorage.setItem('portfolio.detail.interestAssetType', 'invalid');
 ctx.initInterestAssetTypeControl();
 assert.equal(h.evaluate(ctx, 'interestAssetType'), 'all');
 assert.match(h.readStatic('index.html'), /id="interestAssetTypeToggle"/);
+// PC 선택기(2026-11-05): 세 값을 바로 고르고, 모바일 순환 버튼과 같은 상태를 쓴다
+assert.match(h.readStatic('index.html'), /data-asset-type="stock"[^>]*>개별주/);
+ctx.setInterestAssetType('etf');
+assert.equal(h.evaluate(ctx, 'interestAssetType'), 'etf');
+assert.equal(ctx.localStorage.getItem('portfolio.detail.interestAssetType'), 'etf');
+assert.equal(ctx.document.getElementById('interestAssetTypeToggle').textContent, 'ETF');
+const css = h.readStatic('styles.css');
+assert.match(css, /@media \(min-width: 981px\) \{ #interestAssetTypeToggle \{ display: none; \} \}/);
+assert.match(css, /@media \(max-width: 980px\) \{ \.interest-asset-segments \{ display: none; \} \}/);
 console.log('Watchlist asset cycle: ETF/stock filtering, renamed ETFs, other filters, persistence, special groups and migrated selection OK');

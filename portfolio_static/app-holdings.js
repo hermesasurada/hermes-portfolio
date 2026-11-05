@@ -1029,7 +1029,9 @@ function syncDetailTabs() {
   document.getElementById("visibleRowsControl")?.classList.toggle("hidden", showingChart);
   // '보유종목만' 필터는 관심목록 페이지에서만 노출(환율 그룹 제외 — FX는 보유개념 없음)
   document.getElementById("interestHeldControl")?.classList.toggle("hidden", !showingInterest || showingFxInterest);
-  document.getElementById("interestAssetTypeToggle")?.classList.toggle("hidden", !showingInterest || !interestAssetFilterAvailable());
+  const hideAssetType = !showingInterest || !interestAssetFilterAvailable();
+  document.getElementById("interestAssetTypeToggle")?.classList.toggle("hidden", hideAssetType);
+  document.getElementById("interestAssetTypeSegments")?.classList.toggle("hidden", hideAssetType);
   document.getElementById("interestScreenButton")?.classList.toggle("hidden", !showingInterest || showingFxInterest);
   const sectorControl = document.getElementById("interestSectorControl");
   if (!showingInterest) {

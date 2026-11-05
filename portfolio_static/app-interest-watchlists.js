@@ -30,13 +30,22 @@ function syncInterestAssetTypeControl() {
   button.textContent = interestAssetTypeLabels[interestAssetType];
   button.setAttribute("aria-label", `종목 유형: ${button.textContent}. 클릭하면 다음 유형`);
   button.classList.toggle("active", interestAssetType !== "all");
+  document.querySelectorAll("#interestAssetTypeSegments .seg-btn").forEach(segment => {
+    const selected = segment.dataset.assetType === interestAssetType;
+    segment.classList.toggle("active", selected);
+    segment.setAttribute("aria-pressed", String(selected));
+  });
 }
 
-function cycleInterestAssetType() {
-  interestAssetType = interestAssetTypes[(interestAssetTypes.indexOf(interestAssetType) + 1) % interestAssetTypes.length];
+function setInterestAssetType(type) {
+  interestAssetType = type;
   storageSet(detailStorage.interestAssetType, interestAssetType);
   syncInterestAssetTypeControl();
   render();
+}
+
+function cycleInterestAssetType() {
+  setInterestAssetType(interestAssetTypes[(interestAssetTypes.indexOf(interestAssetType) + 1) % interestAssetTypes.length]);
 }
 
 function initInterestAssetTypeControl() {
@@ -44,6 +53,10 @@ function initInterestAssetTypeControl() {
   interestAssetType = interestAssetTypes.includes(saved) ? saved : "all";
   syncInterestAssetTypeControl();
   document.getElementById("interestAssetTypeToggle")?.addEventListener("click", cycleInterestAssetType);
+  document.getElementById("interestAssetTypeSegments")?.addEventListener("click", event => {
+    const type = event.target.closest?.(".seg-btn")?.dataset.assetType;
+    if (type && type !== interestAssetType) setInterestAssetType(type);
+  });
 }
 
 function interestModeActive() {
