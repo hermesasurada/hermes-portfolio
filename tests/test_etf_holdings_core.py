@@ -66,9 +66,10 @@ class EtfHoldingsCacheTests(unittest.TestCase):
     def test_leveraged_etfs_get_no_button(self):
         self.write({"QLD": {"items": [{"name": "A"}]}, "TSL": {"items": [{"name": "A"}]}}, 100)
         self.assertFalse(E.etf_holdings_available("QLD", "Ultra QQQ"))
-        self.assertTrue(E.etf_holdings_available("TSL", "Granite TSLA 롱 1.25x"))   # 이름 패턴이 놓친다
+        name = "GraniteShares 1.25x Long TSLA Daily ETF"
+        self.assertTrue(E.etf_holdings_available("TSL", name))   # 이름 패턴이 놓친다
         with mock.patch.object(E, "_leveraged_group", return_value={"TSL"}):
-            self.assertFalse(E.etf_holdings_available("TSL", "Granite TSLA 롱 1.25x"))
+            self.assertFalse(E.etf_holdings_available("TSL", name))
 
     def test_universe_excludes_leveraged_even_after_cache_purge(self):
         rows = [{"ticker": "SMH", "name": "VanEck Semiconductor ETF", "display_name": ""},
