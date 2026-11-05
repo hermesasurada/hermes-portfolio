@@ -20,6 +20,9 @@ class EtfHoldingsCacheTests(unittest.TestCase):
         names = mock.patch.object(E, "_list_names", return_value={})
         names.start()
         self.addCleanup(names.stop)
+        group = mock.patch.object(E, "_leveraged_group", return_value=set())
+        group.start()
+        self.addCleanup(group.stop)
         E._loaded = (0, {})
 
     def write(self, data, stamp):
@@ -59,6 +62,25 @@ class EtfHoldingsCacheTests(unittest.TestCase):
         self.assertTrue(E.etf_holdings_available("1623.T", "일본 철강·비철금속"))   # 이름으로는 안 잡힌다
         self.assertTrue(E.etf_holdings_available("069500.KS", "KODEX 200"))
         self.assertFalse(E.etf_holdings_available("AAPL", "Apple"))
+
+    def test_leveraged_etfs_get_no_button(self):
+        self.write({"QLD": {"items": [{"name": "A"}]}, "TSL": {"items": [{"name": "A"}]}}, 100)
+        self.assertFalse(E.etf_holdings_available("QLD", "Ultra QQQ"))
+        self.assertTrue(E.etf_holdings_available("TSL", "Granite TSLA 롱 1.25x"))   # 이름 패턴이 놓친다
+        with mock.patch.object(E, "_leveraged_group", return_value={"TSL"}):
+            self.assertFalse(E.etf_holdings_available("TSL", "Granite TSLA 롱 1.25x"))
+
+    def test_universe_excludes_leveraged_even_after_cache_purge(self):
+        rows = [{"ticker": "SMH", "name": "VanEck Semiconductor ETF", "display_name": ""},
+                {"ticker": "QLD", "name": "ProShares Ultra QQQ", "display_name": "Ultra QQQ"},
+                {"ticker": "COTG", "name": "", "display_name": ""}]
+        conn = mock.MagicMock()
+        conn.__enter__.return_value.execute.return_value.fetchall.return_value = rows
+        with mock.patch.object(E, "connect", return_value=conn), \
+                mock.patch.object(E, "_leveraged_group", return_value={"COTG"}):
+            got = E.load_etf_universe()
+        self.assertEqual([row["ticker"] for row in got["etfs"]], ["SMH"])
+        self.assertEqual(got["leveraged"], ["COTG", "QLD"])
 
     def test_rereads_when_file_changes(self):
         self.write({"AAA": {"items": [{"name": "old"}]}}, 100)

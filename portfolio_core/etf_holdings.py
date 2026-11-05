@@ -1,6 +1,7 @@
 """ETF 구성종목 조회(2026-11-04 사용자 지시): 종목 세부페이지의 구성종목 팝업.
 
 수집은 hermes 크론 etf-holdings-weekly(~/.hermes/scripts/distill/etf_holdings.py)가 맡고 여기서는 그 캐시만 읽는다.
+레버리지·인버스 ETF는 수집 대상이 아니다(2026-11-05 사용자 지시): 스왑 담보만 보여서 구성이 뜻이 없다.
 """
 from __future__ import annotations
 
@@ -8,9 +9,12 @@ import json
 from pathlib import Path
 
 from .db import connect
+from .entry_reward import is_leveraged_product
 from .tickers import asset_class
 
 _loaded: tuple[int, dict] = (0, {})
+# 이름 패턴이 놓치는 상품(1.25x, 이름 없는 COTG·LLYX)은 이 관심목록 소속으로 잡는다.
+LEVERAGED_GROUP_NAME = "레버리지/롱숏 ETF"
 
 
 def cache_path() -> Path:
@@ -39,18 +43,43 @@ def _entry(ticker: str) -> dict | None:
     return entry if isinstance(entry, dict) and entry.get("items") else None
 
 
+def _leveraged_group() -> set[str]:
+    with connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT items.ticker FROM interest_watchlist_items AS items
+            JOIN interest_watchlist_groups AS groups ON groups.id = items.group_id
+            WHERE groups.name = ?
+            """,
+            (LEVERAGED_GROUP_NAME,),
+        ).fetchall()
+    return {row["ticker"] for row in rows}
+
+
 def etf_holdings_available(ticker: str, name: str = "") -> bool:
-    """버튼 표시 기준. 일본 ETF·레버리지처럼 이름으로 안 잡히는 ETF는 수집 결과로 판정한다."""
+    """버튼 표시 기준. 일본 ETF처럼 이름으로 안 잡히는 ETF는 수집 결과로 판정한다. 레버리지는 수집하지 않으니 버튼도 없다."""
+    if is_leveraged_product(name) or ticker in _leveraged_group():
+        return False
     return _entry(ticker) is not None or asset_class(ticker, name or "") == "etf"
 
 
 def load_etf_universe() -> dict:
-    """등록 종목 중 ETF 전체 — 수집기가 시장지수·미보유 ETF까지 받는 대상 목록."""
+    """등록 종목 중 ETF 전체 — 수집기가 시장지수·미보유 ETF까지 받는 대상 목록.
+    leveraged는 수집기가 보유·관심 경로에서도 건너뛰고 캐시에서 지우는 목록이다. 캐시를 지운 뒤에도 그대로여야 해서
+    ETF 판정과 무관하게 이름·관심목록만 본다(Ultra Clean 같은 개별주가 섞여도 구성이 없어 해가 없다)."""
     with connect() as conn:
-        rows = conn.execute("SELECT ticker, name FROM tickers").fetchall()
+        rows = conn.execute("SELECT ticker, name, display_name FROM tickers").fetchall()
     known = {key for key in _cache() if not key.startswith("_")}
-    return {"etfs": [{"ticker": row["ticker"], "name": row["name"] or row["ticker"]} for row in rows
-                     if row["ticker"] in known or asset_class(row["ticker"], row["name"] or "") == "etf"]}
+    leveraged = _leveraged_group() | {
+        row["ticker"] for row in rows
+        if is_leveraged_product(row["name"]) or is_leveraged_product(row["display_name"])
+    }
+    return {
+        "etfs": [{"ticker": row["ticker"], "name": row["name"] or row["ticker"]} for row in rows
+                 if row["ticker"] not in leveraged
+                 and (row["ticker"] in known or asset_class(row["ticker"], row["name"] or "") == "etf")],
+        "leveraged": sorted(leveraged),
+    }
 
 
 def _list_names() -> dict[str, str]:
