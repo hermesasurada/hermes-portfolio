@@ -30,7 +30,7 @@ from .paths import KST
 from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
 from .tickers import is_korean_stock_ticker, ticker_currency, normalize_tickers
 
-TECHNICAL_CACHE_VERSION = 18  # 18: 추세 이탈폭 추가(2026-11-07). 17: 추세 수익률 창 3년→5년(2026-10-23). 16: 추세 수익률·R² 추가. 15: 매수·매도 타점 참고(폐지)
+TECHNICAL_CACHE_VERSION = 19  # 19: 추세 강도 추가(2026-11-07). 18: 추세 이탈폭 추가(2026-11-07). 17: 추세 수익률 창 3년→5년(2026-10-23). 16: 추세 수익률·R² 추가. 15: 매수·매도 타점 참고(폐지)
 TECHNICAL_LOOKBACK_DAYS = 11 * 366
 PRICE_ADJUSTED_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
@@ -53,7 +53,7 @@ def trend_performance(daily: list[float]) -> dict[str, float | None]:
     closes = [float(c) for c in daily[-TREND_WINDOW_DAYS:] if c is not None and float(c) > 0]
     n = len(closes)
     if n < TREND_MIN_DAYS:
-        return {"trend_return": None, "trend_r2": None, "trend_deviation": None}
+        return {"trend_return": None, "trend_r2": None, "trend_deviation": None, "trend_strength": None}
     ys = [math.log(c) for c in closes]
     x_mean = (n - 1) / 2
     y_mean = sum(ys) / n
@@ -63,10 +63,14 @@ def trend_performance(daily: list[float]) -> dict[str, float | None]:
     ss_tot = sum((y - y_mean) ** 2 for y in ys)
     ss_res = sum((y - (y_mean + slope * (x - x_mean))) ** 2 for x, y in enumerate(ys))
     r2 = None if ss_tot <= 0 else max(0.0, 1 - ss_res / ss_tot)
+    annual = (math.exp(slope * 252) - 1) * 100
+    deviation = math.sqrt(ss_res / n) * 100
     return {
-        "trend_return": round((math.exp(slope * 252) - 1) * 100, 2),
+        "trend_return": round(annual, 2),
         "trend_r2": None if r2 is None else round(r2, 3),
-        "trend_deviation": round(math.sqrt(ss_res / n) * 100, 1),
+        "trend_deviation": round(deviation, 1),
+        # 표에 보이는 두 값으로 검산되도록 반올림한 값끼리 나눈다. 이탈폭 0(완전 직선·횡보)은 정의하지 않는다.
+        "trend_strength": round(round(annual, 2) / round(deviation, 1), 2) if round(deviation, 1) > 0 else None,
     }
 
 

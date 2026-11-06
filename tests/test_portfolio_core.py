@@ -3584,15 +3584,17 @@ def test_trend_performance_discounts_endpoint_spikes():
     assert out["trend_return"] < cagr * 100          # 끝점 CAGR(약 12.7%)보다 낮다
     assert out["trend_r2"] < 0.6                     # 꾸준하지 않다
     assert trend_performance([100.0] * (TREND_MIN_DAYS - 1)) == {
-        "trend_return": None, "trend_r2": None, "trend_deviation": None}
+        "trend_return": None, "trend_r2": None, "trend_deviation": None, "trend_strength": None}
     flat = trend_performance([100.0] * 300)
     assert flat["trend_r2"] is None and flat["trend_deviation"] == 0.0   # 분산 0 — R² 정의 불가, 이탈폭은 0
+    assert flat["trend_strength"] is None                                # 0으로 나누지 않는다
     # 이탈폭은 R²와 달리 상승폭에 끌려가지 않는다: 같은 흔들림이면 기울기가 달라도 값이 같다.
     wave = [0.10 * math.sin(i / 40) for i in range(1260)]
     calm = trend_performance([100 * math.exp(w) for w in wave])
     steep = trend_performance([100 * math.exp(w + 0.60 / 252 * i) for i, w in enumerate(wave)])
     assert abs(calm["trend_deviation"] - steep["trend_deviation"]) < 0.01
     assert steep["trend_r2"] > 0.99 and calm["trend_r2"] < 0.2
+    assert steep["trend_strength"] == round(steep["trend_return"] / steep["trend_deviation"], 2)
 
 
 def test_asset_class_ignores_brand_glued_to_korean_company_name():
