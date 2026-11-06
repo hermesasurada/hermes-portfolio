@@ -4150,8 +4150,10 @@ tr:hover .fav-star,
 /* ── 모달 공통 · 관리종목 · 도움말 ────────────────────────────────────── */
 /* 로고가 소개 버튼. 이름·티커의 차트 링크는 별도로 유지한다. */
 .company-profile-logo { display: inline-flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; padding: 0; margin: 0; border: 0; border-radius: 7px; background: transparent; box-shadow: none; line-height: inherit; cursor: pointer; vertical-align: middle; }
-.company-profile-logo:hover, .company-profile-logo[aria-expanded="true"] { outline: 1px solid var(--accent-soft-border); outline-offset: 2px; background: transparent; }
-.company-profile-logo:focus-visible, .company-profile-close:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* 로고에는 마우스·터치로 파란 선을 그리지 않는다(2026-11-07 사용자 지시). 키보드 초점만 무채색 선으로 표시한다. */
+.company-profile-logo:hover, .company-profile-logo[aria-expanded="true"] { outline: none; background: transparent; }
+.company-profile-logo:focus-visible { outline: 2px solid var(--muted); outline-offset: 2px; }
+.company-profile-close:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .company-profile-popover { position: fixed; inset: auto; margin: 0; box-sizing: border-box; width: min(400px, calc(100vw - 20px)); max-height: calc(100dvh - 20px); overflow: auto; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--company-profile-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: var(--ink); box-shadow: var(--shadow); font-family: inherit; font-size: 12.5px; text-align: left; }
 .company-profile-head { display: flex; align-items: start; gap: 8px; justify-content: space-between; }
 .company-profile-title { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
