@@ -98,7 +98,7 @@ const defaultSortDir = {
   insider_ownership: -1,
   institutional_ownership: -1,
   trend_return: -1,
-  trend_r2: -1,
+  trend_deviation: 1,   // 작을수록 꾸준 — 첫 클릭에 꾸준한 종목이 위로
   risk_reward_score: -1,
   entry_risk_reward: -1,
   beta: -1,

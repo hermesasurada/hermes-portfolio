@@ -3567,8 +3567,8 @@ def test_live_chart_point_without_today_row_gets_provisional_candle():
 
 
 def test_trend_performance_discounts_endpoint_spikes():
-    """추세 수익률(로그 회귀 기울기)과 R²(2026-10-23): 꾸준한 상승은 CAGR과 비슷하고 R²≈1,
-    횡보 뒤 막판 급등은 CAGR보다 낮고 R²가 뚜렷이 떨어진다. 이력 1년 미만은 없음."""
+    """추세 수익률(로그 회귀 기울기)·R²·이탈폭: 꾸준한 상승은 CAGR과 비슷하고 R²≈1·이탈폭≈0,
+    횡보 뒤 막판 급등은 CAGR보다 낮고 R²가 떨어진다. 이력 1년 미만은 없음."""
     import math
     from portfolio_core.technical_stats import trend_performance, TREND_MIN_DAYS
 
@@ -3576,14 +3576,23 @@ def test_trend_performance_discounts_endpoint_spikes():
     out = trend_performance(steady)
     assert abs(out["trend_return"] - (math.exp(0.20) - 1) * 100) < 0.05
     assert out["trend_r2"] > 0.999
+    assert out["trend_deviation"] < 0.05
 
     spike = [100.0] * 1134 + [100 * math.exp(0.60 / 126 * i) for i in range(126)]  # 4.5년 횡보 후 6개월 +82%
     out = trend_performance(spike)
     cagr = (spike[-1] / spike[0]) ** (252 / 1260) - 1
     assert out["trend_return"] < cagr * 100          # 끝점 CAGR(약 12.7%)보다 낮다
     assert out["trend_r2"] < 0.6                     # 꾸준하지 않다
-    assert trend_performance([100.0] * (TREND_MIN_DAYS - 1)) == {"trend_return": None, "trend_r2": None}
-    assert trend_performance([100.0] * 300)["trend_r2"] is None   # 분산 0 — R² 정의 불가, 수익률 0
+    assert trend_performance([100.0] * (TREND_MIN_DAYS - 1)) == {
+        "trend_return": None, "trend_r2": None, "trend_deviation": None}
+    flat = trend_performance([100.0] * 300)
+    assert flat["trend_r2"] is None and flat["trend_deviation"] == 0.0   # 분산 0 — R² 정의 불가, 이탈폭은 0
+    # 이탈폭은 R²와 달리 상승폭에 끌려가지 않는다: 같은 흔들림이면 기울기가 달라도 값이 같다.
+    wave = [0.10 * math.sin(i / 40) for i in range(1260)]
+    calm = trend_performance([100 * math.exp(w) for w in wave])
+    steep = trend_performance([100 * math.exp(w + 0.60 / 252 * i) for i, w in enumerate(wave)])
+    assert abs(calm["trend_deviation"] - steep["trend_deviation"]) < 0.01
+    assert steep["trend_r2"] > 0.99 and calm["trend_r2"] < 0.2
 
 
 def test_asset_class_ignores_brand_glued_to_korean_company_name():

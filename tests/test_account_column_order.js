@@ -30,8 +30,8 @@ assert.match(headers[29], /perf_1w/);
 assert.match(headers[36], /perf_5y/);
 assert.match(headers[37], /data-key="trend_return"/);
 assert.match(cells[37], /trendReturnText\(r.trend_return\)/);
-assert.match(headers[38], /data-key="trend_r2"/);   // 추세 R²는 별도 열(2026-10-23)
-assert.match(cells[38], /trendR2Text\(r.trend_r2\)/);
+assert.match(headers[38], /data-key="trend_deviation"/);   // 꾸준함 열은 R²에서 이탈폭으로 교체(2026-11-07)
+assert.match(cells[38], /trendDeviationText\(r.trend_deviation\)/);
 assert.match(headers[39], /perf_10y/);
 // 평단 배당율(추정, 2026-10-31)은 계좌표에만, 5년 배당성장 바로 오른쪽 — 보유 없는 행은 '-'
 assert.match(headers[10], /dividend_growth_5y/);

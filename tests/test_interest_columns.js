@@ -37,8 +37,8 @@ assert.match(few, /data-interest-col="17"/);
 assert.equal((run("interestEmptyRow('none', INTEREST_COLUMNS)").match(/<td /g) || []).length, 62);
 // 추세 수익률은 5년 수익률 바로 오른쪽(2026-10-23)
 assert.equal(run("INTEREST_COLUMNS[INTEREST_COLUMNS.findIndex(c=>c.key==='perf_5y')+1].key"), 'trend_return');
-assert.equal(run("INTEREST_COLUMNS[INTEREST_COLUMNS.findIndex(c=>c.key==='trend_return')+1].key"), 'trend_r2');
-assert.equal(run("INTEREST_COLUMNS[INTEREST_COLUMNS.findIndex(c=>c.key==='trend_r2')+1].key"), 'perf_10y');
+assert.equal(run("INTEREST_COLUMNS[INTEREST_COLUMNS.findIndex(c=>c.key==='trend_return')+1].key"), 'trend_deviation');
+assert.equal(run("INTEREST_COLUMNS[INTEREST_COLUMNS.findIndex(c=>c.key==='trend_deviation')+1].key"), 'perf_10y');
 assert.match(run("interestEmptyRow('<unsafe>', visibleInterestColumns([]))"), /&lt;unsafe&gt;/);
 run(`
   const testCol = { innerHTML: '' }, testHead = { innerHTML: '' };

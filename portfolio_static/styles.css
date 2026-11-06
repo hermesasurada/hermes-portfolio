@@ -2103,7 +2103,7 @@ tr.dividend-month-row:hover td {
 #detailTableWrap th:nth-child(n+30):nth-child(-n+37), #detailTableWrap th:nth-child(40),
 #detailTableWrap td:nth-child(n+30):nth-child(-n+37), #detailTableWrap td:nth-child(40) { min-width: calc(58px * var(--col-scale, 1)); } /* 기간 수익률(1주~5년, 10년=40번) */
 #detailTableWrap th:nth-child(38), #detailTableWrap td:nth-child(38) { min-width: calc(58px * var(--col-scale, 1)); } /* 추세 수익률 (5년 오른쪽) */
-#detailTableWrap th:nth-child(39), #detailTableWrap td:nth-child(39) { min-width: calc(48px * var(--col-scale, 1)); } /* 추세 R² */
+#detailTableWrap th:nth-child(39), #detailTableWrap td:nth-child(39) { min-width: calc(58px * var(--col-scale, 1)); } /* 추세 이탈폭 */
 #detailTableWrap th:nth-child(43), #detailTableWrap td:nth-child(43) { min-width: calc(54px * var(--col-scale, 1)); } /* 거래 */
 #detailTableWrap th:nth-child(17),
 #detailTableWrap td:nth-child(17),

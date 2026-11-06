@@ -30,7 +30,7 @@ from .paths import KST
 from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
 from .tickers import is_korean_stock_ticker, ticker_currency, normalize_tickers
 
-TECHNICAL_CACHE_VERSION = 17  # 17: 추세 수익률 창 3년→5년(2026-10-23). 16: 추세 수익률·R² 추가. 15: 매수·매도 타점 참고(폐지)
+TECHNICAL_CACHE_VERSION = 18  # 18: 추세 이탈폭 추가(2026-11-07). 17: 추세 수익률 창 3년→5년(2026-10-23). 16: 추세 수익률·R² 추가. 15: 매수·매도 타점 참고(폐지)
 TECHNICAL_LOOKBACK_DAYS = 11 * 366
 PRICE_ADJUSTED_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
@@ -41,17 +41,19 @@ TREND_MIN_DAYS = 252      # 이력이 이보다 짧으면 추세를 내지 않�
 
 
 def trend_performance(daily: list[float]) -> dict[str, float | None]:
-    """로그 가격 회귀 추세 수익률(연율 %)과 R²(꾸준함). 2026-10-23 사용자 지시.
+    """로그 가격 회귀 추세 수익률(연율 %), 이탈폭(꾸준함), R². 2026-10-23 사용자 지시.
 
     기간 수익률(CAGR)은 시작·끝 두 점만 보므로 끝점이 급등 직후면 몇 년을 어떻게 왔든 좋아 보인다.
     최근 5년(1,260거래일) 로그 종가에 직선을 맞춰 기울기를 연율로 바꾸면 경로 전체를 반영하고,
-    같은 회귀의 R²가 1에 가까울수록 직선처럼 꾸준히 온 것이다(막판 몰아친 상승은 R²가 낮다).
+    꾸준함은 같은 회귀의 잔차 표준편차(이탈폭, 로그 기준 %)로 본다(2026-11-07). R²는 분모가 전체 변동폭이라
+    많이 오르면 크게 흔들려도 높고(PLTR 0.84, MDD 78%), 평평하면 안정적이어도 낮다(PG 0.04).
+    R²는 값을 바꾸지 않고 통계 팝업에만 남긴다.
     이력이 5년보다 짧으면 있는 만큼(최소 1년)으로 계산한다 — 각주는 붙이지 않는다(변동성 손익비와 동일).
     """
     closes = [float(c) for c in daily[-TREND_WINDOW_DAYS:] if c is not None and float(c) > 0]
     n = len(closes)
     if n < TREND_MIN_DAYS:
-        return {"trend_return": None, "trend_r2": None}
+        return {"trend_return": None, "trend_r2": None, "trend_deviation": None}
     ys = [math.log(c) for c in closes]
     x_mean = (n - 1) / 2
     y_mean = sum(ys) / n
@@ -64,6 +66,7 @@ def trend_performance(daily: list[float]) -> dict[str, float | None]:
     return {
         "trend_return": round((math.exp(slope * 252) - 1) * 100, 2),
         "trend_r2": None if r2 is None else round(r2, 3),
+        "trend_deviation": round(math.sqrt(ss_res / n) * 100, 1),
     }
 
 
