@@ -69,6 +69,7 @@ function money(v, cur) {
     AUD: "A$",
     SGD: "S$",
     HKD: "HK$",
+    TWD: "NT$",
     INR: "₹",
   }[cur] || "";
   return prefix + fmt.format(v);
@@ -92,6 +93,7 @@ function unitMoney(v, cur, ticker = "") {
   if (cur === "AUD") return "A$" + text;
   if (cur === "SGD") return "S$" + text;
   if (cur === "HKD") return "HK$" + text;
+  if (cur === "TWD") return "NT$" + text;
   if (cur === "INR") return "₹" + text;
   return text + " " + cur;
 }
@@ -301,6 +303,7 @@ function dividendCurrencyPrefix(currency) {
     AUD: "A$",
     SGD: "S$",
     HKD: "HK$",
+    TWD: "NT$",
   }[currency] || (currency ? `${currency} ` : "");
 }
 function dividendAmountText(v, currency) {
@@ -442,6 +445,7 @@ function marketCapText(v, currency) {
     AUD: "A$",
     SGD: "S$",
     HKD: "HK$",
+    TWD: "NT$",
   }[currency] || "";
   const abs = Math.abs(n);
   if (abs >= 1_000_000_000_000) return `${prefix}${fmt2.format(n / 1_000_000_000_000)}T`;
