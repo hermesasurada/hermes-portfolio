@@ -3538,6 +3538,39 @@ def test_entry_moving_average_windows_and_live_price():
     assert live['ma200_pct'] == round(ma_pct(values, 200), 4)
 
 
+def test_price_chart_excludes_hidden_transactions():
+    """숨긴 거래는 차트 마커로 내려보내지 않는다(2026-11-07). 거래 원장에는 그대로 남는다."""
+    from unittest.mock import patch
+    from portfolio_core import charts as charts_module
+
+    schema = (Path(charts_module.__file__).parent / "schema.sql").read_text(encoding="utf-8")
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.executescript(schema)
+    _db_module.ensure_daily_prices_table(conn)
+    _db_module.ensure_price_indexes(conn)
+    start = date(2026, 1, 5)
+    conn.execute("INSERT INTO tickers (ticker, name, region, currency) VALUES ('AAA', 'Alpha', 'US', 'USD')")
+    conn.executemany(
+        "INSERT INTO daily_prices (ticker, date, open, high, low, close, volume) VALUES ('AAA', ?, 10, 11, 9, 10, 1)",
+        [((start + timedelta(days=i)).isoformat(),) for i in range(30)],
+    )
+    conn.executemany(
+        "INSERT INTO transactions (trade_date, ticker, side, qty, price, hidden) VALUES (?, 'AAA', 'BUY', 1, ?, ?)",
+        [((start + timedelta(days=5)).isoformat(), 10, 0), ((start + timedelta(days=6)).isoformat(), 11, 1)],
+    )
+
+    @contextmanager
+    def fake_connect():
+        yield conn
+
+    with patch.object(charts_module, "connect", fake_connect):
+        rows = charts_module.load_price_chart("AAA")["transactions"]
+    assert [row["price"] for row in rows] == [10.0]
+    assert conn.execute("SELECT COUNT(*) FROM transactions").fetchone()[0] == 2
+    conn.close()
+
+
 def test_live_chart_point_without_today_row_gets_provisional_candle():
     """미국 장전처럼 당일 일봉이 없을 때 라이브 점은 직전 종가→라이브 가격 잠정 봉을 갖는다(2026-10-16).
     당일 일봉이 이미 있으면 그 봉을 쓰고 잠정 표시를 붙이지 않는다."""

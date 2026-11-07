@@ -254,7 +254,7 @@ def load_price_chart(
             FROM transactions t
             LEFT JOIN accounts a ON a.id = t.account_id
             LEFT JOIN tickers tk ON tk.ticker = t.ticker
-            WHERE upper(t.ticker) = ?
+            WHERE upper(t.ticker) = ? AND COALESCE(t.hidden, 0) = 0
             ORDER BY t.trade_date, t.id
             """,
             (clean_ticker,),
