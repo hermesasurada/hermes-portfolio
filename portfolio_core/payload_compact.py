@@ -29,7 +29,7 @@ def _compact_chart_point(point: dict) -> dict:
         elif key == "volume":
             # 주식 거래량은 정수(…123.0 → …123), 코인 거래량은 소수라 가격 규칙으로 줄인다.
             out[key] = int(value) if value.is_integer() else round_price(value)
-        elif key in ("rsi", "entry_score"):
+        elif key == "rsi":
             out[key] = round(value, 2)
         else:  # 시고저종 · 이동평균 · 볼린저 · 일목 — 모두 가격 단위
             out[key] = round_price(value)

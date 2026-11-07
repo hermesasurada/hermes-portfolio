@@ -43,7 +43,7 @@ class MovingAverageTests(unittest.TestCase):
         rows = history()
         overlay = _chart_overlay_series(rows)
         points = [dict(row, **overlay[row['date']]) for row in rows]
-        _append_market_chart_point({'price': 270}, {'use_live': True, 'include_extended': True}, points, rows, entry_scoring=False)
+        _append_market_chart_point({'price': 270}, {'use_live': True, 'include_extended': True}, points, rows)
         self.assertEqual(len(points), 250)
         self.assertEqual(points[-1]['candle_close'], 250)
         for period in (20, 50, 200):
@@ -52,14 +52,14 @@ class MovingAverageTests(unittest.TestCase):
     def test_new_session_appends_one_daily_sample(self):
         rows = history(end=datetime.now(US_EASTERN).date() - timedelta(days=1))
         points = [dict(row) for row in rows]
-        _append_market_chart_point({'price': 251}, {'use_live': True}, points, rows, entry_scoring=False)
+        _append_market_chart_point({'price': 251}, {'use_live': True}, points, rows)
         self.assertEqual(len(points), 251)
         self.assertAlmostEqual(points[-1]['sma_200'], 151.5)
 
     def test_disabled_live_does_not_change_points(self):
         rows = history()
         points = [dict(row) for row in rows]
-        _append_market_chart_point({'price': 500}, {'use_live': False}, points, rows, entry_scoring=False)
+        _append_market_chart_point({'price': 500}, {'use_live': False}, points, rows)
         self.assertEqual(points, rows)
 
 

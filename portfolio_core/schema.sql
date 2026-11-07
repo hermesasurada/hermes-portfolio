@@ -52,7 +52,6 @@ CREATE TABLE IF NOT EXISTS transactions (
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     apply_to_holdings INTEGER NOT NULL DEFAULT 1,
     hidden INTEGER NOT NULL DEFAULT 0,
-    entry_score REAL,
     memo TEXT,
     FOREIGN KEY (account_id) REFERENCES accounts(id)
 );

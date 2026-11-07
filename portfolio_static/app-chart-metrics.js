@@ -87,7 +87,6 @@ function chartStatMetricRows(payload) {
     ["성과", "추세 R²", s.trend_r2 == null ? "-" : Number(s.trend_r2).toFixed(2), finiteMetric(s.trend_r2), "high"],
     ["위험", "52주 고점 대비", chartStatPercent(s.drawdown_52w), finiteMetric(s.drawdown_52w), "high"],
     ["위험", "변동성 손익비", riskRewardScoreText(s.risk_reward_score), finiteMetric(s.risk_reward_score), "high"],
-    ["위험", "진입 손익비", entryRewardText(s.entry_risk_reward), finiteMetric(s.entry_risk_reward), "high"],
     ["위험", "β", betaText(s.beta), finiteMetric(s.beta), "lowAbs"],
     ["위험", "β″", betaText(s.beta_adj), finiteMetric(s.beta_adj), "lowAbs"],
   ];

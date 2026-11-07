@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 
 from .db import connect
-from .entry_reward import is_leveraged_product
+from .leveraged import is_leveraged_product
 from .tickers import asset_class
 
 _loaded: tuple[int, dict] = (0, {})

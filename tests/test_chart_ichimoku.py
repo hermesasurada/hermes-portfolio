@@ -117,7 +117,7 @@ class LiveChartPointIchimoku(unittest.TestCase):
     def test_new_live_point_carries_ichimoku(self):
         rows = self.daily_rows()
         points = [dict(date=row['date'], close=row['close']) for row in rows]
-        _append_market_chart_point({'price': 19.5}, {'use_live': True}, points, rows, False)
+        _append_market_chart_point({'price': 19.5}, {'use_live': True}, points, rows)
         today = datetime.now(US_EASTERN).strftime('%Y-%m-%d')
         self.assertEqual(points[-1]['date'], today)  # 당일 일봉이 없어 새 점이 붙는다
         for key in ('ichi_tenkan', 'ichi_kijun', 'ichi_span_a', 'ichi_span_b'):
@@ -128,7 +128,7 @@ class LiveChartPointIchimoku(unittest.TestCase):
         rows = self.daily_rows()
         points = [dict(date=row['date'], close=row['close']) for row in rows]
         today = datetime.now(US_EASTERN).strftime('%Y-%m-%d')
-        _append_market_chart_point({'price': 19.5}, {'use_live': True}, points, rows, False)
+        _append_market_chart_point({'price': 19.5}, {'use_live': True}, points, rows)
         expected = _chart_overlay_series(rows + [dict(date=today, close=19.5,
                                                       high=19.5, low=19.5, open=19.5)])[today]
         self.assertEqual(points[-1]['ichi_span_a'], expected['ichi_span_a'])

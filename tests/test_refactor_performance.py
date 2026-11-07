@@ -1,20 +1,15 @@
 """Network-free regression checks for read paths and equivalent chart math."""
 from __future__ import annotations
 
-import math
-import random
 import sqlite3
 import sys
 from contextlib import contextmanager
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from portfolio_core.db import ensure_dividend_tables, ensure_earnings_events_table, ensure_stats_cache_table
-from portfolio_core.entry_reward import entry_risk_reward_score
-from portfolio_core.entry_reward_history import entry_score_series
-from portfolio_core.indicators import atr_percent, bollinger_distance_pct, ma_pct, resample_last, rolling_atr_percent, rsi_series
 from portfolio_core.prices import latest_prices
 import portfolio_core.price_store as price_store
 import portfolio_core.schedule as schedule
@@ -50,59 +45,6 @@ def test_latest_prices_seeks_all_tickers_and_preserves_previous_semantics():
         conn.executemany("INSERT INTO daily_prices VALUES(?, '2026-01-01', 1, 'test')",
                          [(f"T{i:04}",) for i in range(1500)])
         assert len(latest_prices(conn)) == 1503
-
-
-def history(count=420):
-    rng = random.Random(34)
-    start = date(2024, 12, 2)
-    rows = []
-    for index in range(count):
-        day = start + timedelta(days=index)
-        if day.weekday() >= 5 or index % 29 == 0:
-            continue
-        close = 100 + 5 * math.sin(index / 8) + rng.random()
-        rows.append({"date": day.isoformat(), "close": close,
-                     "high": close + 1 if index % 7 else None,
-                     "low": close - 1 if index % 11 else None})
-    return rows
-
-
-def test_rolling_atr_matches_finite_window_including_missing_ohlc():
-    rows = history()
-    for index, value in [(20, 0), (40, float("nan")), (61, -1), (89, None)]:
-        rows[index] = {**rows[index], "close": value, "high": float("inf"), "low": -1}
-    for period, lookback in [(14, 61), (3, 15), (14, 14), (0, 61)]:
-        expected = [atr_percent(rows[max(0, i - lookback + 1):i + 1], period) for i in range(len(rows))]
-        assert rolling_atr_percent(rows, period, lookback) == expected
-
-
-def reference_scores(rows):
-    result = []
-    for index in range(len(rows)):
-        prior = rows[:index + 1]
-        closes = [row["close"] for row in prior]
-        weekly = resample_last(prior, "week")
-        daily_bb = bollinger_distance_pct(closes)
-        weekly_bb = bollinger_distance_pct(weekly)
-        if index < 79 or len(weekly) <= 20 or not daily_bb or not weekly_bb:
-            result.append(None)
-        else:
-            result.append(entry_risk_reward_score(
-                daily_bb[0], atr_percent(prior[-61:]), rsi_series(closes)[-1],
-                rsi_series(weekly)[-1], ma_pct(closes, 50), weekly_bb[0], ma_pct(closes, 200),
-            ))
-    return result
-
-
-def test_entry_score_series_preserves_every_historical_point():
-    rows = history()
-    assert entry_score_series(rows) == reference_scores(rows)
-    assert entry_score_series(rows[:70]) == [None] * 70
-    flat = [{**row, "close": 100, "high": 100, "low": 100} for row in rows]
-    assert entry_score_series(flat) == [None] * len(flat)
-    # A replacement live close must use the same partial-week semantics.
-    live = [*rows[:-1], {**rows[-1], "close": 90}]
-    assert entry_score_series(live) == reference_scores(live)
 
 
 def test_schedule_is_read_only_and_collector_preserves_earnings_history():

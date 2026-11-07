@@ -36,7 +36,7 @@ class AtomicWritesTests(unittest.TestCase):
                 CREATE TABLE transactions(id INTEGER PRIMARY KEY AUTOINCREMENT, trade_date TEXT,
                     created_at TEXT, member TEXT, account_id INTEGER, ticker TEXT, side TEXT,
                     qty REAL, price REAL, currency TEXT, note TEXT, apply_to_holdings INTEGER,
-                    hidden INTEGER DEFAULT 0, entry_score REAL);
+                    hidden INTEGER DEFAULT 0);
                 CREATE TABLE daily_prices(ticker TEXT, date TEXT, open REAL, high REAL,
                     low REAL, close REAL, PRIMARY KEY(ticker, date));
                 INSERT INTO accounts VALUES (1, 'A', 'One', 'overseas', 'USD', '2026-03-02');
@@ -44,8 +44,8 @@ class AtomicWritesTests(unittest.TestCase):
                 INSERT INTO tickers VALUES ('MSFT', 'Microsoft', 'US', 'USD', '2026-03-02', 'overseas', 'Microsoft');
                 INSERT INTO holdings VALUES (1, 1, 'A', 'MSFT', 'Microsoft', 10, 100, 1000, 'USD', '', 'old');
                 INSERT INTO holdings VALUES (2, 2, 'B', 'MSFT', 'Microsoft', 3, 100, 300, 'USD', '', 'old');
-                INSERT INTO transactions VALUES (1, '2026-03-02', 'old', 'A', 1, 'MSFT', 'BUY', 10, 100, 'USD', '', 1, 0, 1);
-                INSERT INTO transactions VALUES (2, '2026-03-02', 'old', 'B', 2, 'MSFT', 'BUY', 3, 100, 'USD', '', 1, 0, 1);
+                INSERT INTO transactions VALUES (1, '2026-03-02', 'old', 'A', 1, 'MSFT', 'BUY', 10, 100, 'USD', '', 1, 0);
+                INSERT INTO transactions VALUES (2, '2026-03-02', 'old', 'B', 2, 'MSFT', 'BUY', 3, 100, 'USD', '', 1, 0);
             """)
             db.ensure_cash_flow_table(conn)
             db.ensure_value_snapshot_table(conn)

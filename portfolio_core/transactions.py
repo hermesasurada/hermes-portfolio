@@ -8,7 +8,6 @@ from .accounts import load_account, load_holding, load_ticker_info
 from .constants import CRYPTO_MARKETS, KOREAN_SUFFIXES
 from .dates import now_kst_text
 from .db import connect, ensure_transaction_columns
-from .entry_reward_history import entry_score_on
 from .performance_snapshots import rebuild_account_snapshots_in_transaction
 from .portfolio import load_portfolio
 from .tickers import account_scope, display_name, ticker_currency, ticker_scope
@@ -130,8 +129,7 @@ def load_transactions(account_id: str | None = None, ticker: str | None = None, 
                 t.note,
                 t.memo,
                 t.apply_to_holdings,
-                COALESCE(t.hidden, 0) AS hidden,
-                t.entry_score
+                COALESCE(t.hidden, 0) AS hidden
             FROM transactions t
             LEFT JOIN accounts a ON t.account_id = a.id
             LEFT JOIN holdings h ON h.account_id = t.account_id AND h.ticker = t.ticker
@@ -260,14 +258,13 @@ def add_transaction(payload: dict, portfolio_loader: Callable[[], dict] | None =
             apply_holding_trade(conn, account, ticker, side, qty, price, name, currency, note or trade_date)
 
         ensure_ticker(conn, ticker, name, currency)
-        entry_score = entry_score_on(conn, ticker, trade_date)
         conn.execute(
             """
             INSERT INTO transactions
-              (trade_date, member, account_id, ticker, side, qty, price, currency, note, memo, created_at, apply_to_holdings, entry_score)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              (trade_date, member, account_id, ticker, side, qty, price, currency, note, memo, created_at, apply_to_holdings)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (trade_date, account["member"], account_id, ticker, side, qty, price, currency, note, memo, now_kst_text(), 1 if apply_to_holdings else 0, entry_score),
+            (trade_date, account["member"], account_id, ticker, side, qty, price, currency, note, memo, now_kst_text(), 1 if apply_to_holdings else 0),
         )
 
         rebuild_account_snapshots_in_transaction(conn, [account_id])
@@ -303,10 +300,6 @@ def update_transaction(payload: dict, portfolio_loader: Callable[[], dict] | Non
         hidden = int(row["hidden"] or 0) if "hidden" in row.keys() else 0
         if "hidden" in payload:
             hidden = 1 if parse_bool(payload.get("hidden"), False) else 0
-        # 시점 값이므로 거래일이 바뀌면 그 날짜 기준으로 다시 계산한다.
-        entry_score = row["entry_score"] if "entry_score" in row.keys() else None
-        if trade_date != row["trade_date"] or entry_score is None:
-            entry_score = entry_score_on(conn, row["ticker"], trade_date)
         account_id = int(row["account_id"])
         holding_fields_changed = (
             side != str(row["side"]).upper()
@@ -328,8 +321,8 @@ def update_transaction(payload: dict, portfolio_loader: Callable[[], dict] | Non
             reverse_holding_trade(conn, account, ticker, str(row["side"]).upper(), float(row["qty"]), float(row["price"]))
             apply_holding_trade(conn, account, ticker, side, qty, price, name, currency, note or trade_date)
         conn.execute(
-            "UPDATE transactions SET trade_date = ?, side = ?, qty = ?, price = ?, note = ?, hidden = ?, entry_score = ? WHERE id = ?",
-            (trade_date, side, qty, price, note, hidden, entry_score, tx_id),
+            "UPDATE transactions SET trade_date = ?, side = ?, qty = ?, price = ?, note = ?, hidden = ? WHERE id = ?",
+            (trade_date, side, qty, price, note, hidden, tx_id),
         )
         rebuild_account_snapshots_in_transaction(conn, [account_id])
     result = {"ok": True, "id": tx_id, "holdings_applied": apply_holdings}

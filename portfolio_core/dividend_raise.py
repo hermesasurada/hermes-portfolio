@@ -34,7 +34,7 @@ from .dividend_history import (
     _same_dividend_cycle_amount,
     _same_period_reference,
 )
-from .entry_reward import is_leveraged_product
+from .leveraged import is_leveraged_product
 from .tickers import asset_class
 
 RAISE_TOLERANCE = 0.01           # 1% 이하 변동은 반올림·자사주 소각 노이즈

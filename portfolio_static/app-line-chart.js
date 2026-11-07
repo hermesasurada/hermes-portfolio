@@ -889,8 +889,6 @@ function chartPointTooltipLines(point, payload, previous = null) {
   if (change) lines.push([["등락", `${change.arrow}${change.text}`, change.cls]]);
   const rsiValue = Number(point.rsi);
   if (Number.isFinite(rsiValue)) lines.push([["RSI", rsiValue.toFixed(1)]]);
-  const entryValue = point.entry_score == null ? NaN : Number(point.entry_score);
-  if (Number.isFinite(entryValue)) lines.push([["진입점수", entryValue.toFixed(2)]]);
   activeChartMovingAverages().forEach(series => {
     const value = chartNumericValue(point, series.key);
     if (value != null) lines.push([[`MA ${series.period}`, money(value)]]);
@@ -1320,16 +1318,10 @@ function bindChartInteractions(points, payload, geometry) {
     });
     selectionSummary.classList.remove("hidden", "up", "down", "flat");
     selectionSummary.classList.add(cls);
-    const startEntry = start.entry_score == null ? NaN : Number(start.entry_score);
-    const endEntry = end.entry_score == null ? NaN : Number(end.entry_score);
     selectionSummaryText.textContent = [
       `${shortDateText(start.date)}–${shortDateText(end.date)}`,
       `${chartMoney(startPrice, payload.currency, payload.ticker)} → ${chartMoney(endPrice, payload.currency, payload.ticker)}`,
       `${arrow} ${changePct > 0 ? "+" : ""}${fmt2.format(changePct)}% (${signedChartMoney(change, payload.currency, payload.ticker)})`,
-      // 구간 양끝의 진입점수 — 눌림이 깊어졌는지(점수↑) 과열로 갔는지(점수↓) 한눈에
-      ...(Number.isFinite(startEntry) && Number.isFinite(endEntry)
-        ? [`진입점수 ${startEntry.toFixed(2)} → ${endEntry.toFixed(2)}`]
-        : []),
     ].join(" · ");
 
     const inset = geometry.pad.left + 8;
@@ -1481,7 +1473,7 @@ function renderLineChart(payload) {
   const pad = { top: 12, right: 58, bottom: compactChart ? 54 : 44, left: 14 };
   const plotW = width - pad.left - pad.right;
   const rsiGap = compactChart ? 24 : 18;
-  const rsiH = compactChart ? 126 : 67;   // RSI·진입점수 칸 — 2026-10-10 사용자 지시로 70%(180·96 → 126·67), 남는 높이는 가격 칸으로
+  const rsiH = compactChart ? 126 : 67;   // RSI 칸 — 2026-10-10 사용자 지시로 70%(180·96 → 126·67), 남는 높이는 가격 칸으로
   const plotH = height - pad.top - pad.bottom - rsiGap - rsiH;
   const rsiTop = pad.top + plotH + rsiGap;
   const rsiBottom = rsiTop + rsiH;
@@ -1596,23 +1588,6 @@ function renderLineChart(payload) {
   });
   const latestRsi = [...points].reverse().map(point => Number(point.rsi)).find(value => Number.isFinite(value));
   const currentRsiY = Number.isFinite(latestRsi) ? rsiYFor(latestRsi) : null;
-  // 진입점수(종가 기준)는 RSI 패널에 겹쳐 그린다 — 축은 왼쪽 안쪽에 0~max.
-  // 점수는 실질 0~4 범위라 RSI(0~100)와 축을 나눠야 과열 구간과 0점대가 같은 시점에서 읽힌다.
-  const entryValues = points
-    .map(point => point.entry_score == null ? NaN : Number(point.entry_score))
-    .filter(value => Number.isFinite(value));
-  const entryMax = entryValues.length ? Math.max(1, Math.ceil(Math.max(...entryValues))) : 0;
-  const entryYFor = value => rsiTop + (entryMax - Math.max(0, Math.min(entryMax, value))) / (entryMax || 1) * rsiH;
-  const entryLine = entryMax ? chartLinePath(
-    points
-      .map((point, index) => ({ x: xFor(index), value: point.entry_score == null ? NaN : Number(point.entry_score) }))
-      .filter(point => Number.isFinite(point.value))
-      .map(point => ({ x: point.x, y: entryYFor(point.value) }))
-  ) : "";
-  const entryTicks = entryMax ? [entryMax, entryMax / 2, 0] : [];
-  const latestEntry = [...points].reverse()
-    .map(point => point.entry_score == null ? NaN : Number(point.entry_score))
-    .find(value => Number.isFinite(value));
   const yTicks = scale.ticks.map(value => ({ value, y: yFor(value) }));
   const currentPriceY = yFor(last);
   // 선 끝 이름표: 마지막 봉 오른쪽에 자리가 있을 때만(일목 선행 26봉 자리가 있으면 생긴다).
@@ -1773,13 +1748,8 @@ function renderLineChart(payload) {
         <line class="chart-rsi-guide ${guide.boundary ? "boundary" : `level-${guide.value}`}" x1="${pad.left}" x2="${pad.left + plotW}" y1="${guide.y.toFixed(2)}" y2="${guide.y.toFixed(2)}"></line>
         ${guide.label && !(currentRsiY != null && Math.abs(guide.y - currentRsiY) < (compactChart ? 14 : 9)) ? `<text class="chart-rsi-axis" x="${width - 6}" y="${(guide.y + 4).toFixed(2)}">${guide.value}</text>` : ""}
       `).join("")}
-      ${entryTicks.map((value, index) => `
-        <text class="chart-entry-axis" x="${pad.left + 4}" y="${(entryYFor(value) + (index === 0 ? 11 : index === entryTicks.length - 1 ? -2 : 4)).toFixed(2)}">${Number.isInteger(value) ? value : value.toFixed(1)}</text>
-      `).join("")}
-      <text class="chart-rsi-title" x="${pad.left + (entryMax ? 26 : 7)}" y="${rsiTop + 14}">RSI (14)</text>
-      ${Number.isFinite(latestEntry) ? `<text class="chart-entry-title" x="${pad.left + (entryMax ? 26 : 7) + 52}" y="${rsiTop + 14}">진입점수 ${latestEntry.toFixed(2)}</text>` : ""}
+      <text class="chart-rsi-title" x="${pad.left + 7}" y="${rsiTop + 14}">RSI (14)</text>
       <g class="chart-rsi-line-series" clip-path="url(#chartRsiClip)">
-        ${entryLine ? `<path class="chart-entry-line" d="${entryLine}"></path>` : ""}
         ${rsiLine ? `<path class="chart-rsi-line" d="${rsiLine}"></path>` : ""}
       </g>
       ${currentRsiY != null ? `

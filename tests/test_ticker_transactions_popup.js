@@ -1,5 +1,7 @@
-// 종목 차트 '내역' 팝업(2026-10-26): 전 계좌 거래 표 + 요약. 숨긴 거래는 흐리게 보이고 합계에서 빠진다.
+// 종목 차트 '내역' 팝업(2026-10-26): 전 계좌 거래 표 + 요약. 숨긴 거래는 표·요약 모두에서 뺀다(2026-11-07).
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const h = require('./harness');
 const ctx = h.loadScripts(h.createContext());
 const run = code => h.evaluate(ctx, code);
@@ -9,20 +11,18 @@ ctx.__rows = [
   {id: 3, trade_date: '2026-10-07', member: 'Claire', account_name: '해외주식', side: 'SELL', qty: 40, price: 237.2, currency: 'USD', memo: '일부 차익', hidden: 0},
   {id: 2, trade_date: '2026-03-01', member: 'Ray', account_name: '해외주식', side: 'BUY', qty: 10, price: 100, currency: 'USD', memo: null, hidden: 0},
   {id: 1, trade_date: '2025-01-02', member: 'Ray', account_name: '해외주식', side: 'BUY', qty: 30, price: 200, currency: 'USD', memo: '<b>x</b>', hidden: 0},
-  {id: 0, trade_date: '2024-01-02', member: 'Ray', account_name: '해외주식', side: 'BUY', qty: 999, price: 1, currency: 'USD', hidden: 1},
-];
+  ];
 const s = json('tickerTransactionSummary(__rows)');
-assert.equal(s.buy.count, 2);           // 숨긴 거래 제외
+assert.equal(s.buy.count, 2);
 assert.equal(s.buy.qty, 40);
 assert.equal(s.buy.avg, 175);           // (10×100 + 30×200) / 40
 assert.equal(s.sell.count, 1);
-assert.equal(s.hidden, 1);
 assert.equal(s.first, '2025-01-02');
 assert.equal(s.last, '2026-10-07');
 
 const html = run('tickerTransactionsMarkup(__rows, "NVDA", 200)');
-assert.equal((html.match(/<tr class=/g) || []).length, 4);   // 숨긴 거래도 행으로는 보인다
-assert.equal((html.match(/tx-hidden-row/g) || []).length, 1);
+assert.equal((html.match(/<tr>/g) || []).length, 4);   // 헤더 + 넘겨받은 3건(숨긴 거래는 조회 단계에서 뺀다)
+assert.doesNotMatch(html, /tx-hidden-row|숨김/);
 assert.match(html, /Claire · 해외주식/);
 // 메모 칸은 없고(2026-10-26), 현재대비 = (현재가 − 거래 단가) / 거래 단가
 assert.doesNotMatch(html, /메모|x<\/b>|일부 차익/);
@@ -37,7 +37,9 @@ assert.match(html, /<td>26\.10\.07<\/td>/);
 assert.doesNotMatch(html, /2026-10-07/);
 assert.match(html, /<th>수량<\/th><th[^>]*>현재대비<\/th><th>금액<\/th>/);
 assert.match(run('tickerTransactionsSummaryMarkup(__rows, "NVDA")'), /25\.01\.02 ~ 26\.10\.07/);
-assert.match(run('tickerTransactionsSummaryMarkup(__rows, "NVDA")'), /숨김 1건 제외/);
+assert.doesNotMatch(run('tickerTransactionsSummaryMarkup(__rows, "NVDA")'), /숨김/);
+const source = fs.readFileSync(path.join(__dirname, '..', 'portfolio_static', 'app-transactions.js'), 'utf8');
+assert.match(source, /transactions \|\| \[\]\)\.filter\(tx => !transactionIsHidden\(tx\)\)/);
 assert.match(run('tickerTransactionsMarkup([], "NVDA")'), /거래내역이 없습니다/);
 // 최근 1년만(2026-10-28): 오늘 2026-10-28 → 2025-10-28 이상
 assert.deepEqual(json('tickerTransactionsRecent(__rows, "2026-10-28").map(tx => tx.id)'), [3, 2]);

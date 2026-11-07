@@ -382,7 +382,7 @@ def test_transaction_history_is_not_truncated_and_preserves_scope():
             id INTEGER PRIMARY KEY, trade_date TEXT, created_at TEXT,
             account_id INTEGER, member TEXT, ticker TEXT, side TEXT,
             qty REAL, price REAL, currency TEXT, note TEXT,
-            apply_to_holdings INTEGER, hidden INTEGER, entry_score REAL
+            apply_to_holdings INTEGER, hidden INTEGER
         );
         INSERT INTO accounts VALUES (1, 'Test', 'pension_kr', 'Pension');
         INSERT INTO accounts VALUES (2, 'Test', 'retirement_kr', 'Retirement');
@@ -1783,101 +1783,6 @@ def test_risk_reward_score_formula():
     assert risk_reward_score({"5y": None, "3y": None, "1y": None}) == (None, None, None)
 
 
-def test_entry_risk_reward_score_formula():
-    from portfolio_core.entry_reward import (
-        WEEK_UPSIDE_CAP,
-        entry_risk_reward_score,
-        _rsi_scale,
-    )
-    from portfolio_core.indicators import atr_percent, bollinger_distance_pct, ma_pct
-
-    # 일·주 상단 0. 주 RSI 55·60일선 위 → 업사이드 0
-    assert entry_risk_reward_score(0.0, 2.0, 50, 55, 5.0, 0.0) == 0.0
-
-    # 일·주 +6%, ATR 2% → 손절 3% → 6/3=2. 주 RSI 60·60일선 +5%(둘 다 밴드 밖) → 추세 1.0·일 RSI 50
-    mid = entry_risk_reward_score(6.0, 2.0, 50, 60, 5.0, 6.0)
-    assert abs(mid - 2.0) < 0.02
-
-    # 주 밴드가 일보다 무겁다: 일은 소진(0)이어도 주에 여유가 있으면 점수가 난다
-    weekly_room = entry_risk_reward_score(0.0, 2.0, 50, 60, 5.0, 8.0)
-    daily_only = entry_risk_reward_score(8.0, 2.0, 50, 60, 5.0, 0.0)
-    assert abs(weekly_room - 8.0 * 0.7 / 3.0) < 0.02
-    assert abs(daily_only - 8.0 * 0.3 / 3.0) < 0.02
-    assert weekly_room > daily_only
-
-    # 주봉 상단 거리는 30%에서 자른다. 급락 후 4σ 여유를 그대로 쓰지 않는다.
-    capped = entry_risk_reward_score(0.0, 2.0, 50, 60, 5.0, 400.0)
-    assert abs(capped - WEEK_UPSIDE_CAP * 0.7 / 3.0) < 0.02
-    uncapped = entry_risk_reward_score(0.0, 2.0, 50, 60, 5.0, 20.0)
-    assert abs(uncapped - 20.0 * 0.7 / 3.0) < 0.02
-    assert capped > uncapped
-
-    # 같은 ATR이면 상단 여유가 큰 쪽이 높다
-    near_upper = entry_risk_reward_score(1.0, 2.0, 50, 60, 5.0, 1.0)
-    near_lower = entry_risk_reward_score(8.0, 2.0, 50, 60, 5.0, 8.0)
-    assert near_lower > near_upper > 0
-
-    # 타이밍 RSI는 일봉만. 주 RSI는 추세에만 쓰이므로 일 RSI만 바꿔도 점수가 갈린다.
-    rsi_scores = [
-        entry_risk_reward_score(6.0, 2.0, value, 55, 5.0, 6.0)
-        for value in (30, 40, 50, 70, 85)
-    ]
-    assert all(left > right for left, right in zip(rsi_scores, rsi_scores[1:]))
-    assert abs(_rsi_scale(50) - 1.0) < 1e-9
-    assert _rsi_scale(40) > _rsi_scale(45) > 1.0
-    assert 0.25 <= _rsi_scale(90) < _rsi_scale(70) < 1.0
-    # 주 RSI가 낮아도 일 RSI 50이면 타이밍 계수는 1.0 (추세만 약해진다)
-    # 주 RSI 30(성분 0)·60일선 +5%(성분 1) → 평균 0.5 → 추세 0.625
-    same_timing = entry_risk_reward_score(6.0, 2.0, 50, 30, 5.0, 6.0)
-    assert abs(same_timing - 2.0 * 0.625) < 0.02
-
-    # 주 RSI 40·60일선 −5%(둘 다 밴드 밖 약세) → 추세 0.25. 일 RSI 50 → 타이밍 1.0
-    weak = entry_risk_reward_score(6.0, 2.0, 50, 40, -5.0, 6.0)
-    assert abs(weak - 2.0 * 0.25) < 0.02
-
-    # 주 RSI 60(강)·60일선 −5%(약) → 혼합 0.625. 문턱 안쪽(−1%)은 그 사이 값
-    mixed = entry_risk_reward_score(6.0, 2.0, 50, 60, -5.0, 6.0)
-    assert abs(mixed - 2.0 * 0.625) < 0.02
-    between = entry_risk_reward_score(6.0, 2.0, 50, 60, -1.0, 6.0)
-    assert mixed < between < 2.0
-
-    # ATR 바닥 1%. ATR 0.2%여도 손절은 1%
-    floor = entry_risk_reward_score(4.0, 0.2, 50, 60, 5.0, 4.0)
-    assert abs(floor - 4.0) < 0.02
-
-    # ATR은 손절 폭으로만. 같은 밴드면 ATR이 큰 쪽이 점수가 낮다 (가점 없음)
-    low_vol = entry_risk_reward_score(6.0, 2.0, 50, 60, 5.0, 6.0)
-    high_vol = entry_risk_reward_score(6.0, 4.0, 50, 60, 5.0, 6.0)
-    assert low_vol > high_vol > 0
-    assert abs(high_vol / low_vol - 0.5) < 0.02
-
-    assert entry_risk_reward_score(None, 2.0, 50, 60, 5.0, 6.0) is None
-    assert entry_risk_reward_score(6.0, None, 50, 60, 5.0, 6.0) is None
-    # 이력 부족 결측은 낙관 기본값 대신 점수 없음 — 주 RSI / 주 상단 / 60일선 / 일 RSI
-    assert entry_risk_reward_score(6.0, 2.0, 50, None, 5.0, 6.0) is None
-    assert entry_risk_reward_score(6.0, 2.0, 50, 60, 5.0, None) is None
-    assert entry_risk_reward_score(6.0, 2.0, 50, 60, None, 6.0) is None
-    assert entry_risk_reward_score(6.0, 2.0, None, 60, 5.0, 6.0) is None
-
-    assert ma_pct([100.0] * 20) == 0.0
-    assert ma_pct([90.0] * 19 + [110.0]) > 0
-    assert ma_pct([100.0] * 60, 60) == 0.0
-    assert ma_pct([90.0] * 59 + [110.0], 60) > 0
-
-    # 밴드 거리: 평탄하면 상·하단이 현재가에 가깝다
-    flat = [100.0] * 19 + [100.0]
-    assert bollinger_distance_pct(flat) is None  # width 0
-    series = [100.0 + (index % 5) for index in range(25)]
-    distances = bollinger_distance_pct(series)
-    assert distances is not None and distances[0] > 0 and distances[1] > 0
-
-    # ATR: 종가만 있으면 |Δclose|, high/low가 있으면 True Range
-    closes = [{"close": 100.0 + index} for index in range(20)]
-    assert atr_percent(closes) is not None and atr_percent(closes) > 0
-    ranges = [{"close": 100.0, "high": 110.0, "low": 90.0} for _ in range(20)]
-    assert atr_percent(ranges) > atr_percent(closes)
-
-
 def test_total_return_periods_dividend_mapping():
     from portfolio_core.technical_stats import total_return_periods
 
@@ -2595,7 +2500,7 @@ def test_payload_compact_rounds_only_beyond_display_precision():
     chart = {
         "ticker": "NVDA", "current_price": 225.0712345678,
         "points": [{"date": "2026-09-25", "close": 225.0700000001, "bb_lower": 210.82100592125224,
-                    "volume": 123456789.0, "rsi": 56.912345, "entry_score": 0.9, "live": True}],
+                    "volume": 123456789.0, "rsi": 56.912345, "live": True}],
         "ichimoku_projection": {"day": [{"ichi_span_a": 215.37749862670898}]},
         "transactions": [{"price": 176.9912345}],
     }
@@ -2604,7 +2509,7 @@ def test_payload_compact_rounds_only_beyond_display_precision():
     assert chart == original, "원본을 바꾸면 안 된다(내부 캐시·다른 호출자가 원래 정밀도를 본다)"
     point = out["points"][0]
     assert point == {"date": "2026-09-25", "close": 225.07, "bb_lower": 210.821, "volume": 123456789,
-                     "rsi": 56.91, "entry_score": 0.9, "live": True}
+                     "rsi": 56.91, "live": True}
     assert isinstance(point["volume"], int)
     # 코인 거래량처럼 소수인 값은 정수로 자르지 않는다
     assert compact_chart_payload({"points": [{"volume": 108.5312345}]})["points"][0]["volume"] == 108.531
@@ -2787,12 +2692,11 @@ def test_update_transaction_can_reapply_holdings_when_asked():
         with conn:
             yield conn
 
-    originals = (tm.connect, tm.rebuild_account_snapshots_in_transaction, tm.entry_score_on)
+    originals = (tm.connect, tm.rebuild_account_snapshots_in_transaction)
     holding = lambda: conn.execute("SELECT qty, avg_price, invested FROM holdings WHERE ticker='TSM'").fetchone()  # noqa: E731
     try:
         tm.connect = fake_connect
         tm.rebuild_account_snapshots_in_transaction = lambda c, ids: None
-        tm.entry_score_on = lambda c, t, d: None
         # 거래내역만 수정(기본): 잔고는 그대로
         out = tm.update_transaction({"id": 1, "side": "SELL"}, portfolio_loader=lambda: {})
         assert out["holdings_applied"] is False and "portfolio" not in out
@@ -2823,7 +2727,7 @@ def test_update_transaction_can_reapply_holdings_when_asked():
         assert float(conn.execute("SELECT qty FROM transactions WHERE id=1").fetchone()[0]) == 4
         assert float(holding()["qty"]) == 136
     finally:
-        tm.connect, tm.rebuild_account_snapshots_in_transaction, tm.entry_score_on = originals
+        tm.connect, tm.rebuild_account_snapshots_in_transaction = originals
         conn.close()
 
 
@@ -3148,65 +3052,8 @@ def test_dividend_streak_pay_never_below_growth():
     assert reconcile_pay_with_growth(10.0, 0, None) == (10.0, 0)
 
 
-def test_entry_trend_factor_is_continuous():
-    from portfolio_core.entry_reward import (
-        TREND_STRONG, TREND_WEAK, _trend_factor, entry_risk_reward_score,
-    )
-
-    # 양 끝은 옛 계단과 같다
-    assert _trend_factor(60, 5.0) == TREND_STRONG
-    assert _trend_factor(40, -5.0) == TREND_WEAK
-    # 옛 '하나만 충족'(0.6)에 해당하는 자리는 그 근처 값
-    assert abs(_trend_factor(60, -5.0) - 0.625) < 1e-9
-    # 60일선 이격 −2%→+2%에서 단조 증가, 문턱(0)에서 도약이 없다
-    steps = [_trend_factor(50, pct) for pct in (-3, -2, -1, 0, 1, 2, 3)]
-    assert all(b >= a for a, b in zip(steps, steps[1:]))
-    assert abs(steps[3] - steps[2]) < 0.2 and abs(steps[4] - steps[3]) < 0.2
-    # 정보 없음 → 강함, 한 성분만 → 그 성분으로
-    assert _trend_factor(None, None) == TREND_STRONG
-    assert _trend_factor(None, 5.0) == TREND_STRONG
-    assert _trend_factor(None, -5.0) == TREND_WEAK
-
-    # PH 실사례: 60일선 +0.11%→−0.34%로 0.45% 밀렸을 때 점수가 40% 빠지던 것이 완만해진다
-    before = entry_risk_reward_score(9.5, 2.52, 45, 54.1, 0.11, 7.9)
-    after = entry_risk_reward_score(11.4, 2.52, 42, 53.5, -0.34, 9.5)
-    assert after > before * 0.85
-
-
-def test_entry_score_series_matches_point_calculation():
-    """차트용 일별 점수 시계열은 같은 날짜의 단건 계산과 일치하고, 이력 부족 구간은 None."""
-    import sqlite3
-    from portfolio_core.entry_reward_history import entry_score_on, entry_score_series
-    from portfolio_core.entry_reward import entry_risk_reward_score
-
-    conn = sqlite3.connect(":memory:")
-    conn.row_factory = sqlite3.Row
-    conn.execute("CREATE TABLE daily_prices (ticker TEXT, date TEXT, open REAL, high REAL, low REAL, close REAL)")
-    # 260거래일 합성 시계열 — 추세+파동
-    import math
-    from datetime import date, timedelta
-    day = date(2025, 1, 6)
-    rows = []
-    for i in range(260):
-        while day.weekday() >= 5:
-            day += timedelta(days=1)
-        px = 100 + i * 0.15 + 4 * math.sin(i / 7)
-        rows.append((day.isoformat(), px * 0.995, px * 1.01, px * 0.99, px))
-        day += timedelta(days=1)
-    conn.executemany("INSERT INTO daily_prices VALUES ('T', ?, ?, ?, ?, ?)", rows)
-    fetched = conn.execute("SELECT date, open, high, low, close FROM daily_prices ORDER BY date").fetchall()
-
-    series = entry_score_series(fetched)
-    assert len(series) == 260
-    assert series[50] is None                       # 주봉 20개 전
-    assert series[-1] is not None
-    assert abs(series[-1] - entry_score_on(conn, "T", rows[-1][0])) < 1e-9
-    assert abs(series[200] - entry_score_on(conn, "T", rows[200][0])) < 1e-9
-    assert entry_score_series(fetched[:50]) == [None] * 50
-
-
 def test_leveraged_product_detection():
-    from portfolio_core.entry_reward import is_leveraged_product
+    from portfolio_core.leveraged import is_leveraged_product
 
     for name in (
         "Direxion TSLA 롱 2x", "Direxion Daily AAPL Bear 1X ETF", "GraniteShares 2x Long NVDA Daily ETF",
@@ -3503,22 +3350,6 @@ def test_beta_korean_benchmark_cache_routing():
         conn.close()
 
 
-def test_entry_trend_sma200_optional_weighting():
-    from portfolio_core.entry_reward import _trend_factor, entry_risk_reward_score
-    assert abs(_trend_factor(55, 2, -5) - 0.85) < 1e-12
-    assert _trend_factor(55, 2, 5) == 1.0
-    assert abs(_trend_factor(45, -2, 5) - 0.4) < 1e-12
-    assert _trend_factor(45, -2, -5) == 0.25
-    assert _trend_factor(50, 0, 0) == 0.625
-    assert _trend_factor(55, -2) == 0.625
-    assert _trend_factor(55, -2, float('nan')) == 0.625
-    args = (6, 2, 50, 55, 2, 6)
-    assert entry_risk_reward_score(*args) == 2.0
-    assert entry_risk_reward_score(*args, -5) == 1.7
-    assert entry_risk_reward_score(*args, 5) == 2.0
-    assert entry_risk_reward_score(6, 2, 50, 55, None, 6, 5) is None
-
-
 def test_entry_moving_average_windows_and_live_price():
     from portfolio_core.technical_stats import calculate_technical_stats, calculate_price_adjusted_indicators
     from portfolio_core.indicators import ma_pct
@@ -3585,7 +3416,7 @@ def test_live_chart_point_without_today_row_gets_provisional_candle():
     ]
     points = [{"date": r["date"], "close": r["close"], "open": r["open"], "high": r["high"], "low": r["low"]} for r in rows]
     status = {"use_live": True, "include_extended": True}
-    charts_module._append_market_chart_point({"price": 155.0}, status, points, rows, entry_scoring=False)
+    charts_module._append_market_chart_point({"price": 155.0}, status, points, rows)
     live = points[-1]
     assert live["date"] == today and live["live"] and live["provisional"]
     assert (live["open"], live["high"], live["low"], live["close"]) == (159.0, 159.0, 155.0, 155.0)
@@ -3593,7 +3424,7 @@ def test_live_chart_point_without_today_row_gets_provisional_candle():
     # 당일 일봉이 있으면 확정 봉 — 잠정 아님, 장외가는 candle_close로 몸통 보존
     rows_today = rows[:-1] + [{**rows[-1], "date": today}]
     points_today = [{"date": r["date"], "close": r["close"], "open": r["open"], "high": r["high"], "low": r["low"]} for r in rows_today]
-    charts_module._append_market_chart_point({"price": 155.0}, status, points_today, rows_today, entry_scoring=False)
+    charts_module._append_market_chart_point({"price": 155.0}, status, points_today, rows_today)
     assert len(points_today) == len(rows_today)
     assert "provisional" not in points_today[-1]
     assert points_today[-1]["candle_close"] == 159.0

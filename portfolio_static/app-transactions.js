@@ -177,7 +177,7 @@ function confirmTradeSave(payload) {
 
 // ── 종목 차트 '내역' 팝업(2026-10-26 사용자 지시) ─────────────────────────────
 // 그 종목의 전 계좌 거래를 모아 본다. 아래 거래내역 패널(선택 계좌 기준)과 별개.
-// 숨긴 거래는 흐리게 보여 주되 요약 합계에서는 뺀다(패널의 숨김 의미와 같게).
+// 숨긴 거래는 표·요약 어디에도 넣지 않는다(2026-11-07 사용자 지시).
 // 처음엔 최근 1년 거래만, '1년 더 보기'로 1년씩 넓힌다(2026-10-28 사용자 지시).
 // 기준은 오늘에서 N년 전 같은 날짜 이상.
 let tickerTxView = null;   // {ticker, rows(전체), price, years}
@@ -188,7 +188,7 @@ function tickerTransactionsRecent(rows, today = todayLocal(), years = 1) {
 }
 
 function tickerTransactionSummary(rows) {
-  const visible = (rows || []).filter(tx => !transactionIsHidden(tx));
+  const visible = rows || [];
   const side = kind => {
     const list = visible.filter(tx => String(tx.side).toUpperCase() === kind);
     const qty = list.reduce((sum, tx) => sum + Number(tx.qty || 0), 0);
@@ -198,9 +198,8 @@ function tickerTransactionSummary(rows) {
   const dates = visible.map(tx => tx.trade_date).filter(Boolean).sort();
   return {
     buy: side("BUY"), sell: side("SELL"),
-    hidden: (rows || []).length - visible.length,
     first: dates[0] || null, last: dates[dates.length - 1] || null,
-    currency: visible[0]?.currency || rows?.[0]?.currency || "",
+    currency: visible[0]?.currency || "",
   };
 }
 
@@ -208,7 +207,6 @@ function tickerTransactionsSummaryMarkup(rows, ticker, olderCount = 0, years = 1
   const s = tickerTransactionSummary(rows);
   const older = olderCount ? ` · ${years}년 전 ${olderCount}건 생략` : "";
   if (!s.buy.count && !s.sell.count) {
-    if (s.hidden) return `<span class="flat">숨긴 거래 ${s.hidden}건만 있음${older}</span>`;
     return older ? `<span class="flat">최근 ${years}년 거래 없음${older}</span>` : "";
   }
   const part = (label, cls, item) => item.count
@@ -216,7 +214,7 @@ function tickerTransactionsSummaryMarkup(rows, ticker, olderCount = 0, years = 1
     : "";
   const period = s.first === s.last ? shortDateText(s.first) : `${shortDateText(s.first)} ~ ${shortDateText(s.last)}`;
   return [part("매수", "up", s.buy), part("매도", "down", s.sell),
-    `<span class="ticker-tx-stat flat">${esc(period)}${s.hidden ? ` · 숨김 ${s.hidden}건 제외` : ""}${older}</span>`].join("");
+    `<span class="ticker-tx-stat flat">${esc(period)}${older}</span>`].join("");
 }
 
 // 현재대비 = 거래 단가 대비 현재가 등락률(2026-10-26, 메모 칸 대신). 현재가는 차트에 보이는 가격.
@@ -240,11 +238,10 @@ function tickerTransactionsMarkup(rows, ticker, currentPrice = null, olderCount 
   }
   const body = rows.map(tx => {
     const buy = String(tx.side).toUpperCase() === "BUY";
-    const hidden = transactionIsHidden(tx);
-    return `<tr class="${hidden ? "tx-hidden-row" : ""}">
+    return `<tr>
       <td>${shortDateText(tx.trade_date)}</td>
       <td class="ticker-tx-account">${esc(`${tx.member || ""} · ${tx.account_name || tx.account_type || ""}`)}</td>
-      <td><span class="change-cell pct-chip ${buy ? "up" : "down"}">${buy ? "매수" : "매도"}</span>${hidden ? ` <span class="flat ticker-tx-hidden">숨김</span>` : ""}</td>
+      <td><span class="change-cell pct-chip ${buy ? "up" : "down"}">${buy ? "매수" : "매도"}</span></td>
       <td>${unitMoney(tx.price, tx.currency, ticker)}</td>
       <td>${tradeQtyText(tx.qty || 0, ticker)}</td>
       <td>${changePercentText(tickerTransactionChangePct(tx, currentPrice), true)}</td>
@@ -270,7 +267,7 @@ async function openTickerTransactions(ticker, name, currentPrice = null) {
   if (!modal.open) modal.showModal();
   try {
     tickerTxView = null;
-    const allRows = (await apiFetchTickerTransactions(ticker)).transactions || [];
+    const allRows = ((await apiFetchTickerTransactions(ticker)).transactions || []).filter(tx => !transactionIsHidden(tx));
     const price = currentPrice != null && Number.isFinite(Number(currentPrice)) ? Number(currentPrice) : currentPriceForTicker(ticker);
     tickerTxView = { ticker, rows: allRows, price, years: 1 };
     renderTickerTransactionsView();
@@ -544,7 +541,6 @@ function txEditRow(tx, endingQty) {
       <td>-</td>
       <td>-</td>
       <td>-</td>
-      <td>${entryRewardText(tx.entry_score)}</td>
       <td class="tx-actions">
         <button class="tx-action-btn tx-save" type="button" data-tx-save="${tx.id}" title="저장">저장</button>
         <button class="tx-action-btn" type="button" data-tx-cancel title="취소">취소</button>
@@ -578,7 +574,6 @@ function txViewRow(tx, endingQty) {
       <td>${money(amount, tx.currency)}</td>
       <td>${currentPriceText}</td>
       <td>${compareText}</td>
-      <td>${entryRewardText(tx.entry_score)}</td>
       <td class="tx-actions">
         <button class="tx-action-btn${String(tx.memo || "").trim() ? " has-memo" : ""}" type="button" data-tx-memo="${tx.id}" title="${String(tx.memo || "").trim() ? "메모 편집" : "메모 추가"}">메모</button>
         <button class="tx-action-btn" type="button" data-tx-edit="${tx.id}" title="편집">편집</button>
@@ -734,7 +729,7 @@ function renderTransactions(rows, resetPage = true) {
     editingTxId = null;
     const emptyText = transactionNameFilterValue() ? "검색 조건에 맞는 거래내역이 없습니다"
       : transactionRows.some(transactionIsHidden) ? "숨긴 거래만 있습니다" : "거래내역 없음";
-    tbody.innerHTML = `<tr><td colspan="13" class="flat">${emptyText}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="12" class="flat">${emptyText}</td></tr>`;
     renderTransactionPager(0);
     return;
   }
