@@ -88,9 +88,6 @@ function krwRate(row) {
     ? valueKrw / value
     : Number(data.fx?.[row.currency] || 1);
 }
-function dividendReturnsEnabled() {
-  return document.getElementById("dividendReturnToggle")?.checked || false;
-}
 function fxAdjustedEnabled() {
   return document.getElementById("fxAdjustedToggle")?.checked || false;
 }
@@ -970,7 +967,6 @@ function sortRows(rows, tab = activeDetailTab) {
 function syncFilterToggleControls() {
   [
     ["fxAdjustedToggle", "fxAdjustedControl"],
-    ["dividendReturnToggle", "dividendReturnControl"],
     ["interestHeldToggle", "interestHeldControl"],
     ["performanceDetailToggle", "performanceDetailControl"]
   ].forEach(([toggleId, controlId]) => {
@@ -1026,11 +1022,6 @@ function syncDetailTabs() {
   document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart || showingInterest);
   // 통계 지표 도움말 버튼은 통합 세부내역에서 노출
   document.getElementById("fxAdjustedControl")?.classList.toggle("hidden", showingChart || showingFxInterest);
-  // 기간 수익률 열이 있는 표(세부내역·관심목록)에서만 — 배당 탭·차트·환율 그룹엔 해당 열이 없다.
-  document.getElementById("dividendReturnControl")?.classList.toggle(
-    "hidden",
-    showingChart || showingFxInterest || (!showingInterest && activeDetailTab !== "detail")
-  );
   document.getElementById("nameFilterControl")?.classList.toggle(
     "hidden",
     showingChart || (!showingInterest && activeDetailTab !== "detail")

@@ -3,12 +3,11 @@ function statsRows(rows) {
     const stats = statsData[row.ticker] || {};
     const rsi = stats.rsi || {};
     const bb = stats.bollinger_pband || {};
-    // '배당 포함'이 켜져 있으면 배당 재투자 수익률(서버 performance_tr)을 쓴다. 정렬도 이 값으로 된다.
+    // 기간 수익률은 항상 배당 재투자 값(서버 performance_tr)을 쓴다(2026-11-07 사용자 지시). 정렬도 이 값으로 된다.
     // 아직 계산되지 않은 종목은 가격 수익률로 두되 전 기간을 '일부 반영(P)'으로 표시한다.
-    const includeDividends = dividendReturnsEnabled();
     const hasTr = Boolean(stats.performance_tr);
-    const perf = (includeDividends && hasTr ? stats.performance_tr : stats.performance) || {};
-    const perfQuality = !includeDividends ? {} : hasTr ? (stats.performance_tr_quality || {})
+    const perf = (hasTr ? stats.performance_tr : stats.performance) || {};
+    const perfQuality = hasTr ? (stats.performance_tr_quality || {})
       : Object.fromEntries(PERF_PERIOD_KEYS.map(key => [key, "P"]));
     const isEtf = (row.assetClass || row.asset_class) === "etf";
     const isIndex = (row.assetClass || row.asset_class) === "index";

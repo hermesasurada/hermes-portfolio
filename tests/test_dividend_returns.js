@@ -1,10 +1,7 @@
-// '배당 포함' 토글 — 기간 수익률(1주~10년)을 배당 재투자 값으로 바꾸고, 이 브라우저에 저장한다.
+// 목록의 기간 수익률(1주~10년)은 항상 배당 재투자 값이다(2026-11-07, 토글 폐지).
 const assert = require('node:assert/strict');
 const h = require('./harness');
 const ctx = h.loadScripts(h.createContext());
-const toggle = h.element({ checked: false });
-const byId = ctx.document.getElementById.bind(ctx.document);
-ctx.document.getElementById = id => (id === 'dividendReturnToggle' ? toggle : byId(id));
 
 ctx.__stats = {
   SCHD: {
@@ -22,13 +19,8 @@ ctx.__stats = {
 h.evaluate(ctx, 'statsData = __stats; data = {fx: {USD: 1400}}');
 const rows = () => h.plain(ctx.statsRows([{ ticker: 'SCHD' }, { ticker: 'K' }, { ticker: 'OLD' }]));
 
-// 꺼져 있으면 가격 수익률, 품질 표시 없음
-let [schd, k, old] = rows();
-assert.equal(schd.perf_1y, 21.2);
-assert.equal(k.perf_quality.perf_5y, null);
-// 켜면 배당 포함 값 — 3년 이상은 기존처럼 연평균으로 환산
-toggle.checked = true;
-[schd, k, old] = rows();
+// 배당 포함 값 — 3년 이상은 기존처럼 연평균으로 환산
+const [schd, k, old] = rows();
 assert.equal(schd.perf_1y, 25.5);
 assert.ok(Math.abs(schd.perf_5y - ((1 + 56.3 / 100) ** (1 / 5) - 1) * 100) < 1e-9);
 assert.equal(k.perf_quality.perf_1y, 'TR');
@@ -49,10 +41,7 @@ for (const key of ['perf_1w', 'perf_1m', 'perf_3m', 'perf_6m', 'perf_ytd', 'perf
   assert.ok(holdings.includes(`perfText(r, "${key}"`), `계좌표 ${key}`);
   assert.ok(columns.includes(`perfText(r, "${key}"`), `관심목록 ${key}`);
 }
-// 표 위 컨트롤 영역(환율 적용 옆)에 있고, 로컬 옵션 저장 대상이다
-const html = h.readStatic('index.html');
-assert.match(html, /id="fxAdjustedControl"[\s\S]*?<\/label>\s*<\/span>\s*<span class="filter-toggle-control" id="dividendReturnControl"/);
-assert.match(h.readStatic('state.js'), /dividendReturns: "portfolio\.detail\.dividendReturns"/);
-assert.match(h.readStatic('app.js'), /storageSet\(detailStorage\.dividendReturns,/);
-assert.match(h.readStatic('app.js'), /checked = storageGet\(detailStorage\.dividendReturns\) === "true"/);
-console.log('Dividend returns toggle: values switch, CAGR kept, partial marking, both tables, toolbar + local storage');
+// 토글과 저장 키는 없다
+const source = ['index.html', 'app.js', 'app-holdings.js', 'state.js'].map(name => h.readStatic(name)).join(' ');
+assert.doesNotMatch(source, /dividendReturn|배당 포함/);
+console.log('Dividend returns: always total return, CAGR kept, partial marking, both tables, no toggle');
