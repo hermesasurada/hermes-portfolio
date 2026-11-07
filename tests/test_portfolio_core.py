@@ -3423,6 +3423,37 @@ def test_price_chart_excludes_hidden_transactions():
     conn.close()
 
 
+def test_quote_stats_matches_list_stats_and_falls_back_to_prices():
+    """/api/chart quote_stats(티커칩 팝오버, 2026-11-07): 목록과 같은 load_stats 값을 쓰고,
+    technical cache가 없으면 daily_prices로 calculate_technical_stats를 바로 돌린다. 못 내면 None."""
+    from unittest.mock import patch
+    from portfolio_core import stats as stats_module
+    from portfolio_core.technical_stats import calculate_technical_stats
+
+    cached = {"rsi": {"day": 58.24, "week": 61.0, "month": None},
+              "bollinger_pband": {"day": 73.126, "week": 80.2, "month": 95.0},
+              "performance": {"one_week": 2.111, "one_month": -4.3, "three_month": 12.8, "one_year": 9.0}}
+    with patch.object(stats_module, "load_stats", return_value={"stats": {"AAA": cached}}):
+        quote = stats_module.load_quote_stats("aaa")
+    assert quote == {"rsi": {"day": 58.24, "week": 61.0, "month": None},
+                     "bollinger_pband": {"day": 73.13, "week": 80.2, "month": 95.0},
+                     "performance": {"one_week": 2.11, "one_month": -4.3, "three_month": 12.8}}
+
+    start = date(2025, 1, 1)
+    rows = [{"ticker": "BBB", "date": (start + timedelta(days=i)).isoformat(),
+             "close": 100.0 + (i % 7) + i * 0.1, "high": 0, "low": 0} for i in range(400)]
+    expected = calculate_technical_stats(rows)
+    with patch.object(stats_module, "load_stats", return_value={"stats": {}}), \
+            patch.object(stats_module, "_quote_stats_from_prices", return_value=expected):
+        quote = stats_module.load_quote_stats("BBB")
+    assert quote["rsi"]["week"] == round(expected["rsi"]["week"], 2)
+    assert quote["performance"]["one_month"] == round(expected["performance"]["one_month"], 2)
+    with patch.object(stats_module, "load_stats", return_value={"stats": {}}), \
+            patch.object(stats_module, "_quote_stats_from_prices", return_value={}):
+        assert stats_module.load_quote_stats("CCC") == stats_module.empty_quote_stats()
+    assert stats_module.load_quote_stats("") == stats_module.empty_quote_stats()
+
+
 def test_live_chart_point_without_today_row_gets_provisional_candle():
     """미국 장전처럼 당일 일봉이 없을 때 라이브 점은 직전 종가→라이브 가격 잠정 봉을 갖는다(2026-10-16).
     당일 일봉이 이미 있으면 그 봉을 쓰고 잠정 표시를 붙이지 않는다."""

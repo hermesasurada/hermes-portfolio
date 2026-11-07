@@ -47,7 +47,7 @@ from portfolio_core.interest_watchlists import (
 )
 from portfolio_core.paths import DB_PATH, LOGO_DIR
 from portfolio_core.portfolio import load_portfolio as load_portfolio_data
-from portfolio_core.stats import load_stats
+from portfolio_core.stats import empty_quote_stats, load_quote_stats, load_stats
 from portfolio_core.tickers import asset_class
 from portfolio_core.transactions import add_transaction, delete_transaction, load_transactions, update_transaction, update_transaction_memo
 from portfolio_core.ticker_lookup import is_registered_ticker, lookup_ticker
@@ -450,6 +450,11 @@ class Handler(BaseHTTPRequestHandler):
             end=(query.get("end") or [None])[0],
         ))
         payload["has_etf_holdings"] = etf_holdings_available(ticker, payload.get("name") or "")
+        # 티커칩 시세 팝오버(wm·sa·td·xw)용 — 목록 표와 같은 계산. 실패해도 차트 응답은 그대로 낸다.
+        try:
+            payload["quote_stats"] = load_quote_stats(ticker, us_extended=us_extended)
+        except Exception:
+            payload["quote_stats"] = empty_quote_stats()
         return payload
 
     def api_price_since(self, query: dict[str, list[str]]) -> dict:

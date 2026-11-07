@@ -130,3 +130,68 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
         "us_extended": bool(us_extended),
         "stats": stats,
     }
+
+
+QUOTE_STATS_PERIODS = ("one_week", "one_month", "three_month")
+
+
+def _quote_stats_round(value) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return round(number, 2) if number == number and abs(number) != float("inf") else None
+
+
+def _quote_stats_from_prices(ticker: str) -> dict:
+    """technical cache가 없는 종목(수집 대상 밖) — daily_prices로 같은 함수(calculate_technical_stats)를 바로 돌린다."""
+    from .listing_dates import load_listing_dates
+    from .technical_stats import TECHNICAL_LOOKBACK_DAYS, calculate_technical_stats
+
+    cutoff = (datetime.now(KST).date() - timedelta(days=TECHNICAL_LOOKBACK_DAYS)).isoformat()
+    with connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT ticker, date, close, high, low
+            FROM daily_prices
+            WHERE ticker = ? AND date >= ? AND close IS NOT NULL
+            ORDER BY date
+            """,
+            [ticker, cutoff],
+        ).fetchall()
+        list_date = load_listing_dates(conn, [ticker]).get(ticker)
+    if list_date:
+        rows = [row for row in rows if row["date"] >= list_date]
+    return calculate_technical_stats(rows) if rows else {}
+
+
+def empty_quote_stats() -> dict:
+    return {
+        "rsi": {key: None for key in ("day", "week", "month")},
+        "bollinger_pband": {key: None for key in ("day", "week", "month")},
+        "performance": {key: None for key in QUOTE_STATS_PERIODS},
+    }
+
+
+def load_quote_stats(ticker: str, us_extended: bool = False) -> dict:
+    """티커칩 시세 팝오버(wm·sa·td·xw)용 RSI·BB·기간 등락률 — /api/chart 응답의 quote_stats(2026-11-07).
+
+    목록 표와 같은 경로(load_stats: technical cache + 연장 시세 보정)를 쓰므로 포트폴리오 화면과 숫자가 같다.
+    performance는 가격 기준(차트 지표 팝업과 같음, 목록 기간 수익률은 배당 포함 performance_tr).
+    계산할 수 없는 값은 None.
+    """
+    clean = normalize_tickers([ticker])
+    stats: dict = {}
+    if not clean:
+        return empty_quote_stats()
+    stats = load_stats(clean, us_extended=us_extended)["stats"].get(clean[0]) or {}
+    if not isinstance(stats.get("rsi"), dict):
+        stats = {**_quote_stats_from_prices(clean[0]), **stats}
+    rsi = stats.get("rsi") or {}
+    band = stats.get("bollinger_pband") or {}
+    performance = stats.get("performance") or {}
+    return {
+        "rsi": {key: _quote_stats_round(rsi.get(key)) for key in ("day", "week", "month")},
+        "bollinger_pband": {key: _quote_stats_round(band.get(key)) for key in ("day", "week", "month")},
+        "performance": {key: _quote_stats_round(performance.get(key)) for key in QUOTE_STATS_PERIODS},
+    }
