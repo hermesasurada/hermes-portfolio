@@ -27,13 +27,13 @@ const INTEREST_COLUMNS = [
         </span>` },
   { key: "display_change_pct", width: 85, label: "등락", headClass: "group-start interest-leaf-head", cellClass: "group-start", always: true,
     cell: (r, group) => `${changeMarkup(r)}` },
-  { key: "extended_change_pct", width: 71, label: "연장", headClass: "interest-leaf-head",
+  { key: "extended_change_pct", width: 62, label: "연장", headClass: "interest-leaf-head",
     cell: (r, group) => `${extendedChangeText(r) || "-"}` },
-  { key: "current_price", width: 109, label: "현재단가", headClass: "interest-leaf-head", always: true,
+  { key: "current_price", width: 96, label: "현재단가", headClass: "interest-leaf-head", always: true,
     cell: (r, group) => `${currentPriceMarkup(r)}` },
   { key: "market_cap_usd", width: 76, label: "시총/AUM", headClass: "group-start interest-leaf-head", cellClass: "group-start",
     cell: (r, group) => `${marketCapMarkup(r)}` },
-  { key: "drawdown_52w", width: 72, label: "52주高 대비", headClass: "interest-leaf-head",
+  { key: "drawdown_52w", width: 56, label: "<span>52주高</span><span>대비</span>", headClass: "indicator-head interest-leaf-head", ariaLabel: "52주 고점 대비",
     cell: (r, group) => `${signedPercentText(r.drawdown_52w, 1)}` },
   { key: "risk_reward_score", width: 58, label: "<span>변동성</span><span>손익비</span>", headClass: "indicator-head interest-leaf-head", title: "변동성 손익비 = 10 × Σ w(h) × 기간점수(h)\n기간점수(h) = clamp((연율수익(h) − 3%) ÷ max(변동성(h), 바닥), −2, +2)\n · 연율수익: KRW 환산 일간 총수익(배당 재투자)의 산술 연율\n · 변동성: 같은 기간 일간 수익률의 연율 표준편차(상승·하락 모두)\n · 바닥: 주식·ETF·지수 8% / 크립토 20% / FX·채권 3%\n · 창(비겹침): 5Y=3~5년 전 w=0.4 / 3Y=1~3년 전 w=0.3 / 1Y=최근 1년 w=0.3 — 없는 창은 0점(이력 1년이면 최대 30%만 반영)",
     cell: (r, group) => `${riskRewardScoreText(r.risk_reward_score)}` },
@@ -146,7 +146,8 @@ const INTEREST_COLUMNS = [
   // 맨 끝 칸: 찐관심 별 + 삭제(2026-10-30 별을 종목명 앞에서 이리로 옮김)
   // 버튼 두 개(26px×2)+칸 여백이 들어가야 해서 좁은 화면 축소(--col-scale)에서 뺀다 — 64px·축소 때 ×가 잘렸다
   { key: "delete", width: 76, noScale: true, label: "", headClass: "group-start interest-leaf-head interest-delete-col", ariaLabel: "찐관심·삭제", cellClass: "group-start interest-delete-col", always: true,
-    cell: (r, group) => `<span class="row-actions">${favoriteStarMarkup(r)}${isProtectedInterestItem(r, group)
+    cell: (r, group) => `<span class="row-actions">${favoriteStarMarkup(r)}${isProtectedInterestItem(r, group) || group?.favorite
+        // 찐관심 목록은 별(해제)로 빠지므로 삭제 버튼을 두지 않는다(2026-11-07)
         ? ""
         : group.fixed
           ? `<button class="interest-row-delete" type="button" data-interest-unregister="${esc(r.ticker)}" aria-label="${esc(r.name)} 수집 제외" title="수집 대상에서 제외">×</button>`
