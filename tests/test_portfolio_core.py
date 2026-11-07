@@ -1453,6 +1453,27 @@ def test_nintendo_march_fiscal_groups_september_interim_with_march_final():
         assert final["date"].month == 3 and final["date"].year == year
 
 
+def test_fast_retailing_august_fiscal_groups_february_interim_with_august_final():
+    """패스트리테일링은 8월 결산 — 2월 중간배당과 8월 결산배당이 한 사업연도다(2026-11-07 사용자 지적).
+    이듬해 2월 회차가 앞 사업연도에 붙으면 반기배당인데 한 해 3회차로 보인다."""
+    from portfolio_core.dividend_history import FISCAL_END_MONTH_OVERRIDES
+
+    assert FISCAL_END_MONTH_OVERRIDES.get("9983.T") == 8
+    rows = [
+        {"record_date": None, "ex_date": ex, "pay_date": None, "declaration_date": None,
+         "amount": amount, "source": "yf-history"}
+        for ex, amount in [
+            ("2025-02-27", 240.0), ("2025-08-28", 260.0),
+            ("2026-02-26", 320.0), ("2026-08-28", 530.0), ("2027-02-25", 530.0),
+        ]
+    ]
+    events, _ = _attributed_history_events(rows, "9983.T", False, 8)
+    annual = _aggregate_annual_dividends(events)
+    assert sorted(e["amount"] for e in annual[2025]["events"]) == [240.0, 260.0]
+    assert sorted(e["amount"] for e in annual[2026]["events"]) == [320.0, 530.0]
+    assert [e["amount"] for e in annual[2027]["events"]] == [530.0]
+
+
 def test_jpm_october_raise_groups_four_equal_quarters():
     """JPM은 10월 회차부터 인상분을 지급한다 → 10월~익년 7월이 한 배당년도.
 
