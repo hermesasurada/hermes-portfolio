@@ -132,7 +132,7 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
     }
 
 
-QUOTE_STATS_PERIODS = ("one_week", "one_month", "three_month")
+QUOTE_STATS_PERIODS = ("one_week", "one_month", "three_month", "ytd")
 
 
 def _quote_stats_round(value) -> float | None:

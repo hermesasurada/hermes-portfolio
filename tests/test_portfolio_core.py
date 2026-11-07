@@ -3432,12 +3432,12 @@ def test_quote_stats_matches_list_stats_and_falls_back_to_prices():
 
     cached = {"rsi": {"day": 58.24, "week": 61.0, "month": None},
               "bollinger_pband": {"day": 73.126, "week": 80.2, "month": 95.0},
-              "performance": {"one_week": 2.111, "one_month": -4.3, "three_month": 12.8, "one_year": 9.0}}
+              "performance": {"one_week": 2.111, "one_month": -4.3, "three_month": 12.8, "ytd": 5.555, "one_year": 9.0}}
     with patch.object(stats_module, "load_stats", return_value={"stats": {"AAA": cached}}):
         quote = stats_module.load_quote_stats("aaa")
     assert quote == {"rsi": {"day": 58.24, "week": 61.0, "month": None},
                      "bollinger_pband": {"day": 73.13, "week": 80.2, "month": 95.0},
-                     "performance": {"one_week": 2.11, "one_month": -4.3, "three_month": 12.8}}
+                     "performance": {"one_week": 2.11, "one_month": -4.3, "three_month": 12.8, "ytd": 5.55}}
 
     start = date(2025, 1, 1)
     rows = [{"ticker": "BBB", "date": (start + timedelta(days=i)).isoformat(),
