@@ -167,11 +167,14 @@ function hasInterestColumnValue(row, field) {
   return row[field] != null && Number.isFinite(Number(row[field]));
 }
 
-function visibleInterestColumns(rows, isIndexGroup = false) {
+// 별만 남는 목록(찐관심·주요 지수·환율 — 삭제 버튼 없음)은 맨 끝 칸을 별 하나 폭으로 줄인다(2026-11-07)
+const INTEREST_STAR_ONLY_WIDTH = 44;
+
+function visibleInterestColumns(rows, isIndexGroup = false, {starOnly = false} = {}) {
   return INTEREST_COLUMNS.filter(column => column.always || (
     !(isIndexGroup && column.key === "extended_change_pct")
     && rows.some(row => hasInterestColumnValue(row, column.key))
-  ));
+  )).map(column => starOnly && column.key === "delete" ? {...column, width: INTEREST_STAR_ONLY_WIDTH} : column);
 }
 
 function interestColumnAttributes(column) {
@@ -202,7 +205,7 @@ function interestTableHead(columns) {
 
 function renderInterestFrame(table, columns) {
   interestRenderedColumns = columns;
-  const key = columns.map(column => column.key).join(",");
+  const key = columns.map(column => `${column.key}:${column.width}`).join(",");
   if (table.dataset.columnKey === key) return;
   table.dataset.columnKey = key;
   const columnWidth = column => column.key === "name"

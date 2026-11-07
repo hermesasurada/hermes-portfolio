@@ -67,6 +67,11 @@ assert.match(css, /left: var\(--interest-logo-col, 40px\);/);
 assert.match(css, /width: var\(--interest-logo-col, 40px\);/);
 run("testHead.innerHTML = 'unchanged'; renderInterestFrame(table, visibleInterestColumns([]));");
 assert.equal(run("testHead.innerHTML"), "unchanged");
+// 찐관심·주요 지수·환율은 삭제 버튼이 없어 끝 칸을 별 폭으로(2026-11-07)
+assert.equal(run("visibleInterestColumns([], false, {starOnly: true}).find(c => c.key === 'delete').width"), 44);
+assert.equal(run("visibleInterestColumns([]).find(c => c.key === 'delete').width"), 76);
+assert.equal(run("INTEREST_COLUMNS.find(c => c.key === 'delete').width"), 76);
+assert.match(run("interestRowCells({ticker: 'A', name: 'A'}, {favorite: true}, [INTEREST_COLUMNS.find(c => c.key === 'delete')])"), /^(?![\s\S]*interest-row-delete)/);
 console.log("interest column schema, visibility, header alignment and frame reuse ok");
 // 매매참고(2026-10-16)·진입 손익비(2026-11-07) 열 폐지 — 변동성 손익비 다음은 β
 assert.equal(run("INTEREST_COLUMNS.some(c => c.key === 'trade_timing')"), false);

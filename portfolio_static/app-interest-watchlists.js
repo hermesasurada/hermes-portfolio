@@ -747,7 +747,8 @@ function renderInterestMainTable() {
     : rows.length;
   const suppressIndexHighlight = interestGroupIsIndex(group);
   const table = body.closest("table");
-  const columns = visibleInterestColumns(rows, suppressIndexHighlight);
+  const columns = visibleInterestColumns(rows, suppressIndexHighlight,
+    {starOnly: Boolean(group.favorite) || isProtectedInterestGroup(group)});
   renderInterestFrame(table, columns);
   resetInterestScrollIfListChanged(group, rows);
   if (rows.length) {
