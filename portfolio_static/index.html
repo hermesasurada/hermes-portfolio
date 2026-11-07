@@ -293,7 +293,7 @@
                 <th rowspan="2" class="indicator-head group-start" data-key="trailing_pe"><span>P/E</span><span>(t)</span></th>
                 <th rowspan="2" class="indicator-head" data-key="forward_pe"><span>P/E</span><span>(f)</span></th>
                 <th rowspan="2" data-key="price_to_book">P/B</th>
-                <th colspan="3" class="group-start detail-group-label" data-detail-group="dividend">배당</th>
+                <th colspan="6" class="group-start detail-group-label" data-detail-group="dividend">배당</th>
                 <th rowspan="2" class="group-start" data-key="perf_1w">1주</th>
                 <th rowspan="2" data-key="perf_1m">1개월</th>
                 <th rowspan="2" data-key="perf_3m">3개월</th>
@@ -312,6 +312,9 @@
                 <th class="group-start" data-key="dividend_yield">배당율</th>
                 <th class="indicator-head" data-key="dividend_growth_5y" aria-label="배당성장(5년)"><span>성장</span><span>(5년)</span></th>
                 <th class="indicator-head" data-key="yield_on_cost" title="내 평단가 기준 배당율(추정) = 배당율 × 현재가 ÷ 평단가&#10;연간 주당배당금을 현재 배당율에서 되짚어 내 매입 단가에 대 본 값이다.&#10;여러 계좌를 합치면 수량 가중 평단가를 쓴다."><span>평단</span><span>배당율</span></th>
+                <th class="indicator-head" data-key="dividend_streak_years" aria-label="배당 연속지급" title="상장 이래 배당을 거른 해 없이 지급한 연속 연수(완결 연도 기준, 미국 상장만). +는 이력 한계(1962)로 실제는 더 긺"><span>연속</span><span>지급</span></th>
+                <th class="indicator-head" data-key="dividend_growth_streak_years" aria-label="배당 연속증액" title="연간 배당을 연속으로 늘린 연수(미국 상장만). 개별주는 StockAnalysis 공식 값, ETF는 자체 계산"><span>연속</span><span>증액</span></th>
+                <th data-key="payout_ratio" aria-label="배당성향">성향</th>
                 <th class="group-start" data-key="trend_return" aria-label="추세 수익률" title="추세 수익률 = 최근 5년(1,260거래일) 로그 종가에 직선을 맞춘 기울기의 연율 환산&#10;기간 수익률(CAGR)은 시작·끝 두 점만 보지만 이 값은 경로 전체를 반영해 막판 급등에 덜 흔들린다&#10;이탈폭 = 가격이 그 직선에서 평균 얼마나 벗어났는가(작을수록 꾸준)&#10;이력이 5년보다 짧으면 있는 만큼(최소 1년)으로 계산">수익률</th>
                 <th data-key="trend_deviation" aria-label="추세 이탈폭" title="추세 이탈폭 = 최근 5년 로그 종가가 추세 직선에서 벗어난 폭의 표준편차(잔차 표준편차, 로그 기준 %)&#10;작을수록 직선처럼 꾸준하다. 가격이 많이 올랐는지와 무관하게 흔들림의 크기만 본다&#10;예: ±47%(PLTR)는 큰 등락, ±8%(SPY)는 직선에 가까움">이탈폭</th>
                 <th data-key="trend_strength" aria-label="추세 강도" title="추세 강도 = 추세 수익률 ÷ 추세 이탈폭&#10;높을수록 흔들림에 비해 많이 올랐다. 비슷한 수준의 종목끼리 비교한다&#10;추세 수익률이 아주 높으면 복리 때문에 값이 커 보일 수 있다">강도</th>

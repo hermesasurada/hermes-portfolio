@@ -1301,6 +1301,9 @@ function renderTable() {
       <td class="group-start">${dividendYieldMarkup(r)}</td>
       <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
       <td>${noPosition ? "-" : yieldOnCostMarkup(r)}</td>
+      <td>${dividendStreakText(r.dividend_streak_years, r.dividend_streak_floor)}</td>
+      <td>${dividendStreakText(r.dividend_growth_streak_years)}</td>
+      <td>${fractionPercentText(r.payout_ratio)}</td>
       <td class="group-start">${perfText(r, "perf_1w", 1)}</td>
       <td>${perfText(r, "perf_1m", 1)}</td>
       <td>${perfText(r, "perf_3m", 0)}</td>
