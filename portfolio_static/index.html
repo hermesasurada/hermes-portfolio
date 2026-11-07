@@ -267,50 +267,54 @@
         <div class="table-wrap" id="detailTableWrap">
           <table>
             <thead>
-              <tr>
-                <th class="logo-col" aria-hidden="true"></th>
-                <th class="name-head"><span class="sort-mini" data-key="ticker">티커</span><span class="name-head-sep">·</span><span class="sort-mini" data-key="name">종목</span></th>
-                <th data-key="display_change_pct">등락</th>
-                <th class="extended-change-col" data-key="extended_change_pct">연장</th>
-                <th data-key="current_price">현재단가</th>
-                <th data-key="qty">수량</th>
-                <th data-key="change_krw">등락금액</th>
-                <th data-key="value_krw">평가액</th>
-                <th data-key="weight_pct">비중</th>
-                <th data-key="dividend_yield">배당율</th>
-                <th class="indicator-head" data-key="dividend_growth_5y"><span>배당성장</span><span>(5년)</span></th>
+              <tr class="detail-group-head">
+                <th rowspan="2" class="logo-col" aria-hidden="true"></th>
+                <th rowspan="2" class="name-head"><span class="sort-mini" data-key="ticker">티커</span><span class="name-head-sep">·</span><span class="sort-mini" data-key="name">종목</span></th>
+                <th rowspan="2" data-key="display_change_pct">등락</th>
+                <th rowspan="2" class="extended-change-col" data-key="extended_change_pct">연장</th>
+                <th rowspan="2" data-key="current_price">현재단가</th>
+                <th rowspan="2" data-key="qty">수량</th>
+                <th rowspan="2" data-key="change_krw">등락금액</th>
+                <th rowspan="2" data-key="value_krw">평가액</th>
+                <th rowspan="2" data-key="weight_pct">비중</th>
+                <th rowspan="2" class="indicator-head group-start" data-key="drawdown_52w"><span>52주高</span><span>대비</span></th>
+                <th rowspan="2" class="indicator-head" data-key="risk_reward_score" title="변동성 손익비 = 10 × Σ w(h) × 기간점수(h)&#10;기간점수(h) = clamp((연율수익(h) − 3%) ÷ max(변동성(h), 바닥), −2, +2)&#10; · 연율수익: KRW 환산 일간 총수익(배당 재투자)의 산술 연율&#10; · 변동성: 같은 기간 일간 수익률의 연율 표준편차(상승·하락 모두)&#10; · 바닥: 주식·ETF·지수 8% / 크립토 20% / FX·채권 3%&#10; · 창(비겹침): 5Y=3~5년 전 w=0.4 / 3Y=1~3년 전 w=0.3 / 1Y=최근 1년 w=0.3 — 없는 창은 0점(이력 1년이면 최대 30%만 반영)"><span>변동성</span><span>손익비</span></th>
+                <th rowspan="2" data-key="beta" title="지수와 같이 움직인 정도 · 최근 252거래일(약 1년) 일간 수익률&#10;공분산(종목, 지수) ÷ 지수 분산&#10;기준지수: 한국 KODEX 200TR · 일본 Nikkei 225 · 대만 Taiwan Weighted · 홍콩 Hang Seng · 중국 Shanghai · 영국 FTSE 100 · 유럽 Euro Stoxx 50 · 그 외 S&amp;P 500&#10;1이면 지수와 같은 폭, 1.5면 1.5배, 0.5면 절반, 음수면 반대 방향&#10;두 계열의 공통 거래일만 쓰고, 30일 미만이면 표시하지 않는다">β</th>
+                <th rowspan="2" data-key="beta_adj" title="지수 대비 변동폭 배수 · 최근 252거래일(약 1년) 일간 수익률&#10;종목 표준편차 ÷ 지수 표준편차&#10;기준지수: 한국 KODEX 200TR · 일본 Nikkei 225 · 대만 Taiwan Weighted · 홍콩 Hang Seng · 중국 Shanghai · 영국 FTSE 100 · 유럽 Euro Stoxx 50 · 그 외 S&amp;P 500 — β와 같은 지수라 β = 상관계수 × β″, 항상 |β| ≤ β″&#10;방향이 달라 β가 낮아도 β″가 크면 그 자체로 많이 흔들리는 종목">β″</th>
+                <th rowspan="2" class="indicator-head group-start" data-key="rsi_day"><span>RSI</span><span>(일)</span></th>
+                <th rowspan="2" class="indicator-head" data-key="rsi_week"><span>RSI</span><span>(주)</span></th>
+                <th rowspan="2" class="indicator-head" data-key="rsi_month"><span>RSI</span><span>(월)</span></th>
+                <th rowspan="2" class="indicator-head" data-key="bb_day"><span>BB</span><span>(일)</span></th>
+                <th rowspan="2" class="indicator-head" data-key="bb_week"><span>BB</span><span>(주)</span></th>
+                <th rowspan="2" class="indicator-head" data-key="bb_month"><span>BB</span><span>(월)</span></th>
+                <th rowspan="2" class="indicator-head ma-distance-col" data-key="ma20_pct" title="20거래일 단순이동평균선 이격률 = (현재가 ÷ 이동평균 − 1) × 100. 위면 양수, 아래면 음수."><span>이격</span><span>(20일)</span></th>
+                <th rowspan="2" class="indicator-head ma-distance-col" data-key="ma50_pct" title="50거래일 단순이동평균선 이격률 = (현재가 ÷ 이동평균 − 1) × 100. 위면 양수, 아래면 음수."><span>이격</span><span>(50일)</span></th>
+                <th rowspan="2" class="indicator-head ma-distance-col" data-key="ma200_pct" title="200거래일 단순이동평균선 이격률 = (현재가 ÷ 이동평균 − 1) × 100. 이력이 부족하면 표시하지 않습니다."><span>이격</span><span>(200일)</span></th>
+                <th rowspan="2" class="indicator-head group-start" data-key="trailing_pe"><span>P/E</span><span>(t)</span></th>
+                <th rowspan="2" class="indicator-head" data-key="forward_pe"><span>P/E</span><span>(f)</span></th>
+                <th rowspan="2" data-key="price_to_book">P/B</th>
+                <th colspan="3" class="group-start detail-group-label" data-detail-group="dividend">배당</th>
+                <th rowspan="2" class="group-start" data-key="perf_1w">1주</th>
+                <th rowspan="2" data-key="perf_1m">1개월</th>
+                <th rowspan="2" data-key="perf_3m">3개월</th>
+                <th rowspan="2" data-key="perf_6m">6개월</th>
+                <th rowspan="2" data-key="perf_ytd">YTD</th>
+                <th rowspan="2" data-key="perf_1y">1년</th>
+                <th rowspan="2" data-key="perf_3y" title="3년 연평균 복리수익률">3년</th>
+                <th rowspan="2" data-key="perf_5y" title="5년 연평균 복리수익률">5년</th>
+                <th rowspan="2" data-key="perf_10y" title="10년 연평균 복리수익률">10년</th>
+                <th colspan="3" class="group-start detail-group-label" data-detail-group="trend">추세</th>
+                <th rowspan="2" class="group-start" data-key="market_cap_usd">시총/AUM</th>
+                <th rowspan="2" data-key="next_earnings_date">실적일</th>
+                <th rowspan="2">거래</th>
+              </tr>
+              <tr class="detail-col-head">
+                <th class="group-start" data-key="dividend_yield">배당율</th>
+                <th class="indicator-head" data-key="dividend_growth_5y" aria-label="배당성장(5년)"><span>성장</span><span>(5년)</span></th>
                 <th class="indicator-head" data-key="yield_on_cost" title="내 평단가 기준 배당율(추정) = 배당율 × 현재가 ÷ 평단가&#10;연간 주당배당금을 현재 배당율에서 되짚어 내 매입 단가에 대 본 값이다.&#10;여러 계좌를 합치면 수량 가중 평단가를 쓴다."><span>평단</span><span>배당율</span></th>
-                <th class="indicator-head group-start" data-key="drawdown_52w"><span>52주高</span><span>대비</span></th>
-                <th class="indicator-head" data-key="risk_reward_score" title="변동성 손익비 = 10 × Σ w(h) × 기간점수(h)&#10;기간점수(h) = clamp((연율수익(h) − 3%) ÷ max(변동성(h), 바닥), −2, +2)&#10; · 연율수익: KRW 환산 일간 총수익(배당 재투자)의 산술 연율&#10; · 변동성: 같은 기간 일간 수익률의 연율 표준편차(상승·하락 모두)&#10; · 바닥: 주식·ETF·지수 8% / 크립토 20% / FX·채권 3%&#10; · 창(비겹침): 5Y=3~5년 전 w=0.4 / 3Y=1~3년 전 w=0.3 / 1Y=최근 1년 w=0.3 — 없는 창은 0점(이력 1년이면 최대 30%만 반영)"><span>변동성</span><span>손익비</span></th>
-                <th data-key="beta" title="지수와 같이 움직인 정도 · 최근 252거래일(약 1년) 일간 수익률&#10;공분산(종목, 지수) ÷ 지수 분산&#10;기준지수: 한국 KODEX 200TR · 일본 Nikkei 225 · 대만 Taiwan Weighted · 홍콩 Hang Seng · 중국 Shanghai · 영국 FTSE 100 · 유럽 Euro Stoxx 50 · 그 외 S&amp;P 500&#10;1이면 지수와 같은 폭, 1.5면 1.5배, 0.5면 절반, 음수면 반대 방향&#10;두 계열의 공통 거래일만 쓰고, 30일 미만이면 표시하지 않는다">β</th>
-                <th data-key="beta_adj" title="지수 대비 변동폭 배수 · 최근 252거래일(약 1년) 일간 수익률&#10;종목 표준편차 ÷ 지수 표준편차&#10;기준지수: 한국 KODEX 200TR · 일본 Nikkei 225 · 대만 Taiwan Weighted · 홍콩 Hang Seng · 중국 Shanghai · 영국 FTSE 100 · 유럽 Euro Stoxx 50 · 그 외 S&amp;P 500 — β와 같은 지수라 β = 상관계수 × β″, 항상 |β| ≤ β″&#10;방향이 달라 β가 낮아도 β″가 크면 그 자체로 많이 흔들리는 종목">β″</th>
-                <th class="indicator-head group-start" data-key="rsi_day"><span>RSI</span><span>(일)</span></th>
-                <th class="indicator-head" data-key="rsi_week"><span>RSI</span><span>(주)</span></th>
-                <th class="indicator-head" data-key="rsi_month"><span>RSI</span><span>(월)</span></th>
-                <th class="indicator-head" data-key="bb_day"><span>BB</span><span>(일)</span></th>
-                <th class="indicator-head" data-key="bb_week"><span>BB</span><span>(주)</span></th>
-                <th class="indicator-head" data-key="bb_month"><span>BB</span><span>(월)</span></th>
-                <th class="indicator-head ma-distance-col" data-key="ma20_pct" title="20거래일 단순이동평균선 이격률 = (현재가 ÷ 이동평균 − 1) × 100. 위면 양수, 아래면 음수."><span>이격</span><span>(20일)</span></th>
-                <th class="indicator-head ma-distance-col" data-key="ma50_pct" title="50거래일 단순이동평균선 이격률 = (현재가 ÷ 이동평균 − 1) × 100. 위면 양수, 아래면 음수."><span>이격</span><span>(50일)</span></th>
-                <th class="indicator-head ma-distance-col" data-key="ma200_pct" title="200거래일 단순이동평균선 이격률 = (현재가 ÷ 이동평균 − 1) × 100. 이력이 부족하면 표시하지 않습니다."><span>이격</span><span>(200일)</span></th>
-                <th class="indicator-head group-start" data-key="trailing_pe"><span>P/E</span><span>(t)</span></th>
-                <th class="indicator-head" data-key="forward_pe"><span>P/E</span><span>(f)</span></th>
-                <th data-key="price_to_book">P/B</th>
-                <th class="group-start" data-key="perf_1w">1주</th>
-                <th data-key="perf_1m">1개월</th>
-                <th data-key="perf_3m">3개월</th>
-                <th data-key="perf_6m">6개월</th>
-                <th data-key="perf_ytd">YTD</th>
-                <th data-key="perf_1y">1년</th>
-                <th data-key="perf_3y" title="3년 연평균 복리수익률">3년</th>
-                <th data-key="perf_5y" title="5년 연평균 복리수익률">5년</th>
-                <th data-key="perf_10y" title="10년 연평균 복리수익률">10년</th>
-                <th class="indicator-head" data-key="trend_return" title="추세 수익률 = 최근 5년(1,260거래일) 로그 종가에 직선을 맞춘 기울기의 연율 환산&#10;기간 수익률(CAGR)은 시작·끝 두 점만 보지만 이 값은 경로 전체를 반영해 막판 급등에 덜 흔들린다&#10;이탈폭 = 가격이 그 직선에서 평균 얼마나 벗어났는가(작을수록 꾸준)&#10;이력이 5년보다 짧으면 있는 만큼(최소 1년)으로 계산"><span>추세</span><span>수익률</span></th>
-                <th class="indicator-head" data-key="trend_deviation" title="추세 이탈폭 = 최근 5년 로그 종가가 추세 직선에서 벗어난 폭의 표준편차(잔차 표준편차, 로그 기준 %)&#10;작을수록 직선처럼 꾸준하다. 가격이 많이 올랐는지와 무관하게 흔들림의 크기만 본다&#10;예: ±47%(PLTR)는 큰 등락, ±8%(SPY)는 직선에 가까움"><span>추세</span><span>이탈폭</span></th>
-                <th class="indicator-head" data-key="trend_strength" title="추세 강도 = 추세 수익률 ÷ 추세 이탈폭&#10;높을수록 흔들림에 비해 많이 올랐다. 비슷한 수준의 종목끼리 비교한다&#10;추세 수익률이 아주 높으면 복리 때문에 값이 커 보일 수 있다"><span>추세</span><span>강도</span></th>
-                <th class="group-start" data-key="market_cap_usd">시총/AUM</th>
-                <th data-key="next_earnings_date">실적일</th>
-                <th>거래</th>
+                <th class="group-start" data-key="trend_return" aria-label="추세 수익률" title="추세 수익률 = 최근 5년(1,260거래일) 로그 종가에 직선을 맞춘 기울기의 연율 환산&#10;기간 수익률(CAGR)은 시작·끝 두 점만 보지만 이 값은 경로 전체를 반영해 막판 급등에 덜 흔들린다&#10;이탈폭 = 가격이 그 직선에서 평균 얼마나 벗어났는가(작을수록 꾸준)&#10;이력이 5년보다 짧으면 있는 만큼(최소 1년)으로 계산">수익률</th>
+                <th data-key="trend_deviation" aria-label="추세 이탈폭" title="추세 이탈폭 = 최근 5년 로그 종가가 추세 직선에서 벗어난 폭의 표준편차(잔차 표준편차, 로그 기준 %)&#10;작을수록 직선처럼 꾸준하다. 가격이 많이 올랐는지와 무관하게 흔들림의 크기만 본다&#10;예: ±47%(PLTR)는 큰 등락, ±8%(SPY)는 직선에 가까움">이탈폭</th>
+                <th data-key="trend_strength" aria-label="추세 강도" title="추세 강도 = 추세 수익률 ÷ 추세 이탈폭&#10;높을수록 흔들림에 비해 많이 올랐다. 비슷한 수준의 종목끼리 비교한다&#10;추세 수익률이 아주 높으면 복리 때문에 값이 커 보일 수 있다">강도</th>
               </tr>
             </thead>
             <tbody id="holdings"></tbody>

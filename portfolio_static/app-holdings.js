@@ -1201,8 +1201,9 @@ function syncPcFrozenColumns() {
   ].forEach(([selector, columnCount]) => {
     const table = document.querySelector(selector);
     if (!table || table.closest(".hidden")) return;
-    // 컬럼 헤더 행 기준으로 폭 측정 (단일 헤더 표는 first==last).
-    const headers = Array.from(table.querySelectorAll("thead tr:last-child > th"));
+    // 틀고정 열(로고·종목명)은 헤더 첫 행에 있다 — 계좌표는 2행 헤더라 두 열이 rowspan으로
+    // 첫 행에만 있고, 단일 헤더 표(배당)는 first==last(2026-11-07 계좌표 묶음 머리글 도입).
+    const headers = Array.from(table.querySelectorAll("thead tr:first-child > th"));
     let left = 0;
     for (let index = 0; index < Math.min(columnCount, headers.length); index += 1) {
       const cells = [headers[index]];
@@ -1281,9 +1282,6 @@ function renderTable() {
       <td>${noPosition ? "-" : changeKrwText(r.change_krw, { zeroWhenFlat: isHolidayPreviousSession(r) })}</td>
       <td>${noPosition ? "-" : valueMarkup(r)}</td>
       <td>${noPosition ? "-" : weightText(r.weight_pct)}</td>
-      <td>${dividendYieldMarkup(r)}</td>
-      <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
-      <td>${noPosition ? "-" : yieldOnCostMarkup(r)}</td>
       <td class="group-start">${signedPercentText(r.drawdown_52w, 1)}</td>
       <td>${riskRewardScoreText(r.risk_reward_score)}</td>
       <td>${betaText(r.beta)}</td>
@@ -1300,6 +1298,9 @@ function renderTable() {
       <td class="group-start">${peText(r.trailing_pe)}</td>
       <td>${peText(r.forward_pe)}</td>
       <td>${peText(r.price_to_book)}</td>
+      <td class="group-start">${dividendYieldMarkup(r)}</td>
+      <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
+      <td>${noPosition ? "-" : yieldOnCostMarkup(r)}</td>
       <td class="group-start">${perfText(r, "perf_1w", 1)}</td>
       <td>${perfText(r, "perf_1m", 1)}</td>
       <td>${perfText(r, "perf_3m", 0)}</td>
@@ -1309,7 +1310,7 @@ function renderTable() {
       <td>${perfText(r, "perf_3y", 1)}</td>
       <td>${perfText(r, "perf_5y", 1)}</td>
       <td>${perfText(r, "perf_10y", 1)}</td>
-      <td>${trendReturnText(r.trend_return)}</td>
+      <td class="group-start">${trendReturnText(r.trend_return)}</td>
       <td>${trendDeviationText(r.trend_deviation)}</td>
       <td>${trendStrengthText(r.trend_strength)}</td>
       <td class="group-start">${marketCapMarkup(r)}</td>

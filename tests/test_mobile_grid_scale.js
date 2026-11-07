@@ -85,7 +85,7 @@ const colScale = Number(mobile.match(/--col-scale:\s*(\.?\d*\.?\d+)/)[1]);
 assert.ok(colScale > 0 && colScale < 1, `--col-scale은 0~1 사이여야 한다: ${colScale}`);
 assert.ok(colScale >= 0.75, `너무 좁히면 숫자가 서로 붙는다: ${colScale}`);
 // 데스크톱 기본은 1 — calc의 fallback으로 보장한다.
-assert.match(desktop, /#detailTableWrap th:nth-child\(3\)[^{]*\{ min-width: calc\(76px \* var\(--col-scale, 1\)\); \}/);
+assert.match(desktop, /#detailTableWrap td:nth-child\(3\) \{ min-width: calc\(76px \* var\(--col-scale, 1\)\); \}/);
 const scaledWidths = (desktop.match(/calc\(\d+px \* var\(--col-scale, 1\)\)/g) || []).length;
 assert.ok(scaledWidths >= 20, `계좌표 컬럼 폭이 배율을 타지 않는다: ${scaledWidths}개만 적용`);
 
