@@ -8,10 +8,11 @@
   /* 차트 영역 숫자(축·끝라벨·현재가) 공통 — 고정폭이라 자릿수가 흔들리지 않는다 */
   --chart-num-size: 9.5px;
   --chart-num-font: "Roboto Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  /* 표(그리드) 숫자는 고정폭 글꼴을 쓰지 않는다(2026-09-16 사용자 지시).
-     Roboto Mono는 자간이 넓어 열이 길어지고 한글·기호와 섞이면 톤이 튄다.
-     본문과 같은 Pretendard를 쓰되 tabular-nums로 자릿수 정렬만 유지한다.
-     차트 축·툴팁은 --chart-num-font(고정폭) 그대로. */
+  /* 리스트(계좌·관심목록·배당 표) 숫자 칸은 고정폭(2026-11-07 사용자 지시, 09-16 결정 번복).
+     글꼴은 Geist Mono(같은 날 Roboto Mono 대신 "다른 고정폭"으로 교체), 자간을 조금 좁힌다.
+     사이드바·히어로 숫자는 여전히 --grid-num-font(Pretendard + tabular-nums). */
+  --list-num-font: "Geist Mono", "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --list-num-tracking: -.2px;
   --grid-num-font: "Pretendard Variable", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   /* surfaces & text */
   --bg: #f5f6f8;
@@ -84,7 +85,7 @@
   --fs-xl: 21px;
   --fs-hero: 28px;   /* 히어로 요약(총 평가액) 전용 */
   /* list/table rhythm */
-  --list-row-height: 45px;
+  --list-row-height: 42px;   /* 2026-11-07 밀도 상향(45→42, 실측 45.5→42 — 셀 안 버튼 높이 해제 포함) */
   --list-cell-y: 5px;
   --list-icon-size: 28px;
   --table-head-height: 48px;
@@ -190,6 +191,15 @@
   src: url("/static/RobotoMono-Variable.woff2") format("woff2");
   font-style: normal;
   font-weight: 100 700;
+  font-display: swap;
+}
+/* 리스트 숫자 칸 고정폭(2026-11-07). Geist Mono(Vercel, OFL) 가변 latin 서브셋 —
+   숫자·%·$·€ 등만 담겨 있고 ₩·한글은 다음 글꼴로 넘어간다. */
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/static/GeistMono-Variable-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
   font-display: swap;
 }
 @font-face {
@@ -1697,9 +1707,10 @@ th:first-child, td:first-child { text-align: left; }
 #interestRows > tr > td.numeric-cell,
 #dividendRows > tr:is(.dividend-paid-row, .dividend-upcoming-row) > td:is(:first-child, :nth-child(n+4):nth-child(-n+14)),
 #dividendRows .dividend-today-marker time {
-  font-family: var(--grid-num-font);
+  font-family: var(--list-num-font);
   font-weight: 400;
   font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: var(--list-num-tracking);
 }
 #dividendRows .dividend-month-summary strong {
   font-family: var(--grid-num-font);
@@ -1725,6 +1736,18 @@ th:first-child, td:first-child { text-align: left; }
   padding-bottom: var(--list-cell-y);
   box-sizing: border-box;
   vertical-align: middle;
+}
+/* 전역 button{height:36px}가 셀 안 로고·배당률 버튼까지 키우면 행이 40px를 넘는다
+   (2026-11-07 밀도 상향 때 PC에도 적용 — 전에는 좁은 화면 블록에만 있었다). */
+:is(#detailTableWrap, .dividend-list, .interest-detail-list, .tx-list)
+  tbody :is(.company-profile-logo, .stat-yield-link) {
+  height: auto;
+  min-height: 0;
+}
+:is(#detailTableWrap, .dividend-list, .interest-detail-list, .tx-list)
+  tbody :is(.tx-pick, .interest-row-delete) {
+  height: 28px;
+  min-height: 28px;
 }
 #detailTableWrap tbody .asset-icon,
 #interestTableWrap tbody .asset-icon {
@@ -6113,7 +6136,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   /* 정보 밀도는 가로 위주로 — 행 높이는 40px를 유지하고(터치 목표), 대신 컬럼 폭과
      좌우 여백을 줄여 한 화면에 열을 더 담는다.
      전역 button{height:36px}가 셀 안 로고·배당률 버튼까지 키워 행이 47.5px로
-     불어나 있었다. 그리드 안에서만 자연 높이로 되돌려야 40px가 지켜진다. */
+     불어나 있었다. 그리드 안에서만 자연 높이로 되돌려야 행 높이가 지켜진다. */
   #detailTableWrap, .dividend-list, .interest-detail-list, .tx-list {
     --list-row-height: 40px;
     --list-cell-y: 4px;

@@ -32,8 +32,18 @@ assert.equal((allHeaders.match(/data-interest-col=/g) || []).length, 62);
 assert.equal((allHeaders.match(/data-interest-sort-key=/g) || []).length, 61);
 const few = run("interestTableHead(visibleInterestColumns([{ rsi_week: 40, rsi_month: 45 }]))");
 assert.match(few, /colspan="2" class="group-start" data-interest-group-head="momentum"/);
-assert.doesNotMatch(few, /data-interest-col="15"/);   // rsi_day(값 없음) 숨김
-assert.match(few, /data-interest-col="16"/);
+const colIndex = key => run(`INTEREST_COLUMNS.findIndex(c => c.key === '${key}')`);
+assert.doesNotMatch(few, new RegExp(`data-interest-col="${colIndex('rsi_day')}"`));   // rsi_day(값 없음) 숨김
+assert.match(few, new RegExp(`data-interest-col="${colIndex('rsi_week')}"`));
+// 배당 묶음(배당율~연속증액+배당성향)은 밸류 다음, 추세 3열은 10년 뒤 자리에서 묶음(2026-11-07)
+assert.equal(run("INTEREST_COLUMNS.filter(c => c.group === 'dividend').map(c => c.key).join(',')"),
+  'dividend_yield,dividend_growth_5y,dividend_streak_years,dividend_growth_streak_years,payout_ratio');
+assert.equal(colIndex('dividend_yield'), colIndex('price_to_book') + 1);
+assert.equal(run("INTEREST_COLUMNS.filter(c => c.group === 'trend').map(c => c.key).join(',')"), 'trend_return,trend_deviation,trend_strength');
+assert.equal(run("INTEREST_COLUMNS.some(c => c.group === 'dividend-policy')"), false);
+const groupedHead = run("interestTableHead(INTEREST_COLUMNS)");
+assert.match(groupedHead, /colspan="5" class="group-start" data-interest-group-head="dividend">배당</);
+assert.match(groupedHead, /colspan="3" class="group-start" data-interest-group-head="trend">추세</);
 assert.equal((run("interestEmptyRow('none', INTEREST_COLUMNS)").match(/<td /g) || []).length, 62);
 // 5년 → 10년 → 추세 수익률 → 이탈폭 → 강도(2026-11-07)
 assert.deepEqual(JSON.parse(run("JSON.stringify(INTEREST_COLUMNS.slice(INTEREST_COLUMNS.findIndex(c=>c.key==='perf_5y')).slice(0,5).map(c=>c.key))")),
