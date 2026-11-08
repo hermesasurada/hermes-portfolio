@@ -1215,6 +1215,36 @@ function bindChartInteractions(points, payload, geometry) {
     tooltipBox.setAttribute("height", (bbox.height + 10).toFixed(2));
   };
 
+  // 가로선은 커서 높이를 따르고, 오른쪽 축에 그 높이의 가격(RSI 칸이면 RSI 값)을 띄운다
+  const hoverHLine = document.getElementById("chartHoverHLine");
+  const hoverAxis = document.getElementById("chartHoverAxis");
+  const hoverAxisBox = document.getElementById("chartHoverAxisBox");
+  const hoverAxisText = document.getElementById("chartHoverAxisText");
+  function showCrosshairY(svgY) {
+    if (!hoverHLine || !hoverAxis || !geometry.valueForY) return;
+    const priceBottom = geometry.pad.top + geometry.plotH;
+    let label = null;
+    if (svgY != null && svgY >= geometry.pad.top && svgY <= priceBottom) {
+      const value = geometry.valueForY(svgY);
+      if (Number.isFinite(value)) label = chartMoney(value, payload.currency, payload.ticker);
+    } else if (svgY != null && geometry.rsiTop != null && svgY >= geometry.rsiTop && svgY <= geometry.rsiBottom) {
+      const value = geometry.rsiValueForY(svgY);
+      if (Number.isFinite(value)) label = String(Math.round(value));
+    }
+    hoverHLine.classList.toggle("hidden", label == null);
+    hoverAxis.classList.toggle("hidden", label == null);
+    if (label == null) return;
+    hoverHLine.setAttribute("y1", svgY.toFixed(2));
+    hoverHLine.setAttribute("y2", svgY.toFixed(2));
+    hoverAxisText.textContent = label;
+    hoverAxisText.setAttribute("y", (svgY + 4).toFixed(2));
+    const box = hoverAxisText.getBBox();
+    hoverAxisBox.setAttribute("x", (box.x - 4).toFixed(2));
+    hoverAxisBox.setAttribute("y", (box.y - 2).toFixed(2));
+    hoverAxisBox.setAttribute("width", (box.width + 8).toFixed(2));
+    hoverAxisBox.setAttribute("height", (box.height + 4).toFixed(2));
+  }
+
   function showMarker(marker) {
     const x = Number(marker.dataset.x);
     const y = Number(marker.dataset.y);
@@ -1229,6 +1259,7 @@ function bindChartInteractions(points, payload, geometry) {
     hoverDot.setAttribute("cy", y.toFixed(2));
     setTooltipLines(tooltipLines, x > geometry.width - 190 ? x - 160 : x + 14, tooltipY);
     updateTooltipBox();
+    showCrosshairY(y);
   }
 
   function showPoint(clientX, clientY) {
@@ -1274,6 +1305,7 @@ function bindChartInteractions(points, payload, geometry) {
     }
     setTooltipLines(tooltipLines, tooltipX, tooltipY);
     updateTooltipBox();
+    showCrosshairY(svgY);
   }
 
   function pointIndexFromClientX(clientX) {
@@ -1529,6 +1561,11 @@ function renderLineChart(payload) {
     const bounded = Math.max(rsiScale.min, Math.min(rsiScale.max, value));
     return rsiTop + (rsiScale.max - bounded) / rsiSpan * rsiH;
   };
+  // 마우스 십자선(2026-11-08 사용자 지시): 커서 높이 → 가격·RSI 값(오른쪽 축 라벨)
+  const valueForY = useLog
+    ? (y => 10 ** (logMax - (y - dataTop) / dataH * logSpan))
+    : (y => max - (y - dataTop) / dataH * range);
+  const rsiValueForY = y => rsiScale.max - (y - rsiTop) / rsiH * rsiSpan;
   const line = chartLinePath(points.map((point, index) => ({ x: xFor(index), y: yFor(Number(point.close)) })));
   const area = `${line} L${xFor(points.length - 1)},${pad.top + plotH} L${xFor(0)},${pad.top + plotH} Z`;
   const bbUpperPaths = showBollinger ? chartSeriesPaths(points, "bb_upper", xFor, yFor) : [];
@@ -1782,6 +1819,11 @@ function renderLineChart(payload) {
         : ""}
       <g id="chartHoverGroup" class="chart-hover hidden">
         <line id="chartHoverLine" class="chart-hover-line" x1="0" x2="0" y1="${pad.top}" y2="${rsiBottom}"></line>
+        <line id="chartHoverHLine" class="chart-hover-line horizontal hidden" x1="${pad.left}" x2="${(pad.left + plotW).toFixed(2)}" y1="0" y2="0"></line>
+        <g id="chartHoverAxis" class="chart-hover-axis hidden">
+          <rect id="chartHoverAxisBox" class="chart-hover-axis-box" x="0" y="0" width="0" height="0" rx="3"></rect>
+          <text id="chartHoverAxisText" class="chart-hover-axis-text" x="${width - 6}" y="0"></text>
+        </g>
         <circle id="chartHoverDot" class="chart-hover-dot" cx="0" cy="0" r="4"></circle>
         <circle id="chartHoverRsiDot" class="chart-hover-rsi-dot hidden" cx="0" cy="0" r="3.5"></circle>
         <rect id="chartTooltipBox" class="chart-tooltip-box" x="0" y="0" width="0" height="0" rx="6"></rect>
@@ -1795,7 +1837,8 @@ function renderLineChart(payload) {
     ${renderChartCompareControls()}
   `;
   renderChartRangeControls();
-  bindChartInteractions(points, payload, { width, height, pad, plotW, plotH, xStart, xSpan, xFor, yFor, rsiYFor });
+  bindChartInteractions(points, payload, { width, height, pad, plotW, plotH, xStart, xSpan, xFor, yFor, rsiYFor,
+    dataTop, rsiTop, rsiBottom, valueForY, rsiValueForY });
   bindChartCompareControls(payload);
   bindLineChartControls(payload);
   renderChartStats(payload);

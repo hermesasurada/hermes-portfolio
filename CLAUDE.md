@@ -4,6 +4,7 @@
 운영 규칙·불변식은 `AGENTS.md`, 각 규칙의 **근거·사고 이력·데이터 보정 기록은 `docs/DECISIONS.md`**(여기선 한 줄 요약만).
 
 ## 배포/반영
+- 차트 마우스오버 십자선(2026-11-08 사용자 지시): 세로선·점은 가까운 봉에 붙고, 가로선은 커서 높이를 따른다. 오른쪽 축에 그 높이의 가격(로그 축이면 로그 역변환), RSI 칸에서는 RSI 값을 띄운다(`showCrosshairY`, geometry의 `valueForY`·`rsiValueForY`). 매매 마커에 올리면 마커 높이.
 - 프런트(js/css/html): no-store 서빙 → 새로고침만. `?v=` 캐시버전 금지.
 - 백엔드(.py): `launchctl kickstart -k gui/$(id -u)/com.yhandhs.portfolio-web` (pkill 금지 — KeepAlive가 재점유).
 - 브라우저 검증은 `http://localhost:8765`(Tailscale IP는 권한 프롬프트로 자동화가 막힌다).

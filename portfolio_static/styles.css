@@ -3809,6 +3809,16 @@ tr:hover .fav-star,
   stroke: var(--chart-hover-line);
   stroke-width: 1;
 }
+.chart-hover-line.horizontal { stroke-dasharray: 3 3; }
+.chart-hover-axis-box { fill: var(--chart-hover-line); }
+.chart-hover-axis-text {
+  fill: var(--chart-bg);
+  font-size: var(--chart-num-size);
+  font-family: var(--chart-num-font);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-anchor: end;
+}
 .chart-hover-dot {
   fill: var(--chart-dot-fill);
   stroke: var(--chart-price);
