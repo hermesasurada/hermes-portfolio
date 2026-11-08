@@ -7276,6 +7276,32 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 .etf-holdings-table .etf-holdings-other td { opacity: .7; }
 .etf-holdings-source { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
+/* ── 촉매·일정(2026-11-08, 지식증류 연동): 상단 툴바 버튼 → 팝업. 표는 배당이력·구성종목 팝업 스타일 재사용 ── */
+.company-events-badge {
+  display: inline-block; min-width: 16px; margin-left: 3px; padding: 0 4px; border-radius: 8px;
+  background: var(--brand-soft); color: var(--brand); font-size: 10.5px; line-height: 16px; text-align: center;
+}
+.watch-modal.company-events-modal { width: min(820px, calc(100vw - 16px)); }
+.company-events-table td { vertical-align: top; }
+.company-events-table td.company-event-date { white-space: nowrap; color: var(--muted); }
+.company-events-table th:nth-child(3), .company-events-table td.company-event-main { text-align: left; }
+.company-events-table td.company-event-main { white-space: normal; overflow-wrap: anywhere; min-width: 260px; }
+.company-event-title { font-weight: 600; }
+.company-event-detail, .company-event-condition { margin-top: 2px; font-size: 12px; line-height: 1.45; }
+.company-event-condition { color: var(--muted); }
+.company-event-meta { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 3px; color: var(--muted); font-size: 11px; }
+.company-event-meta a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.company-event-status { white-space: nowrap; }
+.company-event-status.verdict { color: var(--brand); font-weight: 600; }
+.company-event-tag {
+  display: inline-block; margin-right: 5px; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px;
+  color: var(--muted); font-size: 10.5px; font-weight: 500; line-height: 15px; vertical-align: 1px;
+}
+.company-events-table .company-event-earnings td { opacity: .7; }
+.company-events-table .etf-holdings-group td { color: var(--muted); font-size: 11px; font-weight: 600; text-align: left; }
+.company-events-foot { color: var(--muted); font-size: 11px; }
+.company-events-foot:empty { display: none; }
+
 /* ── 종목 차트 '내역' 팝업(2026-10-26): 그 종목의 전 계좌 거래 — 표는 배당이력 표 스타일 재사용 ── */
 .watch-modal.ticker-tx-modal {
   width: fit-content;

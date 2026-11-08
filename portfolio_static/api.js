@@ -82,6 +82,11 @@ function apiFetchEtfHoldings(ticker) {
   return fetchJson(`/api/etf-holdings?ticker=${encodeURIComponent(ticker || "")}`);
 }
 
+// 증류 리포트의 기업별 촉매·일정(2026-11-08)
+function apiFetchCompanyEvents(ticker) {
+  return fetchJson(`/api/company-events?ticker=${encodeURIComponent(ticker || "")}`);
+}
+
 function apiFetchTickerTransactions(ticker) {
   return fetchJson(`/api/transactions?ticker=${encodeURIComponent(ticker || "")}`);
 }

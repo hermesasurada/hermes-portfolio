@@ -426,6 +426,7 @@ function renderChartExternalLinks(payload) {
 
 function clearChartExternalLinks() {
   syncChartEtfButton(null);
+  syncChartEventsButton(null);
   const el = document.getElementById("chartNaverLink");
   if (el) {
     el.classList.add("hidden");
@@ -561,6 +562,7 @@ function renderChartIdentity(payload) {
   document.getElementById("chartInterestOpen")?.classList.toggle("hidden", !row.ticker);
   renderChartFavorite();
   syncChartEtfButton(payload);
+  syncChartEventsButton(payload);
   renderChartExternalLinks(row);
   renderChartPriceSummary(payload);
 }

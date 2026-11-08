@@ -193,6 +193,7 @@
             <button class="ghost-btn hidden" id="chartBack" type="button">목록</button>
             <button class="ghost-btn chart-interest-open hidden" id="chartInterestOpen" type="button">관심목록</button>
             <button class="ghost-btn hidden" id="chartEtfHoldings" type="button" aria-haspopup="dialog" aria-controls="etfHoldingsModal" title="이 ETF의 구성종목">구성종목</button>
+            <button class="ghost-btn hidden" id="chartCompanyEvents" type="button" aria-haspopup="dialog" aria-controls="companyEventsModal" title="증류 리포트의 촉매·일정">촉매·일정</button>
             <a class="ghost-btn chart-link-btn chart-naver-link hidden" id="chartNaverLink" target="_blank" rel="noopener noreferrer" title="네이버 증권에서 보기">네이버 증권</a>
             <span class="filter-toggle-control hidden" id="performanceDetailControl">
               <label class="toggle-switch" for="performanceDetailToggle">
@@ -792,6 +793,20 @@
       <div class="ticker-tx-body" id="etfHoldingsBody"></div>
     </form>
   </dialog>
+  <dialog class="watch-modal ticker-tx-modal company-events-modal" id="companyEventsModal" aria-labelledby="companyEventsTitle">
+    <form method="dialog" class="modal-card ticker-tx-card">
+      <div class="modal-head">
+        <div class="dividend-history-title">
+          <strong id="companyEventsTitle">촉매·일정</strong>
+          <span id="companyEventsTicker">-</span>
+        </div>
+        <button class="ghost-btn" id="companyEventsClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <div class="ticker-tx-summary" id="companyEventsSummary"></div>
+      <div class="ticker-tx-body" id="companyEventsBody"></div>
+      <div class="company-events-foot" id="companyEventsFoot"></div>
+    </form>
+  </dialog>
   <dialog class="watch-modal dividend-history-modal" id="dividendHistoryModal">
     <form method="dialog" class="modal-card dividend-history-card">
       <div class="modal-head">
@@ -965,6 +980,7 @@
   <script src="/static/app-consensus.js"></script>
   <script src="/static/app-company-profile.js"></script>
   <script src="/static/app-etf-holdings.js"></script>
+  <script src="/static/app-company-events.js"></script>
   <script src="/static/app-interest-columns.js"></script>
   <script src="/static/app-tabs.js"></script>
   <script src="/static/app-charts.js"></script>
