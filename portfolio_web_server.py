@@ -213,6 +213,9 @@ STATIC_DIR = Path(__file__).with_name("portfolio_static")
 INDEX_HTML = STATIC_DIR / "index.html"
 
 
+# /api/chart?lite=1에서 빼는 큰 키. 나머지 시세 필드 모양은 일반 응답과 같다.
+CHART_LITE_DROP_KEYS = ("points", "ichimoku_projection", "transactions")
+
 class Handler(BaseHTTPRequestHandler):
     # 요청 로그는 log_access 한 곳(logging → err.log)만 남긴다. 기본 log_request까지 두면 같은 요청이
     # out.log에도 필터 없이 찍혀 두 배로 쌓였다(2026-10-11 정리 전 out.log 27MB·err.log 45MB).
@@ -464,6 +467,10 @@ class Handler(BaseHTTPRequestHandler):
             payload["quote_stats"] = load_quote_stats(ticker, us_extended=us_extended)
         except Exception:
             payload["quote_stats"] = empty_quote_stats()
+        # 시세 팝오버용 가벼운 응답(2026-11-08): 봉 배열·일목 예상경로를 빼고 시세·quote_stats만(1.3MB → 2KB 안팎).
+        if (query.get("lite") or ["0"])[0] in {"1", "true", "yes", "on"}:
+            for key in CHART_LITE_DROP_KEYS:
+                payload.pop(key, None)
         return payload
 
     def api_price_since(self, query: dict[str, list[str]]) -> dict:
