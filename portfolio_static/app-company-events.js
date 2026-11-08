@@ -50,6 +50,10 @@ function companyEventDateMarkup(event) {
 
 function companyEventChipMarkup(event) {
   if (event.attribution === "portfolio_db") return `<span class="company-event-chip earnings">실적</span>`;
+  // 지난 일정에 판정이 없으면 '예정' 대신 '지남'(회색). 판정·지연 같은 상태가 있으면 그대로 보인다.
+  if (!event.verdict?.value && companyEventPhase(event) === "past" && (!event.status || event.status === "예정")) {
+    return `<span class="company-event-chip passed">지남</span>`;
+  }
   const label = event.verdict?.value || event.status || "예정";
   const tone = /무산|미충족/.test(label) ? "bad" : /충족/.test(label) ? "good" : /지연|보류/.test(label) ? "warn" : "";
   return `<span class="company-event-chip${tone ? ` ${tone}` : ""}">${esc(label)}</span>`;

@@ -31,6 +31,11 @@ assert.match(list, /조건 키옥시아/);
 assert.match(list, /company-event-chip earnings">실적</);
 assert.match(list, /company-event-chip good">부분충족</);
 assert.match(list, /company-event-item past/);
+// 지난 일정: 판정이 없으면 '지남', 판정·지연 상태가 있으면 그것
+assert.match(run(`companyEventChipMarkup({bucket: "stale", date: "2026-07-31", status: "예정"})`), /passed">지남</);
+assert.match(run(`companyEventChipMarkup({bucket: "overdue_unresolved", date: "2026-11-01", status: "지연"})`), /warn">지연</);
+assert.match(run(`companyEventChipMarkup({bucket: "resolved", date: "2026-10-30", status: "예정", verdict: {value: "무산"}})`), /bad">무산</);
+assert.match(run(`companyEventChipMarkup({bucket: "upcoming", date: "2026-12-09", status: "예정"})`), /chip">예정</);
 // 출처·근거·가설·추정·판정 메모는 보이지 않는다
 for (const hidden of [/C195/, /AI·테크/, /S-1/, /t\.me/, /H01/, /추정/, /메모/]) assert.doesNotMatch(list, hidden);
 const summary = run(`companyEventsSummaryMarkup({events: [{bucket: "upcoming", date: "2026-12-01"}, {bucket: "undated", date: null}, {bucket: "stale", date: "2026-01-01"}, {bucket: "resolved", date: "2026-10-01"}]})`);

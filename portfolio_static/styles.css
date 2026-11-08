@@ -7303,6 +7303,7 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
   flex: 0 0 auto; padding: 0 6px; border-radius: 9px; background: var(--brand-soft); color: var(--brand);
   font-size: 10.5px; font-weight: 600; line-height: 18px; white-space: nowrap;
 }
+.company-event-chip.passed { background: color-mix(in srgb, var(--muted) 14%, transparent); color: var(--muted); }
 .company-event-chip.earnings { background: var(--schedule-earnings-soft); color: var(--schedule-earnings); }
 .company-event-chip.good { background: var(--brand); color: var(--on-accent); }
 .company-event-chip.bad { background: color-mix(in srgb, var(--sell) 14%, transparent); color: var(--sell); }
