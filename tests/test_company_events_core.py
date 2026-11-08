@@ -63,12 +63,20 @@ class CompanyEventsTests(unittest.TestCase):
             ev("undated"), ev("resolved", "2026-10-30"),
         ]}}, 1000)
         got = C.load_company_events("MU", TODAY)["company"]
-        self.assertEqual([e["bucket"] for e in got["events"]],
-                         ["overdue_unresolved", "upcoming", "stale", "undated", "resolved"])
+        # 7일 이상 지난 09-01(stale)·10-30(resolved)은 빠진다
+        self.assertEqual([e["bucket"] for e in got["events"]], ["overdue_unresolved", "upcoming", "undated"])
         self.assertEqual(got["events"][0]["source_bucket"], "upcoming")
         self.assertEqual(got["counts"]["upcoming"], 1)
+        self.assertEqual(got["counts"]["stale"], 0)
         self.assertEqual(got["next_date"], "2026-11-20")
-        self.assertEqual(C.company_events_summary("MU", TODAY), {"count": 5, "upcoming": 1})
+        self.assertEqual(C.company_events_summary("MU", TODAY), {"count": 3, "upcoming": 1})
+
+    def test_hide_events_a_week_past(self):
+        self.write({"AAA": {"events": [ev("overdue_unresolved", "2026-11-02"), ev("overdue_unresolved", "2026-11-01")]},
+                    "BBB": {"events": [ev("stale", "2026-08-01")]}}, 1000)
+        dates = [e["date"] for e in C.load_company_events("AAA", TODAY)["company"]["events"]]
+        self.assertEqual(dates, ["2026-11-02"])       # 6일 경과는 남고 7일 경과는 빠진다
+        self.assertIsNone(C.company_events_summary("BBB", TODAY))   # 남는 일정이 없으면 버튼도 없다
 
 
 if __name__ == "__main__":

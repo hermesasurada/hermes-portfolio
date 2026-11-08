@@ -15,6 +15,8 @@ PORTFOLIO_ATTRIBUTION = "portfolio_db"
 # 파일은 증류 게시 때만 다시 만들어져 bucket이 최대 1주 어긋난다. 날짜 있는 열린 일정은 오늘 기준으로 다시 나눈다.
 DATED_BUCKETS = {"upcoming", "overdue_unresolved", "stale"}
 STALE_AFTER_DAYS = 45
+# 날짜가 7일 이상 지난 일정은 판정 여부와 무관하게 보이지 않는다(2026-11-08 사용자 지시). 날짜 없는 일정은 남긴다.
+HIDE_PAST_AFTER_DAYS = 7
 
 
 def cache_path() -> Path:
@@ -61,9 +63,18 @@ def _rebucket(event: dict, today: date) -> dict:
     return event if now == bucket else {**event, "bucket": now, "source_bucket": bucket}
 
 
+def _long_past(event: dict, today: date) -> bool:
+    try:
+        when = date.fromisoformat(str(event.get("date") or ""))
+    except ValueError:
+        return False
+    return today - when >= timedelta(days=HIDE_PAST_AFTER_DAYS)
+
+
 def _events(entry: dict, today: date | None = None) -> list[dict]:
     today = today or date.today()
-    return [_rebucket(event, today) for event in entry["events"] if isinstance(event, dict)]
+    return [_rebucket(event, today) for event in entry["events"]
+            if isinstance(event, dict) and not _long_past(event, today)]
 
 
 def company_events_summary(ticker: str, today: date | None = None) -> dict | None:
