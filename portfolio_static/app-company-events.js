@@ -119,4 +119,8 @@ document.getElementById("chartCompanyEvents")?.addEventListener("click", event =
   openCompanyEvents(ticker, name);
 });
 document.getElementById("companyEventsClose")?.addEventListener("click", () => document.getElementById("companyEventsModal")?.close());
+// 팝업 밖(백드롭) 클릭으로 닫기 — 다른 팝업과 같은 방식
+document.getElementById("companyEventsModal")?.addEventListener("click", event => {
+  if (event.target === event.currentTarget) event.currentTarget.close();
+});
 (window.__loaded = window.__loaded || new Set()).add("app-company-events");
