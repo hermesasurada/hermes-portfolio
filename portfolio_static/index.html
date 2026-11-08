@@ -820,57 +820,43 @@
       <div id="dividendHistoryBody"></div>
     </form>
   </dialog>
-  <dialog class="watch-modal schedule-modal" id="scheduleModal">
+  <dialog class="watch-modal schedule-modal" id="scheduleModal" aria-labelledby="scheduleTitle">
     <form method="dialog" class="modal-card schedule-card">
       <div class="modal-head schedule-head">
         <div class="schedule-title">
-          <strong>일정</strong>
-          <span id="scheduleCount">-</span>
+          <strong id="scheduleTitle">일정</strong>
+          <div class="schedule-nav" aria-label="월 이동">
+            <button class="schedule-nav-btn" id="schedulePrev" type="button" aria-label="이전 달" title="이전 달">‹</button>
+            <strong id="scheduleMonthLabel">-</strong>
+            <button class="schedule-nav-btn" id="scheduleNext" type="button" aria-label="다음 달" title="다음 달">›</button>
+            <button class="ghost-btn schedule-today-btn" id="scheduleToday" type="button">오늘</button>
+          </div>
+          <span class="schedule-count" id="scheduleCount">-</span>
         </div>
         <button class="ghost-btn" id="scheduleClose" type="button" aria-label="닫기">닫기</button>
       </div>
-      <div class="schedule-toolbar">
-        <div class="schedule-nav" aria-label="월 이동">
-          <button class="schedule-nav-btn" id="schedulePrev" type="button" aria-label="이전 달" title="이전 달">‹</button>
-          <strong id="scheduleMonthLabel">-</strong>
-          <button class="schedule-nav-btn" id="scheduleNext" type="button" aria-label="다음 달" title="다음 달">›</button>
-          <button class="ghost-btn schedule-today-btn" id="scheduleToday" type="button">오늘</button>
-        </div>
-        <div class="schedule-options">
-          <div class="segmented schedule-view-toggle" role="group" aria-label="일정 보기 방식">
-            <button class="seg-btn active" type="button" data-schedule-view="grid" title="격자 보기">
-              <span class="schedule-grid-icon" aria-hidden="true"></span><span>격자</span>
-            </button>
-            <button class="seg-btn" type="button" data-schedule-view="list" title="목록 보기">
-              <span class="schedule-list-icon" aria-hidden="true"></span><span>목록</span>
-            </button>
-          </div>
-        </div>
-      </div>
       <div class="schedule-filters">
-        <div class="schedule-filter-scopes">
-          <span class="schedule-filter-label">대상</span>
-          <div class="segmented schedule-held-toggle" role="group" aria-label="보유종목 필터">
-            <button class="seg-btn active" type="button" data-schedule-held="0">전체</button>
-            <button class="seg-btn" type="button" data-schedule-held="1">보유</button>
-          </div>
-          <span class="schedule-filter-label">지역</span>
-          <div class="segmented schedule-region-toggle" role="group" aria-label="지역 필터">
-            <button class="seg-btn active" type="button" data-schedule-region="korea" aria-pressed="true">한국</button>
-            <button class="seg-btn active" type="button" data-schedule-region="foreign" aria-pressed="true">외국</button>
-          </div>
+        <div class="schedule-filter-row" role="group" aria-label="일정 유형">
+          <button class="schedule-chip type earnings" type="button" data-schedule-type="earnings"><i aria-hidden="true"></i>실적</button>
+          <button class="schedule-chip type dividend-base" type="button" data-schedule-type="dividend_base"><i aria-hidden="true"></i>배당기준</button>
+          <button class="schedule-chip type dividend-pay" type="button" data-schedule-type="dividend_pay"><i aria-hidden="true"></i>배당지급</button>
+          <button class="schedule-chip type catalyst" type="button" data-schedule-type="catalyst"><i aria-hidden="true"></i>촉매</button>
         </div>
-      <div class="schedule-legend" role="group" aria-label="일정 유형 필터">
-        <button class="schedule-legend-item schedule-type-toggle earnings active" type="button"
-                data-schedule-type="earnings" aria-pressed="true" title="실적발표 숨기기">
-          <i aria-hidden="true"></i><span>실적발표</span>
-        </button>
-        <button class="schedule-legend-item schedule-type-toggle dividend active" type="button"
-                data-schedule-type="dividend" aria-pressed="true" title="배당지급 숨기기">
-          <i aria-hidden="true"></i><span>배당지급</span>
-        </button>
-        <span class="schedule-estimate-note">기울임은 예상일</span>
-      </div>
+        <div class="schedule-filter-row">
+          <div class="schedule-chip-group" role="group" aria-label="시장">
+            <button class="schedule-chip" type="button" data-schedule-market="us">미국</button>
+            <button class="schedule-chip" type="button" data-schedule-market="jp">일본</button>
+            <button class="schedule-chip" type="button" data-schedule-market="kr">한국</button>
+            <button class="schedule-chip" type="button" data-schedule-market="other" title="유럽·대만·중국 등">기타</button>
+          </div>
+          <div class="segmented schedule-kind-toggle" role="group" aria-label="종목 종류">
+            <button class="seg-btn" type="button" data-schedule-kind="all">전체</button>
+            <button class="seg-btn" type="button" data-schedule-kind="stock">개별</button>
+            <button class="seg-btn" type="button" data-schedule-kind="etf">ETF</button>
+          </div>
+          <button class="schedule-chip schedule-held-chip" type="button" data-schedule-held title="보유 종목만 보기">보유만</button>
+          <span class="schedule-estimate-note">기울임 = 예상일</span>
+        </div>
       </div>
       <div class="schedule-body" id="scheduleBody" aria-live="polite"></div>
     </form>

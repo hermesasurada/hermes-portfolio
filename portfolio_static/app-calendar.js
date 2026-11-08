@@ -1,48 +1,51 @@
+// 일정 팝업(2026-11-08 사용자 지시로 개편): 격자 폐기, 월별 목록 하나.
+// 유형 = 실적·배당기준·배당지급·촉매(제목만)를 각각 켜고 끈다. 종목 = 시장(미국·일본·한국·기타) × 종류(전체·개별·ETF) × 보유만.
+// 촉매는 증류 리포트(company-events)의 일 단위 날짜 촉매를 서버가 /api/schedule에 실어 준다.
 const scheduleStorage = {
-  view: "portfolio.schedule.view",
+  types: "portfolio.schedule.types",
+  markets: "portfolio.schedule.markets",
+  kind: "portfolio.schedule.kind",
   heldOnly: "portfolio.schedule.heldOnly",
-  earningsVisible: "portfolio.schedule.earningsVisible",
-  dividendsVisible: "portfolio.schedule.dividendsVisible",
-  koreaVisible: "portfolio.schedule.koreaVisible",
-  foreignVisible: "portfolio.schedule.foreignVisible",
 };
+
+const SCHEDULE_TYPES = [
+  { key: "earnings", label: "실적" },
+  { key: "dividend_base", label: "배당기준" },
+  { key: "dividend_pay", label: "배당지급" },
+  { key: "catalyst", label: "촉매" },
+];
+const SCHEDULE_MARKETS = ["us", "jp", "kr", "other"];
 
 let schedulePayload = null;
 let scheduleLoadInFlight = null;
 let scheduleMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-function initialScheduleView(saved, mobile) {
-  return saved === "list" || saved === "grid" ? saved : mobile ? "list" : "grid";
-}
-let scheduleView = initialScheduleView(storageGet(scheduleStorage.view), Boolean(window.matchMedia?.("(max-width: 700px)")?.matches));
-let scheduleHeldOnly = storageGet(scheduleStorage.heldOnly) === "1";
-const scheduleTypeVisible = {
-  earnings: storageGet(scheduleStorage.earningsVisible) !== "0",
-  dividend: storageGet(scheduleStorage.dividendsVisible) !== "0",
-};
-const scheduleRegionVisible = {
-  korea: storageGet(scheduleStorage.koreaVisible) !== "0",
-  foreign: storageGet(scheduleStorage.foreignVisible) !== "0",
-};
-let scheduleFocusDate = "";
 
-function scheduleDateKey(value) {
-  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return "";
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function scheduleStoredSet(key, allowed) {
+  try {
+    const saved = JSON.parse(storageGet(key) || "null");
+    if (Array.isArray(saved)) return new Set(saved.filter(value => allowed.includes(value)));
+  } catch { /* 저장값이 깨졌으면 기본값 */ }
+  return new Set(allowed);
 }
+
+const scheduleTypeVisible = scheduleStoredSet(scheduleStorage.types, SCHEDULE_TYPES.map(type => type.key));
+const scheduleMarketVisible = scheduleStoredSet(scheduleStorage.markets, SCHEDULE_MARKETS);
+let scheduleKind = ["all", "stock", "etf"].includes(storageGet(scheduleStorage.kind)) ? storageGet(scheduleStorage.kind) : "all";
+let scheduleHeldOnly = storageGet(scheduleStorage.heldOnly) === "1";
 
 function scheduleMonthIndex(value) {
   return value.getFullYear() * 12 + value.getMonth();
 }
 
-function scheduleTickerLabel(event) {
-  return /\.(KS|KQ)$/i.test(event.ticker || "") ? event.name : event.ticker;
+function scheduleMonthKey(value) {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function scheduleEventRegion(event) {
-  return /\.(KS|KQ)$/i.test(event.ticker || "") ? "korea" : "foreign";
+function scheduleMarket(ticker) {
+  const symbol = String(ticker || "").toUpperCase();
+  if (/\.(KS|KQ)$/.test(symbol)) return "kr";
+  if (/\.T$/.test(symbol)) return "jp";
+  return symbol.includes(".") ? "other" : "us";
 }
 
 function scheduleMarketCapUsd(row) {
@@ -50,193 +53,115 @@ function scheduleMarketCapUsd(row) {
   return marketCapUsd != null && Number.isFinite(Number(marketCapUsd)) ? Number(marketCapUsd) : null;
 }
 
+const SCHEDULE_TYPE_ORDER = Object.fromEntries(SCHEDULE_TYPES.map((type, index) => [type.key, index]));
+
 function compareScheduleEvents(a, b) {
-  const dateOrder = a.date.localeCompare(b.date);
-  if (dateOrder) return dateOrder;
-  const typeOrder = (a.type === "earnings" ? 0 : 1) - (b.type === "earnings" ? 0 : 1);
-  if (typeOrder) return typeOrder;
-  const aCap = Number(a.marketCapUsd);
-  const bCap = Number(b.marketCapUsd);
-  const aHasCap = a.marketCapUsd != null && Number.isFinite(aCap);
-  const bHasCap = b.marketCapUsd != null && Number.isFinite(bCap);
-  if (aHasCap !== bHasCap) return aHasCap ? -1 : 1;
-  if (aHasCap && aCap !== bCap) return bCap - aCap;
-  return String(a.ticker || "").localeCompare(String(b.ticker || ""));
+  return a.date.localeCompare(b.date)
+    || SCHEDULE_TYPE_ORDER[a.type] - SCHEDULE_TYPE_ORDER[b.type]
+    || (b.marketCapUsd ?? -1) - (a.marketCapUsd ?? -1)
+    || String(a.ticker || "").localeCompare(String(b.ticker || ""));
 }
 
-function normalizedScheduleEvents() {
-  if (!schedulePayload) return [];
-  const earnings = (schedulePayload.earnings || []).flatMap(row => {
-    const earningsDate = String(row.earnings_date || "").slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(earningsDate)) return [];
-    const today = String(schedulePayload.today || todayLocal()).slice(0, 10);
-    return [{
-      type: "earnings",
-      date: earningsDate,
-      ticker: row.ticker,
-      name: row.name,
-      owned: Boolean(row.owned),
-      estimated: false,
-      past: earningsDate < today,
-      logo: row.logo,
-      marketCapUsd: scheduleMarketCapUsd(row),
-      sourceDate: row.earnings_date,
-    }];
-  });
-  const dividends = (schedulePayload.dividends || []).map(row => ({
-    type: "dividend",
-    date: String(row.date || "").slice(0, 10),
+function normalizedScheduleEvents(payload = schedulePayload) {
+  if (!payload) return [];
+  const today = String(payload.today || todayLocal()).slice(0, 10);
+  const base = row => ({
     ticker: row.ticker,
     name: row.name,
+    kind: row.kind === "etf" ? "etf" : "stock",
+    market: scheduleMarket(row.ticker),
     owned: Boolean(row.owned),
-    estimated: Boolean(row.estimated),
     logo: row.logo,
-    amount: row.amount,
-    currency: row.currency,
     marketCapUsd: scheduleMarketCapUsd(row),
-  }));
-  return [...earnings, ...dividends]
+  });
+  const events = [];
+  for (const row of payload.earnings || []) {
+    events.push({ ...base(row), type: "earnings", date: String(row.earnings_date || "").slice(0, 10), estimated: false });
+  }
+  for (const row of payload.dividends || []) {
+    const money = { amount: row.amount, currency: row.currency };
+    if (row.base_date) {
+      events.push({ ...base(row), ...money, type: "dividend_base", date: row.base_date, estimated: Boolean(row.base_estimated), baseKind: row.base_kind });
+    }
+    const pay = row.pay_date || row.date;
+    if (pay) events.push({ ...base(row), ...money, type: "dividend_pay", date: String(pay).slice(0, 10), estimated: Boolean(row.estimated) });
+  }
+  for (const row of payload.catalysts || []) {
+    events.push({ ...base(row), type: "catalyst", date: String(row.date || "").slice(0, 10), title: row.title || "", estimated: false });
+  }
+  return events
     .filter(event => /^\d{4}-\d{2}-\d{2}$/.test(event.date))
+    .map(event => ({ ...event, past: event.date < today }))
     .sort(compareScheduleEvents);
 }
 
+function scheduleEventVisible(event) {
+  return scheduleTypeVisible.has(event.type)
+    && scheduleMarketVisible.has(event.market)
+    && (scheduleKind === "all" || event.kind === scheduleKind)
+    && (!scheduleHeldOnly || event.owned);
+}
+
 function visibleScheduleEvents() {
-  const monthKey = `${scheduleMonth.getFullYear()}-${String(scheduleMonth.getMonth() + 1).padStart(2, "0")}`;
-  return normalizedScheduleEvents().filter(event => (
-    event.date.startsWith(monthKey)
-      && scheduleTypeVisible[event.type]
-      && scheduleRegionVisible[scheduleEventRegion(event)]
-      && (!scheduleHeldOnly || event.owned)
-  ));
-}
-
-function scheduleEventButton(event) {
-  const label = scheduleTickerLabel(event);
-  const typeLabel = event.type === "earnings" ? "실적발표" : "배당지급";
-  const shortTypeLabel = event.type === "earnings" ? "실적" : "배당";
-  const title = `${typeLabel} · ${event.name} (${event.ticker})${event.estimated ? " · 예상일" : ""}`;
-  return `
-    <button class="schedule-event ${event.type}${event.estimated ? " estimated" : ""}${event.owned ? " owned" : ""}"
-      type="button" data-chart-ticker="${esc(event.ticker)}" data-market-cap-usd="${event.marketCapUsd ?? ""}"
-      title="${esc(title)}" aria-label="${esc(title)}">
-      <span class="schedule-event-type" aria-hidden="true">${shortTypeLabel}</span>
-      <span class="schedule-event-label">${esc(label)}</span>
-    </button>`;
-}
-
-function renderScheduleGrid(events) {
-  const year = scheduleMonth.getFullYear();
-  const month = scheduleMonth.getMonth();
-  const first = new Date(year, month, 1);
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cellCount = Math.ceil((first.getDay() + daysInMonth) / 7) * 7;
-  const gridStart = new Date(year, month, 1 - first.getDay());
-  const eventsByDate = new Map();
-  events.forEach(event => {
-    const rows = eventsByDate.get(event.date) || [];
-    rows.push(event);
-    eventsByDate.set(event.date, rows);
-  });
-  const weekdays = ["일", "월", "화", "수", "목", "금", "토"]
-    .map((day, index) => `<div class="schedule-weekday${index === 0 ? " sunday" : index === 6 ? " saturday" : ""}">${day}</div>`)
-    .join("");
-  const today = schedulePayload?.today || todayLocal();
-  const cells = Array.from({ length: cellCount }, (_, index) => {
-    const date = new Date(gridStart);
-    date.setDate(gridStart.getDate() + index);
-    const key = scheduleDateKey(date);
-    const dayEvents = eventsByDate.get(key) || [];
-    const visible = dayEvents.slice(0, 4).map(scheduleEventButton).join("");
-    const more = dayEvents.length > 4
-      ? `<button class="schedule-more" type="button" data-schedule-list-date="${key}">+${dayEvents.length - 4}개</button>`
-      : "";
-    const classes = [
-      "schedule-day",
-      date.getMonth() !== month ? "outside" : "",
-      key === today ? "today" : "",
-      date.getDay() === 0 ? "sunday" : "",
-      date.getDay() === 6 ? "saturday" : "",
-    ].filter(Boolean).join(" ");
-    return `
-      <div class="${classes}" data-schedule-date="${key}">
-        <span class="schedule-day-number">${date.getDate()}</span>
-        <div class="schedule-day-events">${visible}${more}</div>
-      </div>`;
-  }).join("");
-  return `<div class="schedule-calendar"><div class="schedule-weekdays">${weekdays}</div><div class="schedule-days">${cells}</div></div>`;
+  const monthKey = scheduleMonthKey(scheduleMonth);
+  return normalizedScheduleEvents().filter(event => event.date.startsWith(monthKey) && scheduleEventVisible(event));
 }
 
 function scheduleEventDetail(event) {
-  if (event.type === "earnings") {
-    return `<span class="schedule-list-note${event.estimated ? " estimated" : ""}">${event.past ? "발표일" : event.estimated ? "예상 발표일" : "발표 예정"}</span>`;
-  }
+  if (event.type === "catalyst") return esc(event.title);
+  if (event.type === "earnings") return event.past ? "발표" : "발표 예정";
   const amount = event.amount == null ? "금액 미정" : `주당 ${unitMoney(event.amount, event.currency, event.ticker)}`;
-  return `<span class="schedule-list-note${event.estimated ? " estimated" : ""}">${event.estimated ? "예상 지급일" : "지급 예정"} · ${amount}</span>`;
+  if (event.type === "dividend_base") return `${event.baseKind === "ex" ? "배당락" : "기준일"} · ${amount}`;
+  return `${event.past ? "지급" : "지급 예정"} · ${amount}`;
 }
 
-function renderScheduleList(events) {
-  if (!events.length) {
-    return `<div class="schedule-empty">선택한 조건의 일정이 없습니다.</div>`;
-  }
+function scheduleRowMarkup(event) {
+  const typeLabel = SCHEDULE_TYPES.find(type => type.key === event.type)?.label || "";
+  const label = event.market === "kr" ? event.name : event.ticker;
+  const title = `${typeLabel} · ${event.name} (${event.ticker})${event.estimated ? " · 예상일" : ""}`;
+  return `<button class="schedule-row ${event.type.replace("_", "-")}${event.estimated ? " estimated" : ""}" type="button"
+      data-chart-ticker="${esc(event.ticker)}" title="${esc(title)}">
+    <span class="schedule-row-logo">${logoMarkup(event)}</span>
+    <span class="schedule-row-name"><strong>${esc(event.name)}</strong>${label !== event.name ? `<small>${esc(label)}</small>` : ""}</span>
+    <span class="schedule-row-type">${typeLabel}</span>
+    <span class="schedule-row-detail">${scheduleEventDetail(event)}</span>
+    ${event.owned ? '<span class="schedule-row-owned">보유</span>' : "<span></span>"}
+  </button>`;
+}
+
+function renderScheduleList(events, today) {
+  if (!events.length) return `<div class="schedule-empty">선택한 조건의 일정이 없습니다.</div>`;
   const grouped = new Map();
-  events.forEach(event => {
-    const rows = grouped.get(event.date) || [];
-    rows.push(event);
-    grouped.set(event.date, rows);
-  });
-  const groups = Array.from(grouped.entries()).map(([dateText, rows]) => {
+  for (const event of events) {
+    if (!grouped.has(event.date)) grouped.set(event.date, []);
+    grouped.get(event.date).push(event);
+  }
+  return `<div class="schedule-list">${[...grouped].map(([dateText, rows]) => {
     const date = localDateFromIso(dateText);
-    const weekday = date?.toLocaleDateString("ko-KR", { weekday: "short" }) || "";
-    const items = rows.map(event => `
-      <button class="schedule-list-row ${event.type}${event.estimated ? " estimated" : ""}"
-        type="button" data-chart-ticker="${esc(event.ticker)}" data-market-cap-usd="${event.marketCapUsd ?? ""}">
-        <span class="schedule-list-logo">${logoMarkup(event)}</span>
-        <span class="schedule-type-badge ${event.type}">${event.type === "earnings" ? "실적발표" : "배당지급"}</span>
-        <span class="schedule-list-identity">
-          <strong>${esc(event.name)}</strong><small>${esc(event.ticker)}</small>
-        </span>
-        ${scheduleEventDetail(event)}
-        ${event.owned ? '<span class="schedule-owned-badge">보유</span>' : ""}
-      </button>`).join("");
-    return `
-      <section class="schedule-list-group" id="schedule-date-${dateText}">
-        <div class="schedule-list-date"><strong>${dateText.slice(8, 10)}</strong><span>${weekday}</span></div>
-        <div class="schedule-list-items">${items}</div>
-      </section>`;
-  }).join("");
-  return `<div class="schedule-list">${groups}</div>`;
+    const weekday = date?.getDay();
+    const weekdayLabel = date?.toLocaleDateString("ko-KR", { weekday: "short" }) || "";
+    const classes = ["schedule-day",
+      dateText < today ? "past" : "",
+      dateText === today ? "today" : "",
+      weekday === 0 ? "sunday" : weekday === 6 ? "saturday" : ""].filter(Boolean).join(" ");
+    return `<section class="${classes}" data-schedule-date="${dateText}">
+      <div class="schedule-day-head"><strong>${Number(dateText.slice(8, 10))}</strong><span>${weekdayLabel}</span>${dateText === today ? "<em>오늘</em>" : ""}</div>
+      <div class="schedule-day-rows">${rows.map(scheduleRowMarkup).join("")}</div>
+    </section>`;
+  }).join("")}</div>`;
 }
 
 function syncScheduleControls(events) {
-  const monthLabel = document.getElementById("scheduleMonthLabel");
-  const count = document.getElementById("scheduleCount");
-  if (monthLabel) monthLabel.textContent = `${scheduleMonth.getFullYear()}년 ${scheduleMonth.getMonth() + 1}월`;
-  if (count) count.textContent = `${events.length}건`;
-  document.querySelectorAll("[data-schedule-view]").forEach(button => {
-    const active = button.dataset.scheduleView === scheduleView;
+  document.getElementById("scheduleMonthLabel").textContent = `${scheduleMonth.getFullYear()}년 ${scheduleMonth.getMonth() + 1}월`;
+  document.getElementById("scheduleCount").textContent = `${events.length}건`;
+  const press = (button, active) => {
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", active ? "true" : "false");
-  });
-  document.querySelectorAll("[data-schedule-held]").forEach(button => {
-    const active = (button.dataset.scheduleHeld === "1") === scheduleHeldOnly;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", active ? "true" : "false");
-  });
-  document.querySelectorAll("[data-schedule-type]").forEach(button => {
-    const active = Boolean(scheduleTypeVisible[button.dataset.scheduleType]);
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", active ? "true" : "false");
-    const typeLabel = button.dataset.scheduleType === "earnings" ? "실적발표" : "배당지급";
-    button.title = `${typeLabel} ${active ? "숨기기" : "표시하기"}`;
-  });
-  document.querySelectorAll("[data-schedule-region]").forEach(button => {
-    const region = button.dataset.scheduleRegion;
-    const active = Boolean(scheduleRegionVisible[region]);
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", active ? "true" : "false");
-    const regionLabel = region === "korea" ? "한국" : "외국";
-    button.title = `${regionLabel} 일정 ${active ? "숨기기" : "표시하기"}`;
-  });
+  };
+  document.querySelectorAll("[data-schedule-type]").forEach(button => press(button, scheduleTypeVisible.has(button.dataset.scheduleType)));
+  document.querySelectorAll("[data-schedule-market]").forEach(button => press(button, scheduleMarketVisible.has(button.dataset.scheduleMarket)));
+  document.querySelectorAll("[data-schedule-kind]").forEach(button => press(button, button.dataset.scheduleKind === scheduleKind));
+  document.querySelectorAll("[data-schedule-held]").forEach(button => press(button, scheduleHeldOnly));
   const minDate = localDateFromIso(schedulePayload?.start);
   const maxDate = localDateFromIso(schedulePayload?.end);
   const currentIndex = scheduleMonthIndex(scheduleMonth);
@@ -244,35 +169,43 @@ function syncScheduleControls(events) {
   document.getElementById("scheduleNext").disabled = Boolean(maxDate && currentIndex >= scheduleMonthIndex(maxDate));
 }
 
-function renderSchedule() {
+function renderSchedule({ scrollToToday = false } = {}) {
   const body = document.getElementById("scheduleBody");
   if (!body) return;
   if (!schedulePayload) {
     body.innerHTML = '<div class="schedule-loading"><span class="skeleton-bar"></span><span class="skeleton-bar"></span><span class="skeleton-bar"></span></div>';
     return;
   }
+  const today = String(schedulePayload.today || todayLocal()).slice(0, 10);
   const events = visibleScheduleEvents();
   syncScheduleControls(events);
-  body.innerHTML = scheduleView === "list" ? renderScheduleList(events) : renderScheduleGrid(events);
-  if (scheduleView === "list" && scheduleFocusDate) {
-    const target = document.getElementById(`schedule-date-${scheduleFocusDate}`);
-    requestAnimationFrame(() => target?.scrollIntoView({ block: "start" }));
-    scheduleFocusDate = "";
+  body.innerHTML = renderScheduleList(events, today);
+  body.scrollTop = 0;
+  // 이번 달을 열면 오늘(없으면 다음 일정)로 스크롤 — 지난 날은 위로 올려 보면 된다
+  if (scrollToToday) {
+    const target = [...body.querySelectorAll("[data-schedule-date]")].find(section => section.dataset.scheduleDate >= today);
+    if (target) body.scrollTop += target.getBoundingClientRect().top - body.getBoundingClientRect().top;
   }
+}
+
+function moveScheduleMonth(offset) {
+  scheduleMonth = offset == null
+    ? new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+    : new Date(scheduleMonth.getFullYear(), scheduleMonth.getMonth() + offset, 1);
+  renderSchedule({ scrollToToday: scheduleMonthKey(scheduleMonth) === scheduleMonthKey(new Date()) });
 }
 
 async function openScheduleModal() {
   const modal = document.getElementById("scheduleModal");
   if (!modal) return;
   scheduleMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  scheduleFocusDate = "";
   schedulePayload = null;
   renderSchedule();
   modal.showModal();
   if (!scheduleLoadInFlight) scheduleLoadInFlight = apiFetchSchedule();
   try {
     schedulePayload = await scheduleLoadInFlight;
-    renderSchedule();
+    renderSchedule({ scrollToToday: true });
   } catch (error) {
     const body = document.getElementById("scheduleBody");
     if (body) body.innerHTML = `<div class="schedule-empty error">${esc(error.message || "일정을 불러오지 못했습니다.")}</div>`;
@@ -281,73 +214,35 @@ async function openScheduleModal() {
   }
 }
 
+function toggleScheduleSetValue(set, value, storageKey) {
+  if (set.has(value)) set.delete(value); else set.add(value);
+  storageSet(storageKey, JSON.stringify([...set]));
+  renderSchedule();
+}
+
 function initScheduleModal() {
   const modal = document.getElementById("scheduleModal");
   if (!modal) return;
   document.getElementById("scheduleOpen")?.addEventListener("click", openScheduleModal);
   document.getElementById("scheduleClose")?.addEventListener("click", () => modal.close());
-  document.getElementById("schedulePrev")?.addEventListener("click", () => {
-    scheduleMonth = new Date(scheduleMonth.getFullYear(), scheduleMonth.getMonth() - 1, 1);
-    scheduleFocusDate = "";
+  document.getElementById("schedulePrev")?.addEventListener("click", () => moveScheduleMonth(-1));
+  document.getElementById("scheduleNext")?.addEventListener("click", () => moveScheduleMonth(1));
+  document.getElementById("scheduleToday")?.addEventListener("click", () => moveScheduleMonth(null));
+  document.querySelectorAll("[data-schedule-type]").forEach(button => button.addEventListener("click", () =>
+    toggleScheduleSetValue(scheduleTypeVisible, button.dataset.scheduleType, scheduleStorage.types)));
+  document.querySelectorAll("[data-schedule-market]").forEach(button => button.addEventListener("click", () =>
+    toggleScheduleSetValue(scheduleMarketVisible, button.dataset.scheduleMarket, scheduleStorage.markets)));
+  document.querySelectorAll("[data-schedule-kind]").forEach(button => button.addEventListener("click", () => {
+    scheduleKind = button.dataset.scheduleKind;
+    storageSet(scheduleStorage.kind, scheduleKind);
     renderSchedule();
-  });
-  document.getElementById("scheduleNext")?.addEventListener("click", () => {
-    scheduleMonth = new Date(scheduleMonth.getFullYear(), scheduleMonth.getMonth() + 1, 1);
-    scheduleFocusDate = "";
+  }));
+  document.querySelectorAll("[data-schedule-held]").forEach(button => button.addEventListener("click", () => {
+    scheduleHeldOnly = !scheduleHeldOnly;
+    storageSet(scheduleStorage.heldOnly, scheduleHeldOnly ? "1" : "0");
     renderSchedule();
-  });
-  document.getElementById("scheduleToday")?.addEventListener("click", () => {
-    scheduleMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    scheduleFocusDate = "";
-    renderSchedule();
-  });
-  document.querySelectorAll("[data-schedule-view]").forEach(button => {
-    button.addEventListener("click", () => {
-      scheduleView = button.dataset.scheduleView === "list" ? "list" : "grid";
-      storageSet(scheduleStorage.view, scheduleView);
-      scheduleFocusDate = "";
-      renderSchedule();
-    });
-  });
-  document.querySelectorAll("[data-schedule-held]").forEach(button => {
-    button.addEventListener("click", () => {
-      scheduleHeldOnly = button.dataset.scheduleHeld === "1";
-      storageSet(scheduleStorage.heldOnly, scheduleHeldOnly ? "1" : "0");
-      scheduleFocusDate = "";
-      renderSchedule();
-    });
-  });
-  document.querySelectorAll("[data-schedule-type]").forEach(button => {
-    button.addEventListener("click", () => {
-      const type = button.dataset.scheduleType;
-      if (!(type in scheduleTypeVisible)) return;
-      scheduleTypeVisible[type] = !scheduleTypeVisible[type];
-      const storageKey = type === "earnings" ? scheduleStorage.earningsVisible : scheduleStorage.dividendsVisible;
-      storageSet(storageKey, scheduleTypeVisible[type] ? "1" : "0");
-      scheduleFocusDate = "";
-      renderSchedule();
-    });
-  });
-  document.querySelectorAll("[data-schedule-region]").forEach(button => {
-    button.addEventListener("click", () => {
-      const region = button.dataset.scheduleRegion;
-      if (!(region in scheduleRegionVisible)) return;
-      scheduleRegionVisible[region] = !scheduleRegionVisible[region];
-      const storageKey = region === "korea" ? scheduleStorage.koreaVisible : scheduleStorage.foreignVisible;
-      storageSet(storageKey, scheduleRegionVisible[region] ? "1" : "0");
-      scheduleFocusDate = "";
-      renderSchedule();
-    });
-  });
+  }));
   document.getElementById("scheduleBody")?.addEventListener("click", event => {
-    const more = event.target.closest?.("[data-schedule-list-date]");
-    if (more) {
-      scheduleView = "list";
-      scheduleFocusDate = more.dataset.scheduleListDate || "";
-      storageSet(scheduleStorage.view, scheduleView);
-      renderSchedule();
-      return;
-    }
     const ticker = event.target.closest?.("[data-chart-ticker]")?.dataset.chartTicker;
     if (!ticker) return;
     modal.close();

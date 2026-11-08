@@ -9,13 +9,6 @@ const h = require('./harness');
 const ctx = h.loadScripts(h.createContext());
 Object.assign(ctx, {storageGet: () => null, esc});
 h.evaluate(ctx, 'performanceIndexes = {SP500:true}; performanceFixedFx = true;');
-for (const mobile of [false, true]) {
-  for (const saved of ['grid', 'list']) {
-    assert.equal(ctx.initialScheduleView(saved, mobile), saved);
-  }
-}
-assert.equal(ctx.initialScheduleView(null, true), 'list');
-assert.equal(ctx.initialScheduleView(null, false), 'grid');
 const series = [{key:'portfolio', primary:true, name:'선택 <계좌>', color:'var(--brand)', points:[{date:'2026-01-02'}, {date:'2026-09-04'}]}];
 const legend = ctx.renderPerformanceLegend(series);
 // 범례는 두 줄뿐 — 고정환율 칩은 계좌 줄에 얹고 별도 '환율' 줄은 두지 않는다.
@@ -81,7 +74,5 @@ assert.ok(lines.every(l => !l.classList['perf-dimmed'] && !l.classList['perf-foc
 const source = read('app-line-chart.js');
 assert.match(source, /const headroomPx = 16;/);
 const css = read('styles.css');
-assert.match(css, /\.schedule-calendar \{ min-width: 700px; \}/);
-assert.match(css, /\.schedule-event-label, \.schedule-more \{ font-size: 12px;/);
 assert.match(css, /\.perf-line\.perf-dimmed, \.perf-end-label\.perf-dimmed/);
-console.log('Analysis views: saved calendar modes, basis/period, legend groups, focus reset and normal-flow chart controls passed.');
+console.log('Analysis views: basis/period, legend groups, focus reset and normal-flow chart controls passed.');

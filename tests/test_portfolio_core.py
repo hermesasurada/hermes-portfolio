@@ -2792,11 +2792,15 @@ def test_ticker_scope():
     assert ticker_scope("042660.KS", "한화오션", None, "KRW") == "kr_stock"
 
 
-def test_schedule_excludes_only_korean_etfs():
-    assert not schedule_module._include_schedule_ticker("069500.KS", "KODEX 200", "kr", "KRW")
-    assert not schedule_module._include_schedule_ticker("0101N0.KS", "RISE AI전력인프라", "kr", "KRW")
+def test_schedule_includes_korean_etfs_and_tags_kind():
+    """2026-11-08: 일정 팝업이 전체/개별/ETF를 고르므로 한국 ETF도 싣는다. 지수·암호화폐는 뺀다."""
+    assert schedule_module._include_schedule_ticker("069500.KS", "KODEX 200", "kr", "KRW")
     assert schedule_module._include_schedule_ticker("005930.KS", "삼성전자", "kr", "KRW")
     assert schedule_module._include_schedule_ticker("SCHD", "Schwab US Dividend Equity ETF", "overseas", "USD")
+    assert not schedule_module._include_schedule_ticker("^GSPC", "S&P 500", "index", "USD")
+    assert schedule_module._ticker_kind("069500.KS", "KODEX 200") == "etf"
+    assert schedule_module._ticker_kind("005930.KS", "삼성전자") == "stock"
+    assert schedule_module.company_events_plain("[[키옥시아]] 실적과 [[SK hynix|하이닉스]]") == "키옥시아 실적과 하이닉스"
 
 
 # --- watchlist helpers ------------------------------------------------------
