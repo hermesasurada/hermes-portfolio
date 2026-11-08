@@ -7276,30 +7276,38 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 .etf-holdings-table .etf-holdings-other td { opacity: .7; }
 .etf-holdings-source { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
-/* ── 촉매·일정(2026-11-08, 지식증류 연동): 상단 툴바 버튼 → 팝업. 표는 배당이력·구성종목 팝업 스타일 재사용 ── */
+/* ── 촉매·일정(2026-11-08, 지식증류 연동): 상단 툴바 버튼 → 팝업. 배당이력·구성종목 팝업 톤의 카드 목록.
+   행 = 날짜(크게, 앞) | 상태 칩 + 굵은 제목 / 확인조건 한 줄. 지난 일정은 흐리게. 세로 스크롤바는 숨김(공용 wrap 규칙). ── */
 .company-events-badge {
   display: inline-block; min-width: 16px; margin-left: 3px; padding: 0 4px; border-radius: 8px;
   background: var(--brand-soft); color: var(--brand); font-size: 10.5px; line-height: 16px; text-align: center;
 }
-.watch-modal.company-events-modal { width: min(820px, calc(100vw - 16px)); }
-.company-events-table td { vertical-align: top; }
-.company-events-table td.company-event-date { white-space: nowrap; color: var(--muted); }
-.company-events-table th:nth-child(3), .company-events-table td.company-event-main { text-align: left; }
-.company-events-table td.company-event-main { white-space: normal; overflow-wrap: anywhere; min-width: 260px; }
-.company-event-title { font-weight: 600; }
-.company-event-detail, .company-event-condition { margin-top: 2px; font-size: 12px; line-height: 1.45; }
-.company-event-condition { color: var(--muted); }
-.company-event-meta { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 3px; color: var(--muted); font-size: 11px; }
-.company-event-meta a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-.company-event-status { white-space: nowrap; }
-.company-event-status.verdict { color: var(--brand); font-weight: 600; }
-.company-event-tag {
-  display: inline-block; margin-right: 5px; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px;
-  color: var(--muted); font-size: 10.5px; font-weight: 500; line-height: 15px; vertical-align: 1px;
+.watch-modal.company-events-modal { width: min(640px, calc(100vw - 16px)); }
+.company-events-wrap { overflow-x: hidden; }
+.company-events-list { margin: 0; padding: 0; list-style: none; }
+.company-event-item {
+  display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: start;
+  padding: 10px 14px; border-top: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
 }
-.company-events-table .company-event-earnings td { opacity: .7; }
-.company-events-table .etf-holdings-group td { color: var(--muted); font-size: 11px; font-weight: 600; text-align: left; }
-.company-events-foot { color: var(--muted); font-size: 11px; }
+.company-event-item:first-child { border-top: 0; }
+.company-event-item.past { opacity: .5; }
+.company-event-date { display: flex; flex-direction: column; align-items: flex-start; padding-top: 1px; }
+.company-event-day { font-size: 16px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.company-event-day.text { font-size: 12px; font-weight: 600; line-height: 1.35; color: var(--muted); }
+.company-event-year { color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.company-event-body { min-width: 0; }
+.company-event-head { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.company-event-title { min-width: 0; font-size: 13.5px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+.company-event-condition { margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.company-event-chip {
+  flex: 0 0 auto; padding: 0 6px; border-radius: 9px; background: var(--brand-soft); color: var(--brand);
+  font-size: 10.5px; font-weight: 600; line-height: 18px; white-space: nowrap;
+}
+.company-event-chip.earnings { background: var(--schedule-earnings-soft); color: var(--schedule-earnings); }
+.company-event-chip.good { background: var(--brand); color: var(--on-accent); }
+.company-event-chip.bad { background: color-mix(in srgb, var(--sell) 14%, transparent); color: var(--sell); }
+.company-event-chip.warn { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+.company-events-foot { color: var(--muted); font-size: 10.5px; text-align: right; }
 .company-events-foot:empty { display: none; }
 
 /* ── 종목 차트 '내역' 팝업(2026-10-26): 그 종목의 전 계좌 거래 — 표는 배당이력 표 스타일 재사용 ── */

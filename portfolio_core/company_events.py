@@ -10,7 +10,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 _loaded: tuple[int, dict] = (0, {})
-# 증류가 포트폴리오 DB의 실적 예정일을 되돌려 넣은 행. 세부페이지에 이미 있는 정보라 버튼 판정·배지에서 뺀다.
+# 증류가 포트폴리오 DB의 실적 예정일을 되돌려 넣은 행. 팝업에서 '실적' 칩으로 보인다.
 PORTFOLIO_ATTRIBUTION = "portfolio_db"
 # 파일은 증류 게시 때만 다시 만들어져 bucket이 최대 1주 어긋난다. 날짜 있는 열린 일정은 오늘 기준으로 다시 나눈다.
 DATED_BUCKETS = {"upcoming", "overdue_unresolved", "stale"}
@@ -67,12 +67,12 @@ def _events(entry: dict, today: date | None = None) -> list[dict]:
 
 
 def company_events_summary(ticker: str, today: date | None = None) -> dict | None:
-    """버튼 표시용 요약. 증류 고유 촉매(실적 예정일 역주입분 말고)가 하나라도 있을 때만 값을 낸다."""
+    """버튼 표시용 요약. 실적 예정일만 있어도 이벤트가 하나라도 있으면 값을 낸다(2026-11-08 사용자 지시)."""
     entry = _company(str(ticker or "").strip())
     if entry is None:
         return None
     events = _events(entry, today)
-    if all(event.get("attribution") == PORTFOLIO_ATTRIBUTION for event in events):
+    if not events:
         return None
     # 배지는 팝업 요약의 '다가오는' 건수와 같게(실적 예정일 포함)
     return {"count": len(events), "upcoming": sum(event.get("bucket") == "upcoming" for event in events)}

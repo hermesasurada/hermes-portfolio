@@ -48,11 +48,11 @@ class CompanyEventsTests(unittest.TestCase):
         self.write({"MU": {"events": [ev("upcoming", "2026-12-01"), ev("undated")]}}, 2000)
         self.assertEqual(C.company_events_summary("MU", TODAY)["count"], 2)
 
-    def test_earnings_only_hides_button(self):
+    def test_earnings_only_still_shows_button(self):
         self.write({"MMM": {"events": [ev("upcoming", "2026-12-01", "portfolio_db")]}}, 1000)
+        self.assertEqual(C.company_events_summary("MMM", TODAY), {"count": 1, "upcoming": 1})
+        self.write({"MMM": {"events": []}}, 2000)
         self.assertIsNone(C.company_events_summary("MMM", TODAY))
-        self.write({"MMM": {"events": [ev("upcoming", "2026-12-01", "portfolio_db"), ev("undated")]}}, 2000)
-        self.assertEqual(C.company_events_summary("MMM", TODAY), {"count": 2, "upcoming": 1})
         self.assertIsNotNone(C.load_company_events("MMM", TODAY)["company"])
 
     def test_rebucket_by_today(self):
