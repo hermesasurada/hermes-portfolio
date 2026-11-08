@@ -34,6 +34,13 @@ class LogoTests(unittest.TestCase):
         Image.new('RGBA', (64, 64), 'gray').save(solid, format='PNG')
         self.assertIsNone(logo_assets.validate_asset(solid.getvalue()))
 
+    def test_logo_dark_header_uses_file_stem(self):
+        from portfolio_web_server import logo_dark_header
+        with patch('portfolio_web_server.is_dark_logo', side_effect=lambda stem: stem == 'ABBV') as dark:
+            self.assertEqual(logo_dark_header('ABBV.png'), '1')
+            self.assertEqual(logo_dark_header('005930_KS.svg'), '0')
+            self.assertEqual([c.args[0] for c in dark.call_args_list], ['ABBV', '005930_KS'])
+
     def test_logo_brand_namespace(self):
         from portfolio_web_server import logo_hint
         with patch('portfolio_web_server.logo_url', side_effect=lambda key: '/logos/' + key), patch('portfolio_web_server.is_dark_logo', return_value=False):

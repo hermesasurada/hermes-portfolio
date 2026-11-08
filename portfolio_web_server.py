@@ -216,6 +216,12 @@ INDEX_HTML = STATIC_DIR / "index.html"
 # /api/chart?lite=1에서 빼는 큰 키. 나머지 시세 필드 모양은 일반 응답과 같다.
 CHART_LITE_DROP_KEYS = ("points", "ichimoku_projection", "transactions")
 
+
+def logo_dark_header(file_name: str) -> str:
+    """/logos/<stem>.<ext> 응답의 X-Logo-Dark 값. logo_stem은 stem에 다시 걸어도 같아서 기존 판정(is_dark_logo:
+    logo_dark.json + .source.json의 dark)을 그대로 쓴다."""
+    return "1" if is_dark_logo(Path(file_name).stem) else "0"
+
 class Handler(BaseHTTPRequestHandler):
     # 요청 로그는 log_access 한 곳(logging → err.log)만 남긴다. 기본 log_request까지 두면 같은 요청이
     # out.log에도 필터 없이 찍혀 두 배로 쌓였다(2026-10-11 정리 전 out.log 27MB·err.log 45MB).
@@ -371,6 +377,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(logo_path.stat().st_size))
         self.send_header("Cache-Control", "public, max-age=86400")
+        # 흰 바탕에서 안 보이는 로고 표시(2026-11-08, 증류 뷰어 등 /logos 프록시 소비처용). 프런트 칩과 같은 판정.
+        self.send_header("X-Logo-Dark", logo_dark_header(logo_path.name))
         self.end_headers()
         body = logo_path.read_bytes()
         try:
