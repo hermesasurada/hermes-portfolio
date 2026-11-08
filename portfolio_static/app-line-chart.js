@@ -1129,6 +1129,10 @@ function bindChartLongPress(target, show, hide, delay = 450) {
   target.addEventListener("contextmenu", event => {
     if (press || suppressHover()) event.preventDefault();
   });
+  // 길게 누르는 동안 글자 선택이 시작되지 않게 — CSS user-select가 안 먹는 브라우저 대비
+  target.ownerSVGElement?.addEventListener("selectstart", event => {
+    if (press || suppressHover()) event.preventDefault();
+  });
   return suppressHover;
 }
 

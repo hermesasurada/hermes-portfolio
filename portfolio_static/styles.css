@@ -3794,6 +3794,14 @@ tr:hover .fav-star,
 @media (max-width: 980px) {
   .chart-selection-summary-text { font-size: 15px; }
 }
+/* 모바일 길게 누르기(십자선)가 축·라벨 글자 선택과 iOS 확대·메뉴로 새지 않게(2026-11-08 사용자 지시).
+   비교 검색 입력칸이 같은 상자에 있어 상자 전체가 아니라 SVG에만 건다. */
+.chart-canvas svg, .chart-canvas svg * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
 .chart-hover-layer {
   fill: transparent;
   cursor: ew-resize;
