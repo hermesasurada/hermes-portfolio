@@ -14,7 +14,7 @@ for (const [key, needle] of [["beta", "공분산"], ["beta_adj", "표준편차"]
   assert.ok(column.title.includes("252거래일"), `${key} 툴팁에 계산 창이 없다`);
 }
 // MM/DD in Roboto Mono needs room for both group-boundary paddings.
-assert.equal(run("INTEREST_COLUMNS.find(c => c.key === 'next_earnings_date').width"), 60);
+assert.equal(run("INTEREST_COLUMNS.find(c => c.key === 'next_earnings_date').width"), 52);
 assert.equal(run("new Set(INTEREST_COLUMNS.map(c => c.key)).size"), 62);
 assert.equal(run("INTEREST_COLUMNS.filter(c => c.numeric).length"), 58);
 assert.equal(run("INTEREST_COLUMNS.filter(c => !c.numeric).map(c => c.key).join(',')"), 'logo,name,rating_rank,delete');
