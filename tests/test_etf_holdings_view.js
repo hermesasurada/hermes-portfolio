@@ -77,4 +77,13 @@ const exposureSummary = run(`etfExposureSummaryMarkup(${exposure})`);
 assert.match(exposureSummary, /수집된 ETF 90개 중 2개 편입/);
 assert.match(exposureSummary, /보유 ETF 1개/);
 assert.match(exposureSummary, /일부만 공개된 ETF 8개/);
+
+// 당일 등락 열(2026-11-09): 티커 다음, 값 없으면 '-', 기준일은 title
+const changeTable = run(`etfHoldingsTableMarkup({items: [{symbol: "NVDA", name: "N", weight: 5, change_pct: 1.234, change_date: "2026-11-09"}, {symbol: "", name: "X", weight: 1}], others: []})`);
+assert.match(changeTable, /<th>티커<\/th><th>등락<\/th><th>비중<\/th>/);
+assert.match(changeTable, /class="etf-day-change" title="2026-11-09 종가 기준"><span class="[^"]*">.*1\.23%/);
+assert.match(changeTable, /class="etf-day-change">-</);
+const changeExposure = run(`etfExposureTableMarkup({items: [{etf: "SMH", name: "S", weight: 3, change_pct: -0.5, complete: true}]})`);
+assert.match(changeExposure, /<th>티커<\/th><th>등락<\/th><th>비중<\/th>/);
+assert.match(changeExposure, /etf-holdings-symbol">SMH<\/td>\s*<td class="etf-day-change">/);
 console.log('etf holdings view ok');

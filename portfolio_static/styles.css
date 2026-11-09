@@ -6928,9 +6928,10 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
   display: inline-block; margin-left: 4px; padding: 0 5px; border-radius: 4px; white-space: nowrap; vertical-align: 1px;
   background: var(--brand-soft); color: var(--brand); font-size: 10.5px; font-weight: 600; line-height: 16px;
 }
-/* 좁은 화면: 티커 열을 빼서 비중이 가로 스크롤 없이 보이게(ETF 이름이 차트 링크라 티커 없이도 찾아간다) */
+/* 좁은 화면: 구성종목·편입 ETF 두 표 모두 티커 열을 빼서 등락·비중이 가로 스크롤 없이 보이게(2026-11-09) */
 @media (max-width: 600px) {
-  .etf-exposure-table th:nth-child(3), .etf-exposure-table td:nth-child(3) { display: none; }
+  .etf-holdings-table th:nth-child(3), .etf-holdings-table td:nth-child(3) { display: none; }
+  .etf-holdings-table td.etf-holdings-name { max-width: 150px; }
 }
 
 /* ── 촉매·일정(2026-11-08, 지식증류 연동): 상단 툴바 버튼 → 팝업. 배당이력·구성종목 팝업 톤의 카드 목록.

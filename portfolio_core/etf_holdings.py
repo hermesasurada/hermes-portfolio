@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import json
 import re
+import threading
+import time
 from pathlib import Path
 
 from .db import connect
@@ -91,14 +93,98 @@ def _list_names() -> dict[str, str]:
     return {row["ticker"]: row["name"] for row in rows if row["name"]}
 
 
-def _row(item: dict, names: dict[str, str] | None = None) -> dict:
+def _day_changes(tickers) -> dict[str, dict]:
+    """당일 등락(2026-11-09 사용자 지시): 일봉 최신 종가 ÷ 직전 종가 — 목록 표와 같은 latest_prices 기준.
+    한국 종목은 출처마다 .KS/.KQ가 달라 둘 다 찾는다. 포트폴리오에 일봉이 없는 종목은 빠진다(화면은 '-')."""
+    from .prices import latest_prices
+
+    tickers = list(tickers)      # 제너레이터로 받아도 아래에서 두 번 돈다
+    wanted: set[str] = set()
+    for ticker in tickers:
+        text = str(ticker or "").strip().upper()
+        if not text:
+            continue
+        wanted.add(text)
+        match = re.fullmatch(r"([0-9A-Z]{6})\.(KS|KQ)", text)
+        if match:
+            wanted.add(f"{match.group(1)}.{'KQ' if match.group(2) == 'KS' else 'KS'}")
+    if not wanted:
+        return {}
+    with connect() as conn:
+        prices = latest_prices(conn, sorted(wanted))
+    out: dict[str, dict] = {}
+    for ticker, record in prices.items():
+        price, previous = record.get("price"), record.get("previous_price")
+        if price is None or not previous:
+            continue
+        out[ticker] = {"pct": round((float(price) / float(previous) - 1) * 100, 4), "date": record.get("date")}
+    for ticker in list(wanted):    # 접미사가 다른 쪽으로만 있으면 요청한 표기로도 찾게 한다
+        match = re.fullmatch(r"([0-9A-Z]{6})\.(KS|KQ)", ticker)
+        if match and ticker not in out:
+            other = f"{match.group(1)}.{'KQ' if match.group(2) == 'KS' else 'KS'}"
+            if other in out:
+                out[ticker] = out[other]
+    # 포트폴리오에 일봉이 없는 구성종목(대부분 미등록)은 야후 최근 일봉으로 채운다
+    missing = [ticker for ticker in tickers_upper(tickers) if ticker not in out]
+    if missing:
+        out.update(_yahoo_day_changes(missing))
+    return out
+
+
+def tickers_upper(tickers) -> list[str]:
+    return sorted({str(t or "").strip().upper() for t in tickers if str(t or "").strip()})
+
+
+_YAHOO_TTL = 900          # 15분: 팝업을 여러 번 열어도 야후를 다시 부르지 않는다
+_yahoo_cache: dict[str, tuple[float, dict | None]] = {}
+_yahoo_lock = threading.Lock()
+
+
+def _yahoo_day_changes(symbols: list[str]) -> dict[str, dict]:
+    """미등록 구성종목의 당일 등락 — 야후 v7 quote 일괄 조회(정규장 현재가 ÷ 전일 종가). 없음도 15분 캐시.
+    웹서버 안에서 yfinance.download를 쓰지 않는다: 스레드마다 tkr-tz.db 연결을 열고 닫지 않아
+    파일 열기 한도를 넘겨 서버 전체가 500을 냈다(2026-11-09). 기존 크럼 세션을 재사용한다."""
+    from datetime import datetime, timezone
+
+    from .us_live_quotes import yahoo_quote_batch
+
+    now = time.time()
+    with _yahoo_lock:
+        fresh = {s: _yahoo_cache[s][1] for s in symbols if s in _yahoo_cache and now - _yahoo_cache[s][0] < _YAHOO_TTL}
+    todo = [s for s in symbols if s not in fresh]
+    fetched: dict[str, dict | None] = {}
+    for offset in range(0, len(todo), 50):
+        chunk = todo[offset:offset + 50]
+        try:
+            quotes = yahoo_quote_batch(chunk)
+        except Exception as exc:       # noqa: BLE001 — 실패한 묶음은 캐시하지 않아 다음에 다시 시도한다
+            print(f"[etf_holdings] yahoo day change failed ({len(chunk)} symbols): {exc}")
+            continue
+        for symbol in chunk:
+            row = quotes.get(symbol.upper()) or {}
+            price, previous = row.get("regularMarketPrice"), row.get("regularMarketPreviousClose")
+            stamp = row.get("regularMarketTime")
+            fetched[symbol] = None if price is None or not previous else {
+                "pct": round((float(price) / float(previous) - 1) * 100, 4),
+                "date": datetime.fromtimestamp(int(stamp), timezone.utc).date().isoformat() if stamp else None,
+            }
+    with _yahoo_lock:
+        for symbol, value in fetched.items():
+            _yahoo_cache[symbol] = (now, value)
+    merged = {**fresh, **fetched}
+    return {symbol: value for symbol, value in merged.items() if value}
+
+def _row(item: dict, names: dict[str, str] | None = None, changes: dict[str, dict] | None = None) -> dict:
     symbol = str(item.get("symbol") or "")
+    change = (changes or {}).get(symbol.upper()) or {}
     return {
         "symbol": symbol,
         "name": (names or {}).get(symbol) or str(item.get("name") or ""),
         "weight": item.get("weight"),
         "estimated": bool(item.get("weight_estimated")),
         "type": str(item.get("type") or ""),
+        "change_pct": change.get("pct"),
+        "change_date": change.get("date"),
     }
 
 
@@ -108,6 +194,10 @@ def load_etf_holdings(ticker: str) -> dict:
     if entry is None:
         return {"ticker": clean, "found": False, "items": [], "others": []}
     names = _list_names()
+    try:
+        changes = _day_changes(item.get("symbol") for item in [*entry["items"], *(entry.get("others") or [])])
+    except Exception:          # noqa: BLE001 — 등락이 실패해도 구성종목은 보인다
+        changes = {}
     return {
         "ticker": clean,
         "found": True,
@@ -115,8 +205,8 @@ def load_etf_holdings(ticker: str) -> dict:
         "url": str(entry.get("url") or ""),
         "as_of": str(entry.get("as_of") or ""),
         "complete": bool(entry.get("complete")),
-        "items": [_row(item, names) for item in entry["items"]],
-        "others": [_row(item) for item in entry.get("others") or []],
+        "items": [_row(item, names, changes) for item in entry["items"]],
+        "others": [_row(item, None, changes) for item in entry.get("others") or []],
     }
 
 
@@ -179,9 +269,14 @@ def load_etf_exposure(ticker: str) -> dict:
     collected = [key for key, entry in cache.items()
                  if key in names and isinstance(entry, dict) and entry.get("items")]
     held = _held_tickers()
+    try:
+        changes = _day_changes(row["etf"] for row in rows)
+    except Exception:          # noqa: BLE001
+        changes = {}
     items = []
     for row in rows:
         entry = cache.get(row["etf"]) or {}
+        change = changes.get(row["etf"].upper()) or {}
         items.append({
             "etf": row["etf"],
             "name": names[row["etf"]],
@@ -190,6 +285,8 @@ def load_etf_exposure(ticker: str) -> dict:
             "as_of": str(entry.get("as_of") or ""),
             "complete": bool(entry.get("complete")),
             "held": row["etf"] in held,
+            "change_pct": change.get("pct"),
+            "change_date": change.get("date"),
         })
     # 비중 큰 순, 비중 없는 행은 뒤로
     items.sort(key=lambda r: (r["weight"] is None, -(r["weight"] or 0), r["name"]))

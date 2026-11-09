@@ -123,5 +123,50 @@ class EtfHoldingsCacheTests(unittest.TestCase):
         with mock.patch.object(E, "_list_names", return_value={"SMH": "VanEck Semi"}):
             self.assertEqual((E.etf_exposure_count("NVDA"), E.etf_exposure_count("AAPL")), (0, 1))
 
+    def test_day_changes_match_kr_suffix_and_skip_missing(self):
+        """당일 등락(2026-11-09): 최신 ÷ 직전 종가, .KS/.KQ 어느 쪽으로 물어도 찾고, 직전가 없으면 뺀다."""
+        prices = {"247540.KQ": {"price": 110.0, "previous_price": 100.0, "date": "2026-11-09"},
+                  "NVDA": {"price": 95.0, "previous_price": 100.0, "date": "2026-11-07"},
+                  "NEW": {"price": 10.0, "previous_price": None, "date": "2026-11-09"}}
+        with mock.patch("portfolio_core.prices.latest_prices", side_effect=lambda conn, t: {k: v for k, v in prices.items() if k in t}), \
+             mock.patch.object(E, "connect"), \
+             mock.patch.object(E, "_yahoo_day_changes", return_value={"ABBN.SW": {"pct": 2.0, "date": "2026-11-09"}}) as yahoo:
+            got = E._day_changes(t for t in ["247540.KS", "nvda", "NEW", "ABBN.SW", "", None])   # 호출부는 제너레이터를 넘긴다
+        # 포트폴리오 일봉으로 못 채운 것만 야후로 넘긴다
+        self.assertEqual(yahoo.call_args.args[0], ["ABBN.SW", "NEW"])
+        self.assertEqual(got["ABBN.SW"]["pct"], 2.0)
+        self.assertAlmostEqual(got["247540.KS"]["pct"], 10.0)
+        self.assertAlmostEqual(got["NVDA"]["pct"], -5.0)
+        self.assertEqual(got["NVDA"]["date"], "2026-11-07")
+        self.assertNotIn("NEW", got)
+
+    def test_yahoo_day_changes_cache_missing_but_retry_failed_batches(self):
+        E._yahoo_cache.clear()
+        quotes = {"ABBN.SW": {"regularMarketPrice": 51.0, "regularMarketPreviousClose": 50.0, "regularMarketTime": 1794200000}}
+        with mock.patch("portfolio_core.us_live_quotes.yahoo_quote_batch", return_value=quotes) as batch:
+            got = E._yahoo_day_changes(["ABBN.SW", "DEAD.X"])
+            again = E._yahoo_day_changes(["ABBN.SW", "DEAD.X"])
+        self.assertAlmostEqual(got["ABBN.SW"]["pct"], 2.0)
+        self.assertRegex(got["ABBN.SW"]["date"], r"^2026-11-")
+        self.assertNotIn("DEAD.X", got)
+        self.assertEqual(again, got)
+        self.assertEqual(batch.call_count, 1)        # 없는 종목도 15분 캐시
+        E._yahoo_cache.clear()
+        with mock.patch("portfolio_core.us_live_quotes.yahoo_quote_batch", side_effect=OSError("down")) as batch:
+            self.assertEqual(E._yahoo_day_changes(["ABBN.SW"]), {})
+            E._yahoo_day_changes(["ABBN.SW"])
+        self.assertEqual(batch.call_count, 2)        # 요청 실패는 캐시하지 않는다
+        E._yahoo_cache.clear()
+
+    def test_holdings_rows_carry_day_change(self):
+        self.write({"SMH": {"items": [{"symbol": "NVDA", "name": "NVIDIA", "weight": 19.0},
+                                      {"symbol": "", "name": "No Ticker", "weight": 1}]}}, 100)
+        with mock.patch.object(E, "_day_changes", return_value={"NVDA": {"pct": 1.5, "date": "2026-11-09"}}):
+            got = E.load_etf_holdings("SMH")
+        self.assertEqual(got["items"][0]["change_pct"], 1.5)
+        self.assertIsNone(got["items"][1]["change_pct"])
+        with mock.patch.object(E, "_day_changes", side_effect=RuntimeError("db")):
+            self.assertTrue(E.load_etf_holdings("SMH")["found"])   # 등락 실패는 팝업을 막지 않는다
+
 if __name__ == "__main__":
     unittest.main()

@@ -32,11 +32,18 @@ function etfHoldingsSummaryMarkup(data) {
   return stats.filter(Boolean).map(text => `<span class="ticker-tx-stat">${text}</span>`).join("");
 }
 
+// 당일 등락 칸(2026-11-09): 일봉 최신 종가 기준, 기준일은 title. 포트폴리오에 시세가 없으면 '-'.
+function etfDayChangeCell(row) {
+  const title = row.change_date ? ` title="${esc(row.change_date)} 종가 기준"` : "";
+  return `<td class="etf-day-change"${title}>${signedPercentText(row.change_pct)}</td>`;
+}
+
 function etfHoldingsRowMarkup(row, rank, cumulative, rowClass = "") {
   return `<tr${rowClass ? ` class="${rowClass}"` : ""}>
     <td>${rank}</td>
     <td class="etf-holdings-name">${esc(row.name)}</td>
     <td class="etf-holdings-symbol">${esc(row.symbol || "-")}</td>
+    ${etfDayChangeCell(row)}
     <td${row.estimated ? ` title="CU 수량과 현재가로 환산한 추정 비중"` : ""}>${etfWeightText(row)}</td>
     <td class="etf-holdings-cumulative">${etfWeightText(cumulative)}</td>
   </tr>`;
@@ -55,11 +62,11 @@ function etfHoldingsTableMarkup(data) {
   };
   const rows = data.items.map((row, index) => rowMarkup(row, index + 1));
   if (others.length) {
-    rows.push(`<tr class="etf-holdings-group"><td colspan="5">현금·채권·파생 등</td></tr>`);
+    rows.push(`<tr class="etf-holdings-group"><td colspan="6">현금·채권·파생 등</td></tr>`);
     others.forEach(row => rows.push(rowMarkup(row, "", "etf-holdings-other")));
   }
   return `<div class="dividend-history-table-wrap ticker-tx-table-wrap"><table class="dividend-history-table etf-holdings-table">
-    <thead><tr><th>#</th><th>종목</th><th>티커</th><th>비중</th><th>누적</th></tr></thead>
+    <thead><tr><th>#</th><th>종목</th><th>티커</th><th>등락</th><th>비중</th><th>누적</th></tr></thead>
     <tbody>${rows.join("")}</tbody></table></div>`;
 }
 
@@ -131,11 +138,12 @@ function etfExposureTableMarkup(data) {
     <td>${index + 1}</td>
     <td class="etf-holdings-name"><a class="ticker-link etf-exposure-link" href="${esc(chartHref(row.etf))}" data-chart-ticker="${esc(row.etf)}">${esc(row.name)}</a>${row.held ? ' <span class="etf-exposure-held">보유</span>' : ""}</td>
     <td class="etf-holdings-symbol">${esc(row.etf)}</td>
+    ${etfDayChangeCell(row)}
     <td${row.estimated ? ` title="CU 수량과 현재가로 환산한 추정 비중"` : ""}>${etfWeightText(row)}</td>
     <td class="etf-holdings-cumulative" title="${esc([row.as_of, row.complete ? "" : "상위 일부만 공개된 출처"].filter(Boolean).join(" · "))}">${esc(etfAsOfText(row.as_of))}${row.complete ? "" : " *"}</td>
   </tr>`);
   return `<div class="dividend-history-table-wrap ticker-tx-table-wrap"><table class="dividend-history-table etf-holdings-table etf-exposure-table">
-    <thead><tr><th>#</th><th>ETF</th><th>티커</th><th>비중</th><th>기준일</th></tr></thead>
+    <thead><tr><th>#</th><th>ETF</th><th>티커</th><th>등락</th><th>비중</th><th>기준일</th></tr></thead>
     <tbody>${rows.join("")}</tbody></table></div>`;
 }
 
