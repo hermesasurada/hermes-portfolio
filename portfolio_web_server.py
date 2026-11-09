@@ -30,7 +30,13 @@ from portfolio_core.constants import (
 )
 from portfolio_core.db import connect, initialize_schema
 from portfolio_core.company_events import company_events_summary, load_company_events
-from portfolio_core.etf_holdings import etf_holdings_available, load_etf_holdings, load_etf_universe
+from portfolio_core.etf_holdings import (
+    etf_exposure_count,
+    etf_holdings_available,
+    load_etf_exposure,
+    load_etf_holdings,
+    load_etf_universe,
+)
 from portfolio_core.queries import load_collection_diagnostics, load_ticker_directory
 from portfolio_core.schedule import load_schedule
 from portfolio_core.logos import KR_ETF_BRAND_SOURCES, SVG_PREFERRED_LOGOS, is_dark_logo
@@ -442,6 +448,9 @@ class Handler(BaseHTTPRequestHandler):
     def api_etf_holdings(self, query: dict[str, list[str]]) -> dict:
         return load_etf_holdings((query.get("ticker") or [""])[0])
 
+    def api_etf_exposure(self, query: dict[str, list[str]]) -> dict:
+        return load_etf_exposure((query.get("ticker") or [""])[0])
+
     def api_company_events(self, query: dict[str, list[str]]) -> dict:
         return load_company_events((query.get("ticker") or [""])[0])
 
@@ -465,6 +474,11 @@ class Handler(BaseHTTPRequestHandler):
             end=(query.get("end") or [None])[0],
         ))
         payload["has_etf_holdings"] = etf_holdings_available(ticker, payload.get("name") or "")
+        # 이 종목을 편입한 ETF 수(2026-11-09). 캐시가 깨져도 차트 응답은 그대로 낸다.
+        try:
+            payload["etf_exposure_count"] = etf_exposure_count(ticker)
+        except Exception:
+            payload["etf_exposure_count"] = 0
         # 증류 촉매·일정 버튼(2026-11-08). 캐시가 깨져도 차트 응답은 그대로 낸다.
         try:
             payload["company_events"] = company_events_summary(ticker)
@@ -634,6 +648,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/tickers": self.api_tickers,
                 "/api/company-profile": self.api_company_profile,
                 "/api/etf-holdings": self.api_etf_holdings,
+                "/api/etf-exposure": self.api_etf_exposure,
                 "/api/company-events": self.api_company_events,
                 "/api/etf-universe": self.api_etf_universe,
                 "/api/diagnostics": self.api_diagnostics,

@@ -193,6 +193,7 @@
             <button class="ghost-btn hidden" id="chartBack" type="button">목록</button>
             <button class="ghost-btn chart-interest-open hidden" id="chartInterestOpen" type="button">관심목록</button>
             <button class="ghost-btn hidden" id="chartEtfHoldings" type="button" aria-haspopup="dialog" aria-controls="etfHoldingsModal" title="이 ETF의 구성종목">구성종목</button>
+            <button class="ghost-btn hidden" id="chartEtfExposure" type="button" aria-haspopup="dialog" aria-controls="etfExposureModal" title="이 종목을 편입한 ETF">편입 ETF</button>
             <button class="ghost-btn hidden" id="chartCompanyEvents" type="button" aria-haspopup="dialog" aria-controls="companyEventsModal" title="증류 리포트의 촉매·일정">촉매·일정</button>
             <a class="ghost-btn chart-link-btn chart-naver-link hidden" id="chartNaverLink" target="_blank" rel="noopener noreferrer" title="네이버 증권에서 보기">네이버 증권</a>
             <span class="filter-toggle-control hidden" id="performanceDetailControl">
@@ -791,6 +792,19 @@
       </div>
       <div class="ticker-tx-summary" id="etfHoldingsSummary"></div>
       <div class="ticker-tx-body" id="etfHoldingsBody"></div>
+    </form>
+  </dialog>
+  <dialog class="watch-modal ticker-tx-modal etf-holdings-modal" id="etfExposureModal" aria-labelledby="etfExposureTitle">
+    <form method="dialog" class="modal-card ticker-tx-card">
+      <div class="modal-head">
+        <div class="dividend-history-title">
+          <strong id="etfExposureTitle">편입 ETF</strong>
+          <span id="etfExposureTicker">-</span>
+        </div>
+        <button class="ghost-btn" id="etfExposureClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+      <div class="ticker-tx-summary" id="etfExposureSummary"></div>
+      <div class="ticker-tx-body" id="etfExposureBody"></div>
     </form>
   </dialog>
   <dialog class="watch-modal ticker-tx-modal company-events-modal" id="companyEventsModal" aria-labelledby="companyEventsTitle">

@@ -82,6 +82,11 @@ function apiFetchEtfHoldings(ticker) {
   return fetchJson(`/api/etf-holdings?ticker=${encodeURIComponent(ticker || "")}`);
 }
 
+// 이 종목을 편입한 ETF(구성종목 역방향, 2026-11-09)
+function apiFetchEtfExposure(ticker) {
+  return fetchJson(`/api/etf-exposure?ticker=${encodeURIComponent(ticker || "")}`);
+}
+
 // 증류 리포트의 기업별 촉매·일정(2026-11-08)
 function apiFetchCompanyEvents(ticker) {
   return fetchJson(`/api/company-events?ticker=${encodeURIComponent(ticker || "")}`);

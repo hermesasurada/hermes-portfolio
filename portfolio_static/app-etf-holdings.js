@@ -93,4 +93,82 @@ document.getElementById("chartEtfHoldings")?.addEventListener("click", event => 
   openEtfHoldings(ticker, name);
 });
 document.getElementById("etfHoldingsClose")?.addEventListener("click", () => document.getElementById("etfHoldingsModal")?.close());
+// ── 편입 ETF(2026-11-09 사용자 지시): 구성종목의 역방향 — 이 종목을 담은 ETF와 비중.
+// 수집된 구성종목 캐시만 근거로 한다. 버튼 표시는 차트 응답의 etf_exposure_count를 따른다.
+let etfExposureRequest = 0;
+
+function syncChartExposureButton(payload) {
+  const button = document.getElementById("chartEtfExposure");
+  if (!button) return;
+  const count = Number(payload?.etf_exposure_count || 0);
+  const visible = count > 0 && !performanceChartOpen && !chartComparePayloads.length;
+  button.classList.toggle("hidden", !visible);
+  button.dataset.ticker = visible ? payload.ticker : "";
+  button.dataset.name = visible ? (payload.name || payload.ticker) : "";
+  button.innerHTML = `편입 ETF${visible ? ` <span class="company-events-badge">${count}</span>` : ""}`;
+  button.title = visible ? `이 종목을 편입한 ETF ${count}개(수집된 구성종목 기준)` : "이 종목을 편입한 ETF";
+}
+
+function etfExposureSummaryMarkup(data) {
+  const held = data.items.filter(row => row.held).length;
+  const stats = [
+    `수집된 ETF ${Number(data.collected || 0)}개 중 ${data.items.length}개 편입`,
+    held ? `보유 ETF ${held}개` : "",
+    data.partial ? `상위 일부만 공개된 ETF ${Number(data.partial)}개는 그 밖 편입을 알 수 없음` : "",
+  ];
+  return stats.filter(Boolean).map(text => `<span class="ticker-tx-stat">${esc(text)}</span>`).join("");
+}
+
+// 기준일: 올해는 월-일만(좁은 화면에서 열이 잘리지 않게), 다른 해는 그대로
+function etfAsOfText(asOf, year = new Date().getFullYear()) {
+  const text = String(asOf || "");
+  if (!text) return "-";
+  return text.startsWith(`${year}-`) ? text.slice(5) : text;
+}
+
+function etfExposureTableMarkup(data) {
+  const rows = data.items.map((row, index) => `<tr>
+    <td>${index + 1}</td>
+    <td class="etf-holdings-name"><a class="ticker-link etf-exposure-link" href="${esc(chartHref(row.etf))}" data-chart-ticker="${esc(row.etf)}">${esc(row.name)}</a>${row.held ? ' <span class="etf-exposure-held">보유</span>' : ""}</td>
+    <td class="etf-holdings-symbol">${esc(row.etf)}</td>
+    <td${row.estimated ? ` title="CU 수량과 현재가로 환산한 추정 비중"` : ""}>${etfWeightText(row)}</td>
+    <td class="etf-holdings-cumulative" title="${esc([row.as_of, row.complete ? "" : "상위 일부만 공개된 출처"].filter(Boolean).join(" · "))}">${esc(etfAsOfText(row.as_of))}${row.complete ? "" : " *"}</td>
+  </tr>`);
+  return `<div class="dividend-history-table-wrap ticker-tx-table-wrap"><table class="dividend-history-table etf-holdings-table etf-exposure-table">
+    <thead><tr><th>#</th><th>ETF</th><th>티커</th><th>비중</th><th>기준일</th></tr></thead>
+    <tbody>${rows.join("")}</tbody></table></div>`;
+}
+
+async function openEtfExposure(ticker, name) {
+  const modal = document.getElementById("etfExposureModal");
+  if (!modal || !ticker) return;
+  const request = ++etfExposureRequest;
+  const summary = document.getElementById("etfExposureSummary");
+  const body = document.getElementById("etfExposureBody");
+  document.getElementById("etfExposureTitle").textContent = `${name || ticker} 편입 ETF`;
+  document.getElementById("etfExposureTicker").textContent = ticker;
+  summary.innerHTML = "";
+  body.innerHTML = `<div class="ticker-tx-empty flat">불러오는 중…</div>`;
+  if (!modal.open) modal.showModal();
+  try {
+    const data = await apiFetchEtfExposure(ticker);
+    if (request !== etfExposureRequest) return;
+    summary.innerHTML = etfExposureSummaryMarkup(data);
+    body.innerHTML = data.items.length
+      ? etfExposureTableMarkup(data)
+      : `<div class="ticker-tx-empty flat">수집된 ETF 중 이 종목을 편입한 곳이 없습니다.</div>`;
+  } catch (err) {
+    if (request === etfExposureRequest) body.innerHTML = `<div class="ticker-tx-empty error">${esc(err.message || String(err))}</div>`;
+  }
+}
+
+document.getElementById("chartEtfExposure")?.addEventListener("click", event => {
+  const { ticker, name } = event.currentTarget.dataset;
+  openEtfExposure(ticker, name);
+});
+document.getElementById("etfExposureClose")?.addEventListener("click", () => document.getElementById("etfExposureModal")?.close());
+// ETF 이름을 누르면 팝업을 닫는다 — 차트 이동은 app.js 문서 위임(.ticker-link)이 맡는다. 백드롭 클릭도 닫기.
+document.getElementById("etfExposureModal")?.addEventListener("click", event => {
+  if (event.target === event.currentTarget || event.target.closest?.(".ticker-link")) event.currentTarget.close();
+});
 (window.__loaded = window.__loaded || new Set()).add("app-etf-holdings");

@@ -47,4 +47,34 @@ assert.equal(sync({ ticker: 'SMH', has_etf_holdings: true }), true);
 run('chartComparePayloads = []');
 run('performanceChartOpen = true');
 assert.equal(sync({ ticker: 'SMH', has_etf_holdings: true }), true);
+
+// 편입 ETF(2026-11-09): 개수 배지, 비교·성과 화면 숨김, 이름 이스케이프·차트 링크, 일부 공개 표시
+run('performanceChartOpen = false');
+const exposureButton = { classList: { hidden: null, toggle(_, v) { this.hidden = v; } }, dataset: {}, innerHTML: '', title: '' };
+ctx.document.getElementById = id => (id === 'chartEtfExposure' ? exposureButton : null);
+const syncExposure = payload => { run(`syncChartExposureButton(${JSON.stringify(payload)})`); return exposureButton.classList.hidden; };
+assert.equal(syncExposure({ ticker: 'NVDA', name: 'NVIDIA', etf_exposure_count: 7 }), false);
+assert.match(exposureButton.innerHTML, /편입 ETF <span class="company-events-badge">7<\/span>/);
+assert.equal(exposureButton.dataset.ticker, 'NVDA');
+assert.equal(syncExposure({ ticker: 'XYZ', etf_exposure_count: 0 }), true);
+assert.equal(syncExposure(null), true);
+run('chartComparePayloads = [{ticker: "SPY"}]');
+assert.equal(syncExposure({ ticker: 'NVDA', etf_exposure_count: 3 }), true);
+run('chartComparePayloads = []');
+const exposure = `{collected: 90, partial: 8, items: [
+  {etf: "SMH", name: "<i>VanEck</i>", weight: 19.2, estimated: false, as_of: "2026-11-03", complete: true, held: true},
+  {etf: "0131V0.KS", name: "1Q", weight: 3, estimated: true, as_of: "", complete: false, held: false}]}`;
+const exposureTable = run(`etfExposureTableMarkup(${exposure})`);
+assert.match(exposureTable, /&lt;i&gt;VanEck&lt;\/i&gt;/);
+assert.match(exposureTable, /class="ticker-link etf-exposure-link"[^>]*data-chart-ticker="SMH"/);
+assert.match(exposureTable, /보유/);
+assert.match(exposureTable, /약 3\.00%/);
+assert.match(exposureTable, />- \*</);   // 기준일 없음 + 일부 공개 표시
+assert.equal(run('etfAsOfText("2026-11-03", 2026)'), '11-03');
+assert.equal(run('etfAsOfText("2025-12-31", 2026)'), '2025-12-31');
+assert.equal(run('etfAsOfText("", 2026)'), '-');
+const exposureSummary = run(`etfExposureSummaryMarkup(${exposure})`);
+assert.match(exposureSummary, /수집된 ETF 90개 중 2개 편입/);
+assert.match(exposureSummary, /보유 ETF 1개/);
+assert.match(exposureSummary, /일부만 공개된 ETF 8개/);
 console.log('etf holdings view ok');

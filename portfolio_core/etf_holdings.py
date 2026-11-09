@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from .db import connect
@@ -13,6 +14,7 @@ from .leveraged import is_leveraged_product
 from .tickers import asset_class
 
 _loaded: tuple[int, dict] = (0, {})
+_exposure: tuple[int, dict] = (0, {})
 # 이름 패턴이 놓치는 상품(1.25x, 이름 없는 COTG·LLYX)은 이 관심목록 소속으로 잡는다.
 LEVERAGED_GROUP_NAME = "레버리지/롱숏 ETF"
 
@@ -115,4 +117,86 @@ def load_etf_holdings(ticker: str) -> dict:
         "complete": bool(entry.get("complete")),
         "items": [_row(item, names) for item in entry["items"]],
         "others": [_row(item) for item in entry.get("others") or []],
+    }
+
+
+# ── 역방향: 이 종목을 편입한 ETF(2026-11-09 사용자 지시) ──
+# 수집된 캐시의 주식 구성(items)만 본다. 현금·채권·파생(others)의 스왑 등은 편입으로 치지 않는다.
+# 한국 종목은 거래소 접미사(.KS/.KQ)가 출처마다 달라 6자리 코드로 맞춘다.
+def _symbol_key(symbol: str) -> str:
+    text = str(symbol or "").strip().upper()
+    match = re.fullmatch(r"([0-9A-Z]{6})\.(KS|KQ)", text)
+    return f"{match.group(1)}.KR" if match else text
+
+
+def _exposure_index() -> dict[str, list[dict]]:
+    """종목 키 → [{etf, weight, estimated}]. 캐시 파일이 바뀔 때만 다시 만든다."""
+    global _exposure
+    cache = _cache()
+    stamp = _loaded[0]
+    if cache and _exposure[0] == stamp:
+        return _exposure[1]
+    index: dict[str, dict[str, dict]] = {}
+    for etf, entry in cache.items():
+        if etf.startswith("_") or not isinstance(entry, dict):
+            continue
+        for item in entry.get("items") or []:
+            key = _symbol_key(item.get("symbol"))
+            if not key or key == _symbol_key(etf):
+                continue
+            row = index.setdefault(key, {}).setdefault(etf, {"etf": etf, "weight": None, "estimated": False})
+            weight = item.get("weight")
+            if weight is not None:   # 같은 ETF 안 중복 행(보통주·예탁증서 등)은 비중을 더한다
+                row["weight"] = (row["weight"] or 0) + float(weight)
+            row["estimated"] = row["estimated"] or bool(item.get("weight_estimated"))
+    built = {key: list(rows.values()) for key, rows in index.items()}
+    _exposure = (stamp, built)
+    return built
+
+
+def _registered(rows: list[dict], names: dict[str, str]) -> list[dict]:
+    """등록에서 빠진 ETF는 캐시에 남아도 주간 갱신 대상이 아니라 낡고, 이름·차트도 없다 — 뺀다."""
+    return [row for row in rows if row["etf"] in names]
+
+
+def etf_exposure_count(ticker: str) -> int:
+    """차트 상단 '편입 ETF' 버튼 표시용 개수."""
+    rows = _exposure_index().get(_symbol_key(ticker), [])
+    return len(_registered(rows, _list_names())) if rows else 0
+
+
+def _held_tickers() -> set[str]:
+    with connect() as conn:
+        rows = conn.execute("SELECT DISTINCT ticker FROM holdings WHERE qty > 0").fetchall()
+    return {row["ticker"] for row in rows}
+
+
+def load_etf_exposure(ticker: str) -> dict:
+    clean = str(ticker or "").strip().upper()
+    cache = _cache()
+    names = _list_names()
+    rows = _registered(_exposure_index().get(_symbol_key(clean), []), names)
+    collected = [key for key, entry in cache.items()
+                 if key in names and isinstance(entry, dict) and entry.get("items")]
+    held = _held_tickers()
+    items = []
+    for row in rows:
+        entry = cache.get(row["etf"]) or {}
+        items.append({
+            "etf": row["etf"],
+            "name": names[row["etf"]],
+            "weight": None if row["weight"] is None else round(row["weight"], 4),
+            "estimated": row["estimated"],
+            "as_of": str(entry.get("as_of") or ""),
+            "complete": bool(entry.get("complete")),
+            "held": row["etf"] in held,
+        })
+    # 비중 큰 순, 비중 없는 행은 뒤로
+    items.sort(key=lambda r: (r["weight"] is None, -(r["weight"] or 0), r["name"]))
+    return {
+        "ticker": clean,
+        "items": items,
+        "collected": len(collected),
+        # 상위 일부만 공개된 ETF는 '없음'이 미편입을 뜻하지 않는다
+        "partial": sum(1 for key in collected if not cache[key].get("complete")),
     }

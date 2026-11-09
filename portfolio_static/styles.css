@@ -6921,6 +6921,17 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 .etf-holdings-table .etf-holdings-group td { color: var(--muted); font-size: 11px; font-weight: 600; text-align: left; }
 .etf-holdings-table .etf-holdings-other td { opacity: .7; }
 .etf-holdings-source { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+/* 편입 ETF(2026-11-09): 구성종목 팝업의 역방향. ETF 이름은 차트로 가는 링크 */
+.etf-exposure-link { display: inline; color: inherit; text-decoration: none; }
+.etf-exposure-link:hover, .etf-exposure-link:focus-visible { color: var(--brand); text-decoration: underline; text-underline-offset: 2px; }
+.etf-exposure-held {
+  display: inline-block; margin-left: 4px; padding: 0 5px; border-radius: 4px; white-space: nowrap; vertical-align: 1px;
+  background: var(--brand-soft); color: var(--brand); font-size: 10.5px; font-weight: 600; line-height: 16px;
+}
+/* 좁은 화면: 티커 열을 빼서 비중이 가로 스크롤 없이 보이게(ETF 이름이 차트 링크라 티커 없이도 찾아간다) */
+@media (max-width: 600px) {
+  .etf-exposure-table th:nth-child(3), .etf-exposure-table td:nth-child(3) { display: none; }
+}
 
 /* ── 촉매·일정(2026-11-08, 지식증류 연동): 상단 툴바 버튼 → 팝업. 배당이력·구성종목 팝업 톤의 카드 목록.
    행 = 날짜(크게, 앞) | 상태 칩 + 굵은 제목 / 확인조건 한 줄. 지난 일정은 흐리게. 세로 스크롤바는 숨김(공용 wrap 규칙). ── */

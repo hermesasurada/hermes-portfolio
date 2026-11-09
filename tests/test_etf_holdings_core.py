@@ -89,6 +89,39 @@ class EtfHoldingsCacheTests(unittest.TestCase):
         self.write({"AAA": {"items": [{"name": "new"}]}}, 200)
         self.assertEqual(E.load_etf_holdings("AAA")["items"][0]["name"], "new")
 
+    def test_exposure_reverse_lookup(self):
+        """편입 ETF(2026-11-09): 주식 구성만, 한국 접미사 무시, 중복 행 합산, 비중 순, 일부 공개 출처 개수."""
+        self.write({
+            "SMH": {"as_of": "2026-11-03", "complete": True,
+                    "items": [{"symbol": "NVDA", "name": "NVIDIA", "weight": 19.0},
+                              {"symbol": "005930.KQ", "name": "Samsung", "weight": 1.0}]},
+            "SOXX": {"as_of": "2026-11-04", "complete": False,
+                     "items": [{"symbol": "NVDA", "name": "NVIDIA", "weight": 8.0},
+                               {"symbol": "NVDA", "name": "NVIDIA ADR", "weight": 1.5, "weight_estimated": True}]},
+            "TAN": {"complete": True, "items": [{"symbol": "FSLR", "weight": 10}],
+                    "others": [{"symbol": "NVDA", "name": "NVDA swap", "weight": 3}]},
+            "_symbols": {"x": "NVDA"},
+        }, 100)
+        names = {"SMH": "VanEck Semi", "SOXX": "iShares Semi", "TAN": "Invesco Solar"}
+        with mock.patch.object(E, "_list_names", return_value=names), \
+             mock.patch.object(E, "_held_tickers", return_value={"SOXX"}):
+            got = E.load_etf_exposure("nvda")
+            count_kr = E.etf_exposure_count("005930.KS")
+            count_none = E.etf_exposure_count("AAPL")
+            # 등록에서 빠진 ETF(캐시에만 남은 것)는 세지 않는다
+            del names["SOXX"]
+            self.assertEqual(E.etf_exposure_count("NVDA"), 1)
+            self.assertEqual(E.load_etf_exposure("NVDA")["collected"], 2)
+        self.assertEqual([r["etf"] for r in got["items"]], ["SMH", "SOXX"])   # others의 스왑은 편입이 아니다
+        self.assertEqual(got["items"][0]["name"], "VanEck Semi")
+        self.assertEqual(got["items"][1]["weight"], 9.5)
+        self.assertTrue(got["items"][1]["estimated"] and got["items"][1]["held"])
+        self.assertEqual((got["collected"], got["partial"]), (3, 1))
+        self.assertEqual((count_kr, count_none), (1, 0))
+        # 캐시가 바뀌면 역색인도 다시 만든다
+        self.write({"SMH": {"items": [{"symbol": "AAPL", "weight": 5}]}}, 200)
+        with mock.patch.object(E, "_list_names", return_value={"SMH": "VanEck Semi"}):
+            self.assertEqual((E.etf_exposure_count("NVDA"), E.etf_exposure_count("AAPL")), (0, 1))
 
 if __name__ == "__main__":
     unittest.main()
