@@ -2120,11 +2120,16 @@ tr.dividend-month-row:hover td {
 #detailTableWrap td:nth-child(13) { min-width: calc(42px * var(--col-scale, 1)); } /* β · β″ */
 #detailTableWrap thead tr:first-child th:nth-child(n+14):nth-child(-n+19),
 #detailTableWrap td:nth-child(n+14):nth-child(-n+19) {
-  min-width: calc(43px * var(--col-scale, 1));
+  min-width: calc(32px * var(--col-scale, 1));
   padding-left: 1px;
   padding-right: 1px;
-} /* RSI/BB */
-#detailTableWrap td.ma-distance-col { min-width: calc(76px * var(--col-scale, 1)); } /* 20/50/200일선 이격률(20~22) */
+} /* RSI/BB — 값은 2~3자리라 32px(2026-11-09 사용자 지시로 43→32) */
+#detailTableWrap thead tr:first-child th.ma-distance-col,
+#detailTableWrap td.ma-distance-col {
+  min-width: calc(56px * var(--col-scale, 1));
+  padding-left: 4px;
+  padding-right: 4px;
+} /* 20/50/200일선 이격률(20~22) — 최장 값 "▼17.4%"(42px)+여백, 2026-11-09 76→56 */
 #detailTableWrap td:nth-child(23),
 #detailTableWrap td:nth-child(24) { min-width: calc(56px * var(--col-scale, 1)); } /* P/E */
 #detailTableWrap td:nth-child(25) { min-width: calc(40px * var(--col-scale, 1)); } /* P/B */
