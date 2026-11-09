@@ -6929,6 +6929,13 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 .etf-holdings-table td.etf-holdings-cumulative { color: var(--muted); }
 .etf-holdings-table .etf-holdings-group td { color: var(--muted); font-size: 11px; font-weight: 600; text-align: left; }
 .etf-holdings-table .etf-holdings-other td { opacity: .7; }
+/* 숫자 칸(#·등락·비중·누적/기준일)은 계좌·관심목록 표와 같은 고정폭 숫자 글꼴(2026-11-10) */
+.etf-holdings-table tbody tr:not(.etf-holdings-group) > td:is(:first-child, :nth-child(n+4)) {
+  font-family: var(--list-num-font);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: var(--list-num-tracking);
+}
 .etf-holdings-source { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 /* 편입 ETF(2026-11-09): 구성종목 팝업의 역방향. ETF 이름은 차트로 가는 링크 */
 .etf-exposure-link { display: inline; color: inherit; text-decoration: none; }

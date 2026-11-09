@@ -175,8 +175,11 @@ document.getElementById("chartEtfExposure")?.addEventListener("click", event => 
   openEtfExposure(ticker, name);
 });
 document.getElementById("etfExposureClose")?.addEventListener("click", () => document.getElementById("etfExposureModal")?.close());
-// ETF 이름을 누르면 팝업을 닫는다 — 차트 이동은 app.js 문서 위임(.ticker-link)이 맡는다. 백드롭 클릭도 닫기.
-document.getElementById("etfExposureModal")?.addEventListener("click", event => {
-  if (event.target === event.currentTarget || event.target.closest?.(".ticker-link")) event.currentTarget.close();
-});
+// 두 팝업 공통(2026-11-10 사용자 지시): 카드 밖(백드롭)을 누르면 닫는다. 종목·ETF 이름을 눌러도
+// 닫는다 — 차트 이동은 app.js 문서 위임(.ticker-link)이 맡는다.
+for (const id of ["etfHoldingsModal", "etfExposureModal"]) {
+  document.getElementById(id)?.addEventListener("click", event => {
+    if (!event.target.closest?.(".modal-card") || event.target.closest(".ticker-link")) event.currentTarget.close();
+  });
+}
 (window.__loaded = window.__loaded || new Set()).add("app-etf-holdings");
