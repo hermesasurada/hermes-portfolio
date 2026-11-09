@@ -2150,6 +2150,8 @@ tr.dividend-month-row:hover td {
   line-height: 1;
 }
 #detailTableWrap th { padding-left: 5px; padding-right: 5px; }
+/* 머리글(열 이름)은 가운데 정렬(2026-11-10 사용자 지시, 관심목록과 같게). 티커·종목 머리글은 아래 규칙으로 왼쪽 유지 */
+#detailTableWrap thead th { text-align: center; }
 /* 2행 헤더: 묶음 라벨 띠(22px, 위) + 묶음 안 열 이름(아래). 묶음 밖 열은 두 행을 rowspan으로 덮는다(관심목록과 같은 모양). */
 #detailTableWrap thead .detail-group-head th:not([rowspan]) {
   top: 0;
