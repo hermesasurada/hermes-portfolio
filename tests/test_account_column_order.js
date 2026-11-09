@@ -58,10 +58,10 @@ assert.match(cells[27], /noPosition \? "-" : yieldOnCostMarkup\(r\)/);
 const interestColumns = read('app-interest-columns.js');
 assert.doesNotMatch(interestColumns, /yield_on_cost/);
 const css = read('styles.css');
-assert.match(css, /td:nth-child\(28\) \{ min-width: calc\(62px \* var\(--col-scale, 1\)\); \} \/\* 평단 배당율/);
+assert.match(css, /td:nth-child\(28\) \{ min-width: calc\(54px \* var\(--col-scale, 1\)\); \} \/\* 평단 배당율/);
 // 폭은 --col-scale 배율을 타되 기본값(데스크톱)은 원래 값 그대로다.
-assert.match(css, /td:nth-child\(45\) \{ min-width: calc\(60px \* var\(--col-scale, 1\)\); \} \/\* 실적일/);
-assert.match(css, /td:nth-child\(44\) \{ min-width: calc\(76px \* var\(--col-scale, 1\)\); \} \/\* 시총\/AUM/);
+assert.match(css, /td:nth-child\(45\) \{ min-width: calc\(48px \* var\(--col-scale, 1\)\); \} \/\* 실적일/);
+assert.match(css, /td:nth-child\(44\) \{ min-width: calc\(70px \* var\(--col-scale, 1\)\); \} \/\* 시총\/AUM/);
 // 연속지급·연속증액·배당성향(2026-11-07) — 평단 배당율 다음, 배당 묶음 6열
 assert.match(headers[28], /data-key="dividend_streak_years"/);
 assert.match(cells[28], /dividendStreakText\(r.dividend_streak_years, r.dividend_streak_floor\)/);
