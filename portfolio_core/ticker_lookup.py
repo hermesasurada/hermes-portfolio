@@ -141,8 +141,14 @@ def lookup_korean_ticker(ticker: str) -> dict | None:
     code = kr_ticker_code(ticker)
     url = f"https://stock.naver.com/api/domestic/detail/{quote(code)}/detail?codeType=KRX"
     request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(request, timeout=8) as response:
-        obj = json.loads(response.read().decode("utf-8"))
+    # 없는 코드는 네이버가 404를 준다. 실패는 None으로 넘겨 호출부(lookup_ticker)가 KRX 상장목록으로
+    # 폴백하게 한다 — 예외를 올리면 폴백 없이 관심종목 등록 전체가 500으로 끝난다(2026-11-09).
+    try:
+        with urllib.request.urlopen(request, timeout=8) as response:
+            obj = json.loads(response.read().decode("utf-8"))
+    except (OSError, ValueError) as exc:
+        print(f"[ticker_lookup] naver detail failed for {code}: {exc}")
+        return None
     name = obj.get("stockName") or obj.get("stockEndType") or obj.get("itemName") or obj.get("itemname")
     if not name:
         return None
