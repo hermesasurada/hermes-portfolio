@@ -165,9 +165,9 @@ function closeReportModal() {
   if (frame) frame.src = "about:blank";   // 다음 오픈에서 확실히 새로 로드
 }
 
-// iframe(8767 임베드 모달) 안에서 닫힘 → 오버레이 제거. 8767 출처만 신뢰.
+// iframe(8767 임베드 모달) 안에서 닫힘 → 오버레이 제거. iframe을 띄운 바로 그 출처(같은 호스트의 8767)만 신뢰.
 window.addEventListener("message", event => {
-  if (event.data?.type === "ar-modal-close" && /:8767$/.test(event.origin)) closeReportModal();
+  if (event.data?.type === "ar-modal-close" && event.origin === `http://${location.hostname}:8767`) closeReportModal();
 });
 document.addEventListener("keydown", event => {
   if (event.key === "Escape") closeReportModal();

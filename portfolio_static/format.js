@@ -225,18 +225,24 @@ function signedPercentText(v, digits = 2) {
   const { cls, arrow } = changeDirection(n);
   return `<span class="${cls}"><span aria-hidden="true">${arrow}</span>${Math.abs(n).toLocaleString("ko-KR", { maximumFractionDigits: digits })}%</span>`;
 }
+// 값 없음(null·undefined·"")은 null — Number(null)이 0이라 그대로 넘기면 ETF·코인의 배당성향이 "0%"로 보인다.
+function optionalNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
 function fractionPercentText(v, digits = 1) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return "-";
+  const n = optionalNumber(v);
+  if (n === null) return "-";
   return `${(n * 100).toLocaleString("ko-KR", { maximumFractionDigits: digits })}%`;
 }
 function fractionSignedPercentText(v, digits = 1) {
-  const n = Number(v);
-  return Number.isFinite(n) ? signedPercentText(n * 100, digits) : "-";
+  const n = optionalNumber(v);
+  return n === null ? "-" : signedPercentText(n * 100, digits);
 }
 function rawPercentText(v, digits = 1) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return "-";
+  const n = optionalNumber(v);
+  if (n === null) return "-";
   return `${n.toLocaleString("ko-KR", { maximumFractionDigits: digits })}%`;
 }
 function freeCashFlowText(v, currency) {
@@ -420,8 +426,8 @@ function sectorLabel(sector) {
 }
 
 function marketCapText(v, currency) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return "-";
+  const n = optionalNumber(v);
+  if (n === null) return "-";
   if (currency === "KRW") {
     const jo = n / 1_0000_0000_0000;
     // 조 단위는 소수 1자리 반올림·콤마 없이 짧게 — "1,312조 7,978억" → "1312.8조"
@@ -461,7 +467,7 @@ function marketCapMarkup(row) {
   return `<span class="price-cell"><span>${local}</span><span class="krw-sub">(${usd})</span></span>`;
 }
 function logoMarkup(row) {
-  const text = row.logo?.text || row.ticker.slice(0, 2).toUpperCase();
+  const text = row.logo?.text || String(row.ticker || "").slice(0, 2).toUpperCase();
   const url = row.logo?.url;
   // 흰색/연한 로고는 서버가 logo.dark 플래그로 표시 (detect_dark_logos.py 자동 감지)
   const darkLogo = row.logo?.dark ? " dark-logo" : "";

@@ -121,11 +121,6 @@ function matchesNameFilter(row, query = nameFilterValue()) {
 function holdingChangePct(row) {
   return Number.isFinite(row.change_pct) ? row.change_pct : null;
 }
-function optionalNumber(value) {
-  if (value === null || value === undefined || value === "") return null;
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-}
 // 연장 정렬은 실제 연장가가 온 종목과 그렇지 않은 종목을 먼저 두 묶음으로 나눈다.
 // listSortValue는 연장가가 없으면 정규장 등락으로 대신하므로 그 값만으로는 구분되지 않는다.
 function hasExtendedQuote(row) {
@@ -816,7 +811,7 @@ function renderAccounts() {
   };
   const accountButton = a => `
     <button class="account ${isAccountSelected(a.id) ? "active" : ""}" data-account="${a.id}" aria-pressed="${isAccountSelected(a.id)}">
-      <span class="name">${a.memberName} · ${a.name}</span>
+      <span class="name">${esc(a.memberName)} · ${esc(a.name)}</span>
       <span class="meta"><span>${krw(accountTotal(a, byAccount))}</span>${accountChangeMarkup(byAccount.get(a.id))}</span>
     </button>
   `;

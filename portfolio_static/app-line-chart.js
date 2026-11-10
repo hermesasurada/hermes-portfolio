@@ -1850,7 +1850,6 @@ function renderLineChart(payload) {
   renderChartStats(payload);
   ensureChartStats(payload.ticker);
   ensureChartQuote(payload.ticker);
-  // rAF 타이밍에 기대지 않고 렌더 직후 즉시 위치 계산(+rAF는 보험)
 }
 
 // 파일 끝 로드 마커 — 파스 에러·태그 미닫힘 시 이 줄이 실행되지 않아 부트 검사에 걸린다

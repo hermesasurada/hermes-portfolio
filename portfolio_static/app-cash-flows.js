@@ -153,12 +153,12 @@ function initCashFlowsModal() {
     entryModal.close();
     selectedYear = Number(payload.flow_date.slice(0, 4));
     if (selectedIds !== null) selectedIds.add(String(payload.account_id));
-    await load();
+    await loadMatrix();
     if (typeof performanceChartOpen !== "undefined" && performanceChartOpen) {
       try { await reloadPerformanceChart(); } catch { /* Ledger already saved; do not offer a duplicate save. */ }
     }
   });
-  function render() {
+  function renderMatrix() {
     if (!fullMatrix) return;
     const matrix = filterCashFlowsMatrix(fullMatrix, selectedIds, selectedYear);
     yearLabel.textContent = `${selectedYear}년`;
@@ -174,7 +174,7 @@ function initCashFlowsModal() {
       btn.setAttribute("aria-pressed", String(selectedIds === null || selectedIds.has(btn.dataset.cashAccount)));
     });
   }
-  async function load() {
+  async function loadMatrix() {
     const token = ++requestId;
     status.textContent = "입출금 내역을 불러오는 중…";
     wrap.innerHTML = "";
@@ -200,7 +200,7 @@ function initCashFlowsModal() {
       maxYear = Math.max(currentYear, ...years);
       selectedYear = Math.max(minYear, Math.min(maxYear, selectedYear));
       switches.innerHTML = fullMatrix.accounts.map(a => `<button type="button" class="cash-flows-switch" data-cash-account="${esc(a.id)}" aria-pressed="false"><span aria-hidden="true" class="cash-flows-dot"></span>${esc(a.memberName || "")} · ${esc(a.name)}</button>`).join("");
-      render();
+      renderMatrix();
     } catch (err) {
       if (token === requestId && modal.open) status.textContent = `불러오기 실패: ${err.message || err} · 팝업을 닫고 다시 열어주세요.`;
     } finally {
@@ -211,18 +211,18 @@ function initCashFlowsModal() {
   }
   document.getElementById("cashFlowsOpen").addEventListener("click", () => {
     if (!modal.open) modal.showModal();
-    load();
+    loadMatrix();
   });
   document.getElementById("cashFlowsClose").addEventListener("click", () => modal.close());
   prevYear.addEventListener("click", () => {
     if (!fullMatrix || selectedYear <= minYear) return;
     selectedYear -= 1;
-    render();
+    renderMatrix();
   });
   nextYear.addEventListener("click", () => {
     if (!fullMatrix || selectedYear >= maxYear) return;
     selectedYear += 1;
-    render();
+    renderMatrix();
   });
   switches.addEventListener("click", e => {
     const btn = e.target.closest("button");
@@ -233,7 +233,7 @@ function initCashFlowsModal() {
       if (selectedIds.has(id)) selectedIds.delete(id);
       else selectedIds.add(id);
     }
-    render();
+    renderMatrix();
   });
   modal.addEventListener("close", () => { requestId += 1; });
   modal.addEventListener("click", e => {

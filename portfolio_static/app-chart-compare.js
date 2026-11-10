@@ -143,6 +143,7 @@ function bindChartCompareControls(payload) {
 }
 
 async function addChartCompareTicker(value) {
+  const baseTicker = chartTicker;   // 응답을 기다리는 사이 차트를 닫거나 다른 종목으로 옮기면 버린다
   if (!compareTickerDirectoryCache) {
     try {
       const payload = await apiFetchTickerDirectory();
@@ -166,6 +167,7 @@ async function addChartCompareTicker(value) {
   compareAddPendingTickers.add(ticker);
   try {
     const payload = await apiFetchChart(ticker, usExtendedEnabled(), priceChartRequestOptions());
+    if (chartTicker !== baseTicker || !chartPayload) return;
     const pricedPoints = (payload.points || []).filter(point => point.date && Number.isFinite(Number(point.close)));
     if (pricedPoints.length < 2) {
       showTradeStatus(`${ticker} 가격 이력이 없습니다.`, true);

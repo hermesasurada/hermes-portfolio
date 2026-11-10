@@ -535,6 +535,8 @@ function restoreListScroll() {
   window.scrollTo(0, memory.windowY);
 }
 
+// 같은 종목을 기간만 바꿔 다시 부르면 티커 비교로는 옛 응답을 걸러 내지 못한다 — 요청 순번으로 마지막 것만 받는다.
+let chartLoadToken = 0;
 async function openChart(ticker) {
   const cleanTicker = String(ticker || "").trim().toUpperCase();
   if (!cleanTicker) return;
@@ -557,19 +559,20 @@ async function openChart(ticker) {
   if (rangeHost) rangeHost.innerHTML = "";
   document.getElementById("chartMeta").textContent = "loading...";
   document.getElementById("chartCanvas").innerHTML = `<div class="chart-skeleton"></div>`;
+  const token = ++chartLoadToken;
   chartLoadInFlight = apiFetchChart(cleanTicker, usExtendedEnabled(), priceChartRequestOptions());
   try {
     const payload = await chartLoadInFlight;
-    if (chartTicker !== cleanTicker) return;
+    if (token !== chartLoadToken || chartTicker !== cleanTicker) return;
     chartPayload = payload;
     document.getElementById("tableTitle").textContent = payload.name || payload.ticker;
     renderLineChart(payload);
   } catch (err) {
-    if (chartTicker !== cleanTicker) return;
+    if (token !== chartLoadToken || chartTicker !== cleanTicker) return;
     document.getElementById("chartMeta").textContent = "";
     document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">${esc(err.message || String(err))}</div>`;
   } finally {
-    if (chartLoadInFlight) chartLoadInFlight = null;
+    if (token === chartLoadToken) chartLoadInFlight = null;   // 더 새 요청이 걸어 둔 표시는 지우지 않는다
   }
 }
 
@@ -584,28 +587,30 @@ async function reloadPriceChartForMarketMode({ skeleton = false } = {}) {
     document.getElementById("chartCanvas").innerHTML = `<div class="chart-skeleton"></div>`;
   }
   const options = priceChartRequestOptions();
+  const token = ++chartLoadToken;
   chartLoadInFlight = apiFetchChart(cleanTicker, usExtendedEnabled(), options);
   try {
     const payloads = await Promise.all([
       chartLoadInFlight,
       ...compareTickers.map(ticker => apiFetchChart(ticker, usExtendedEnabled(), options)),
     ]);
-    if (chartTicker !== cleanTicker) return;
+    if (token !== chartLoadToken || chartTicker !== cleanTicker) return;
     chartPayload = payloads[0];
     chartComparePayloads = payloads.slice(1);
     document.getElementById("tableTitle").textContent = chartPayload.name || chartPayload.ticker;
     renderLineChart(chartPayload);
   } catch (err) {
-    if (chartTicker !== cleanTicker) return;
+    if (token !== chartLoadToken || chartTicker !== cleanTicker) return;
     document.getElementById("chartMeta").textContent = "";
     document.getElementById("chartCanvas").innerHTML = `<div class="chart-empty">${esc(err.message || String(err))}</div>`;
   } finally {
-    chartLoadInFlight = null;
+    if (token === chartLoadToken) chartLoadInFlight = null;
   }
 }
 
 function closeChart(updateHash = true) {
   chartTicker = null;
+  chartLoadToken += 1;
   chartLoadInFlight = null;
   chartPayload = null;
   chartComparePayloads = [];

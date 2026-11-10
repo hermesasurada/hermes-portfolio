@@ -1,8 +1,18 @@
 async function fetchJson(url, options = {}) {
   const res = await fetch(url, { cache: "no-store", ...options });
-  const payload = await res.json();
-  if (!res.ok) throw new Error(payload.error || "요청 실패");
+  // 서버가 죽었거나 프록시가 HTML 오류 페이지를 주면 본문이 JSON이 아니다 — 파싱 오류 문구 대신 상태 코드를 알린다.
+  const payload = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(payload?.error || `요청 실패 (${res.status})`);
+  if (payload == null) throw new Error("서버 응답을 읽지 못했습니다.");
   return payload;
+}
+
+function postJson(url, body) {
+  return fetchJson(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 function apiFetchPortfolio(usExtended, options = {}) {
@@ -46,9 +56,7 @@ function apiFetchCashFlows() {
 }
 
 function apiSaveCashFlow(payload) {
-  return fetchJson("/api/cash-flows", {
-    method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload),
-  });
+  return postJson("/api/cash-flows", payload);
 }
 
 function apiFetchChart(ticker, usExtended = usExtendedEnabled(), options = {}) {
@@ -77,7 +85,6 @@ function apiFetchTransactions(accountIds, allAccounts) {
   return fetchJson(`/api/transactions${query}`);
 }
 
-// 한 종목의 전 계좌 거래(종목 차트 '내역' 팝업, 2026-10-26)
 function apiFetchEtfHoldings(ticker) {
   return fetchJson(`/api/etf-holdings?ticker=${encodeURIComponent(ticker || "")}`);
 }
@@ -92,40 +99,25 @@ function apiFetchCompanyEvents(ticker) {
   return fetchJson(`/api/company-events?ticker=${encodeURIComponent(ticker || "")}`);
 }
 
+// 한 종목의 전 계좌 거래(종목 차트 '내역' 팝업, 2026-10-26)
 function apiFetchTickerTransactions(ticker) {
   return fetchJson(`/api/transactions?ticker=${encodeURIComponent(ticker || "")}`);
 }
 
 function apiSaveTransaction(payload) {
-  return fetchJson("/api/transactions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  return postJson("/api/transactions", payload);
 }
 
 function apiUpdateTransaction(payload) {
-  return fetchJson("/api/transactions/update", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  return postJson("/api/transactions/update", payload);
 }
 
 function apiUpdateTransactionMemo(id, memo) {
-  return fetchJson("/api/transactions/memo", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id, memo }),
-  });
+  return postJson("/api/transactions/memo", { id, memo });
 }
 
 function apiDeleteTransaction(id) {
-  return fetchJson("/api/transactions/delete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id }),
-  });
+  return postJson("/api/transactions/delete", { id });
 }
 
 function apiLookupTicker(query) {
@@ -137,11 +129,7 @@ function apiFetchTickerDirectory() {
 }
 
 function apiUpdateTickerDisplayName(ticker, displayName) {
-  return fetchJson("/api/tickers/display-name", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ticker, display_name: displayName }),
-  });
+  return postJson("/api/tickers/display-name", { ticker, display_name: displayName });
 }
 
 function apiFetchTags() {
@@ -149,11 +137,7 @@ function apiFetchTags() {
 }
 
 function apiSaveTickerTags(ticker, tags) {
-  return fetchJson("/api/tags", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ticker, tags }),
-  });
+  return postJson("/api/tags", { ticker, tags });
 }
 
 function apiFetchDiagnostics() {
@@ -161,28 +145,16 @@ function apiFetchDiagnostics() {
 }
 
 function apiAddWatchlist(tickers) {
-  return fetchJson("/api/watchlist", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tickers }),
-  });
+  return postJson("/api/watchlist", { tickers });
 }
 
 // 지우지 않고 막힌 이유만 묻는다 — {blocked: 이유|null}
 function apiCheckUnregisterCollectedTicker(ticker) {
-  return fetchJson("/api/watchlist/delete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ticker, check: true }),
-  });
+  return postJson("/api/watchlist/delete", { ticker, check: true });
 }
 
 function apiUnregisterCollectedTicker(ticker) {
-  return fetchJson("/api/watchlist/delete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ticker }),
-  });
+  return postJson("/api/watchlist/delete", { ticker });
 }
 
 function apiFetchInterestWatchlists() {
@@ -190,59 +162,31 @@ function apiFetchInterestWatchlists() {
 }
 
 function apiCreateInterestGroup(name) {
-  return fetchJson("/api/interest-watchlists/groups", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
+  return postJson("/api/interest-watchlists/groups", { name });
 }
 
 function apiDeleteInterestGroup(groupId) {
-  return fetchJson("/api/interest-watchlists/groups/delete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ group_id: groupId }),
-  });
+  return postJson("/api/interest-watchlists/groups/delete", { group_id: groupId });
 }
 
 function apiRenameInterestGroup(groupId, name) {
-  return fetchJson("/api/interest-watchlists/groups/rename", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ group_id: groupId, name }),
-  });
+  return postJson("/api/interest-watchlists/groups/rename", { group_id: groupId, name });
 }
 
 function apiReorderInterestGroups(groupIds) {
-  return fetchJson("/api/interest-watchlists/groups/reorder", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ group_ids: groupIds }),
-  });
+  return postJson("/api/interest-watchlists/groups/reorder", { group_ids: groupIds });
 }
 
 function apiSetFavorite(ticker, favorite) {
-  return fetchJson("/api/interest-watchlists/favorite", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ticker, favorite }),
-  });
+  return postJson("/api/interest-watchlists/favorite", { ticker, favorite });
 }
 
 function apiAddInterestItem(groupId, ticker) {
-  return fetchJson("/api/interest-watchlists/items", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ group_id: groupId, ticker }),
-  });
+  return postJson("/api/interest-watchlists/items", { group_id: groupId, ticker });
 }
 
 function apiDeleteInterestItem(groupId, ticker) {
-  return fetchJson("/api/interest-watchlists/items/delete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ group_id: groupId, ticker }),
-  });
+  return postJson("/api/interest-watchlists/items/delete", { group_id: groupId, ticker });
 }
 
 // 파일 끝 로드 마커 — 파스 에러·태그 미닫힘 시 이 줄이 실행되지 않아 부트 검사에 걸린다

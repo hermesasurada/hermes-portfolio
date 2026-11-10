@@ -255,9 +255,11 @@ function tickerTransactionsMarkup(rows, ticker, currentPrice = null, olderCount 
     <tbody>${body}</tbody></table></div>${tickerTransactionsMoreMarkup(olderCount)}`;
 }
 
+let tickerTxRequest = 0;
 async function openTickerTransactions(ticker, name, currentPrice = null) {
   const modal = document.getElementById("tickerTxModal");
   if (!modal || !ticker) return;
+  const request = ++tickerTxRequest;
   document.getElementById("tickerTxTitle").textContent = `${name || ticker} 거래내역`;
   document.getElementById("tickerTxTicker").textContent = ticker;
   const summary = document.getElementById("tickerTxSummary");
@@ -268,11 +270,12 @@ async function openTickerTransactions(ticker, name, currentPrice = null) {
   try {
     tickerTxView = null;
     const allRows = ((await apiFetchTickerTransactions(ticker)).transactions || []).filter(tx => !transactionIsHidden(tx));
+    if (request !== tickerTxRequest) return;   // 그 사이 다른 종목을 열었다
     const price = currentPrice != null && Number.isFinite(Number(currentPrice)) ? Number(currentPrice) : currentPriceForTicker(ticker);
     tickerTxView = { ticker, rows: allRows, price, years: 1 };
     renderTickerTransactionsView();
   } catch (err) {
-    body.innerHTML = `<div class="ticker-tx-empty error">${esc(err.message || String(err))}</div>`;
+    if (request === tickerTxRequest) body.innerHTML = `<div class="ticker-tx-empty error">${esc(err.message || String(err))}</div>`;
   }
 }
 
@@ -755,9 +758,12 @@ function setTransactionsExpanded(expanded, shouldLoad = false) {
   if (expanded && shouldLoad) loadTransactions().catch(showTradeError);
 }
 
+// 계좌 선택을 빠르게 바꾸면 응답이 요청 순서와 다르게 올 수 있다 — 마지막 요청의 응답만 그린다.
+let transactionsRequest = 0;
 async function loadTransactions() {
   if (!transactionsExpanded) return;
   if (!data) return;
+  const request = ++transactionsRequest;
   const accounts = visibleAccounts();
   const accountIds = accounts.map(a => a.id);
   updateTradeScope();
@@ -766,6 +772,7 @@ async function loadTransactions() {
     return;
   }
   const payload = await apiFetchTransactions(accountIds, selectionMode === "all");
+  if (request !== transactionsRequest) return;
   renderTransactions(payload.transactions);
 }
 

@@ -460,7 +460,9 @@ function renderDividendHistory(payload) {
   }
 }
 
+let dividendHistoryRequest = 0;
 async function openDividendHistory(ticker) {
+  const request = ++dividendHistoryRequest;
   const modal = document.getElementById("dividendHistoryModal");
   const body = document.getElementById("dividendHistoryBody");
   document.getElementById("dividendHistoryName").textContent = "배당이력";
@@ -473,9 +475,10 @@ async function openDividendHistory(ticker) {
     history.pushState({ dividendHistory: true }, "");
   }
   try {
-    renderDividendHistory(await apiFetchDividendHistory(ticker));
+    const payload = await apiFetchDividendHistory(ticker);
+    if (request === dividendHistoryRequest) renderDividendHistory(payload);   // 그 사이 다른 종목을 열었으면 버린다
   } catch (err) {
-    body.innerHTML = `<div class="dividend-history-empty">${esc(err.message || String(err))}</div>`;
+    if (request === dividendHistoryRequest) body.innerHTML = `<div class="dividend-history-empty">${esc(err.message || String(err))}</div>`;
   }
 }
 

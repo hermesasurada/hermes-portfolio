@@ -13,4 +13,13 @@ for (const fn of ['optionalNumber', 'finiteChartNumber', 'finiteMetric', 'chartN
 assert.deepEqual([...ctx.compareBestIndexes([ctx.finiteMetric(null), 1.2, 0.8], 'lowAbs')], [2]);
 // 차트 헤더: 연장가가 없으면 가격도 없음(0이 아니다)
 assert.equal(ctx.chartPriceChangeMetric(null, 100, null, null).price, null);
+// 지표 서식: 값이 없으면 "-"이고 실제 0만 0으로 적는다 (ETF 배당성향이 "0%"로 보이던 문제)
+for (const fn of ['fractionPercentText', 'fractionSignedPercentText', 'rawPercentText']) {
+  for (const missing of [null, undefined, '', 'abc']) assert.equal(ctx[fn](missing), '-', `${fn}(${missing})`);
+}
+for (const missing of [null, undefined, '']) assert.equal(ctx.marketCapText(missing, 'USD'), '-');
+assert.equal(ctx.fractionPercentText(0), '0%');
+assert.equal(ctx.fractionPercentText(0.256), '25.6%');
+assert.equal(ctx.rawPercentText(0), '0%');
+assert.notEqual(ctx.marketCapText(0, 'USD'), '-');
 console.log('numeric missing ok');
