@@ -27,7 +27,7 @@
 | 분 단위 시세 | `collect_quotes.py` (Yahoo/Naver 배치 스냅샷) |
 | 일봉·통계 보정 | `collect_prices.py` |
 | 유틸 | `download_portfolio_logos.py` |
-| 테스트 | `tests/run_all.sh` (python 13 + node 39, 의존성 없음, 약 5초) |
+| 테스트 | `tests/run_all.sh` (python + node, 의존성 없음, 약 6초) |
 
 ## 데이터 위치
 
@@ -53,7 +53,7 @@ python3 collect_prices.py --category kr
 ## 테스트
 
 ```bash
-tests/run_all.sh                                  # 전체(python 13 + node 39)
+tests/run_all.sh                                  # 전체(python + node)
 PYTHONPATH=. python3 tests/test_portfolio_core.py  # 개별 실행 예
 node tests/test_interest_columns.js
 ```

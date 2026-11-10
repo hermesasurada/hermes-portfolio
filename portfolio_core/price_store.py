@@ -214,7 +214,6 @@ def save_daily_prices(ticker: str, rows: Iterable, source: str) -> int:
 
 
 # 공용 헬퍼 위임 (동일 기능 로컬 복제 제거)
-_date_value = parse_iso_date
 
 
 def _load_close_rows(conn, ticker: str, since: str | None) -> list[dict]:
@@ -252,7 +251,7 @@ def _material_split_ratio(ratio: float) -> bool:
 def _split_break_ratio(price_ratio: float, break_date: str, splits: list[dict]) -> float | None:
     if price_ratio <= 0:
         return None
-    parsed_break_date = _date_value(break_date)
+    parsed_break_date = parse_iso_date(break_date)
     if parsed_break_date is None:
         return None
     for split in sorted(splits, key=lambda item: abs(float(item["ratio"]) - 1), reverse=True):
@@ -261,7 +260,7 @@ def _split_break_ratio(price_ratio: float, break_date: str, splits: list[dict]) 
             continue
         if not _material_split_ratio(ratio):
             continue
-        split_date = _date_value(split["split_date"])
+        split_date = parse_iso_date(split["split_date"])
         if (
             split_date is None
             or abs((parsed_break_date - split_date).days) > SPLIT_REPAIR_MAX_DATE_DISTANCE_DAYS
@@ -388,7 +387,7 @@ def sanitize_price_spikes(tickers: Iterable[str], since: str | None = None) -> d
             split_dates = [
                 parsed
                 for parsed in (
-                    _date_value(s["split_date"])
+                    parse_iso_date(s["split_date"])
                     for s in conn.execute(
                         "SELECT split_date FROM stock_splits WHERE ticker = ?", (ticker,)
                     ).fetchall()
@@ -398,8 +397,8 @@ def sanitize_price_spikes(tickers: Iterable[str], since: str | None = None) -> d
             closes = [(r["date"], float(r["close"])) for r in rows]
             n = len(closes)
             to_delete: list[str] = []
-            near_split_date = lambda day: _date_value(day) is not None and any(
-                abs((_date_value(day) - sd).days) <= SPLIT_REPAIR_MAX_DATE_DISTANCE_DAYS
+            near_split_date = lambda day: parse_iso_date(day) is not None and any(
+                abs((parse_iso_date(day) - sd).days) <= SPLIT_REPAIR_MAX_DATE_DISTANCE_DAYS
                 for sd in split_dates
             )
             # 이력 맨 앞의 몇 행만 다른 스케일인 경우(1489.T 2017-02-09·10 — 상장 전 분할

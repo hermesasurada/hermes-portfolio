@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import sqlite3
 from collections.abc import Callable
 from datetime import datetime
@@ -10,6 +11,7 @@ from .dates import now_kst_text
 from .db import connect, ensure_transaction_columns
 from .performance_snapshots import rebuild_account_snapshots_in_transaction
 from .portfolio import load_portfolio
+from .queries import clean_account_ids
 from .tickers import account_scope, display_name, ticker_currency, ticker_scope
 
 
@@ -48,6 +50,8 @@ def require_positive_float(value, label: str) -> float:
         number = float(value)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{label}은 숫자여야 합니다.") from exc
+    if not math.isfinite(number):   # float("nan")·float("inf")는 예외 없이 통과한다 — 원장에 들어가면 잔고·스냅샷이 전부 NaN
+        raise ValueError(f"{label}은 숫자여야 합니다.")
     if number <= 0:
         raise ValueError(f"{label}은 0보다 커야 합니다.")
     return number
@@ -96,7 +100,7 @@ def validate_account_ticker_scope(account, ticker: str, name: str, category: str
 def load_transactions(account_id: str | None = None, ticker: str | None = None, account_ids: list[str] | None = None) -> dict:
     params: list[object] = []
     filters = []
-    cleaned_account_ids = [int(x) for x in (account_ids or []) if str(x).strip()]
+    cleaned_account_ids = clean_account_ids(account_ids)
     if cleaned_account_ids:
         placeholders = ",".join("?" for _ in cleaned_account_ids)
         filters.append(f"t.account_id IN ({placeholders})")
@@ -297,7 +301,7 @@ def update_transaction(payload: dict, portfolio_loader: Callable[[], dict] | Non
         qty = require_positive_float(payload["qty"], "수량") if payload.get("qty") not in (None, "") else float(row["qty"])
         price = require_positive_float(payload["price"], "단가") if payload.get("price") not in (None, "") else float(row["price"])
         note = str(payload["note"] if payload.get("note") is not None else (row["note"] or "")).strip()
-        hidden = int(row["hidden"] or 0) if "hidden" in row.keys() else 0
+        hidden = int(row["hidden"] or 0)
         if "hidden" in payload:
             hidden = 1 if parse_bool(payload.get("hidden"), False) else 0
         account_id = int(row["account_id"])

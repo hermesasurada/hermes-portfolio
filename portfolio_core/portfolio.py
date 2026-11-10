@@ -9,11 +9,28 @@ from .db import connect
 from .market_calendar import change_session_note
 from .paths import DB_PATH, KST
 from .prices import build_market_snapshot, fx_updated_at, latest_prices, price_cache_updated_at, price_updated_at, price_view, price_fields
-from .tickers import account_kind, account_label, account_scope, asset_class, ticker_currency, ticker_scope
+from .tickers import account_kind, account_label, account_scope, asset_class, normalize_tickers, ticker_currency, ticker_scope
 
 
 def default_logo_hint(ticker: str, name: str) -> dict[str, str | None]:
     return {"kind": asset_class(ticker, name), "text": ticker[:2].upper(), "url": None}
+
+
+def _quote_fields(ticker: str, view: dict) -> dict:
+    """price_view 결과에서 보유 종목·종목 목록 응답이 똑같이 싣는 시세 필드."""
+    record = view["price_record"]
+    return {
+        "current_price": view["current_price"],
+        "price_date": record.get("date"),
+        "previous_price": view["previous_price"],
+        "previous_date": record.get("previous_date"),
+        "change_session_note": change_session_note(ticker, record.get("date")),
+        "change": view["change"],
+        "change_pct": view["change_pct"],
+        "change_krw_pct": view["change_krw_pct"],
+        **price_fields(record),
+        "previous_fx_rate": view["previous_fx_rate"],
+    }
 
 
 def ensure_account(members: dict[str, dict], row) -> dict:
@@ -46,11 +63,7 @@ def load_portfolio(
     compact: bool = False,
 ) -> dict:
     logo_hint = logo_hint_fn or default_logo_hint
-    requested_tickers = {
-        str(ticker).strip().upper()
-        for ticker in ticker_filter or []
-        if ticker and str(ticker).strip()
-    }
+    requested_tickers = set(normalize_tickers(ticker_filter))
     with connect() as conn:
         account_rows = conn.execute(
             """
@@ -148,19 +161,8 @@ def load_portfolio(
             "account_kind": account_obj["kind"],
             "asset_class": asset_class(row["ticker"], name),
             "logo": logo_hint(row["ticker"], name),
-            "current_price": current_price,
-            "price_date": current.get("date"),
-            "previous_price": view["previous_price"],
-            "previous_date": current.get("previous_date"),
-            "change_session_note": change_session_note(
-                row["ticker"], current.get("date")
-            ),
-            "change": view["change"],
-            "change_pct": view["change_pct"],
-            "change_krw_pct": view["change_krw_pct"],
-            **price_fields(current),
+            **_quote_fields(row["ticker"], view),
             "fx_rate": rate,
-            "previous_fx_rate": view["previous_fx_rate"],
             "price_source": current.get("source"),
             "value": value,
             "value_krw": value_krw,
@@ -182,7 +184,6 @@ def load_portfolio(
         ticker_currency_value = row["currency"] or ticker_currency(row["ticker"])
         ticker_name = row["name"] or row["ticker"]
         view = price_view(row["ticker"], ticker_currency_value, snapshot)
-        ticker_price = view["price_record"]
         ticker_payload.append(
             {
                 "ticker": row["ticker"],
@@ -196,18 +197,7 @@ def load_portfolio(
                     row["category"],
                     ticker_currency_value,
                 ),
-                "current_price": view["current_price"],
-                "price_date": ticker_price.get("date"),
-                "previous_price": view["previous_price"],
-                "previous_date": ticker_price.get("previous_date"),
-                "change_session_note": change_session_note(
-                    row["ticker"], ticker_price.get("date")
-                ),
-                "change": view["change"],
-                "change_pct": view["change_pct"],
-                "change_krw_pct": view["change_krw_pct"],
-                **price_fields(ticker_price),
-                "previous_fx_rate": view["previous_fx_rate"],
+                **_quote_fields(row["ticker"], view),
                 "next_earnings_date": row["next_earnings_date"],
                 "earnings_updated_at": row["earnings_updated_at"],
                 "logo": logo_hint(row["ticker"], ticker_name),

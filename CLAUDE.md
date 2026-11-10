@@ -7,7 +7,7 @@
 - 프런트(js/css/html): no-store 서빙 → 새로고침만. `?v=` 캐시버전 금지.
 - 백엔드(.py): `launchctl kickstart -k gui/$(id -u)/com.yhandhs.portfolio-web` (pkill 금지 — KeepAlive가 재점유).
 - 브라우저 검증은 `http://localhost:8765`(Tailscale IP는 권한 프롬프트로 자동화가 막힌다).
-- 테스트: `tests/run_all.sh`(python 13 + node 39, 약 5초, 임시 HOME·임시 DB — 운영 데이터에 닿지 않음). 개별은 저장소 루트에서 `PYTHONPATH=. python3 tests/x.py` / `node tests/x.js`.
+- 테스트: `tests/run_all.sh`(python + node 전체, 약 6초, 임시 HOME·임시 DB — 운영 데이터에 닿지 않음). 개별은 저장소 루트에서 `PYTHONPATH=. python3 tests/x.py` / `node tests/x.js`.
 
 ## UI 불변
 - **상승=빨강(`--up`), 하락=파랑(`--down`)**. 변경 금지.

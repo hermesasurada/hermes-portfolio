@@ -7,7 +7,7 @@ daily_prices 종가를 쓴다. 현재가: 보유·차트 화면과 같은 스냅
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 from .db import connect
 from .paths import KST

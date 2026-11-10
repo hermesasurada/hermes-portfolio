@@ -9,6 +9,7 @@ import json
 import logging
 import math
 import mimetypes
+import sys
 import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -55,7 +56,7 @@ from portfolio_core.interest_watchlists import (
 from portfolio_core.paths import DB_PATH, LOGO_DIR
 from portfolio_core.portfolio import load_portfolio as load_portfolio_data
 from portfolio_core.stats import empty_quote_stats, load_quote_stats, load_stats
-from portfolio_core.tickers import asset_class
+from portfolio_core.tickers import asset_class, kr_ticker_code
 from portfolio_core.transactions import add_transaction, delete_transaction, load_transactions, update_transaction, update_transaction_memo
 from portfolio_core.ticker_lookup import is_registered_ticker, lookup_ticker
 from portfolio_core.ticker_metadata import update_ticker_display_name
@@ -93,7 +94,7 @@ def badge_text(ticker: str, name: str) -> str:
     compact_name = "".join(ch for ch in (name or "") if not ch.isspace())
     if compact_name:
         return compact_name[:2].upper()
-    return ticker.replace(".KS", "").replace(".KQ", "")[:2].upper()
+    return kr_ticker_code(ticker)[:2]
 
 
 def logo_stem(ticker: str) -> str:
@@ -135,11 +136,10 @@ def logo_hint(ticker: str, name: str) -> dict[str, str | bool | None]:
             if not logo_url(key):
                 key = ticker  # an unavailable brand must not hide a valid ticker logo
             return {"kind": "etf", "text": brand[:2], "url": logo_url(key), "dark": is_dark_logo(key)}
-    clean_ticker = ticker.replace(".KS", "").replace(".KQ", "")
     if ticker.endswith(LOCAL_MARKET_SUFFIXES):
         text = badge_text(ticker, name)
     else:
-        text = clean_ticker[:2].upper()
+        text = kr_ticker_code(ticker)[:2]
     return {
         "kind": cls,
         "text": text,
@@ -223,6 +223,44 @@ INDEX_HTML = STATIC_DIR / "index.html"
 CHART_LITE_DROP_KEYS = ("points", "ichimoku_projection", "transactions")
 
 
+TRUE_FLAGS = frozenset({"1", "true", "yes", "on"})
+
+
+def query_first(query: dict[str, list[str]], key: str, default: str | None = None) -> str | None:
+    """쿼리 문자열의 첫 값. parse_qs는 빈 값을 버리므로 `?ticker=`도 default가 된다."""
+    values = query.get(key)
+    return values[0] if values else default
+
+
+def query_flag(query: dict[str, list[str]], key: str) -> bool:
+    return query_first(query, key, "0") in TRUE_FLAGS
+
+
+MAX_JSON_BODY_BYTES = 1_000_000
+BAD_JSON_BODY = "요청 형식이 올바르지 않습니다."
+
+
+def parse_json_body(raw: bytes) -> dict:
+    """POST 본문 → dict. JSON이 아니거나 객체가 아니면 ValueError(→ 400) — 핸들러들이 payload.get을 바로 쓴다."""
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except ValueError as exc:   # JSONDecodeError·UnicodeDecodeError
+        raise ValueError(BAD_JSON_BODY) from exc
+    if not isinstance(payload, dict):
+        raise ValueError(BAD_JSON_BODY)
+    return payload
+
+
+def resolve_child(base: Path, name: str) -> Path | None:
+    """base 바로 아래의 실제 파일 경로. 밖으로 나가는 이름(심볼릭 링크 포함)·없는 파일은 None."""
+    path = (base / name).resolve()
+    try:
+        path.relative_to(base.resolve())
+    except ValueError:
+        return None
+    return path if path.is_file() else None
+
+
 def logo_dark_header(file_name: str) -> str:
     """/logos/<stem>.<ext> 응답의 X-Logo-Dark 값. logo_stem은 stem에 다시 걸어도 같아서 기존 판정(is_dark_logo:
     logo_dark.json + .source.json의 dark)을 그대로 쓴다."""
@@ -277,6 +315,18 @@ class Handler(BaseHTTPRequestHandler):
             self.client_address[0] if self.client_address else "-",
         )
 
+    def write_body(self, status: int, body: bytes) -> None:
+        """헤더 뒤 본문 전송 + 접속 로그. 보내는 중 끊긴 연결은 기록만 하고 올려 _dispatch가 조용히 끝낸다."""
+        try:
+            self.wfile.write(body)
+        except ConnectionError:
+            self.log_client_abort(status, len(body))
+            raise
+        self.log_access(status, len(body))
+
+    def send_not_found(self) -> None:
+        self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
+
     def send_bytes(self, body: bytes, content_type: str, status: int = 200) -> None:
         varies_by_encoding = is_gzip_candidate(body, content_type)
         response_body, compressed = gzip_response_body(
@@ -293,12 +343,7 @@ class Handler(BaseHTTPRequestHandler):
         if varies_by_encoding:
             self.send_header("Vary", "Accept-Encoding")
         self.end_headers()
-        try:
-            self.wfile.write(response_body)
-        except BrokenPipeError:
-            self.log_client_abort(status, len(response_body))
-            raise
-        self.log_access(status, len(response_body))
+        self.write_body(status, response_body)
 
     def send_json(self, payload: dict, status: int = 200) -> None:
         self.send_bytes(
@@ -307,10 +352,10 @@ class Handler(BaseHTTPRequestHandler):
             status,
         )
 
-    def send_file(self, file_path: Path, content_type: str | None = None, cache_control: str = "no-store") -> bool:
-        if not file_path.exists() or not file_path.is_file():
-            self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
-            return True
+    def send_file(self, file_path: Path, content_type: str | None = None, cache_control: str = "no-store") -> None:
+        if not file_path.is_file():
+            self.send_not_found()
+            return
         stat = file_path.stat()
         resolved_content_type = content_type or mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
         body = file_path.read_bytes()
@@ -330,7 +375,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_header("Vary", "Accept-Encoding")
             self.end_headers()
             self.log_access(304)
-            return True
+            return
         self.send_response(200)
         self.send_header("Content-Type", resolved_content_type)
         self.send_header("Content-Length", str(len(response_body)))
@@ -341,43 +386,37 @@ class Handler(BaseHTTPRequestHandler):
         if varies_by_encoding:
             self.send_header("Vary", "Accept-Encoding")
         self.end_headers()
-        try:
-            self.wfile.write(response_body)
-        except BrokenPipeError:
-            self.log_client_abort(200, len(response_body))
-            raise
-        self.log_access(200, len(response_body))
-        return True
+        self.write_body(200, response_body)
 
     def read_json(self) -> dict:
-        length = int(self.headers.get("Content-Length") or 0)
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError as exc:
+            raise ValueError(BAD_JSON_BODY) from exc
         if length <= 0:
             return {}
-        return json.loads(self.rfile.read(length).decode("utf-8"))
+        if length > MAX_JSON_BODY_BYTES:
+            raise ValueError("요청 본문이 너무 큽니다.")
+        return parse_json_body(self.rfile.read(length))
 
-    def send_static(self, name: str) -> bool:
-        static_path = (STATIC_DIR / name).resolve()
-        try:
-            static_path.relative_to(STATIC_DIR.resolve())
-        except ValueError:
-            self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
-            return True
+    def send_static(self, name: str) -> None:
+        static_path = resolve_child(STATIC_DIR, name)
+        if static_path is None:
+            self.send_not_found()
+            return
         # 폰트(2MB woff2)는 거의 안 바뀌므로 하루 캐시. 나머지 정적 파일은
         # 본문을 보관하되 매번 ETag만 확인해 변경 즉시 반영한다.
         if static_path.suffix == ".woff2":
-            return self.send_file(static_path, "font/woff2", cache_control="public, max-age=86400")
-        return self.send_file(static_path, cache_control="no-cache")
+            self.send_file(static_path, "font/woff2", cache_control="public, max-age=86400")
+        else:
+            self.send_file(static_path, cache_control="no-cache")
 
-    def send_logo(self, name: str) -> bool:
-        logo_path = (LOGO_DIR / name).resolve()
-        try:
-            logo_path.relative_to(LOGO_DIR.resolve())
-        except ValueError:
-            self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
-            return True
-        if not logo_path.exists() or not logo_path.is_file():
-            self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
-            return True
+    def send_logo(self, name: str) -> None:
+        # send_file과 달리 압축·ETag 없이 원본 그대로(다른 서비스가 /logos를 프록시한다) — 하루 캐시.
+        logo_path = resolve_child(LOGO_DIR, name)
+        if logo_path is None:
+            self.send_not_found()
+            return
         content_type = mimetypes.guess_type(str(logo_path))[0] or "application/octet-stream"
         self.send_response(200)
         self.send_header("Content-Type", content_type)
@@ -386,14 +425,7 @@ class Handler(BaseHTTPRequestHandler):
         # 흰 바탕에서 안 보이는 로고 표시(2026-11-08, 증류 뷰어 등 /logos 프록시 소비처용). 프런트 칩과 같은 판정.
         self.send_header("X-Logo-Dark", logo_dark_header(logo_path.name))
         self.end_headers()
-        body = logo_path.read_bytes()
-        try:
-            self.wfile.write(body)
-        except BrokenPipeError:
-            self.log_client_abort(200, len(body))
-            raise
-        self.log_access(200, len(body))
-        return True
+        self.write_body(200, logo_path.read_bytes())
 
     def query_values(self, query: dict[str, list[str]], key: str) -> list[str]:
         values: list[str] = []
@@ -402,8 +434,8 @@ class Handler(BaseHTTPRequestHandler):
         return values
 
     def api_portfolio(self, query: dict[str, list[str]]) -> dict:
-        us_extended = (query.get("us_extended") or ["0"])[0] in {"1", "true", "yes", "on"}
-        compact = (query.get("compact") or ["0"])[0] in {"1", "true", "yes", "on"}
+        us_extended = query_flag(query, "us_extended")
+        compact = query_flag(query, "compact")
         return load_portfolio(
             us_extended=us_extended,
             ticker_filter=self.query_values(query, "tickers"),
@@ -428,7 +460,7 @@ class Handler(BaseHTTPRequestHandler):
         }
 
     def api_stats(self, query: dict[str, list[str]]) -> dict:
-        us_extended = (query.get("us_extended") or ["0"])[0] in {"1", "true", "yes", "on"}
+        us_extended = query_flag(query, "us_extended")
         return load_stats(self.query_values(query, "tickers"), us_extended=us_extended)
 
     def api_quote(self, query: dict[str, list[str]]) -> dict:
@@ -443,16 +475,16 @@ class Handler(BaseHTTPRequestHandler):
             return {"tickers": load_ticker_directory(conn)}
 
     def api_company_profile(self, query: dict[str, list[str]]) -> dict:
-        return load_company_profile((query.get("ticker") or [""])[0])
+        return load_company_profile(query_first(query, "ticker", ""))
 
     def api_etf_holdings(self, query: dict[str, list[str]]) -> dict:
-        return load_etf_holdings((query.get("ticker") or [""])[0])
+        return load_etf_holdings(query_first(query, "ticker", ""))
 
     def api_etf_exposure(self, query: dict[str, list[str]]) -> dict:
-        return load_etf_exposure((query.get("ticker") or [""])[0])
+        return load_etf_exposure(query_first(query, "ticker", ""))
 
     def api_company_events(self, query: dict[str, list[str]]) -> dict:
-        return load_company_events((query.get("ticker") or [""])[0])
+        return load_company_events(query_first(query, "ticker", ""))
 
     def api_etf_universe(self, query: dict[str, list[str]]) -> dict:
         return load_etf_universe()
@@ -463,15 +495,15 @@ class Handler(BaseHTTPRequestHandler):
             return load_collection_diagnostics(conn)
 
     def api_chart(self, query: dict[str, list[str]]) -> dict:
-        ticker = (query.get("ticker") or [""])[0]
-        us_extended = (query.get("us_extended") or ["0"])[0] in {"1", "true", "yes", "on"}
+        ticker = query_first(query, "ticker", "")
+        us_extended = query_flag(query, "us_extended")
         # 화면 정밀도를 넘는 실수 자릿수는 응답 경계에서만 줄인다(payload_compact).
         payload = compact_chart_payload(load_price_chart(
             ticker,
             us_extended=us_extended,
-            range_key=(query.get("range") or [None])[0],
-            start=(query.get("start") or [None])[0],
-            end=(query.get("end") or [None])[0],
+            range_key=query_first(query, "range"),
+            start=query_first(query, "start"),
+            end=query_first(query, "end"),
         ))
         payload["has_etf_holdings"] = etf_holdings_available(ticker, payload.get("name") or "")
         # 이 종목을 편입한 ETF 수(2026-11-09). 캐시가 깨져도 차트 응답은 그대로 낸다.
@@ -490,14 +522,14 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             payload["quote_stats"] = empty_quote_stats()
         # 시세 팝오버용 가벼운 응답(2026-11-08): 봉 배열·일목 예상경로를 빼고 시세·quote_stats만(1.3MB → 2KB 안팎).
-        if (query.get("lite") or ["0"])[0] in {"1", "true", "yes", "on"}:
+        if query_flag(query, "lite"):
             for key in CHART_LITE_DROP_KEYS:
                 payload.pop(key, None)
         return payload
 
     def api_price_since(self, query: dict[str, list[str]]) -> dict:
         """기준 시각(since, ISO) 이후 등락률 묶음 — 지식증류 뷰어의 '리포트 생성 이후' 열(2026-10-25)."""
-        since = (query.get("since") or [""])[0]
+        since = query_first(query, "since", "")
         try:
             return load_price_since(self.query_values(query, "tickers"), since)
         except ValueError as exc:
@@ -506,30 +538,30 @@ class Handler(BaseHTTPRequestHandler):
     def api_account_performance(self, query: dict[str, list[str]]) -> dict:
         return compact_performance_payload(load_account_performance(
             self.query_values(query, "account_ids"),
-            detail=(query.get("detail") or ["0"])[0] in {"1", "true", "yes", "on"},
-            range_key=(query.get("range") or [None])[0],
-            start=(query.get("start") or [None])[0],
-            end=(query.get("end") or [None])[0],
+            detail=query_flag(query, "detail"),
+            range_key=query_first(query, "range"),
+            start=query_first(query, "start"),
+            end=query_first(query, "end"),
         ))
 
     def api_dividends(self, query: dict[str, list[str]]) -> dict:
         return load_dividends(self.query_values(query, "account_ids"))
 
     def api_dividend_history(self, query: dict[str, list[str]]) -> dict:
-        ticker = (query.get("ticker") or [""])[0]
-        return load_dividend_history(ticker)
+        return load_dividend_history(query_first(query, "ticker", ""))
 
     def api_schedule(self, query: dict[str, list[str]]) -> dict:
         return load_schedule(logo_hint_fn=logo_hint)
 
     def api_transactions(self, query: dict[str, list[str]]) -> dict:
-        account_id = (query.get("account_id") or [None])[0]
-        ticker = (query.get("ticker") or [None])[0]
-        return load_transactions(account_id, ticker, self.query_values(query, "account_ids"))
+        return load_transactions(
+            query_first(query, "account_id"),
+            query_first(query, "ticker"),
+            self.query_values(query, "account_ids"),
+        )
 
     def api_watchlist_lookup(self, query: dict[str, list[str]]) -> dict:
-        q = (query.get("q") or [""])[0]
-        found = lookup_ticker(q)
+        found = lookup_ticker(query_first(query, "q", ""))
         found["registered"] = is_registered_ticker(found.get("ticker", ""))
         return {"ticker": found}
 
@@ -551,17 +583,17 @@ class Handler(BaseHTTPRequestHandler):
     # ── 성과 스냅샷·현금 입출금 (아직 화면 미노출 — API만) ──
     def api_performance_snapshots(self, query: dict[str, list[str]]) -> dict:
         account_ids = self.query_values(query, "account_ids") or []
-        single = (query.get("account_id") or [None])[0]
+        single = query_first(query, "account_id")
         if single:
             account_ids = [single]
         return load_account_snapshots(
             account_ids or None,
-            (query.get("start") or [None])[0],
-            (query.get("end") or [None])[0],
+            query_first(query, "start"),
+            query_first(query, "end"),
         )
 
     def api_cash_flows(self, query: dict[str, list[str]]) -> dict:
-        account_id = (query.get("account_id") or [None])[0]
+        account_id = query_first(query, "account_id")
         return list_cash_flows(int(account_id) if account_id else None)
 
     def post_cash_flow(self) -> dict:
@@ -571,8 +603,9 @@ class Handler(BaseHTTPRequestHandler):
         return delete_cash_flow(self.read_json())
 
     def post_performance_rebuild(self) -> dict:
-        payload = self.read_json()
-        ids = payload.get("account_ids") or None
+        ids = self.read_json().get("account_ids") or None
+        if ids is not None and not isinstance(ids, list):
+            raise ValueError("account_ids는 목록이어야 합니다.")
         return {"ok": True, "rows": rebuild_account_snapshots([int(x) for x in ids] if ids else None)}
 
     def post_watchlist(self) -> dict:
@@ -612,11 +645,59 @@ class Handler(BaseHTTPRequestHandler):
     def post_ticker_tags(self) -> dict:
         return set_ticker_tags(self.read_json())
 
+    # 경로 → 핸들러. 요청마다 사전을 다시 만들지 않도록 클래스에 한 번 둔다.
+    GET_ROUTES = {
+        "/api/health": api_health,
+        "/api/portfolio": api_portfolio,
+        "/api/stats": api_stats,
+        "/api/quote": api_quote,
+        "/api/tickers": api_tickers,
+        "/api/company-profile": api_company_profile,
+        "/api/etf-holdings": api_etf_holdings,
+        "/api/etf-exposure": api_etf_exposure,
+        "/api/company-events": api_company_events,
+        "/api/etf-universe": api_etf_universe,
+        "/api/diagnostics": api_diagnostics,
+        "/api/chart": api_chart,
+        "/api/price-since": api_price_since,
+        "/api/account-performance": api_account_performance,
+        "/api/performance/snapshots": api_performance_snapshots,
+        "/api/cash-flows": api_cash_flows,
+        "/api/dividends": api_dividends,
+        "/api/dividend-history": api_dividend_history,
+        "/api/schedule": api_schedule,
+        "/api/transactions": api_transactions,
+        "/api/watchlist/lookup": api_watchlist_lookup,
+        "/api/interest-watchlists": api_interest_watchlists,
+        "/api/tags": api_tags,
+    }
+    POST_ROUTES = {
+        "/api/transactions": post_transactions,
+        "/api/transactions/update": post_transaction_update,
+        "/api/transactions/delete": post_transaction_delete,
+        "/api/transactions/memo": post_transaction_memo,
+        "/api/cash-flows": post_cash_flow,
+        "/api/cash-flows/delete": post_cash_flow_delete,
+        "/api/performance/rebuild": post_performance_rebuild,
+        "/api/watchlist": post_watchlist,
+        "/api/watchlist/delete": post_watchlist_delete,
+        "/api/interest-watchlists/groups": post_interest_group,
+        "/api/interest-watchlists/groups/rename": post_interest_group_rename,
+        "/api/interest-watchlists/groups/reorder": post_interest_group_reorder,
+        "/api/interest-watchlists/groups/delete": post_interest_group_delete,
+        "/api/interest-watchlists/items": post_interest_item,
+        "/api/interest-watchlists/items/delete": post_interest_item_delete,
+        "/api/interest-watchlists/favorite": post_interest_favorite,
+        "/api/tickers/display-name": post_ticker_display_name,
+        "/api/tags": post_ticker_tags,
+    }
+
     def _dispatch(self, verb: str, handler) -> None:
-        """GET/POST 공통 에러 처리: 끊긴 파이프 무시, ValueError→400, 그 외→로그+500."""
+        """GET/POST 공통 에러 처리: 끊긴 연결 무시, ValueError→400, 그 외→로그+500."""
+        self._request_started_at = time.perf_counter()
         try:
             handler()
-        except BrokenPipeError:
+        except ConnectionError:   # BrokenPipe·ConnectionReset — 응답을 받을 상대가 없다
             return
         except ValueError as exc:
             self.send_json({"error": str(exc)}, 400)
@@ -624,88 +705,46 @@ class Handler(BaseHTTPRequestHandler):
             logging.exception("%s %s failed", verb, self.path)
             try:
                 self.send_json({"error": HTTPStatus.INTERNAL_SERVER_ERROR.phrase}, 500)
-            except BrokenPipeError:
+            except ConnectionError:
                 return
 
     def do_GET(self) -> None:
-        self._request_started_at = time.perf_counter()
         parsed = urlparse(self.path)
         path = parsed.path
-        query = parse_qs(parsed.query)
 
         def handle() -> None:
             if path.startswith("/static/"):
                 self.send_static(Path(path).name)
-                return
-            if path.startswith("/logos/"):
+            elif path.startswith("/logos/"):
                 self.send_logo(Path(path).name)
-                return
-            get_routes = {
-                "/api/health": self.api_health,
-                "/api/portfolio": self.api_portfolio,
-                "/api/stats": self.api_stats,
-                "/api/quote": self.api_quote,
-                "/api/tickers": self.api_tickers,
-                "/api/company-profile": self.api_company_profile,
-                "/api/etf-holdings": self.api_etf_holdings,
-                "/api/etf-exposure": self.api_etf_exposure,
-                "/api/company-events": self.api_company_events,
-                "/api/etf-universe": self.api_etf_universe,
-                "/api/diagnostics": self.api_diagnostics,
-                "/api/chart": self.api_chart,
-                "/api/price-since": self.api_price_since,
-                "/api/account-performance": self.api_account_performance,
-                "/api/performance/snapshots": self.api_performance_snapshots,
-                "/api/cash-flows": self.api_cash_flows,
-                "/api/dividends": self.api_dividends,
-                "/api/dividend-history": self.api_dividend_history,
-                "/api/schedule": self.api_schedule,
-                "/api/transactions": self.api_transactions,
-                "/api/watchlist/lookup": self.api_watchlist_lookup,
-                "/api/interest-watchlists": self.api_interest_watchlists,
-                "/api/tags": self.api_tags,
-            }
-            if path in get_routes:
-                self.send_json(get_routes[path](query))
-                return
-            if path in {"/", "/index.html"}:
+            elif path in self.GET_ROUTES:
+                self.send_json(self.GET_ROUTES[path](self, parse_qs(parsed.query)))
+            elif path in {"/", "/index.html"}:
                 self.send_file(INDEX_HTML, "text/html; charset=utf-8")
-                return
-            self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
+            else:
+                self.send_not_found()
 
         self._dispatch("GET", handle)
 
     def do_POST(self) -> None:
-        self._request_started_at = time.perf_counter()
         path = urlparse(self.path).path
 
         def handle() -> None:
-            post_routes = {
-                "/api/transactions": self.post_transactions,
-                "/api/transactions/update": self.post_transaction_update,
-                "/api/transactions/delete": self.post_transaction_delete,
-                "/api/transactions/memo": self.post_transaction_memo,
-                "/api/cash-flows": self.post_cash_flow,
-                "/api/cash-flows/delete": self.post_cash_flow_delete,
-                "/api/performance/rebuild": self.post_performance_rebuild,
-                "/api/watchlist": self.post_watchlist,
-                "/api/watchlist/delete": self.post_watchlist_delete,
-                "/api/interest-watchlists/groups": self.post_interest_group,
-                "/api/interest-watchlists/groups/rename": self.post_interest_group_rename,
-                "/api/interest-watchlists/groups/reorder": self.post_interest_group_reorder,
-                "/api/interest-watchlists/groups/delete": self.post_interest_group_delete,
-                "/api/interest-watchlists/items": self.post_interest_item,
-                "/api/interest-watchlists/items/delete": self.post_interest_item_delete,
-                "/api/interest-watchlists/favorite": self.post_interest_favorite,
-                "/api/tickers/display-name": self.post_ticker_display_name,
-                "/api/tags": self.post_ticker_tags,
-            }
-            if path in post_routes:
-                self.send_json(post_routes[path]())
-                return
-            self.send_bytes(b"Not found", "text/plain; charset=utf-8", 404)
+            if path in self.POST_ROUTES:
+                self.send_json(self.POST_ROUTES[path](self))
+            else:
+                self.send_not_found()
 
         self._dispatch("POST", handle)
+
+
+class PortfolioHTTPServer(ThreadingHTTPServer):
+    def handle_error(self, request, client_address) -> None:
+        """요청 줄을 읽기도 전에 끊긴 연결(브라우저 예비 연결 정리 등)은 장애가 아니다 — 기본 구현은
+        그때마다 Traceback 20여 줄을 stderr에 찍어 err.log를 채웠다. 그 밖의 오류는 시각과 함께 남긴다."""
+        if isinstance(sys.exc_info()[1], ConnectionError):
+            return
+        logging.exception("request from %s failed", client_address[0] if client_address else "-")
 
 
 def main() -> None:
@@ -715,7 +754,7 @@ def main() -> None:
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(message)s")
     initialize_schema()
-    server = ThreadingHTTPServer((args.host, args.port), Handler)
+    server = PortfolioHTTPServer((args.host, args.port), Handler)
     lan_guard.guard_http_server(server)
     print(f"Serving portfolio web page on http://{args.host}:{args.port}")
     print(f"DB: {DB_PATH}")

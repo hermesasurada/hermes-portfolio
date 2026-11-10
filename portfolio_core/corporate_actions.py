@@ -237,6 +237,19 @@ def _split_cache_due(fetched_at: str | None) -> bool:
     return datetime.now(KST) - fetched > timedelta(hours=SPLIT_CACHE_HOURS)
 
 
+def _mark_split_cache(conn: sqlite3.Connection, ticker: str, fetched_at: str, status: str) -> None:
+    conn.execute(
+        """
+        INSERT INTO ticker_split_cache (ticker, fetched_at, status)
+        VALUES (?, ?, ?)
+        ON CONFLICT(ticker) DO UPDATE SET
+            fetched_at = excluded.fetched_at,
+            status = excluded.status
+        """,
+        (ticker, fetched_at, status),
+    )
+
+
 def fetch_yahoo_stock_splits(ticker: str) -> list[tuple[str, float]]:
     import yfinance as yf
 
@@ -323,31 +336,13 @@ def refresh_stock_splits(tickers: Iterable[str], force: bool = False) -> dict[st
                         """,
                         [(ticker, split_date, ratio, now) for split_date, ratio in splits],
                     )
-                conn.execute(
-                    """
-                    INSERT INTO ticker_split_cache (ticker, fetched_at, status)
-                    VALUES (?, ?, ?)
-                    ON CONFLICT(ticker) DO UPDATE SET
-                        fetched_at = excluded.fetched_at,
-                        status = excluded.status
-                    """,
-                    (ticker, now, f"ok:{len(splits)}"),
-                )
+                _mark_split_cache(conn, ticker, now, f"ok:{len(splits)}")
                 conn.commit()
             results[ticker] = len(splits)
         except Exception as exc:
             with connect() as conn:
                 ensure_stock_split_tables(conn)
-                conn.execute(
-                    """
-                    INSERT INTO ticker_split_cache (ticker, fetched_at, status)
-                    VALUES (?, ?, ?)
-                    ON CONFLICT(ticker) DO UPDATE SET
-                        fetched_at = excluded.fetched_at,
-                        status = excluded.status
-                    """,
-                    (ticker, now, f"error:{type(exc).__name__}"),
-                )
+                _mark_split_cache(conn, ticker, now, f"error:{type(exc).__name__}")
                 conn.commit()
             print(f"[splits] {ticker} failed: {type(exc).__name__}: {exc}")
     return results

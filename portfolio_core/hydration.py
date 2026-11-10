@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import math
-import re
 
 from .collectors import fetch_history_rows, fetch_kr_earnings_date, fetch_yahoo_earnings_date
 from .corporate_actions import refresh_stock_splits
@@ -10,19 +9,12 @@ from .fundamentals import fetch_fundamentals
 from .logos import cache_logo
 from .price_store import infer_category, save_daily_prices, update_earnings_dates
 from .technical_stats import refresh_technical_stats_cache
-from .ticker_lookup import resolve_kr_suffix
+from .ticker_lookup import normalize_lookup_ticker
 from .tickers import asset_class
 
 
-def normalize_hydration_ticker(value: str) -> str:
-    ticker = re.sub(r"\s+", "", str(value or "")).upper()
-    if re.fullmatch(r"\d{6}", ticker):
-        return resolve_kr_suffix(ticker)
-    return ticker
-
-
 def hydrate_ticker(ticker: str, years: int = 10) -> dict:
-    ticker = normalize_hydration_ticker(ticker)
+    ticker = normalize_lookup_ticker(ticker)
     result = {"ticker": ticker, "history_rows": 0, "stats": False, "earnings": None, "logo": None, "error": None}
     with connect() as conn:
         ensure_ticker_metadata_columns(conn)

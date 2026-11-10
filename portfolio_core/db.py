@@ -466,6 +466,9 @@ def initialize_schema() -> None:
         ensure_extended_quote_cache_table(conn)
         ensure_quote_source_state_table(conn)
         ensure_interest_watchlist_tables(conn)
+        ensure_account_history_columns(conn)   # 성과 스냅샷 3종 — 요청 중 첫 DDL로 밀리지 않게 기동 때 보장
+        ensure_cash_flow_table(conn)
+        ensure_value_snapshot_table(conn)
         ensure_market_index_tickers(conn)
         ensure_fx_tickers(conn)
         backfill_ticker_display_names(conn)
