@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from .constants import DIVIDEND_LOOKAHEAD_DAYS, DIVIDEND_LOOKBACK_DAYS
+from .corporate_actions import dedupe_dividend_event_rows, entitlement_date
 from .dates import parse_iso_date, positive_float, shift_months, today_kst
 from .market_calendar import korea_equity_calendar_day
 
@@ -204,12 +205,52 @@ def estimated_events(history_rows, start: date, end: date, actual_rows) -> list[
     return estimates
 
 
+def _distinct_actual_events(event_rows) -> list[dict]:
+    """종목별로 같은 배당의 이중 저장(교차통화·같은 출처 복제·분할 미반영 사본·출처 간 같은 금액)을 먼저 걷어 낸다.
+    남은 같은 출처의 행은 서로 다른 지급(정기+특별 등)이다 — consolidated_dividend_events가 이를 나눠 둔다."""
+    by_ticker: dict[str, list[dict]] = {}
+    for row in event_rows:
+        event = {"record_date": None, "declaration_date": None, **dict(row)}
+        by_ticker.setdefault(event["ticker"], []).append(event)
+    result: list[dict] = []
+    for events in by_ticker.values():
+        events.sort(key=lambda event: entitlement_date(event) or date.min)
+        result.extend(dedupe_dividend_event_rows(events))
+    # 예전 입력 순서(지급일·없으면 배당락일, 종목)를 지킨다 — 같은 달에서는 먼저 온 행이 기준이 된다.
+    result.sort(key=lambda event: (str(event.get("pay_date") or event.get("ex_date") or "")[:10], event["ticker"]))
+    return result
+
+
+def _month_slot(slots: list[dict], candidate: dict) -> dict | None:
+    """같은 종목·같은 달에서 candidate가 합쳐질 칸. None이면 별도 지급으로 새 칸을 만든다.
+
+    - 추정(estimated-*)·금액 없는 행은 첫 칸을 보충한다(예전과 같다).
+    - 실제 금액이 있는 행은 그 출처가 아직 없는 칸 중 금액이 가장 가까운 칸에 합친다(출처 간 금액이 조금 다른 같은 배당).
+      모든 칸에 같은 출처가 이미 있으면 그 출처가 같은 달에 따로 준 배당(정기+특별, 2026-11-11 사용자 지시로 분리)이다."""
+    if not slots:
+        return None
+    amount = float_value(candidate.get("amount"))
+    source = str(candidate.get("source") or "")
+    if amount is None or source.startswith("estimated"):
+        return slots[0]
+    open_slots = [slot for slot in slots if source not in slot["_sources"]]
+    if not open_slots:
+        return None
+
+    def distance(slot: dict) -> float:
+        current = float_value(slot.get("amount"))
+        return abs(current - amount) / max(abs(current), abs(amount), 1e-9) if current is not None else 0.0
+
+    return min(open_slots, key=distance)
+
+
 def consolidated_dividend_events(event_rows, history_rows) -> list[dict]:
     start = today() - timedelta(days=DIVIDEND_LOOKBACK_DAYS)
     end = today() + timedelta(days=DIVIDEND_LOOKAHEAD_DAYS)
-    grouped: dict[tuple[str, int, int], dict] = {}
+    grouped: dict[tuple[str, int, int], list[dict]] = {}
     monthly_tickers = monthly_distribution_tickers(history_rows)
-    for event in [*event_rows, *estimated_events(history_rows, start, end, event_rows)]:
+    actual_events = _distinct_actual_events(event_rows)
+    for event in [*actual_events, *estimated_events(history_rows, start, end, event_rows)]:
         candidate = dict(event)
         apply_jp_pay_date(candidate)
         candidate_amount = float_value(candidate.get("amount"))
@@ -230,10 +271,13 @@ def consolidated_dividend_events(event_rows, history_rows) -> list[dict]:
         if not schedule_date:
             continue
         key = (candidate["ticker"], schedule_date.year, schedule_date.month)
-        current = grouped.get(key)
-        if not current:
-            grouped[key] = candidate
+        slots = grouped.setdefault(key, [])
+        current = _month_slot(slots, candidate)
+        if current is None:
+            candidate["_sources"] = {str(candidate.get("source") or "")}
+            slots.append(candidate)
             continue
+        current["_sources"].add(str(candidate.get("source") or ""))
         current_amount = float_value(current.get("amount"))
         next_amount = float_value(candidate.get("amount"))
         if current_amount is None and next_amount is not None:
@@ -245,4 +289,7 @@ def consolidated_dividend_events(event_rows, history_rows) -> list[dict]:
         if not current.get("ex_date") and candidate.get("ex_date"):
             current["ex_date"] = candidate["ex_date"]
             current["ex_date_estimated"] = bool(candidate.get("ex_date_estimated"))
-    return list(grouped.values())
+    events = [slot for slots in grouped.values() for slot in slots]
+    for event in events:
+        event.pop("_sources", None)
+    return events
