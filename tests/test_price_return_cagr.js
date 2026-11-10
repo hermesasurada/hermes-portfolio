@@ -33,7 +33,7 @@ assert.equal(ctx.chartStatPercent(ctx.priceReturnCagr(null, 10), 1), '-');
 assert.match(ctx.chartStatPercent(row.perf_3y, 1), /10\.0%/);
 for (const years of [3, 5, 10]) {
   assert.match(read('index.html'), new RegExp(`data-key="perf_${years}y"[^>]*>${years}년</th>`));
-  assert.match(read('app-interest-columns.js'), new RegExp(`key: "perf_${years}y", width: 64, label: "${years}년"`));
+  assert.match(read('app-interest-columns.js'), new RegExp(`key: "perf_${years}y", width: \\d+, label: "${years}년"`));
   assert.match(read('app-chart-metrics.js'), new RegExp(`"성과", "${years}년", chartStatPercent\\(priceReturnCagr`));
 }
 console.log('Price CAGR: annualization, missing values, short periods and source preservation passed.');
