@@ -36,6 +36,11 @@ NXT_MAX_WORKERS = 8
 NXT_CACHE_SECONDS = 30
 # 이 시간 안의 묵은 값은 바로 쓰고 갱신은 백그라운드로(us_live_quotes와 같은 방식).
 NXT_MAX_STALE_SECONDS = 300
+# 캐시가 없거나 너무 묵었을 때 웹 요청이 기다리는 최대 시간(평소 0.3초). 넘기면 뒤에서 계속 받고
+# 요청은 저장된 직전 연장가(restore_extended_quotes)로 답한다 — us_live_quotes와 같은 원칙.
+NXT_WAIT_SECONDS = 3.0
+# 404가 아닌 실패(타임아웃·DNS·5xx)는 이 시간 동안 그 종목을 다시 묻지 않는다.
+NXT_FAILURE_COOLDOWN_SECONDS = 120
 
 # 세션 경계(KST 분). 프리·애프터만 '연장'이고 메인은 KRX와 병행이라 제외한다.
 NXT_PRE_OPEN = 8 * 60
@@ -45,6 +50,7 @@ NXT_AFTER_CLOSE = 20 * 60
 
 # 미상장(404) 종목은 되묻지 않는다. 상장 종목 편입은 드물어 프로세스 수명 캐시로 충분.
 _UNLISTED: set[str] = set()
+_FAILED_UNTIL: dict[str, float] = {}
 _QUOTE_CACHE: dict[str, tuple[float, dict]] = {}
 NXT_REFRESH = SingleFlight("kr-nxt")
 _CACHE_LOCK = threading.Lock()
@@ -83,9 +89,11 @@ def _fetch_one(code: str) -> dict | None:
             _UNLISTED.add(code)   # NXT 미상장 — ETF·우선주·일부 중소형주
         else:
             print(f"[nxt] {code} http {exc.code}")
+            _FAILED_UNTIL[code] = datetime.now().timestamp() + NXT_FAILURE_COOLDOWN_SECONDS
         return None
     except Exception as exc:
         print(f"[nxt] {code} failed: {type(exc).__name__}")
+        _FAILED_UNTIL[code] = datetime.now().timestamp() + NXT_FAILURE_COOLDOWN_SECONDS
         return None
 
 
@@ -136,6 +144,7 @@ def fetch_nxt_quotes(tickers: list[str], now_ts: float | None = None) -> dict[st
     targets: list[tuple[str, str]] = []
     refresh_later: list[tuple[str, str]] = []
     result: dict[str, dict] = {}
+    seen_ts: dict[str, float] = {}
     for ticker in tickers:
         code = kr_ticker_code(ticker)
         if not code or code in _UNLISTED:
@@ -148,11 +157,25 @@ def fetch_nxt_quotes(tickers: list[str], now_ts: float | None = None) -> dict[st
         elif cached and age < NXT_MAX_STALE_SECONDS:
             result[ticker] = cached[1]
             refresh_later.append((ticker, code))
+        elif _FAILED_UNTIL.get(code, 0) > now_ts:
+            continue   # 방금 실패한 종목 — 직전 연장가 복원에 맡긴다
         else:
+            if cached:
+                seen_ts[ticker] = cached[0]
             targets.append((ticker, code))
+
+    def work(items: list[tuple[str, str]]) -> None:
+        _fetch_nxt_now(items, datetime.now(KST).timestamp())
+
     if refresh_later:
-        NXT_REFRESH.run(refresh_later, lambda items: _fetch_nxt_now(items, datetime.now(KST).timestamp()))
-    result.update(_fetch_nxt_now(targets, now_ts))
+        NXT_REFRESH.run(refresh_later, work)
+    if targets:
+        NXT_REFRESH.run_and_wait(targets, work, NXT_WAIT_SECONDS)
+        with _CACHE_LOCK:
+            for ticker, _code in targets:
+                cached = _QUOTE_CACHE.get(ticker)
+                if cached and cached[0] > seen_ts.get(ticker, float("-inf")):
+                    result[ticker] = cached[1]
     return result
 
 

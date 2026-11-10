@@ -2387,12 +2387,13 @@ def test_fetch_us_live_quotes_uses_stale_cache_when_batch_fails():
     original_shared = price_module.load_shared_quote_rows
     original_cache = dict(price_module.US_LIVE_QUOTE_CACHE)
     original_schedule = price_module.schedule_us_live_fallback
+    original_same_day = price_module.same_market_day
     scheduled = []
     stale_item = {
         "price": 123.0,
         "source": "yf-pre",
         "market_state": "PRE",
-        "fetched_ts": 1,
+        "fetched_ts": __import__("time").time() - 700,   # 10분 넘게 묵었지만 같은 미국 거래일
         "extended_price": 123.0,
         "extended_base_price": 120.0,
         "extended_change": 3.0,
@@ -2404,10 +2405,13 @@ def test_fetch_us_live_quotes_uses_stale_cache_when_batch_fails():
         price_module.load_shared_quote_rows = lambda symbols: {}
         price_module.yahoo_quote_batch = lambda symbols: (_ for _ in ()).throw(RuntimeError("blocked"))
         price_module.schedule_us_live_fallback = lambda *args: scheduled.append(args)
+        price_module.same_market_day = lambda fetched_ts, now_ts: True   # 자정 무렵 실행에도 같은 날로
         result = price_module.fetch_us_live_quotes(["AAPL"], include_extended=True, regular_hours=False)
         assert result["AAPL"] is stale_item
         assert scheduled == [(["AAPL"], "extended", True, False)]
     finally:
+        price_module.same_market_day = original_same_day
+        price_module._NETWORK_PAUSED_UNTIL = 0.0
         price_module.yahoo_quote_batch = original_batch
         price_module.load_shared_quote_rows = original_shared
         price_module.schedule_us_live_fallback = original_schedule
@@ -2417,6 +2421,7 @@ def test_fetch_us_live_quotes_uses_stale_cache_when_batch_fails():
 
 def test_us_live_quotes_serve_slightly_stale_cache_and_refresh_in_background():
     """캐시가 만료돼도 10분 안이면 요청은 기다리지 않는다 — 갱신은 백그라운드에서 한 번만."""
+    import threading
     import time
     import portfolio_core.us_live_quotes as m
 
@@ -2444,7 +2449,10 @@ def test_us_live_quotes_serve_slightly_stale_cache_and_refresh_in_background():
         # 같은 키로 다시 불러도 이미 도는 갱신을 또 시작하지 않는다(single-flight).
         started = m.US_LIVE_REFRESH.run([("AAPL", "regular")], lambda keys: None)
         assert started == [] or not m.US_LIVE_REFRESH.in_flight(("AAPL", "regular"))
-        m.US_LIVE_REFRESH.last_thread.join(timeout=5)
+        # 너무 묵은 MSFT도 이제 백그라운드 스레드로 받으므로 last_thread만으로는 AAPL 갱신을 기다리지 못한다.
+        for thread in threading.enumerate():
+            if thread.name == "us-live-refresh":
+                thread.join(timeout=5)
         assert ["AAPL"] in batch_calls, batch_calls
         assert m.US_LIVE_QUOTE_CACHE[("AAPL", "regular")]["price"] == 999.0
         assert not m.US_LIVE_REFRESH.in_flight(("AAPL", "regular"))
@@ -2455,6 +2463,7 @@ def test_us_live_quotes_serve_slightly_stale_cache_and_refresh_in_background():
 
 
 def test_nxt_quotes_serve_slightly_stale_cache_and_refresh_in_background():
+    import threading
     import time
     from datetime import datetime
     import portfolio_core.kr_live_quotes as k
@@ -2472,7 +2481,9 @@ def test_nxt_quotes_serve_slightly_stale_cache_and_refresh_in_background():
         result = k.fetch_nxt_quotes(["005930.KS", "000660.KS"], now_ts=now)
         assert result["005930.KS"]["price"] == 70000.0  # 옛 값을 바로
         assert result["000660.KS"]["price"] == 1.0      # 너무 묵은 건 요청 안에서 받음
-        k.NXT_REFRESH.last_thread.join(timeout=5)
+        for thread in threading.enumerate():
+            if thread.name == "kr-nxt-refresh":
+                thread.join(timeout=5)
         assert sorted(calls) == ["000660", "005930"]
         assert k._QUOTE_CACHE["005930.KS"][1]["price"] == 1.0
     finally:

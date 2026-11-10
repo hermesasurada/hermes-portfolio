@@ -24,10 +24,36 @@ SHARED_LIVE_CACHE_SECONDS = 90
 # 예전엔 만료될 때마다 요청 안에서 Yahoo를 기다려 /api/portfolio가 ~1.1초 걸렸다(평소 30ms).
 # 1분 자동 갱신이면 거의 매번 만료 상태였다. 이보다 오래 묵었으면 예전처럼 기다려 받는다.
 US_LIVE_MAX_STALE_SECONDS = 600
+# 캐시가 없거나 너무 묵었을 때도 웹 요청은 이만큼만 기다린다(평소 배치 ~1초). 넘기면 받는 일은 뒤에서
+# 계속하고 요청은 캐시·DB 값으로 답한다. 2026-10-21 DNS 장애 때 요청 안에서 30초 타임아웃이 겹쳐
+# /api/portfolio가 90~180초 걸렸다.
+US_LIVE_WAIT_SECONDS = 3.0
+# Yahoo 배치가 실패하면 이 시간 동안 외부 조회를 쉰다(장애 중 요청마다 다시 두드리지 않게).
+US_LIVE_FAILURE_COOLDOWN_SECONDS = 120
+# 배치도 yfinance도 시세를 못 준 종목은 이 시간 동안 yfinance를 다시 부르지 않는다.
+US_LIVE_UNRESOLVED_SECONDS = 1800
+# yfinance 폴백이 연달아 이만큼 예외를 내면 네트워크 장애로 보고 나머지를 건너뛴다.
+US_LIVE_FALLBACK_MAX_ERRORS = 2
 US_LIVE_REFRESH = SingleFlight("us-live")
 US_LIVE_QUOTE_CACHE: dict[tuple[str, str], dict] = {}
 US_LIVE_QUOTE_LOCK = threading.Lock()
 US_LIVE_FALLBACK_IN_FLIGHT: set[tuple[str, str]] = set()
+US_LIVE_UNRESOLVED_UNTIL: dict[tuple[str, str], float] = {}
+_NETWORK_PAUSED_UNTIL = 0.0
+
+
+def network_paused(now_ts: float | None = None) -> bool:
+    return (now_ts if now_ts is not None else datetime.now().timestamp()) < _NETWORK_PAUSED_UNTIL
+
+
+def pause_network(seconds: float = US_LIVE_FAILURE_COOLDOWN_SECONDS) -> None:
+    global _NETWORK_PAUSED_UNTIL
+    _NETWORK_PAUSED_UNTIL = max(_NETWORK_PAUSED_UNTIL, datetime.now().timestamp() + seconds)
+
+
+def same_market_day(fetched_ts: float, now_ts: float) -> bool:
+    """묵은 캐시를 오늘 시세로 내보내도 되는지 — 미국 동부 날짜가 같을 때만."""
+    return datetime.fromtimestamp(fetched_ts, US_EASTERN).date() == datetime.fromtimestamp(now_ts, US_EASTERN).date()
 
 # Yahoo 크럼+쿠키 세션 (yfinance 내부 방식). 발급 비용이 있으니 캐시·재사용.
 YAHOO_CRUMB_LOCK = threading.Lock()
@@ -225,10 +251,11 @@ def schedule_us_live_fallback(symbols: list[str], mode: str, include_extended: b
     if not unique_symbols:
         return
     todo: list[str] = []
+    now_ts = datetime.now().timestamp()
     with US_LIVE_QUOTE_LOCK:
         for symbol in unique_symbols:
             key = (symbol, mode)
-            if key in US_LIVE_FALLBACK_IN_FLIGHT:
+            if key in US_LIVE_FALLBACK_IN_FLIGHT or US_LIVE_UNRESOLVED_UNTIL.get(key, 0) > now_ts:
                 continue
             US_LIVE_FALLBACK_IN_FLIGHT.add(key)
             todo.append(symbol)
@@ -243,18 +270,29 @@ def schedule_us_live_fallback(symbols: list[str], mode: str, include_extended: b
 
 def fetch_us_live_fallback_worker(symbols: list[str], mode: str, include_extended: bool, regular_hours: bool) -> None:
     updated = 0
+    errors_in_row = 0
     try:
         import yfinance as yf
 
         for symbol in symbols:
+            if errors_in_row >= US_LIVE_FALLBACK_MAX_ERRORS:
+                # 종목마다 30초 DNS 타임아웃을 줄줄이 기다리지 않는다(2026-10-21 장애).
+                pause_network()
+                logging.warning("[us-live] yfinance fallback stopped after %d errors; skipped %d symbols",
+                                errors_in_row, len(symbols) - symbols.index(symbol))
+                break
             try:
                 info = yf.Ticker(symbol).info or {}
+                errors_in_row = 0
                 item = live_quote_item_from_row(info, include_extended, regular_hours, datetime.now().timestamp())
                 if not item:
+                    with US_LIVE_QUOTE_LOCK:
+                        US_LIVE_UNRESOLVED_UNTIL[(symbol, mode)] = datetime.now().timestamp() + US_LIVE_UNRESOLVED_SECONDS
                     continue
                 cache_us_live_quote(symbol, mode, item)
                 updated += 1
             except Exception as exc:
+                errors_in_row += 1
                 logging.warning("[us-live] yfinance fallback failed for %s: %s", symbol, exc)
         logging.info("[us-live] yfinance fallback refreshed %d/%d symbols", updated, len(symbols))
     except Exception as exc:
@@ -269,9 +307,9 @@ def _fetch_us_live_quotes_now(
     symbols: list[str],
     include_extended: bool,
     regular_hours: bool,
-    stale: dict[str, dict] | None = None,
 ) -> dict[str, dict]:
-    """공유 DB 시세 → Yahoo 배치 → yfinance 폴백 순으로 지금 받아 캐시에 넣는다."""
+    """공유 DB 시세 → Yahoo 배치 → yfinance 폴백 순으로 지금 받아 캐시에 넣는다.
+    백그라운드(SingleFlight)에서만 부른다 — 웹 요청 스레드가 외부 응답을 직접 기다리지 않게."""
     mode = "regular" if regular_hours else "extended"
     now_ts = datetime.now().timestamp()
     fresh: dict[str, dict] = {}
@@ -296,6 +334,8 @@ def _fetch_us_live_quotes_now(
         fresh[symbol] = item
     missing = still_missing
 
+    if missing and network_paused():
+        return fresh   # 직전 배치 실패로 쉬는 중 — 공유 DB 값까지만
     if missing:
         try:
             quote_rows = yahoo_quote_batch(missing)
@@ -310,12 +350,13 @@ def _fetch_us_live_quotes_now(
                 fresh[symbol] = item
             schedule_us_live_fallback(unresolved, mode, include_extended, regular_hours)
         except Exception as exc:
+            pause_network()
             logging.warning(
-                "[us-live] batch quote failed for %d symbols; using stale cache/db prices and refreshing in background: %s",
+                "[us-live] batch quote failed for %d symbols; using cache/db prices, Yahoo paused %ds: %s",
                 len(missing),
+                US_LIVE_FAILURE_COOLDOWN_SECONDS,
                 exc,
             )
-            fresh.update({symbol: item for symbol, item in (stale or {}).items() if symbol in missing})
             schedule_us_live_fallback(missing, mode, include_extended, regular_hours)
     return fresh
 
@@ -342,13 +383,23 @@ def fetch_us_live_quotes(symbols: list[str], include_extended: bool, regular_hou
                     stale[symbol] = cached
                 missing.append(symbol)
 
+    def work(keys: list[tuple[str, str]]) -> None:
+        _fetch_us_live_quotes_now([symbol for symbol, _ in keys], include_extended, regular_hours)
+
     if refresh_later:
-        US_LIVE_REFRESH.run(
-            [(symbol, mode) for symbol in refresh_later],
-            lambda keys: _fetch_us_live_quotes_now([symbol for symbol, _ in keys], include_extended, regular_hours),
-        )
+        US_LIVE_REFRESH.run([(symbol, mode) for symbol in refresh_later], work)
     if missing:
-        fresh.update(_fetch_us_live_quotes_now(missing, include_extended, regular_hours, stale))
+        # 받는 일은 늘 백그라운드에서 한다. 요청은 US_LIVE_WAIT_SECONDS만 기다리고, 그 안에 못 받으면
+        # 같은 미국 거래일의 묵은 캐시로 답한다(없으면 DB 종가 — apply_us_live_prices가 그대로 둔다).
+        US_LIVE_REFRESH.run_and_wait([(symbol, mode) for symbol in missing], work, US_LIVE_WAIT_SECONDS)
+        with US_LIVE_QUOTE_LOCK:
+            for symbol in missing:
+                cached = US_LIVE_QUOTE_CACHE.get((symbol, mode))
+                if cached is None:
+                    continue
+                if cached is stale.get(symbol) and not same_market_day(cached.get("fetched_ts", 0), now_ts):
+                    continue
+                fresh[symbol] = cached
     return fresh
 
 
