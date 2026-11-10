@@ -101,6 +101,19 @@
 - Portfolio performance is time-weighted return. Cash flows and trade cash must remain in every account series so deposits and purchases are not counted as investment gains.
 - The analyst consensus block depends on the local `analyst-reports` service through the same-origin `/api/quote` proxy. Failure of that service may hide consensus data but must not break the portfolio dashboard.
 
+## Code structure (2026-11-11 refactor)
+
+- Web server routing is two tables on `Handler`: `GET_ROUTES` / `POST_ROUTES` (path → `api_*` / `post_*` method), dispatched by `_dispatch`. Add an endpoint by writing the method and one table line; `tests/test_web_server_http.py` fails when a handler is unrouted or routed twice. Read query values with `query_first` / `query_flag`, POST bodies with `read_json`.
+- A POST body must be a JSON object within `MAX_JSON_BODY_BYTES`; anything else (array, string, broken JSON, bad `Content-Length`) is a 400 with `BAD_JSON_BODY`, never a 500. `ValueError` from a handler is a 400 with its message; any other exception is logged and returned as a generic 500.
+- `PortfolioHTTPServer.handle_error` drops client disconnects (`ConnectionError`) silently and logs everything else. Do not print tracebacks for dropped connections again.
+- `tests/test_web_server_http.py` exercises the server over a real socket (routing, static files, ETag/gzip, path containment, malformed bodies). Handler-only tests do not cover `read_json`, `_dispatch` or `send_file`.
+- Collectors must tell "no data" from "fetch failed": OpenDART status `013` means no disclosure, every other non-`000` status raises (so `dividend_refresh` does not replace Korean events with an empty set); an empty dividend response keeps the previous streak value; an earnings-date fetch error is reported per ticker instead of clearing the date. `tests/test_collector_guards.py` covers these.
+- Tokyo exchange year-end closures (1/2, 1/3, 12/31) are exchange holidays, not national holidays: add them after the substitute-holiday pass so they never create a substitute day.
+- Frontend network calls go through `fetchJson` in `api.js`; POSTs use `postJson(url, body)`. A non-JSON error response reports the status code instead of a parse error.
+- Missing metric values (null, undefined, empty string, non-numeric) render "-" through `optionalNumber` in `format.js`. Do not format with bare `Number(v)`: `Number(null)` is 0 and showed ETF/crypto payout ratios as "0%". A real 0 still renders as 0.
+- Popup and chart loaders keep a module-level request counter (`const request = ++counter` before the await, compare after) so only the last request renders. Use the same pattern for any new loader the user can re-trigger quickly; comparing tickers alone misses same-ticker reloads.
+- The consensus iframe message handler accepts only the exact origin `http://<this host>:8767`.
+
 `CLAUDE.md` contains historical repair details. Consult it only when working on those specific records; the stable rules above are authoritative for normal development.
 
 ## Distill company events (integration input, 2026-10-03)
