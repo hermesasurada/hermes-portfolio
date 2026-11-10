@@ -174,6 +174,7 @@ def collect_earnings_dates(
             if ticker.endswith((".KS", ".KQ")) and exc.code == 403:
                 print("  x stopped Korean earnings refresh after Investing.com challenge")
                 break
+            continue        # 없으면 직전 종목의 실적일이 이 종목에 저장된다
         except Exception as exc:
             print(f"  x {ticker} earnings: {exc}")
             errors.append(ticker)

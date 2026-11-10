@@ -104,7 +104,6 @@ def _same_dividend_cycle_amount(current: float, previous: float | None) -> bool:
 
 def _annual_cagr(
     totals: dict[int, float],
-    _complete_years: set[int],
     end_year: int,
     years: int,
 ) -> float | None:
@@ -123,7 +122,6 @@ def _annual_cagr(
 
 def _estimated_annual_cagr(
     totals: dict[int, float],
-    _complete_years: set[int],
     current_year: int,
     current_estimate: float | None,
     years: int,
@@ -895,16 +893,16 @@ def _history_summary(
         )
         latest_growth_basis = "estimate" if latest_growth_estimated else "annual"
     estimated_cagr_3y = _estimated_annual_cagr(
-        totals, complete_years, current_year, current_estimate, 3
+        totals, current_year, current_estimate, 3
     )
     estimated_cagr_5y = _estimated_annual_cagr(
-        totals, complete_years, current_year, current_estimate, 5
+        totals, current_year, current_estimate, 5
     )
     cagr_3y = estimated_cagr_3y if estimated_cagr_3y is not None else (
-        _annual_cagr(totals, complete_years, latest_completed, 3) if latest_completed is not None else None
+        _annual_cagr(totals, latest_completed, 3) if latest_completed is not None else None
     )
     cagr_5y = estimated_cagr_5y if estimated_cagr_5y is not None else (
-        _annual_cagr(totals, complete_years, latest_completed, 5) if latest_completed is not None else None
+        _annual_cagr(totals, latest_completed, 5) if latest_completed is not None else None
     )
     last_raise_pct, last_raise_date = _last_raise(events)
     latest_completed_total = totals.get(latest_completed) if latest_completed is not None else None

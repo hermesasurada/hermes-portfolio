@@ -246,8 +246,7 @@ def _stockanalysis_exchange(ticker: str) -> str | None:
     return STOCKANALYSIS_EXCHANGES.get(symbol[symbol.rindex("."):])
 
 
-def _stockanalysis_candidate(ticker: str) -> bool:
-    return ticker_currency(ticker) == "USD" and "." not in ticker and ticker != "BTC"
+_stockanalysis_candidate = _polygon_candidate     # 둘 다 '미국 상장 달러 종목'
 
 
 def _kr_dividend_candidate(ticker: str) -> bool:
@@ -670,12 +669,23 @@ def _apply_stockanalysis_pay_dates(
     sources.append("sa_paydate" if filled else "sa_paydate0")
 
 
+def _near_dates(known: list[date], ex_date_text: str, days: int = 4) -> bool:
+    """ex_date가 이미 확보한 권위 소스 배당락일과 ±days일 안인가 — 소스별 관례차로 생기는 근접 중복 판정."""
+    if not known:
+        return False
+    try:
+        day = date.fromisoformat(ex_date_text)
+    except ValueError:
+        return False
+    return any(abs((day - other).days) <= days for other in known)
+
+
 def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], str]:
     events: dict[str, dict] = {}
     sources = []
     if _kr_dividend_candidate(ticker):
         # OpenDART(현금배당결정 공시) = 한국 배당 권위 소스. 확정 주당배당금·
-        # 배당기준일·지급예정일을 먼저 깔고(미래 확정분 포함), SEIBRO/yfinance는
+        # 배당기준일·지급예정일을 먼저 깔고(미래 확정분 포함), KIND/yfinance는
         # OpenDART와 ±4일 내 겹치지 않는 ex_date만 보강(중복 방지).
         opendart_ex_dates: list[date] = []
         if is_opendart_candidate(ticker):
@@ -692,24 +702,15 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
             except Exception as exc:
                 sources.append(_source_error("opendart", ticker, exc))
 
-        def _near_opendart(ex_date_text: str) -> bool:
-            if not opendart_ex_dates:
-                return False
-            try:
-                d = date.fromisoformat(ex_date_text)
-            except ValueError:
-                return False
-            return any(abs((d - od).days) <= 4 for od in opendart_ex_dates)
-
         # KIND ETF 분배금 공시 = ETF 권위 소스(기준일·지급일·주당분배금 확정값).
-        # SEIBRO 대체. opendart와 ±4일 내 겹치지 않는 ex_date만 덮어쓴다.
+        # opendart와 ±4일 내 겹치지 않는 ex_date만 덮어쓴다.
         kind_ex_dates: list[date] = []
         try:
             kind_events = _fetch_kind_etf_dividends(ticker, name)
             sources.append("kind" if kind_events else "kind0")
             for event in kind_events:
                 ex = event.get("ex_date")
-                if ex and not _near_opendart(ex):
+                if ex and not _near_dates(opendart_ex_dates, ex):
                     events[ex] = event
                     try:
                         kind_ex_dates.append(date.fromisoformat(ex))
@@ -717,15 +718,6 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
                         pass
         except Exception as exc:
             sources.append(_source_error("kind", ticker, exc))
-
-        def _near_kind(ex_date_text: str) -> bool:
-            if not kind_ex_dates:
-                return False
-            try:
-                d = date.fromisoformat(ex_date_text)
-            except ValueError:
-                return False
-            return any(abs((d - kd).days) <= 4 for kd in kind_ex_dates)
 
         try:
             history_events = [
@@ -736,7 +728,7 @@ def _fetch_dividends(ticker: str, name: str | None = None) -> tuple[list[dict], 
             for event in history_events:
                 ex = event.get("ex_date")
                 # KIND 윈도 밖(과거)만 yfinance로 보강 — 최근분은 KIND가 권위.
-                if ex and not _near_opendart(ex) and not _near_kind(ex):
+                if ex and not _near_dates(opendart_ex_dates, ex) and not _near_dates(kind_ex_dates, ex):
                     events.setdefault(ex, {
                         **event,
                         "source": "kr-history",

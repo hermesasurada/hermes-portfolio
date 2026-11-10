@@ -86,16 +86,6 @@ BETA_BENCHMARK_BY_SUFFIX = {
     ".L": "FTSE100",
     **{suffix: "EUROSTOXX50" for suffix in (".PA", ".DE", ".F", ".MI", ".MC", ".AS", ".BR", ".SW", ".ST", ".OL", ".CO", ".HE", ".LS", ".VI", ".IR")},
 }
-BETA_BENCHMARK_LABELS = {
-    "SP500": "S&P 500",
-    BETA_ADJ_KR_BENCHMARK: "KODEX 200TR",
-    "NIKKEI225": "Nikkei 225",
-    "TAIWAN": "Taiwan Weighted",
-    "HANGSENG": "Hang Seng",
-    "SHANGHAI": "Shanghai Composite",
-    "FTSE100": "FTSE 100",
-    "EUROSTOXX50": "Euro Stoxx 50",
-}
 
 
 def beta_benchmark(ticker: str) -> str:

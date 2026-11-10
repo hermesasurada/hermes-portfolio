@@ -247,42 +247,6 @@ def fetch_yahoo_prices_batch(
     return fetched, errors
 
 
-def fetch_yahoo_history_batch(
-    targets: list[tuple[str, str, str]],
-    period: str = "10y",
-) -> tuple[dict[str, list[dict[str, Any]]], list[str]]:
-    """여러 Yahoo 종목의 장기 OHLC를 한 요청으로 내려받는다."""
-    import yfinance as yf
-
-    unique_targets = list({ticker: (ticker, symbol, currency) for ticker, symbol, currency in targets}.values())
-    if not unique_targets:
-        return {}, []
-    symbols = [symbol for _, symbol, _ in unique_targets]
-    frame = yf.download(
-        symbols,
-        period=period,
-        auto_adjust=False,
-        actions=False,
-        group_by="ticker",
-        threads=True,
-        progress=False,
-    )
-    single_symbol = len(symbols) == 1
-    result: dict[str, list[dict[str, Any]]] = {}
-    errors: list[str] = []
-    for cache_ticker, symbol, _currency in unique_targets:
-        try:
-            symbol_frame = _download_symbol_frame(frame, symbol, single_symbol)
-            rows = _rows_from_frame(symbol_frame)
-        except Exception:
-            rows = []
-        if rows:
-            result[cache_ticker] = rows
-        else:
-            errors.append(cache_ticker)
-    return result, errors
-
-
 def normalize_earnings_date(value) -> str | None:
     if not value:
         return None

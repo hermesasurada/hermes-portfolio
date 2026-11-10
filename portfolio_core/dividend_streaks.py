@@ -132,10 +132,10 @@ def refresh_dividend_streaks(max_age_days: int = REFRESH_DAYS, pause_seconds: fl
     with connect() as conn:
         ensure_stats_cache_table(conn)
         candidates = us_streak_candidates(conn)
-        stale: list[tuple[str, bool]] = []
+        stale: list[tuple[str, bool, bool]] = []
         for ticker, is_etf in candidates:
             row = conn.execute(
-                "SELECT streaks_fetched_at FROM ticker_stats_cache WHERE ticker = ?",
+                "SELECT streaks_fetched_at, dividend_streak_years FROM ticker_stats_cache WHERE ticker = ?",
                 (ticker,),
             ).fetchone()
             fetched_at = row["streaks_fetched_at"] if row else None
@@ -146,12 +146,16 @@ def refresh_dividend_streaks(max_age_days: int = REFRESH_DAYS, pause_seconds: fl
                         continue
                 except ValueError:
                     pass
-            stale.append((ticker, is_etf))
+            stale.append((ticker, is_etf, bool(row) and row["dividend_streak_years"] is not None))
 
     updated = 0
-    for ticker, is_etf in stale:
+    for ticker, is_etf, had_streak in stale:
         try:
             yearly = _yearly_dividends(ticker)
+            if not yearly and had_streak:
+                # 야후가 예외 없이 빈 이력을 줄 때가 있다 — 있던 연수를 지우고 7일간 재시도를 막지 않게 건너뛴다.
+                print(f"  x {ticker} streaks: empty dividend history, kept previous value")
+                continue
             streaks = streaks_from_yearly(yearly, now.year)
             growth = streaks["growth_years"]
             # SA 공식 값은 개별주만 — ETF 페이지는 years를 제공하지 않아(n/a)

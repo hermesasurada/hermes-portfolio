@@ -159,7 +159,7 @@ def _yahoo_day_changes(symbols: list[str]) -> dict[str, dict]:
             quotes = yahoo_quote_batch(chunk)
         except Exception as exc:       # noqa: BLE001 — 실패한 묶음은 캐시하지 않아 다음에 다시 시도한다
             print(f"[etf_holdings] yahoo day change failed ({len(chunk)} symbols): {exc}")
-            continue
+            break                      # 야후 장애 때 묶음 수 × 타임아웃만큼 팝업(웹 요청)이 멈추지 않게
         for symbol in chunk:
             row = quotes.get(symbol.upper()) or {}
             price, previous = row.get("regularMarketPrice"), row.get("regularMarketPreviousClose")

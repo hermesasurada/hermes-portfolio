@@ -92,8 +92,6 @@ def japan_equity_calendar_day(day: date) -> dict:
     year = day.year
     holidays: dict[date, str] = {
         date(year, 1, 1): "신정",
-        date(year, 1, 2): "연말연시",
-        date(year, 1, 3): "연말연시",
         _nth_weekday(year, 1, 0, 2): "성인의 날",
         date(year, 2, 11): "건국기념일",
         date(year, 2, 23): "천황탄생일",
@@ -109,7 +107,6 @@ def japan_equity_calendar_day(day: date) -> dict:
         _nth_weekday(year, 10, 0, 2): "스포츠의 날",
         date(year, 11, 3): "문화의 날",
         date(year, 11, 23): "근로감사의 날",
-        date(year, 12, 31): "연말연시",
     }
 
     # 일요일 공휴일은 다음 비공휴일로 순연한다(골든위크 연속 대체휴일 포함).
@@ -132,6 +129,11 @@ def japan_equity_calendar_day(day: date) -> dict:
         ):
             holidays[current] = "국민의 휴일"
         current += timedelta(days=1)
+
+    # 거래소 연말연시(1/2·1/3·12/31)는 국경일이 아니라 대체휴일이 없다 — 위 계산이 끝난 뒤에 더한다.
+    # 먼저 넣으면 1/3이 일요일인 해(2027)에 1/4 개장일이 휴장으로 잡힌다.
+    for month, day_of_month in ((1, 2), (1, 3), (12, 31)):
+        holidays.setdefault(date(year, month, day_of_month), "연말연시")
 
     if day.weekday() >= 5:
         return {"status": "closed", "reason": "주말"}

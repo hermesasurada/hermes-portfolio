@@ -714,7 +714,7 @@ def test_dividend_growth_uses_current_annual_estimate():
     complete_years = {2021, 2022, 2023, 2024, 2025}
     estimate = 2.0
     expected_cagr = ((estimate / totals[2021]) ** (1 / 5) - 1) * 100
-    assert abs(_estimated_annual_cagr(totals, complete_years, 2026, estimate, 5) - expected_cagr) < 1e-9
+    assert abs(_estimated_annual_cagr(totals, 2026, estimate, 5) - expected_cagr) < 1e-9
 
     annual = {
         year: {
@@ -749,12 +749,12 @@ def test_dividend_growth_ignores_historical_payment_count_changes():
 
     # ASML처럼 반기배당에서 분기배당으로 바뀐 종목은 과거 연도가 현재 주기
     # 기준으로 완결되지 않아도 귀속연도 합계로 CAGR을 계산한다.
-    result = _estimated_annual_cagr(totals, {2023, 2024, 2025}, 2026, estimate, 5)
+    result = _estimated_annual_cagr(totals, 2026, estimate, 5)
     assert abs(result - expected_cagr) < 1e-9
 
     missing_year = dict(totals)
     missing_year.pop(2023)
-    assert _estimated_annual_cagr(missing_year, set(), 2026, estimate, 5) is None
+    assert _estimated_annual_cagr(missing_year, 2026, estimate, 5) is None
 
 
 def test_monthly_dividend_growth_compares_four_calendar_month_sums():
@@ -1709,7 +1709,7 @@ def test_long_dividend_plateau_aligns_to_current_raise_month():
     assert round(annual[2025]["amount"], 2) == 1.00
     estimate = 1.24
     totals = {year: row["amount"] for year, row in annual.items()}
-    cagr = _estimated_annual_cagr(totals, {2020, 2021, 2022, 2023, 2024, 2025}, 2026, estimate, 5)
+    cagr = _estimated_annual_cagr(totals, 2026, estimate, 5)
     assert abs(cagr - ((estimate / 0.48) ** (1 / 5) - 1) * 100) < 1e-9
 
 

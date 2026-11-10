@@ -25,7 +25,7 @@ import zipfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from .market_calendar import korea_equity_calendar_day
+from .dividend_schedule import previous_kr_business_day
 from .paths import KST, LOGO_DIR
 from .tickers import kr_ticker_code
 
@@ -136,14 +136,6 @@ def is_opendart_candidate(ticker: str) -> bool:
     return bool(re.fullmatch(r"\d{6}", code)) and _corp_lookup(code)[0] is not None
 
 
-def _prev_business_day(d: date) -> date:
-    """기준일 직전 KRX 거래일 — 주말과 공휴일(광복절·대체휴일 등)을 모두 건너뛴다(2026-10-30)."""
-    d -= timedelta(days=1)
-    while korea_equity_calendar_day(d)["status"] != "open":
-        d -= timedelta(days=1)
-    return d
-
-
 # 지주사가 자회사(은행·SKT·SK하이닉스 등)의 배당을 알리는 공시 — 보고서 이름에 같은
 # '현금ㆍ현물배당결정'이 들어가지만 그 자회사 1주당 금액이라 모회사 배당이 아니다
 # (2026-10-30: JB·BNK·신한·하나·우리·HD현대·LS·SK·SK스퀘어 등 11종목에 섞여 들어갔다).
@@ -204,8 +196,13 @@ def fetch_opendart_dividends(ticker: str) -> list[dict]:
         f"&bgn_de={bgn}&end_de={end}&pblntf_ty=I&page_count=100"
     )
     data = json.loads(_get(list_url).decode("utf-8"))
-    if data.get("status") != "000":
+    status = str(data.get("status") or "")
+    if status == "013":            # 조회된 데이터 없음 — 배당 공시가 없는 종목
         return []
+    if status != "000":
+        # 한도 초과(020)·키 오류(010~012)·점검(800)을 0건으로 돌려주면 dividend_refresh가
+        # 확정 공시분을 yfinance 이력으로 통째 교체한다 — 오류로 올려 교체를 건너뛰게 한다.
+        raise RuntimeError(f"OpenDART status {status}: {data.get('message') or ''}".strip())
     filings = [x for x in data.get("list", []) if is_own_dividend_filing(x.get("report_nm"))]
     # 같은 배당(배당기준일)의 정정은 최신 접수건이 우선 → record_date별 최신만
     by_record: dict[str, dict] = {}
@@ -224,7 +221,7 @@ def fetch_opendart_dividends(ticker: str) -> list[dict]:
     events = []
     for record, info in by_record.items():
         try:
-            ex_date = _prev_business_day(date.fromisoformat(record))
+            ex_date = previous_kr_business_day(date.fromisoformat(record))   # 주말·공휴일을 모두 건너뛴다
         except ValueError:
             continue
         events.append({

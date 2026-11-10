@@ -31,9 +31,9 @@ class OpendartSubsidiaryTests(unittest.TestCase):
         self.assertFalse(od.is_own_dividend_filing("현금ㆍ현물배당을위한주주명부폐쇄(기준일)결정"))
 
     def test_ex_date_skips_korean_holidays(self):
-        self.assertEqual(od._prev_business_day(date(2025, 8, 18)), date(2025, 8, 14))   # 8/15 광복절, 주말
-        self.assertEqual(od._prev_business_day(date(2026, 8, 18)), date(2026, 8, 14))   # 8/17 대체휴일
-        self.assertEqual(od._prev_business_day(date(2026, 3, 27)), date(2026, 3, 26))
+        self.assertEqual(od.previous_kr_business_day(date(2025, 8, 18)), date(2025, 8, 14))   # 8/15 광복절, 주말
+        self.assertEqual(od.previous_kr_business_day(date(2026, 8, 18)), date(2026, 8, 14))   # 8/17 대체휴일
+        self.assertEqual(od.previous_kr_business_day(date(2026, 3, 27)), date(2026, 3, 26))
 
 
 class SplitHandlingTests(unittest.TestCase):
