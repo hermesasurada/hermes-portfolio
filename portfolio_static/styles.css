@@ -34,15 +34,12 @@
   --on-accent: #ffffff;
   --schedule-earnings: #4f46e5;
   --schedule-earnings-soft: #eef0ff;
-  --schedule-earnings-border: #c9ceff;
   --schedule-dividend: #0284c7;
   --schedule-dividend-soft: #e9f7ff;
-  --schedule-dividend-border: #b9e4fa;
   --schedule-record: #0f766e;
   --schedule-record-soft: #e6f6f3;
   --schedule-catalyst: #b45309;
   --schedule-catalyst-soft: #fdf3e4;
-  --schedule-tag-ink: #ffffff;
   --up: #dc3545;            /* KR convention: 상승=빨강 */
   --down: #1976d2;          /* 하락=파랑 */
   --buy: #0284c7;
@@ -53,7 +50,6 @@
   --focus: #2563eb;
   --focus-soft: rgba(37, 99, 235, .18);
   /* interactive surfaces */
-  --accent-soft: #eaf2ff;
   --accent-soft-border: #a9c8f7;
   --track-off: #dbe5f1;
   --track-off-border: #c7d5e7;
@@ -109,7 +105,6 @@
   --button-height: 28px;
   --button-surface: #ffffff;
   --button-active: #2563eb;
-  --button-active-soft: #eaf2ff;
   --button-active-ink: #ffffff;
   --button-shadow-raised: none;
   --button-shadow-hover: none;
@@ -137,15 +132,12 @@
     --brand-soft: #112f53;
     --schedule-earnings: #a5b4fc;
     --schedule-earnings-soft: #202852;
-    --schedule-earnings-border: #4e5e9c;
     --schedule-dividend: #7dd3fc;
     --schedule-dividend-soft: #123b54;
-    --schedule-dividend-border: #2c6683;
     --schedule-record: #5eead4;
     --schedule-record-soft: #10393a;
     --schedule-catalyst: #fbbf24;
     --schedule-catalyst-soft: #3a2a10;
-    --schedule-tag-ink: #07111f;
     --up: #fb7185;
     --down: #60a5fa;
     --buy: #38bdf8;
@@ -155,7 +147,6 @@
     --favorite: #fbbf24;
     --focus: #60a5fa;
     --focus-soft: rgba(96, 165, 250, .24);
-    --accent-soft: #112f53;
     --accent-soft-border: #315d8f;
     --track-off: #33465f;
     --track-off-border: #445b77;
@@ -183,7 +174,6 @@
     --chart-ichi-span-b: #fb923c;
     --button-surface: #1c222b;
     --button-active: #2563eb;
-    --button-active-soft: #112f53;
     --button-active-ink: #ffffff;
     --shadow: 0 12px 36px rgba(0, 0, 0, .3);
 }
@@ -233,10 +223,7 @@
 h1,
 #tableTitle,
 #chartName,
-.hero-label,
 #heroValue,
-.group-head .group-label,
-.group-head strong,
 .toolbar > .title-tools > strong,
 .dividend-month-summary span,
 .consensus-title,
@@ -420,7 +407,6 @@ h1 {
   background: transparent;
   overflow: visible;
 }
-.auto-refresh-control label,
 .us-price-control label,
 .filter-toggle-control label,
 .currency-filter-control label {
@@ -636,14 +622,12 @@ main {
   margin: 0 auto;
   padding: 22px 24px 48px;
 }
-.metric, .section {
+.section {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: none;
 }
-.metric { padding: 14px; }
-.value { font-size: 22px; font-weight: 700; margin-top: 4px; }
 
 /* ── 히어로 요약 (총 평가액 · 오늘 손익) ─────────────────── */
 .hero-strip {
@@ -709,13 +693,6 @@ main {
 .hero-summary-nav:focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
-}
-.hero-label {
-  color: var(--brand);
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-bold);
-  letter-spacing: .04em;
-  margin-bottom: 4px;
 }
 .hero-main {
   display: grid;
@@ -936,10 +913,6 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
   padding: 13px 14px;
   border-bottom: 1px solid var(--line);
 }
-.mobile-panel-head h2 {
-  flex: 1;
-  border: 0;
-}
 .sidebar-panel-head {
   padding: 8px;
 }
@@ -973,19 +946,6 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
   box-shadow: none;
 }
 .section { overflow: hidden; }
-.section h2 {
-  margin: 0;
-  padding: 13px 14px;
-  font-size: 15px;
-  border-bottom: 1px solid var(--line);
-}
-.section .mobile-panel-head h2 {
-  border: 0;
-}
-.section .mobile-panel-head h2 {
-  padding: 0;
-  font-size: 15px;
-}
 .account-list { display: grid; gap: 4px; padding: 8px; }
 
 /* ── 관심목록 사이드바 ─────────────────────────────────────────────── */
@@ -1211,9 +1171,6 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
   line-height: 1.45;
   text-align: center;
 }
-.interest-empty.compact {
-  padding: 12px 8px;
-}
 .interest-main-form {
   display: inline-flex;
   align-items: center;
@@ -1269,10 +1226,6 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
 .interest-detail-list {
   min-width: 100%;
   table-layout: fixed;
-}
-.interest-detail-list col.hidden {
-  visibility: collapse;
-  width: 0 !important;
 }
 .interest-detail-list th,
 .interest-detail-list td {
@@ -2568,12 +2521,6 @@ tr:hover .fav-star,
   color: var(--muted);
   background: var(--surface-2);
 }
-.chart-price-today {
-  font-size: 13.5px;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
 .chart-price-row.extended .chart-price-current {
   font-size: 15px;
 }
@@ -2582,9 +2529,6 @@ tr:hover .fav-star,
   padding: 0 6px;
   border-radius: var(--radius-sm);
   font-size: 11px;
-}
-.chart-price-row.extended .chart-price-today {
-  font-size: 12px;
 }
 .chart-display-controls {
   display: inline-flex;
@@ -2714,9 +2658,6 @@ tr:hover .fav-star,
   font-size: 10.5px !important;
 }
 .chart-id-text.editing .chart-name-line { display: none; }
-.chart-links:empty {
-  display: none;
-}
 .chart-link-btn {
   display: inline-flex;
   align-items: center;
@@ -3707,7 +3648,6 @@ tr:hover .fav-star,
   font-size: 10.5px;
 }
 .chart-range-btn.range-popup-btn { min-width: 46px; }
-.chart-range-btn.custom-range-btn { min-width: 37px; }
 .chart-range-btn:hover {
   background: var(--brand-soft);
   border-color: var(--brand);
@@ -3719,7 +3659,6 @@ tr:hover .fav-star,
   color: var(--button-active-ink);
   box-shadow: none;
 }
-.chart-range-btn.disabled,
 .chart-range-btn:disabled {
   opacity: .38;
   cursor: not-allowed;
@@ -4070,9 +4009,6 @@ tr:hover .fav-star,
 }
 .compare-rsi-dot {
   fill: var(--chart-dot-fill);
-}
-.perf-tooltip tspan:first-child {
-  font-weight: 900;
 }
 /* 비교 차트 HTML 호버 툴팁 (로고 + 색상 기업명 + % + 주가) */
 
@@ -5227,20 +5163,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   font-weight: 650;
   line-height: 1.45;
 }
-.help-block dd code {
-  padding: 0 3px;
-  border-radius: 3px;
-  background: var(--surface-2);
-  color: var(--ink);
-  font-size: 11px;
-}
 /* dd 안의 계산/해석/기준 라벨 */
-.help-block dd b {
-  color: var(--ink);
-  font-weight: 800;
-  margin-right: 2px;
-}
-.help-block dd b:not(:first-child) { margin-left: 4px; }
 .help-note {
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -5250,10 +5173,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   font-size: 12px;
   font-weight: 750;
   line-height: 1.45;
-}
-.watch-search input {
-  flex: 1 1 auto;
-  width: auto;
 }
 .range-fields {
   display: grid;
@@ -5569,50 +5488,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .trade-apply-toggle .seg-btn {
   flex: 1 1 0;
 }
-.apply-toggle {
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  margin: 0;
-  padding: 0 6px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: #fff;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
-  cursor: pointer;
-}
-.apply-toggle > span:first-child { display: none; }
-.apply-toggle input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-.apply-toggle .toggle-ui {
-  width: 28px;
-  height: 16px;
-  border-radius: 999px;
-  background: var(--track-off);
-  position: relative;
-  flex: 0 0 auto;
-}
-.apply-toggle .toggle-ui::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #fff;
-  transition: transform .16s ease;
-}
-.apply-toggle input:checked + .toggle-ui { background: var(--brand); }
-.apply-toggle input:checked + .toggle-ui::after { transform: translateX(12px); }
-.apply-toggle input:checked ~ .toggle-label { color: var(--brand); }
 .primary-btn {
   background: var(--accent);
   border-color: var(--accent);
@@ -5716,7 +5591,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 
 /* ── 공통 UI 계층: 탐색 / 필터 / 편집 ───────────────────────────────── */
-.sidebar-tab, .tab-btn, .section h2,
+.sidebar-tab, .tab-btn,
 .filter-toggle-control .toggle-label,
 .currency-filter-control label, .currency-filter-control select,
 .interest-detail-list thead th, .interest-detail-list thead .interest-group-head th:not([rowspan]),
@@ -5923,22 +5798,9 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     gap: 0;
     padding: 0;
   }
-  .auto-refresh-control label,
   .us-price-control label,
   .toggle-switch {
     gap: 4px;
-  }
-  .auto-refresh-control .label-full {
-    display: none;
-  }
-  .auto-refresh-control .label-short {
-    display: inline;
-  }
-  .ctrl-group .ghost-btn .label-full {
-    display: none;
-  }
-  .ctrl-group .ghost-btn .label-short {
-    display: inline;
   }
   .us-market-status {
     display: none;
@@ -6007,7 +5869,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     padding: 0 5px;
     text-align: left;
   }
-  .summary { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
   .layout { grid-template-columns: 1fr; }
   #interestSidebarPane {
     max-height: none;
@@ -6034,7 +5895,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     overflow-x: auto;
   }
   .chart-head {
-    align-items: flex-start;
     grid-template-columns: minmax(0, 1fr) auto;
   }
   .chart-identity {
@@ -6075,14 +5935,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     border-radius: var(--radius-sm);
     font-size: 10.5px;
   }
-  .chart-price-today {
-    font-size: 11.5px;
-  }
-  .chart-price-row-label {
-    font-size: 10.5px;
-  }
-  .chart-price-row.extended .chart-price-pill,
-  .chart-price-row.extended .chart-price-today {
+  .chart-price-row.extended .chart-price-pill {
     font-size: 10.5px;
   }
   .chart-head-right {
@@ -6180,8 +6033,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   .chart-bottom-controls #chartTypeToggle,
   .chart-bottom-controls #chartIntervalToggle,
-  .chart-bottom-controls .chart-range-btn.range-popup-btn,
-  .chart-bottom-controls .chart-range-btn.custom-range-btn {
+  .chart-bottom-controls .chart-range-btn.range-popup-btn {
     min-width: 0;
   }
   .chart-bottom-controls .chart-range-btn.marker-toggle {
@@ -6308,10 +6160,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     display: grid;
     grid-template-columns: minmax(0, 1fr) 72px;
     align-items: stretch;
-  }
-  .watch-search input {
-    min-width: 0;
-    width: 100%;
   }
   .watch-search button {
     width: 100%;
@@ -6490,13 +6338,13 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 
 /* ── 공통 조작 상태 — 탐색은 옅게, 저장/실행과 차트 토글은 단색 ─────── */
-:where(button, .chart-link-btn, .apply-toggle) {
+:where(button, .chart-link-btn) {
   box-shadow: none;
 }
 :is(.primary-btn, #watchAdd.watch-add-ready,
   .interest-main-form button[type="submit"], .tx-action-btn.tx-save,
   .segmented:not(.trade-side-toggle) .seg-btn.active,
-  .chart-head-toggle[aria-pressed="true"], .apply-toggle:has(input:checked),
+  .chart-head-toggle[aria-pressed="true"],
   .auto-refresh-control.enabled .cycle-toggle-btn) {
   border-color: var(--button-active);
   background: var(--button-active);
@@ -6507,7 +6355,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   color: var(--brand);
 }
 .filter-toggle-control.enabled .toggle-label { color: var(--brand); }
-:where(button, .chart-link-btn, .apply-toggle):disabled {
+:where(button, .chart-link-btn):disabled {
   opacity: .45;
 }
 
@@ -6522,7 +6370,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   font-family: var(--chart-num-font); font-weight: 500;
 }
 .chart-price-current { font-size: 23px; }
-.chart-price-pill, .chart-price-today { font-family: var(--chart-num-font); font-weight: 500; }
+.chart-price-pill { font-family: var(--chart-num-font); font-weight: 500; }
 .chart-price-row-label, .chart-head span.chart-session-note { font-size: 10.5px; font-weight: 500; }
 .chart-meta { font-weight: 400; }
 .chart-head-toggle, .chart-range-btn { font-weight: 500; }
