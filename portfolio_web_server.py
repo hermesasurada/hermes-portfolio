@@ -242,6 +242,29 @@ MAX_JSON_BODY_BYTES = 1_000_000
 BAD_JSON_BODY = "요청 형식이 올바르지 않습니다."
 
 
+CROSS_SITE_POST = "다른 사이트에서 보낸 요청은 받지 않습니다."
+POST_NEEDS_JSON = "요청 형식은 application/json이어야 합니다."
+
+
+def post_rejection(headers) -> tuple[int, str] | None:
+    """쓰기 요청(POST) 경계 검사. 통과하면 None, 막으면 (상태 코드, 문구).
+
+    - 본문은 application/json만 받는다. 다른 사이트의 <form>·text/plain 요청은 브라우저가 사전 확인 없이
+      바로 보내지만, application/json은 CORS 사전 확인을 거치고 이 서버는 허락하지 않으므로 막힌다.
+    - 브라우저가 Origin을 붙였으면 이 서버 주소(Host)와 같아야 한다. curl·서버 간 호출은 Origin이 없어 통과.
+    lan_guard(접속 주소 제한)와 별개로, 내 브라우저에 열린 다른 페이지가 원장을 고치는 일을 막는다."""
+    content_type = str(headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
+    if content_type != "application/json":
+        return HTTPStatus.UNSUPPORTED_MEDIA_TYPE, POST_NEEDS_JSON
+    origin = headers.get("Origin")
+    if origin is not None:
+        parsed = urlparse(origin)
+        host = str(headers.get("Host") or "").strip().lower()
+        if parsed.scheme not in ("http", "https") or not host or parsed.netloc.lower() != host:
+            return HTTPStatus.FORBIDDEN, CROSS_SITE_POST
+    return None
+
+
 def parse_json_body(raw: bytes) -> dict:
     """POST 본문 → dict. JSON이 아니거나 객체가 아니면 ValueError(→ 400) — 핸들러들이 payload.get을 바로 쓴다."""
     try:
@@ -733,10 +756,17 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
 
         def handle() -> None:
-            if path in self.POST_ROUTES:
-                self.send_json(self.POST_ROUTES[path](self))
-            else:
+            if path not in self.POST_ROUTES:
                 self.send_not_found()
+                return
+            rejection = post_rejection(self.headers)
+            if rejection is not None:
+                status, message = rejection
+                logging.warning("POST %s rejected (%d) origin=%s content-type=%s", path, status,
+                                self.headers.get("Origin"), self.headers.get("Content-Type"))
+                self.send_json({"error": message}, status)
+                return
+            self.send_json(self.POST_ROUTES[path](self))
 
         self._dispatch("POST", handle)
 

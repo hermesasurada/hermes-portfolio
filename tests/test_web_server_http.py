@@ -84,6 +84,26 @@ class HttpBoundaryTests(unittest.TestCase):
         status, payload = self.post("/api/tags", b"{}", {"Content-Length": str(server.MAX_JSON_BODY_BYTES + 1)})
         self.assertEqual(status, 400)
 
+    def test_post_requires_json_content_type(self):
+        with mock.patch.object(server, "set_ticker_tags") as save:
+            for content_type in ("text/plain", "application/x-www-form-urlencoded", "multipart/form-data; boundary=x"):
+                status, _, body = self.request("POST", "/api/tags", b'{"ticker": "MU"}', {"Content-Type": content_type})
+                self.assertEqual((status, json.loads(body)["error"]), (415, server.POST_NEEDS_JSON), content_type)
+            status, _, _ = self.request("POST", "/api/tags", b'{"ticker": "MU"}')
+            self.assertEqual(status, 415)
+        save.assert_not_called()
+
+    def test_post_from_another_site_is_refused(self):
+        host = f"127.0.0.1:{self.httpd.server_address[1]}"
+        with mock.patch.object(server, "set_ticker_tags", return_value={"ok": True}) as save:
+            for origin in ("http://evil.example", "null", f"http://{host}.evil.example", f"file://{host}"):
+                status, payload = self.post("/api/tags", b"{}", {"Origin": origin})
+                self.assertEqual((status, payload["error"]), (403, server.CROSS_SITE_POST), origin)
+            save.assert_not_called()
+            self.assertEqual(self.post("/api/tags", b"{}", {"Origin": f"http://{host}"}), (200, {"ok": True}))
+            self.assertEqual(self.post("/api/tags", b"{}", {"Content-Type": "application/json; charset=utf-8"}), (200, {"ok": True}))
+        self.assertEqual(save.call_count, 2)
+
     def test_rebuild_rejects_non_list_account_ids(self):
         with mock.patch.object(server, "rebuild_account_snapshots") as rebuild:
             status, payload = self.post("/api/performance/rebuild", b'{"account_ids": "12"}')
