@@ -152,11 +152,19 @@ class EtfHoldingsCacheTests(unittest.TestCase):
         self.assertEqual(again, got)
         self.assertEqual(batch.call_count, 1)        # 없는 종목도 15분 캐시
         E._yahoo_cache.clear()
-        with mock.patch("portfolio_core.us_live_quotes.yahoo_quote_batch", side_effect=OSError("down")) as batch:
-            self.assertEqual(E._yahoo_day_changes(["ABBN.SW"]), {})
-            E._yahoo_day_changes(["ABBN.SW"])
-        self.assertEqual(batch.call_count, 2)        # 요청 실패는 캐시하지 않는다
-        E._yahoo_cache.clear()
+        import portfolio_core.us_live_quotes as live
+        try:
+            with mock.patch("portfolio_core.us_live_quotes.yahoo_quote_batch", side_effect=OSError("down")) as batch:
+                self.assertEqual(E._yahoo_day_changes(["ABBN.SW"]), {})
+                E._yahoo_day_changes(["ABBN.SW"])
+                self.assertEqual(batch.call_count, 1)    # 실패하면 야후를 잠시 쉰다(실시간 시세와 같은 휴지)
+                self.assertTrue(live.network_paused())
+                live._NETWORK_PAUSED_UNTIL = 0.0
+                E._yahoo_day_changes(["ABBN.SW"])
+            self.assertEqual(batch.call_count, 2)        # 요청 실패는 캐시하지 않는다 — 휴지가 끝나면 다시 묻는다
+        finally:
+            live._NETWORK_PAUSED_UNTIL = 0.0
+            E._yahoo_cache.clear()
 
     def test_holdings_rows_carry_day_change(self):
         self.write({"SMH": {"items": [{"symbol": "NVDA", "name": "NVIDIA", "weight": 19.0},

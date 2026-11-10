@@ -146,12 +146,13 @@ def _yahoo_day_changes(symbols: list[str]) -> dict[str, dict]:
     파일 열기 한도를 넘겨 서버 전체가 500을 냈다(2026-11-09). 기존 크럼 세션을 재사용한다."""
     from datetime import datetime, timezone
 
-    from .us_live_quotes import yahoo_quote_batch
+    from .us_live_quotes import network_paused, pause_network, yahoo_quote_batch
 
     now = time.time()
     with _yahoo_lock:
         fresh = {s: _yahoo_cache[s][1] for s in symbols if s in _yahoo_cache and now - _yahoo_cache[s][0] < _YAHOO_TTL}
-    todo = [s for s in symbols if s not in fresh]
+    # 실시간 시세가 야후 장애로 쉬는 중이면 팝업도 기다리지 않는다(등락은 '-').
+    todo = [] if network_paused(now) else [s for s in symbols if s not in fresh]
     fetched: dict[str, dict | None] = {}
     for offset in range(0, len(todo), 50):
         chunk = todo[offset:offset + 50]
@@ -159,6 +160,7 @@ def _yahoo_day_changes(symbols: list[str]) -> dict[str, dict]:
             quotes = yahoo_quote_batch(chunk)
         except Exception as exc:       # noqa: BLE001 — 실패한 묶음은 캐시하지 않아 다음에 다시 시도한다
             print(f"[etf_holdings] yahoo day change failed ({len(chunk)} symbols): {exc}")
+            pause_network()
             break                      # 야후 장애 때 묶음 수 × 타임아웃만큼 팝업(웹 요청)이 멈추지 않게
         for symbol in chunk:
             row = quotes.get(symbol.upper()) or {}

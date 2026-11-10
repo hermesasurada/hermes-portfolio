@@ -215,7 +215,10 @@ def load_price_chart(
     range_key: str | None = None,
     start: str | None = None,
     end: str | None = None,
+    lite: bool = False,
 ) -> dict:
+    """lite=True(시세 팝오버, /api/chart?lite=1)는 봉·지표·일목·거래 마커를 계산하지 않고
+    시세 필드와 history_start/end만 낸다. 다른 서비스 여섯 곳이 쓰는 경로라 전체 계산(~40ms)을 건너뛴다."""
     clean_ticker = (ticker or "").strip().upper()
     if not clean_ticker:
         raise ValueError("ticker is required")
@@ -238,7 +241,7 @@ def load_price_chart(
             """,
             (clean_ticker,),
         ).fetchall()
-        transaction_rows = conn.execute(
+        transaction_rows = [] if lite else conn.execute(
             """
             SELECT
                 t.trade_date,
@@ -269,6 +272,35 @@ def load_price_chart(
     )
     market_view = price_view(clean_ticker, currency, snapshot)
     price_record = market_view["price_record"]
+    quote_fields = {
+        "ticker": clean_ticker,
+        "name": (meta["name"] if meta and meta["name"] else clean_ticker),
+        "currency": currency,
+        "category": (meta["category"] if meta else None),
+        "current_price": market_view["current_price"],
+        "price_date": price_record.get("date"),
+        "previous_price": market_view["previous_price"],
+        "change_session_note": change_session_note(
+            clean_ticker, price_record.get("date")
+        ),
+        "change": market_view["change"],
+        "change_pct": market_view["change_pct"],
+        **price_fields(price_record),
+        "market": snapshot["market_status"],
+    }
+    if lite:
+        last = rows[-1] if rows else None
+        last_close = float(last["close"]) if last else None
+        history_end = last["date"] if last else None
+        live_date = _live_chart_date(price_record, snapshot["market_status"], last_close)
+        if live_date and (history_end is None or live_date > history_end):
+            history_end = live_date   # 전체 경로에서 라이브 점이 붙는 경우와 같게
+        return {
+            **quote_fields,
+            "history_start": rows[0]["date"] if rows else history_end,
+            "history_end": history_end,
+            "range": str(range_key or "all").lower(),
+        }
     overlays = _chart_overlay_series(rows)
     rsi_values = rsi_series([float(row["close"]) for row in rows])
     points = []
@@ -301,20 +333,7 @@ def load_price_chart(
     points, window_start, window_end = price_chart_points_for_range(points, range_key, start, end)
 
     return {
-        "ticker": clean_ticker,
-        "name": (meta["name"] if meta and meta["name"] else clean_ticker),
-        "currency": currency,
-        "category": (meta["category"] if meta else None),
-        "current_price": market_view["current_price"],
-        "price_date": price_record.get("date"),
-        "previous_price": market_view["previous_price"],
-        "change_session_note": change_session_note(
-            clean_ticker, price_record.get("date")
-        ),
-        "change": market_view["change"],
-        "change_pct": market_view["change_pct"],
-        **price_fields(price_record),
-        "market": snapshot["market_status"],
+        **quote_fields,
         "history_start": history_start,
         "history_end": history_end,
         "range": str(range_key or "all").lower(),
@@ -337,6 +356,18 @@ def load_price_chart(
     }
 
 
+def _live_chart_date(price_record: dict, market_status: dict, last_close: float | None) -> str | None:
+    """라이브 가격이 차트에 점을 더하거나 고칠 날짜. 그럴 일이 없으면 None(전체·lite 경로 공용)."""
+    if not market_status.get("use_live"):
+        return None
+    value = price_record.get("price")
+    if value is None:
+        return None
+    if last_close is not None and abs(float(value) - last_close) <= 1e-9:
+        return None
+    return datetime.now(US_EASTERN).strftime("%Y-%m-%d")
+
+
 def _append_market_chart_point(
     price_record: dict,
     market_status: dict,
@@ -344,14 +375,10 @@ def _append_market_chart_point(
     rows,
 ) -> None:
     """공용 시장 스냅샷이 선택한 라이브 가격을 차트 마지막 점으로 추가한다."""
-    if not market_status.get("use_live"):
-        return
-    value = price_record.get("price")
-    if value is None:
-        return
-    today = datetime.now(US_EASTERN).strftime("%Y-%m-%d")
     last_close = points[-1]["close"] if points else None
-    if last_close is None or abs(float(value) - last_close) > 1e-9:
+    today = _live_chart_date(price_record, market_status, last_close)
+    if today is not None:
+        value = price_record["price"]
         adjusted_rows = price_adjusted_rows(rows, float(value), today)
         adjusted_rsi = rsi_series([float(row["close"]) for row in adjusted_rows])
         adjusted_overlays = _chart_overlay_series(adjusted_rows)

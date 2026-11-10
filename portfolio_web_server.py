@@ -7,8 +7,10 @@ import argparse
 import gzip
 import json
 import logging
+import logging.handlers
 import math
 import mimetypes
+import resource
 import sys
 import time
 from http import HTTPStatus
@@ -504,6 +506,7 @@ class Handler(BaseHTTPRequestHandler):
             range_key=query_first(query, "range"),
             start=query_first(query, "start"),
             end=query_first(query, "end"),
+            lite=query_flag(query, "lite"),
         ))
         payload["has_etf_holdings"] = etf_holdings_available(ticker, payload.get("name") or "")
         # 이 종목을 편입한 ETF 수(2026-11-09). 캐시가 깨져도 차트 응답은 그대로 낸다.
@@ -747,12 +750,57 @@ class PortfolioHTTPServer(ThreadingHTTPServer):
         logging.exception("request from %s failed", client_address[0] if client_address else "-")
 
 
+OPEN_FILE_SOFT_LIMIT = 4096
+WEB_LOG_PATH = Path.home() / "Library" / "Logs" / "hermes" / "portfolio-web.log"
+WEB_LOG_MAX_BYTES = 5_000_000
+WEB_LOG_BACKUPS = 3
+
+
+def raise_open_file_limit(target: int = OPEN_FILE_SOFT_LIMIT) -> int:
+    """launchd가 주는 기본 소프트 한도(256)는 요청 스레드·SQLite·외부 소켓이 겹치면 바닥난다
+    (2026-11-09 'Too many open files'로 index.html까지 500). 하드 한도 안에서 올린다."""
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    wanted = target if hard == resource.RLIM_INFINITY else min(target, hard)
+    if soft != resource.RLIM_INFINITY and soft < wanted:
+        try:
+            resource.setrlimit(resource.RLIMIT_NOFILE, (wanted, hard))
+            soft = wanted
+        except (ValueError, OSError) as exc:
+            logging.warning("could not raise open-file limit to %d: %s", wanted, exc)
+    return soft
+
+
+def configure_logging(log_path: Path = WEB_LOG_PATH) -> None:
+    """요청 기록(INFO)은 크기로 돌려 쓰는 파일에, 경고 이상만 stderr(launchd err.log)에 남긴다.
+    예전엔 요청마다 err.log에 한 줄씩 쌓여 순환 없이 8.7MB까지 자랐다."""
+    formatter = logging.Formatter("[%(asctime)s] %(levelname)s %(message)s")
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    for handler in list(root.handlers):
+        root.removeHandler(handler)
+    stderr_handler = logging.StreamHandler()
+    stderr_handler.setLevel(logging.WARNING)
+    stderr_handler.setFormatter(formatter)
+    root.addHandler(stderr_handler)
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.handlers.RotatingFileHandler(
+            log_path, maxBytes=WEB_LOG_MAX_BYTES, backupCount=WEB_LOG_BACKUPS, encoding="utf-8")
+    except OSError as exc:
+        stderr_handler.setLevel(logging.INFO)   # 파일을 못 열면 예전처럼 전부 stderr로
+        logging.warning("request log file unavailable (%s); logging to stderr", exc)
+        return
+    file_handler.setFormatter(formatter)
+    root.addHandler(file_handler)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(message)s")
+    configure_logging()
+    raise_open_file_limit()
     initialize_schema()
     server = PortfolioHTTPServer((args.host, args.port), Handler)
     lan_guard.guard_http_server(server)

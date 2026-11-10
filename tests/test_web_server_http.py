@@ -133,5 +133,41 @@ class RequestHelperTests(unittest.TestCase):
             logged.assert_called_once()
 
 
+class OpsSetupTests(unittest.TestCase):
+    def test_open_file_limit_is_raised_within_hard_limit(self):
+        import resource
+        before = resource.getrlimit(resource.RLIMIT_NOFILE)
+        try:
+            resource.setrlimit(resource.RLIMIT_NOFILE, (256, before[1]))
+            soft = server.raise_open_file_limit(1024)
+            self.assertEqual(resource.getrlimit(resource.RLIMIT_NOFILE)[0], soft)
+            self.assertGreaterEqual(soft, min(1024, before[1]))
+        finally:
+            resource.setrlimit(resource.RLIMIT_NOFILE, before)
+
+    def test_request_log_rotates_and_stderr_gets_warnings_only(self):
+        import logging
+        root = logging.getLogger()
+        saved = (list(root.handlers), root.level)
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "web.log"
+            try:
+                with mock.patch.object(server, "WEB_LOG_MAX_BYTES", 200):
+                    server.configure_logging(log_path)
+                stderr = [h for h in root.handlers if type(h) is logging.StreamHandler]
+                self.assertEqual([h.level for h in stderr], [logging.WARNING])
+                for i in range(20):
+                    logging.info("GET /api/portfolio 200 0.01s %d", i)
+                self.assertTrue(log_path.exists())
+                self.assertTrue((Path(tmp) / "web.log.1").exists())
+            finally:
+                for handler in list(root.handlers):
+                    root.removeHandler(handler)
+                    handler.close()
+                for handler in saved[0]:
+                    root.addHandler(handler)
+                root.setLevel(saved[1])
+
+
 if __name__ == "__main__":
     unittest.main()
