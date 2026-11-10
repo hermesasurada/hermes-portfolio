@@ -6,8 +6,8 @@ function chartStatPercent(value, digits = 1) {
   if (value == null || value === "") return "-";
   const number = Number(value);
   if (!Number.isFinite(number)) return "-";
-  const cls = number > 0 ? "cstat-positive" : number < 0 ? "cstat-negative" : "";
-  return `<span class="${cls}">${number.toLocaleString("ko-KR", {
+  // 상승=빨강·하락=파랑(2026-11-11 사용자 지시 — 예전 초록/빨강은 시장 색 규칙과 반대였다).
+  return `<span class="${changeDirection(number).cls}">${number.toLocaleString("ko-KR", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   })}%</span>`;

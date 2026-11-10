@@ -3160,8 +3160,6 @@ tr:hover .fav-star,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.cstat-positive { color: #22a447; }
-.cstat-negative { color: #ef4754; }
 .chart-stat-loading {
   color: var(--muted);
   font-size: 10.5px;

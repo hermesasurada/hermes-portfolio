@@ -20,6 +20,12 @@ assert.equal(ctx.chartPriceClass('-3'), 'down');
 assert.match(ctx.dividendHistoryPercent(4), /class="up"><span aria-hidden="true">▲/);
 assert.equal(JSON.stringify(ctx.changePercentParts(-1.234)), JSON.stringify({cls: 'down', arrow: '▼', text: '1.23%'}));
 
+// 차트 통계판 수익률도 시장 색(상승 빨강·하락 파랑)을 따른다(2026-11-11 — 예전 초록/빨강 전용 색 폐지).
+assert.match(ctx.chartStatPercent(5.2), /class="up"/);
+assert.match(ctx.chartStatPercent(-5.2), /class="down"/);
+assert.match(ctx.chartStatPercent(0), /class="flat"/);
+assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '../portfolio_static/styles.css'), 'utf8'), /cstat-(positive|negative)/);
+
 // 부호로 방향을 가르는 삼항식이 다시 흩어지지 않는다(임계값·상태·매수/매도 구분은 다른 의미라 허용).
 const allowed = [/pct >= 60 \? "up"/, /state === "buy" \? "up"/, /buy \? "up" : "down"/];
 const dirStatic = path.join(__dirname, '../portfolio_static');
