@@ -350,16 +350,32 @@ def update_transaction_memo(payload: dict) -> dict:
     return {"ok": True, "id": tx_id, "memo": memo}
 
 
-def delete_transaction(payload: dict) -> dict:
-    """거래내역 물리 삭제(hard delete). 보유는 건드리지 않음."""
+def delete_transaction(payload: dict, portfolio_loader: Callable[[], dict] | None = None) -> dict:
+    """거래내역 물리 삭제(hard delete). 기본은 원장만 지운다(잔고는 과거 거래 일부만 입력되는 설계라
+    거래의 순수 투영이 아니다). payload['apply_to_holdings']가 참이고 잔고에 반영됐던 거래
+    (apply_to_holdings=1)면 그 효과를 잔고에서 되돌린다(2026-11-11 사용자 보고 — 중복 매수를 지웠는데
+    잔고가 그대로였다. 화면이 삭제 때 한 번 묻는다). 원장·잔고·스냅샷은 한 트랜잭션."""
     tx_id = int(payload.get("id") or 0)
     if not tx_id:
         raise ValueError("거래 id가 필요합니다.")
     with connect() as conn:
         conn.execute("BEGIN IMMEDIATE")
-        owner = conn.execute("SELECT account_id FROM transactions WHERE id = ?", (tx_id,)).fetchone()
-        if not owner:
+        ensure_transaction_columns(conn)
+        row = conn.execute("SELECT * FROM transactions WHERE id = ?", (tx_id,)).fetchone()
+        if not row:
             raise ValueError("존재하지 않는 거래입니다.")
+        account_id = int(row["account_id"])
+        revert_holdings = (
+            parse_bool(payload.get("apply_to_holdings"), False)
+            and int(row["apply_to_holdings"] or 0) == 1
+        )
+        if revert_holdings:
+            account = load_account(conn, account_id)
+            reverse_holding_trade(conn, account, str(row["ticker"]), str(row["side"]).upper(),
+                                  float(row["qty"]), float(row["price"]))
         conn.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
-        rebuild_account_snapshots_in_transaction(conn, [int(owner["account_id"])])
-    return {"ok": True, "id": tx_id}
+        rebuild_account_snapshots_in_transaction(conn, [account_id])
+    result = {"ok": True, "id": tx_id, "holdings_applied": revert_holdings}
+    if revert_holdings:
+        result["portfolio"] = (portfolio_loader or load_portfolio)()
+    return result

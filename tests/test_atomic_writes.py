@@ -99,6 +99,8 @@ class AtomicWritesTests(unittest.TestCase):
             "history only": lambda: self.add_trade(apply_to_holdings=False),
             "update": lambda: transactions.update_transaction({"id": 1, "qty": 8}),
             "delete": lambda: transactions.delete_transaction({"id": 1}),
+            "delete and revert holdings": lambda: transactions.delete_transaction(
+                {"id": 1, "apply_to_holdings": True}, portfolio_loader=lambda: {}),
             "cash in": lambda: cash_flows.add_cash_flow({"account_id": 1, "flow_date": "2026-03-03", "amount": 50}),
             "cash out": lambda: cash_flows.add_cash_flow({"account_id": 1, "flow_date": "2026-03-03", "amount": -50}),
             "cash delete": lambda: cash_flows.delete_cash_flow({"id": 1}),
@@ -132,6 +134,30 @@ class AtomicWritesTests(unittest.TestCase):
         transactions.delete_transaction({"id": 1})
         self.assertEqual(self.state()["holdings"], holdings)
         self.assertEqual(self.assert_consistent()["trade_cash_krw"], -220 * 1400)
+
+    def test_delete_can_revert_holdings_when_asked(self):
+        """중복 매수를 지우며 '잔고도 되돌림'을 고르면 잔고에서 그 매수를 걷어 낸다(2026-11-11 SKT 사례)."""
+        self.add_trade(qty=1, price=110)       # 실수로 두 번 저장
+        self.add_trade(qty=1, price=110)
+        with db.connect() as conn:
+            dup = conn.execute("SELECT MAX(id) FROM transactions").fetchone()[0]
+            self.assertEqual(conn.execute("SELECT qty FROM holdings WHERE id = 1").fetchone()[0], 12)
+        out = transactions.delete_transaction({"id": dup, "apply_to_holdings": True}, portfolio_loader=lambda: {"ok": 1})
+        self.assertEqual((out["holdings_applied"], out["portfolio"]), (True, {"ok": 1}))
+        with db.connect() as conn:
+            qty, avg, invested = conn.execute("SELECT qty, avg_price, invested FROM holdings WHERE id = 1").fetchone()
+        self.assertEqual((qty, invested), (11, 1110))
+        self.assertAlmostEqual(avg, 1110 / 11, places=3)
+        self.assert_consistent()
+
+    def test_delete_never_reverts_history_only_trade(self):
+        self.add_trade(apply_to_holdings=False)
+        holdings = self.state()["holdings"]
+        with db.connect() as conn:
+            tx_id = conn.execute("SELECT MAX(id) FROM transactions").fetchone()[0]
+        out = transactions.delete_transaction({"id": tx_id, "apply_to_holdings": True}, portfolio_loader=lambda: {})
+        self.assertFalse(out["holdings_applied"])
+        self.assertEqual(self.state()["holdings"], holdings)
 
     def test_cash_flow_changes_commit_with_snapshots(self):
         result = cash_flows.add_cash_flow({"account_id": 1, "flow_date": "2026-03-03", "amount": -50})

@@ -355,8 +355,23 @@ document.getElementById("tradeModalCancel")?.addEventListener("click", closeTrad
 document.getElementById("tradeModal")?.addEventListener("click", event => {
   if (event.target === event.currentTarget) closeTradeModal();
 });
+// 저장이 끝나기 전에 다시 누르면 같은 거래가 두 번 들어간다(2026-11-11 SKT 매수 1주가 4초 저장 중 두 번 기록).
+let tradeSaveInFlight = false;
 document.getElementById("tradeForm").addEventListener("submit", async event => {
   event.preventDefault();
+  if (tradeSaveInFlight) return;
+  tradeSaveInFlight = true;
+  const submitButtons = [...event.currentTarget.querySelectorAll('button[type="submit"], input[type="submit"]')];
+  submitButtons.forEach(button => { button.disabled = true; });
+  try {
+    await submitTradeForm();
+  } finally {
+    tradeSaveInFlight = false;
+    submitButtons.forEach(button => { button.disabled = false; });
+  }
+});
+
+async function submitTradeForm() {
   selectedTrade.ticker = document.getElementById("tradeTicker").value.trim().toUpperCase();
   document.getElementById("tradeTicker").value = selectedTrade.ticker;
   applyTradeHoldingDefaults(true);
@@ -394,7 +409,7 @@ document.getElementById("tradeForm").addEventListener("submit", async event => {
   } catch (err) {
     showTradeError(err);
   }
-});
+}
 chartLogScale = storageGet(detailStorage.chartLogScale) === "true";
 chartType = storageGet(detailStorage.chartType) === "candle" ? "candle" : "line";
 chartSmoothLines = storageGet(detailStorage.chartSmoothLines) !== "false";

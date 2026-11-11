@@ -604,7 +604,7 @@ class Handler(BaseHTTPRequestHandler):
         return update_transaction_memo(self.read_json())
 
     def post_transaction_delete(self) -> dict:
-        return delete_transaction(self.read_json())
+        return delete_transaction(self.read_json(), portfolio_loader=load_portfolio)
 
     # ── 성과 스냅샷·현금 입출금 (아직 화면 미노출 — API만) ──
     def api_performance_snapshots(self, query: dict[str, list[str]]) -> dict:

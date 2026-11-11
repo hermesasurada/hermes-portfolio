@@ -116,8 +116,8 @@ function apiUpdateTransactionMemo(id, memo) {
   return postJson("/api/transactions/memo", { id, memo });
 }
 
-function apiDeleteTransaction(id) {
-  return postJson("/api/transactions/delete", { id });
+function apiDeleteTransaction(id, applyToHoldings = false) {
+  return postJson("/api/transactions/delete", { id, apply_to_holdings: Boolean(applyToHoldings) });
 }
 
 function apiLookupTicker(query) {

@@ -645,8 +645,50 @@ function transactionEditSummary(original, payload) {
   `).join("");
 }
 
-// 'apply' | 'ledger' | 'cancel'. 대화상자를 못 쓰는 환경은 확인창 두 번으로 대신한다.
+// 같은 대화상자를 수정·삭제가 함께 쓴다 — 문구만 다르다.
+const TX_HOLDINGS_PROMPTS = {
+  edit: {
+    title: "거래내역 수정 — 잔고에도 반영할까요?",
+    note: "'잔고도 반영'은 수정 전 거래를 잔고에서 되돌리고 수정 후 거래를 다시 적용합니다. '거래내역만 수정'은 원장만 고칩니다.",
+    ledger: "거래내역만 수정",
+    apply: "잔고도 반영",
+    confirmApply: "이 거래 수정을 잔고에도 반영할까요?\n(취소를 누르면 거래내역만 수정할지 다시 묻습니다)",
+    confirmLedger: "거래내역만 수정할까요?",
+  },
+  delete: {
+    title: "거래내역 삭제 — 잔고에서도 되돌릴까요?",
+    note: "'잔고도 되돌림'은 이 거래가 잔고에 더하거나 뺀 수량·원금을 되돌립니다. '거래내역만 삭제'는 원장만 지웁니다. 삭제는 되돌릴 수 없습니다.",
+    ledger: "거래내역만 삭제",
+    apply: "잔고도 되돌림",
+    confirmApply: "이 거래를 지우면서 잔고에서도 되돌릴까요?\n(취소를 누르면 거래내역만 삭제할지 다시 묻습니다)",
+    confirmLedger: "거래내역만 삭제할까요?",
+  },
+};
+
+function transactionDeleteSummary(tx) {
+  const line = `${tradeSideLabel(String(tx.side).toUpperCase())} ${tradeQtyText(Number(tx.qty), tx.ticker)}주 @ ${unitMoney(Number(tx.price), tx.currency, tx.ticker)}`;
+  return [
+    ["종목", `${esc(tx.name || tx.ticker)} · ${esc(tx.ticker)}`],
+    ["계좌", esc(tradeAccountLabel(tx.account_id))],
+    ["거래일", esc(tx.trade_date || "")],
+    ["삭제할 거래", line],
+  ].map(([key, value]) => `
+    <div class="trade-confirm-key">${esc(key)}</div>
+    <div class="trade-confirm-val">${value}</div>
+  `).join("");
+}
+
 function askTransactionEditHoldings(original, payload) {
+  return askTransactionHoldings(transactionEditSummary(original, payload), "edit");
+}
+
+function askTransactionDeleteHoldings(tx) {
+  return askTransactionHoldings(transactionDeleteSummary(tx), "delete");
+}
+
+// 'apply' | 'ledger' | 'cancel'. 대화상자를 못 쓰는 환경은 확인창 두 번으로 대신한다.
+function askTransactionHoldings(bodyHtml, mode) {
+  const text = TX_HOLDINGS_PROMPTS[mode];
   const modal = document.getElementById("txEditHoldingsModal");
   const body = document.getElementById("txEditHoldingsBody");
   const buttons = {
@@ -655,10 +697,16 @@ function askTransactionEditHoldings(original, payload) {
     cancel: document.getElementById("txEditHoldingsCancel"),
   };
   if (!modal || !body || Object.values(buttons).some(b => !b) || typeof modal.showModal !== "function") {
-    if (window.confirm("이 거래 수정을 잔고에도 반영할까요?\n(취소를 누르면 거래내역만 수정할지 다시 묻습니다)")) return Promise.resolve("apply");
-    return Promise.resolve(window.confirm("거래내역만 수정할까요?") ? "ledger" : "cancel");
+    if (window.confirm(text.confirmApply)) return Promise.resolve("apply");
+    return Promise.resolve(window.confirm(text.confirmLedger) ? "ledger" : "cancel");
   }
-  body.innerHTML = transactionEditSummary(original, payload);
+  body.innerHTML = bodyHtml;
+  const title = document.getElementById("txEditHoldingsTitle");
+  const note = document.getElementById("txEditHoldingsNote");
+  if (title) title.textContent = text.title;
+  if (note) note.textContent = text.note;
+  buttons.ledger.textContent = text.ledger;
+  buttons.apply.textContent = text.apply;
   return new Promise(resolve => {
     const handlers = {};
     const cleanup = result => {
@@ -710,14 +758,29 @@ async function saveTransactionEdit(id) {
 
 async function deleteTransactionRow(id) {
   const tx = transactionRows.find(item => Number(item.id) === id);
-  const label = tx ? `${tx.trade_date} · ${tx.ticker} ${tx.side === "BUY" ? "매수" : "매도"} ${tradeQtyText(tx.qty || 0, tx.ticker)}` : "이 거래내역";
-  if (!window.confirm(`${label} 을(를) 삭제할까요?\n삭제하면 되돌릴 수 없습니다.`)) return;
+  let applyToHoldings = false;
+  if (tx && Number(tx.apply_to_holdings) === 1) {
+    // 잔고에 반영됐던 거래는 잔고에서도 되돌릴지 묻는다(2026-11-11 — 중복 매수를 지웠는데 잔고가 그대로였다).
+    const choice = await askTransactionDeleteHoldings(tx);
+    if (choice === "cancel") {
+      showTradeStatus("삭제 취소");
+      return;
+    }
+    applyToHoldings = choice === "apply";
+  } else {
+    const label = tx ? `${tx.trade_date} · ${tx.ticker} ${tradeSideLabel(String(tx.side).toUpperCase())} ${tradeQtyText(tx.qty || 0, tx.ticker)}` : "이 거래내역";
+    if (!window.confirm(`${label} 을(를) 삭제할까요?\n삭제하면 되돌릴 수 없습니다.`)) return;
+  }
   try {
     showTradeStatus("삭제 중...");
-    await apiDeleteTransaction(id);
+    const result = await apiDeleteTransaction(id, applyToHoldings);
     if (editingTxId === id) editingTxId = null;
+    if (result?.portfolio) {
+      data = result.portfolio;
+      render();
+    }
     await loadTransactions();
-    showTradeStatus("삭제됨");
+    showTradeStatus(result?.holdings_applied ? "삭제됨 · 잔고 되돌림" : "삭제됨");
   } catch (err) {
     showTradeError(err);
   }
