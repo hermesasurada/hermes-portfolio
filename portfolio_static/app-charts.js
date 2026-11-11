@@ -187,6 +187,39 @@ function syncPerformanceReturnSummary() {
   const html = performanceReturnSummary(performancePayload, performanceRenderedSeries, performanceFocusKey);
   host.innerHTML = html;
   host.classList.toggle("hidden", !html);
+  if (html) placePerformanceReturnSummary(host);
+}
+
+// PC에서는 플롯 안에 떠 있는 상자라 끌어 옮길 수 있다(2026-11-12). 모바일은 플롯 위 띠(흐름 배치)라 끌지 않는다.
+function performanceSummaryDraggable(host) {
+  return getComputedStyle(host).position === "absolute";
+}
+
+function performanceSummaryRange(host) {
+  const svg = host.parentElement?.querySelector("svg");
+  const svgWidth = svg?.getBoundingClientRect().width || 0;
+  return {
+    w: Math.max(0, svgWidth * (Number(host.dataset.plotWRatio) || 0) - host.offsetWidth - 20),
+    h: Math.max(0, svgWidth * (Number(host.dataset.plotHRatio) || 0) - host.offsetHeight - 20),
+  };
+}
+
+function applyPerformanceSummaryPosition(host, pos) {
+  if (!performanceSummaryDraggable(host)) {
+    host.style.transform = "";
+    return;
+  }
+  const { w, h } = performanceSummaryRange(host);
+  host.style.transform = `translate(${(pos.x * w).toFixed(1)}px, ${(pos.y * h).toFixed(1)}px)`;
+}
+
+function placePerformanceReturnSummary(host) {
+  applyPerformanceSummaryPosition(host, chartOverlayPosition("performance"));
+  bindChartOverlayDrag(host, "performance", {
+    range: () => performanceSummaryRange(host),
+    apply: pos => applyPerformanceSummaryPosition(host, pos),
+    enabled: () => performanceSummaryDraggable(host),
+  });
 }
 let performanceRenderedSeries = [];
 
@@ -382,7 +415,8 @@ function renderPerformanceChart(payload) {
         ${series.map(item => `<circle id="perfDot-${item.key}" class="perf-hover-dot" r="3.6" cx="0" cy="0" style="stroke:${item.color}"></circle>`).join("")}
       </g>
     </svg>
-    <div id="perfReturnSummary" class="perf-return-summary hidden" title="각 선의 시작점 = 0%"
+    <div id="perfReturnSummary" class="perf-return-summary hidden" title="각 선의 시작점 = 0% · 끌어서 옮기기 · 두 번 누르면 원래 자리"
+      data-plot-w-ratio="${(plotW / width).toFixed(5)}" data-plot-h-ratio="${(plotH / width).toFixed(5)}"
       style="--perf-plot-left:${(pad.left / width * 100).toFixed(3)}%;--perf-plot-top:${(pad.top / width * 100).toFixed(3)}%"></div>
     <div id="compareTooltip" class="compare-tooltip hidden" aria-hidden="true"></div>
   `;

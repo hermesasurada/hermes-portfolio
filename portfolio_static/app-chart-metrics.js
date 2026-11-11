@@ -307,10 +307,115 @@ function chartOverlayMetrics(values) {
   ];
 }
 
+// ── 차트 왼쪽 위 오버레이 끌어 옮기기(2026-11-12 사용자 지시) ──
+// 종목 차트 '선택 기간' 상자와 성과 차트 수익률 상자. 위치는 움직일 수 있는 범위 안의 비율(0~1)로
+// 이 브라우저에 기억해 기간·창 크기가 바뀌어도 같은 자리에 온다. 두 번 누르면 기본 자리(왼쪽 위).
+const CHART_OVERLAY_POS_KEYS = {
+  price: "portfolio.chart.metricOverlayPos",
+  performance: "portfolio.chart.perfOverlayPos",
+};
+
+function clampUnit(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(1, Math.max(0, number)) : 0;
+}
+
+function chartOverlayPosition(kind) {
+  try {
+    const saved = JSON.parse(storageGet(CHART_OVERLAY_POS_KEYS[kind]) || "null");
+    if (saved && typeof saved === "object") return { x: clampUnit(saved.x), y: clampUnit(saved.y) };
+  } catch {
+    // 깨진 값은 기본 자리로
+  }
+  return { x: 0, y: 0 };
+}
+
+function saveChartOverlayPosition(kind, pos) {
+  storageSet(CHART_OVERLAY_POS_KEYS[kind], pos ? JSON.stringify({ x: clampUnit(pos.x), y: clampUnit(pos.y) }) : "");
+}
+
+// range(): 지금 움직일 수 있는 거리(화면 px) {w, h}. apply(pos): 비율 위치를 화면에 반영.
+// enabled(): false면 끌기를 받지 않는다(모바일 성과 차트처럼 흐름 배치일 때).
+function bindChartOverlayDrag(handle, kind, { range, apply, enabled = () => true }) {
+  if (!handle || handle.dataset?.overlayDragBound) return;
+  if (handle.dataset) handle.dataset.overlayDragBound = "1";
+  handle.addEventListener("pointerdown", event => {
+    if (event.button !== 0 || !enabled()) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const start = chartOverlayPosition(kind);
+    const { w, h } = range();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    let pos = start;
+    try {
+      handle.setPointerCapture?.(event.pointerId);   // 상자 밖으로 빨리 끌어도 놓치지 않게
+    } catch {
+      // 이미 끝난 포인터 등 — 캡처 없이도 끌기는 된다
+    }
+    handle.classList.add("dragging");
+    const move = moveEvent => {
+      pos = {
+        x: clampUnit(start.x + (w > 0 ? (moveEvent.clientX - startX) / w : 0)),
+        y: clampUnit(start.y + (h > 0 ? (moveEvent.clientY - startY) / h : 0)),
+      };
+      apply(pos);
+    };
+    const end = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", end);
+      handle.removeEventListener("pointercancel", end);
+      handle.classList.remove("dragging");
+      saveChartOverlayPosition(kind, pos);
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  });
+  handle.addEventListener("dblclick", event => {
+    if (!enabled()) return;
+    event.stopPropagation();
+    saveChartOverlayPosition(kind, null);
+    apply({ x: 0, y: 0 });
+  });
+}
+
+function chartMetricsOverlaySize(compact = false) {
+  return compact ? { width: 146, height: 96 } : { width: 120, height: 76 };
+}
+
+// 종목 차트: 상자를 플롯(가격 칸) 안에서만 움직인다. room은 SVG 단위.
+function renderDraggableChartMetricsOverlay(metrics, pad, plotW, plotH, compact = false) {
+  const { width, height } = chartMetricsOverlaySize(compact);
+  const roomW = Math.max(0, plotW - 20 - width);
+  const roomH = Math.max(0, plotH - 20 - height);
+  const pos = chartOverlayPosition("price");
+  return `
+    <g id="chartMetricDrag" class="chart-metric-drag" data-room-w="${roomW.toFixed(2)}" data-room-h="${roomH.toFixed(2)}"
+      transform="translate(${(pos.x * roomW).toFixed(2)}, ${(pos.y * roomH).toFixed(2)})">
+      <title>끌어서 옮기기 · 두 번 누르면 원래 자리</title>
+      ${renderChartMetricsOverlay(metrics, pad.left + 10, pad.top + 10, compact)}
+    </g>
+  `;
+}
+
+function bindChartMetricsOverlayDrag() {
+  const group = document.getElementById("chartMetricDrag");
+  if (!group) return;
+  const roomW = Number(group.dataset.roomW) || 0;
+  const roomH = Number(group.dataset.roomH) || 0;
+  bindChartOverlayDrag(group, "price", {
+    range: () => {
+      const ctm = group.ownerSVGElement?.getScreenCTM?.();
+      return { w: roomW * (ctm?.a || 1), h: roomH * (ctm?.d || 1) };
+    },
+    apply: pos => group.setAttribute("transform", `translate(${(pos.x * roomW).toFixed(2)}, ${(pos.y * roomH).toFixed(2)})`),
+  });
+}
+
 function renderChartMetricsOverlay(metrics, x, y, compact = false) {
   // 고정폭 숫자 + 소수 한 자리라 값 폭이 일정하다 — 라벨과 값 사이 빈 공간을 좁힌다
-  const width = compact ? 146 : 120;
-  const height = compact ? 96 : 76;
+  const { width, height } = chartMetricsOverlaySize(compact);
   const titleY = y + (compact ? 18 : 15);
   const rowStartY = y + (compact ? 38 : 31);
   const rowGap = compact ? 17 : 13.5;

@@ -3595,6 +3595,13 @@ tr:hover .fav-star,
 .chart-metric-overlay-text {
   pointer-events: none;
 }
+/* 끌어 옮기기(2026-11-12): 상자 면만 포인터를 받고 글자는 통과시킨다. */
+.chart-metric-drag .chart-metric-box {
+  pointer-events: all;
+  cursor: grab;
+  touch-action: none;
+}
+.chart-metric-drag.dragging .chart-metric-box { cursor: grabbing; }
 .chart-metric-box {
   fill: color-mix(in srgb, var(--chart-tooltip-bg) 88%, transparent);
   stroke: color-mix(in srgb, var(--chart-tooltip-border) 82%, transparent);
@@ -6395,7 +6402,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   #perfLegendHost { padding-right: 150px; }
 }
-/* 표시 기간 최종 수익률 — 플롯 왼쪽 위 안쪽. 선을 가리지 않게 반투명 면, 호버는 통과시킨다. */
+/* 표시 기간 최종 수익률 — 플롯 왼쪽 위 안쪽(반투명 면). PC는 끌어서 옮긴다(2026-11-12) — 위치는 chartOverlayPosition("performance"). */
 .perf-return-summary {
   position: absolute;
   top: 0;
@@ -6411,8 +6418,11 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--chart-bg) 84%, transparent);
   backdrop-filter: blur(2px);
-  pointer-events: none;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
+.perf-return-summary.dragging { cursor: grabbing; }
 .perf-return-caption { color: var(--muted); font-size: 11px; font-weight: 600; }
 .perf-return-meta { color: var(--muted); font-family: var(--grid-num-font); font-size: 10.5px; }
 /* 계좌·고정환율·비교지수 수익률 — 같은 크기의 두 칸 격자 */
@@ -6465,6 +6475,8 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     border-radius: 0;
     background: none;
     backdrop-filter: none;
+    cursor: default;
+    touch-action: auto;
   }
   .perf-return-rows { justify-self: stretch; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .perf-return-caption, .perf-return-meta { font-size: 10px; }

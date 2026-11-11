@@ -54,6 +54,7 @@
 - 차트 컨트롤: 980px 이하 두 줄(1줄 형태·단위·기간·매수·매도·?, 2줄 보조지표·이동평균선), 버튼 26px. '?'는 `#chartHelpModal`, **설명 문구는 개조식 명사형**. 모바일 CSS 테스트는 `h.mediaBlocks(css, '(max-width: 980px)')`로 블록 전부를 읽는다.
 - 환율 차트는 BB·일목·이평선 사용 안 함(`chartOverlaysApply`, 컨트롤은 disabled). 테스트 `test_fx_chart_overlays.js`.
 - 가격축 눈금은 `denseLowerChartScale(values, target, max)`(PC 9/11, 좁은 화면 7/8). 테스트 `test_chart_axis_density.js`.
+- 차트 왼쪽 위 오버레이(종목 차트 '선택 기간' 상자 `#chartMetricDrag`, 성과 차트 수익률 `#perfReturnSummary`)는 끌어서 옮긴다(2026-11-12 사용자 지시). 위치는 움직일 수 있는 범위 안 비율(0~1)로 차트별 localStorage(`CHART_OVERLAY_POS_KEYS`), 두 번 누르면 기본 자리. 종목 차트 상자는 호버 층 위에 그리고 면만 포인터를 받는다. 모바일 성과 차트는 플롯 위 띠라 끌지 않는다. 공용 `bindChartOverlayDrag`(app-chart-metrics.js). 테스트 `test_chart_overlay_drag.js`.
 - RSI 칸 높이는 가격 칸의 보조(모바일 126·PC 67). 끝 눈금이 30·50·70과 15 이내면 숫자 생략, 현재값 표시와 겹치는 눈금 숫자도 생략.
 
 ## 데이터 정합성 (backend)

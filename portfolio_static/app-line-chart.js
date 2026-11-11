@@ -1807,7 +1807,6 @@ function renderLineChart(payload) {
           <text x="${item.labelX.toFixed(2)}" y="${item.labelY.toFixed(2)}" text-anchor="${item.anchor}">${esc(item.text)}</text>
         </g>
       `).join("")}
-      ${renderChartMetricsOverlay(overlayMetrics, pad.left + 10, pad.top + 10, compactChart)}
       <g id="chartSelectionGroup" class="chart-selection hidden">
         <rect id="chartSelectionRect" class="chart-selection-range" x="0" y="${pad.top}" width="0" height="${plotH}"></rect>
         <line id="chartSelectionStartLine" class="chart-selection-line" x1="0" x2="0" y1="${pad.top}" y2="${rsiBottom}"></line>
@@ -1823,6 +1822,7 @@ function renderLineChart(payload) {
       ${(chartType === "line" || !chartPointHasCandle(points[points.length - 1]) || Math.abs(last - chartCandleClose(points[points.length - 1])) > 1e-9)
         ? `<circle class="chart-last-dot" cx="${xFor(points.length - 1).toFixed(2)}" cy="${yFor(last).toFixed(2)}" r="4"></circle>`
         : ""}
+      ${renderDraggableChartMetricsOverlay(overlayMetrics, pad, plotW, plotH, compactChart)}
       <g id="chartHoverGroup" class="chart-hover hidden">
         <line id="chartHoverLine" class="chart-hover-line" x1="0" x2="0" y1="${pad.top}" y2="${rsiBottom}"></line>
         <line id="chartHoverHLine" class="chart-hover-line horizontal hidden" x1="${pad.left}" x2="${(pad.left + plotW).toFixed(2)}" y1="0" y2="0"></line>
@@ -1847,6 +1847,7 @@ function renderLineChart(payload) {
     dataTop, rsiTop, rsiBottom, valueForY, rsiValueForY });
   bindChartCompareControls(payload);
   bindLineChartControls(payload);
+  bindChartMetricsOverlayDrag();
   renderChartStats(payload);
   ensureChartStats(payload.ticker);
   ensureChartQuote(payload.ticker);
