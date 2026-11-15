@@ -6941,7 +6941,9 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 }
 
 /* ── PC 개별종목 2단 배치(2026-11-15): 차트 화면이 1840px 이상이면 왼쪽 차트 | 오른쪽 지표 레일 ──
-   syncChartRailLayout이 .chart-rail을 붙인다. 레일은 스크롤해도 따라오고, 지표판은 2열 세로 우선(모바일과 같은 순서). */
+   syncChartRailLayout이 .chart-rail을 붙인다. 지표판은 2열 세로 우선(모바일과 같은 순서).
+   레일은 머리(종목명) 줄부터 차트 아래 테두리까지 늘어나고, 지표판 행이 남는 높이를 고르게 나눠
+   표의 아래 끝이 차트 아래 테두리와 맞는다(2026-11-15 사용자 지시). */
 @media (min-width: 981px) {
   .chart-view.chart-rail {
     display: grid;
@@ -6955,26 +6957,31 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
   .chart-view.chart-rail > .chart-stage { grid-area: stage; }
   .chart-view.chart-rail > .chart-stats {
     grid-area: rail;
-    position: sticky;
-    top: 68px;
-    max-height: calc(100dvh - 80px);
-    overflow-y: auto;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
     margin-top: 0;
     padding-top: 0;
     border-top: 0;
   }
   .chart-view.chart-rail #chartStats .cstat-board {
+    /* basis 0: 지표판이 레일(=격자 행) 높이를 밀어 올리지 않고 차트가 정한 높이를 나눠 쓴다.
+       차트가 낮을 때는 행 28px 아래로 줄이지 않는다(그때만 레일이 차트보다 길어진다). */
+    flex: 1 1 0;
+    min-height: calc(var(--mobile-rows, 24) * 28px);
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(var(--mobile-rows, 24), 30px);
+    grid-template-rows: repeat(var(--mobile-rows, 24), minmax(28px, 1fr));
     grid-auto-flow: column;
     border-right: 0;
     border-bottom: 0;
   }
   .chart-view.chart-rail #chartStats .cstat-row {
     order: var(--mobile-order, 0);
-    height: 30px;
+    height: auto;
     border-right: 1px solid var(--line);
   }
   .chart-view.chart-rail #chartStats .cstat-row.empty { display: none; }
-  .chart-view.chart-rail .cstat-compare-wrap { overflow-x: auto; }
+  /* 비교 지표표는 행이 많아 줄일 수 없다 — 차트 높이 안에서 표 안쪽을 스크롤한다(아래 끝은 차트와 맞춘다). */
+  .chart-view.chart-rail .cstat-compare-wrap { flex: 1 1 0; min-height: 0; overflow: auto; }
 }

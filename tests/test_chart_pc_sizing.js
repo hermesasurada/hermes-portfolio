@@ -37,6 +37,7 @@ assert.ok(railMin - 440 - 16 - 28 >= 1340, railMin);
 const css = h.readStatic('styles.css');
 const pc = h.mediaBlocks(css, '(min-width: 981px)').map(b => b.text).join('\n');
 assert.match(pc, /\.chart-view\.chart-rail \{[^}]*grid-template-areas: "head rail" "stage rail"/);
-assert.match(pc, /\.chart-view\.chart-rail > \.chart-stats \{[^}]*position: sticky/);
+assert.match(pc, /\.chart-view\.chart-rail > \.chart-stats \{[^}]*align-self: stretch/);   // 레일 아래 끝 = 차트 아래 끝
+assert.match(pc, /\.chart-view\.chart-rail #chartStats \.cstat-board \{[^}]*flex: 1 1 0;[^}]*minmax\(28px, 1fr\)/);
 assert.match(pc, /\.chart-view\.chart-rail #chartStats \.cstat-row \{[^}]*order: var\(--mobile-order/);
 console.log('PC chart sizing: capped scale, rail height fill, rail threshold and layout ok');

@@ -49,7 +49,7 @@
 
 ### 차트
 - 개별종목 차트 헤더: PC는 가격을 종목명 옆에(`.chart-price-summary { margin-right: auto }`).
-- PC 차트 크기(2026-11-15 사용자 지시): viewBox 폭은 `chartViewBoxWidth` — 화면 배율을 1.4(`CHART_MAX_SCALE`, 본문 1760px일 때와 같음)에서 멈추고 남는 폭은 viewBox를 넓혀 더 촘촘히 그린다(전체 폭에서 980 그림을 2배로 늘리던 것 폐지). 개별·비교·성과 차트 공통, 모바일은 980 고정. 차트 화면이 `CHART_RAIL_MIN_WIDTH`(1840px, 레일을 둬도 차트가 약 1,340px 이상) 이상이면 `syncChartRailLayout`이 `.chart-rail`로 2단(차트 | 지표·컨센서스 레일 440px, sticky)을 만들고 차트 높이를 화면 아래까지 채운다(`chartViewBoxHeight`, 기본~1.6배). 레일의 지표판은 2열 세로 우선(`--mobile-order`). 폭·높이가 바뀌면 다시 그린다. 테스트 `test_chart_pc_sizing.js`.
+- PC 차트 크기(2026-11-15 사용자 지시): viewBox 폭은 `chartViewBoxWidth` — 화면 배율을 1.4(`CHART_MAX_SCALE`, 본문 1760px일 때와 같음)에서 멈추고 남는 폭은 viewBox를 넓혀 더 촘촘히 그린다(전체 폭에서 980 그림을 2배로 늘리던 것 폐지). 개별·비교·성과 차트 공통, 모바일은 980 고정. 차트 화면이 `CHART_RAIL_MIN_WIDTH`(1840px, 레일을 둬도 차트가 약 1,340px 이상) 이상이면 `syncChartRailLayout`이 `.chart-rail`로 2단(차트 | 지표·컨센서스 레일 440px, sticky)을 만들고 차트 높이를 화면 아래까지 채운다(`chartViewBoxHeight`, 기본~1.6배). 레일의 지표판은 2열 세로 우선(`--mobile-order`). 레일은 종목명 줄부터 차트 상자 아래 테두리까지 늘어나고(`align-self: stretch`), 지표판 행이 남는 높이를 고르게 나눠(`flex: 1 1 0` + `minmax(28px, 1fr)`) 표 아래 끝이 차트 아래 끝과 맞는다 — 지표판 basis를 auto로 되돌리면 표가 차트보다 길어진다. 비교 지표표는 차트 높이 안에서 안쪽 스크롤. 폭·높이가 바뀌면 다시 그린다. 테스트 `test_chart_pc_sizing.js`.
 - 라이브 점(`_append_market_chart_point`)은 `ichi_*`까지 옮긴다. 일목 구름은 색이 바뀌는 봉에서 교차점 공유. 선행 26봉 x축 자리는 구름을 그릴 때만 예약. 테스트 `test_chart_ichimoku.{py,js}`.
 - 일목선(따뜻한 색, 계단선)과 이평선(차가운 색)은 **같은 색 금지**(`test_chart_line_distinction.js`). 전환·기준선은 `vector-effect: non-scaling-stroke`로 화면 두께, 980px 이하 0.7. 선 끝 이름표 '전환·기준·20·50·200'은 선행 26봉 자리가 있을 때만.
 - 기준선 예상경로: 서버 `_kijun_flat_projection` → `ichi_kijun_flat`, 현재가에 닿는 봉에 'N거래일 뒤'.
