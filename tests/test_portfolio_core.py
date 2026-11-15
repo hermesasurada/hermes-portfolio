@@ -2684,6 +2684,30 @@ def test_total_return_performance_reinvests_dividends_and_flags_short_history():
     # 배당이 없는 종목은 가격 수익률과 같고 품질도 TR
     out3 = total_return_performance(long_prices, [], [], "USD", None, dividend_yield=None)
     assert out3["values"]["five_year"] == 0.0 and out3["quality"]["five_year"] == "TR"
+    # growth: 가격 행과 같은 길이의 배당 재투자 누적 배수 — 추세 3종의 입력(2026-11-15)
+    assert len(out["growth"]) == len(prices)
+    assert out["growth"][0] == 1.0 and abs(out["growth"][-1] - 1.02 ** 2) < 1e-9
+    assert total_return_performance(prices[:1], divs, [], "USD", None)["growth"] == [1.0]
+
+
+def test_trend_uses_dividend_included_growth():
+    """추세 수익률은 배당 포함 가격으로 낸다 — 가격이 제자리여도 배당만큼 오른다(목록 기간 수익률과 같은 기준)."""
+    import math
+    from datetime import date, timedelta
+    from portfolio_core.technical_stats import total_return_performance, trend_performance
+
+    start = date(2020, 1, 1)
+    days = [(start + timedelta(days=i)).isoformat() for i in range(1300)]
+    prices = [{"date": d, "close": 100.0} for d in days]
+    divs = [{"ex_date": days[i], "record_date": None, "pay_date": None, "declaration_date": None,
+             "amount": 1.0, "currency": "USD", "source": "polygon"} for i in range(63, 1300, 63)]   # 63일마다 1%
+    growth = total_return_performance(prices, divs, [], "USD", None, dividend_yield=4.0)["growth"]
+    with_dividends = trend_performance(growth)
+    price_only = trend_performance([row["close"] for row in prices])
+    assert price_only["trend_return"] == 0.0
+    expected = (1.01 ** (252 / 63) - 1) * 100           # 연 4.06%
+    assert abs(with_dividends["trend_return"] - expected) < 0.15, with_dividends
+    assert with_dividends["trend_strength"] > 0
 
 
 def test_dividend_list_includes_previous_month_during_first_five_days():
@@ -3525,7 +3549,25 @@ def test_trend_performance_discounts_endpoint_spikes():
     steep = trend_performance([100 * math.exp(w + 0.60 / 252 * i) for i, w in enumerate(wave)])
     assert abs(calm["trend_deviation"] - steep["trend_deviation"]) < 0.01
     assert steep["trend_r2"] > 0.99 and calm["trend_r2"] < 0.2
-    assert steep["trend_strength"] == round(steep["trend_return"] / steep["trend_deviation"], 2)
+    # 강도 = ln(1 + 추세 수익률) ÷ 이탈폭 — 표에 보이는 두 값으로 검산된다(2026-11-15: 분자를 연속복리로).
+    assert steep["trend_strength"] == round(math.log1p(steep["trend_return"] / 100) * 100 / steep["trend_deviation"], 2)
+    assert abs(math.log1p(steep["trend_return"] / 100) - 0.60) < 0.02      # 분자는 로그 기울기(연 0.60) 그대로
+    # 이탈폭은 5년 기준으로 환산한다 — 같은 무작위 행보라면 이력이 짧아도 비슷한 크기가 된다.
+    import random
+    rng = random.Random(11)
+    ratios = []
+    for _ in range(60):
+        steps = [rng.gauss(0, 0.02) for _ in range(1260)]
+        walk = [100.0]
+        for s in steps:
+            walk.append(walk[-1] * math.exp(s))
+        ratios.append(trend_performance(walk[-316:])["trend_deviation"] / trend_performance(walk[-1260:])["trend_deviation"])
+    ratios.sort()
+    assert 0.7 < ratios[len(ratios) // 2] < 1.4, ratios[len(ratios) // 2]   # 환산 전에는 중앙값이 0.5 안팎이었다
+    # 하락 추세의 강도는 음수이고 −100% 아래로 깨지지 않는다
+    falling = trend_performance([100 * math.exp(w - 0.80 / 252 * i) for i, w in enumerate(wave)])
+    assert falling["trend_strength"] < 0
+    assert falling["trend_strength"] == round(math.log1p(falling["trend_return"] / 100) * 100 / falling["trend_deviation"], 2)
 
 
 def test_asset_class_ignores_brand_glued_to_korean_company_name():

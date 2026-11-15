@@ -30,7 +30,7 @@ from .paths import KST
 from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
 from .tickers import is_korean_stock_ticker, ticker_currency, normalize_tickers
 
-TECHNICAL_CACHE_VERSION = 19  # 19: 추세 강도 추가(2026-11-07). 18: 추세 이탈폭 추가(2026-11-07). 17: 추세 수익률 창 3년→5년(2026-10-23). 16: 추세 수익률·R² 추가. 15: 매수·매도 타점 참고(폐지)
+TECHNICAL_CACHE_VERSION = 20  # 20: 추세를 배당 포함 가격으로·이탈폭 5년 환산·강도 분자 연속복리(2026-11-15). 19: 추세 강도 추가(2026-11-07). 18: 추세 이탈폭 추가(2026-11-07). 17: 추세 수익률 창 3년→5년(2026-10-23). 16: 추세 수익률·R² 추가. 15: 매수·매도 타점 참고(폐지)
 TECHNICAL_LOOKBACK_DAYS = 11 * 366
 PRICE_ADJUSTED_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
@@ -41,7 +41,10 @@ TREND_MIN_DAYS = 252      # 이력이 이보다 짧으면 추세를 내지 않�
 
 
 def trend_performance(daily: list[float]) -> dict[str, float | None]:
-    """로그 가격 회귀 추세 수익률(연율 %), 이탈폭(꾸준함), R². 2026-10-23 사용자 지시.
+    """로그 가격 회귀 추세 수익률(연율 %), 이탈폭(꾸준함), 강도, R². 2026-10-23 사용자 지시.
+
+    입력은 배당 재투자 누적 배수(total_return_performance의 growth)다(2026-11-15) — 목록의 기간 수익률과 같은 기준.
+    배당 자료가 없는 경로(수집 대상 밖 종목의 즉석 계산)만 종가를 그대로 넣는다.
 
     기간 수익률(CAGR)은 시작·끝 두 점만 보므로 끝점이 급등 직후면 몇 년을 어떻게 왔든 좋아 보인다.
     최근 5년(1,260거래일) 로그 종가에 직선을 맞춰 기울기를 연율로 바꾸면 경로 전체를 반영하고,
@@ -49,6 +52,13 @@ def trend_performance(daily: list[float]) -> dict[str, float | None]:
     많이 오르면 크게 흔들려도 높고(PLTR 0.84, MDD 78%), 평평하면 안정적이어도 낮다(PG 0.04).
     R²는 값을 바꾸지 않고 통계 팝업에만 남긴다.
     이력이 5년보다 짧으면 있는 만큼(최소 1년)으로 계산한다 — 각주는 붙이지 않는다(변동성 손익비와 동일).
+
+    2026-11-15 전 종목 점검 뒤 두 가지를 고쳤다(사용자 승인):
+    - 이탈폭은 5년 기준으로 환산한다(× √(1260 ÷ 실제 일수)). 잔차 표준편차는 창이 짧을수록 작아져서
+      (변동성 대비 비율이 5년 0.49, 1년 남짓 0.26) 상장한 지 얼마 안 된 종목이 실제보다 꾸준해 보였고,
+      강도 상위 30개 중 16개가 5년 미만 종목이었다. 환산하면 이력 길이와 무관하게 0.5 안팎으로 맞는다.
+    - 강도의 분자는 연속복리 수익률 ln(1 + 추세 수익률)이다. 단순 연율은 높을수록 복리로 부풀어
+      (2년 이력 종목 +1,585% ÷ 45.7 = 34.7) 다른 종목과 비교가 되지 않았다.
     """
     closes = [float(c) for c in daily[-TREND_WINDOW_DAYS:] if c is not None and float(c) > 0]
     n = len(closes)
@@ -64,13 +74,18 @@ def trend_performance(daily: list[float]) -> dict[str, float | None]:
     ss_res = sum((y - (y_mean + slope * (x - x_mean))) ** 2 for x, y in enumerate(ys))
     r2 = None if ss_tot <= 0 else max(0.0, 1 - ss_res / ss_tot)
     annual = (math.exp(slope * 252) - 1) * 100
-    deviation = math.sqrt(ss_res / n) * 100
+    deviation = math.sqrt(ss_res / n) * 100 * math.sqrt(TREND_WINDOW_DAYS / n)
+    shown_annual, shown_deviation = round(annual, 2), round(deviation, 1)
     return {
-        "trend_return": round(annual, 2),
+        "trend_return": shown_annual,
         "trend_r2": None if r2 is None else round(r2, 3),
-        "trend_deviation": round(deviation, 1),
-        # 표에 보이는 두 값으로 검산되도록 반올림한 값끼리 나눈다. 이탈폭 0(완전 직선·횡보)은 정의하지 않는다.
-        "trend_strength": round(round(annual, 2) / round(deviation, 1), 2) if round(deviation, 1) > 0 else None,
+        "trend_deviation": shown_deviation,
+        # 표에 보이는 두 값으로 검산되도록 반올림한 값으로 계산한다: ln(1 + 추세 수익률) ÷ 이탈폭.
+        # 이탈폭 0(완전 직선·횡보)은 정의하지 않는다.
+        "trend_strength": (
+            round(math.log1p(shown_annual / 100) * 100 / shown_deviation, 2)
+            if shown_deviation > 0 and shown_annual > -100 else None
+        ),
     }
 
 
@@ -261,11 +276,12 @@ def total_return_performance(
     fx_lookup: Callable | None = None,
     dividend_yield: float | None = None,
 ) -> dict[str, dict]:
-    """{'values': {기간: 누적 %}, 'quality': {기간: 'TR'|'P'}} — 현지 통화 배당 포함 수익률."""
+    """{'values': {기간: 누적 %}, 'quality': {기간: 'TR'|'P'}, 'growth': [배당 재투자 누적 배수]} — 현지 통화 배당 포함 수익률.
+    growth는 가격 행과 같은 길이이고 추세 수익률·이탈폭·강도의 입력으로 쓴다."""
     values: dict[str, float | None] = {key: None for key in PERFORMANCE_KEYS}
     quality: dict[str, str | None] = {key: None for key in PERFORMANCE_KEYS}
     if len(price_rows) < 2:
-        return {"values": values, "quality": quality}
+        return {"values": values, "quality": quality, "growth": [1.0] * len(price_rows)}
     dates = [row["date"] for row in price_rows]
     closes = [float(row["close"]) for row in price_rows]
     last_price_date = parse_iso_date(dates[-1])
@@ -320,7 +336,7 @@ def total_return_performance(
         )
         partial = partial or any(dates[start] <= day <= dates[-1] for day in unmapped_dates)
         quality[key] = "P" if partial else "TR"
-    return {"values": values, "quality": quality}
+    return {"values": values, "quality": quality, "growth": growth}
 
 
 def total_return_periods(
@@ -675,6 +691,8 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
             )
             payload["performance_tr"] = tr_performance["values"]
             payload["performance_tr_quality"] = tr_performance["quality"]
+            # 추세 3종은 기간 수익률과 같은 배당 포함 가격으로 다시 낸다(calculate_technical_stats는 종가 기준).
+            payload.update(trend_performance(tr_performance["growth"]))
             payload["risk_reward"] = total_return_periods(
                 price_rows,
                 dividend_rows_by_ticker.get(ticker, []),

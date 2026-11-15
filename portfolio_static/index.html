@@ -321,9 +321,9 @@
                 <th class="indicator-head" data-key="dividend_streak_years" aria-label="배당 연속지급" title="상장 이래 배당을 거른 해 없이 지급한 연속 연수(완결 연도 기준, 미국 상장만). +는 이력 한계(1962)로 실제는 더 긺"><span>연속</span><span>지급</span></th>
                 <th class="indicator-head" data-key="dividend_growth_streak_years" aria-label="배당 연속증액" title="연간 배당을 연속으로 늘린 연수(미국 상장만). 개별주는 StockAnalysis 공식 값, ETF는 자체 계산"><span>연속</span><span>증액</span></th>
                 <th data-key="payout_ratio" aria-label="배당성향">성향</th>
-                <th class="group-start" data-key="trend_return" aria-label="추세 수익률" title="추세 수익률 = 최근 5년(1,260거래일) 로그 종가에 직선을 맞춘 기울기의 연율 환산&#10;기간 수익률(CAGR)은 시작·끝 두 점만 보지만 이 값은 경로 전체를 반영해 막판 급등에 덜 흔들린다&#10;이탈폭 = 가격이 그 직선에서 평균 얼마나 벗어났는가(작을수록 꾸준)&#10;이력이 5년보다 짧으면 있는 만큼(최소 1년)으로 계산">수익률</th>
-                <th data-key="trend_deviation" aria-label="추세 이탈폭" title="추세 이탈폭 = 최근 5년 로그 종가가 추세 직선에서 벗어난 폭의 표준편차(잔차 표준편차, 로그 기준 %)&#10;작을수록 직선처럼 꾸준하다. 가격이 많이 올랐는지와 무관하게 흔들림의 크기만 본다&#10;예: ±47%(PLTR)는 큰 등락, ±8%(SPY)는 직선에 가까움">이탈폭</th>
-                <th data-key="trend_strength" aria-label="추세 강도" title="추세 강도 = 추세 수익률 ÷ 추세 이탈폭&#10;높을수록 흔들림에 비해 많이 올랐다. 비슷한 수준의 종목끼리 비교한다&#10;추세 수익률이 아주 높으면 복리 때문에 값이 커 보일 수 있다">강도</th>
+                <th class="group-start" data-key="trend_return" aria-label="추세 수익률" title="추세 수익률 = 최근 5년(1,260거래일) 배당 재투자 가격의 로그값에 직선을 맞춘 기울기의 연율 환산&#10;기간 수익률(CAGR)은 시작·끝 두 점만 보지만 이 값은 경로 전체를 반영해 막판 급등에 덜 흔들린다&#10;5년 중 가운데 3년의 비중이 크고(약 80%) 최근 6개월은 거의 반영하지 않는다&#10;이력이 5년보다 짧으면 있는 만큼(최소 1년)으로 계산">수익률</th>
+                <th data-key="trend_deviation" aria-label="추세 이탈폭" title="추세 이탈폭 = 최근 5년 배당 재투자 가격이 추세 직선에서 벗어난 폭의 표준편차(잔차 표준편차, 로그 기준 %)&#10;작을수록 직선처럼 꾸준하다. 가격이 많이 올랐는지와 무관하게 흔들림의 크기만 본다&#10;이력이 5년보다 짧으면 5년 기준으로 환산한다(× √(1260 ÷ 실제 일수)) — 짧은 이력이 꾸준해 보이지 않게&#10;예: ±47%(PLTR)는 큰 등락, ±8%(SPY)는 직선에 가까움">이탈폭</th>
+                <th data-key="trend_strength" aria-label="추세 강도" title="추세 강도 = ln(1 + 추세 수익률) ÷ 추세 이탈폭&#10;높을수록 흔들림에 비해 많이 올랐다. 분자는 연속복리 수익률이라 급등 종목도 복리로 부풀지 않는다&#10;예: 추세 수익률 +50%, 이탈폭 ±20% → 40.5 ÷ 20 = 2.03">강도</th>
               </tr>
             </thead>
             <tbody id="holdings"></tbody>
