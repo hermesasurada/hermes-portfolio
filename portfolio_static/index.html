@@ -46,6 +46,8 @@
         window.__bootBanner("스크립트 로드 실패: " + t.src.split("/").pop());
         return;
       }
+      // ResizeObserver 알림 지연은 브라우저 경고일 뿐 스크립트 오류가 아니다(폭 전환·창 크기 변경 때 전광판 배치가 낸다).
+      if (e.message && /ResizeObserver loop/.test(e.message)) return;
       if (e.message) {
         window.__bootBanner("JS 오류: " + e.message + " @"
           + String(e.filename || "").split("/").pop() + ":" + (e.lineno || "?"));
@@ -83,6 +85,7 @@
           <button id="cashFlowsOpen" class="ghost-btn" type="button" aria-haspopup="dialog" aria-label="입출금"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20V5M3.5 8.5 7 5l3.5 3.5M17 4v15M13.5 15.5 17 19l3.5-3.5"/></svg><span>입출금</span></button>
         </div>
         <div class="ctrl-group" aria-label="환경">
+          <button id="layoutWidthToggle" class="ghost-btn layout-width-btn" type="button" aria-pressed="false" title="본문 폭: 기본 → 전체(사이드바 폭은 그대로)"><span>전체 폭</span></button>
           <button id="themeToggle" class="theme-btn" type="button" title="테마">자동</button>
         </div>
       </div>
@@ -257,6 +260,7 @@
               </select>
             </span>
             <div class="segmented currency-segments single-option" id="currencySegments" role="group" aria-label="통화 필터"></div>
+            <button class="ghost-btn tx-popup-open" id="transactionsPopupOpen" type="button" aria-haspopup="dialog" aria-controls="transactionsModal">거래내역</button>
             <span class="pill" id="rowCount"><span id="rowCountValue">0</span><span class="row-count-unit"> rows</span></span>
             <form class="interest-main-form hidden" id="interestMainItemForm">
               <input id="interestMainTicker" type="search" list="interestTickerOptions" placeholder="티커 또는 종목명" autocomplete="off">
@@ -430,6 +434,7 @@
           </label>
           <button class="ghost-btn" id="transactionHiddenToggle" type="button" aria-pressed="false" title="숨긴 거래도 표시">숨긴 내역</button>
           <button class="ghost-btn" id="transactionToggle" type="button" aria-expanded="false">펼치기</button>
+          <button class="ghost-btn" id="transactionsPopupClose" type="button">닫기</button>
         </div>
       </div>
       <div class="table-wrap tx-wrap">
@@ -963,6 +968,10 @@
       </div>
       <div class="interest-main-status" id="interestBulkStatus" aria-live="polite"></div>
     </form>
+  </dialog>
+  <!-- PC 거래내역 팝업(2026-11-15): 하단 패널(.transaction-panel)을 이 자리로 옮겨 연다 -->
+  <dialog class="watch-modal transactions-modal" id="transactionsModal" aria-label="거래내역">
+    <div class="modal-card transactions-modal-card" id="transactionsModalSlot"></div>
   </dialog>
 
   <div id="txMemoTip" class="tx-memo-tip" popover="manual" role="tooltip"></div>

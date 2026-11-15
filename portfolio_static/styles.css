@@ -6910,3 +6910,32 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 .currency-segments.single-option { display: none; }
 @media (min-width: 981px) { #interestAssetTypeToggle, #currencyFilterControl { display: none; } }
 @media (max-width: 980px) { .interest-asset-segments, .currency-segments { display: none; } }
+
+/* ── PC 전용(2026-11-15): 거래내역 팝업 · 본문 폭 전환 ── */
+.watch-modal.transactions-modal {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(1320px, calc(100vw - 48px));
+  max-width: none;
+  max-height: calc(100dvh - 48px);
+  overflow: hidden;
+}
+.transactions-modal .transactions-modal-card {
+  display: block;
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  padding: 0;
+}
+.transaction-panel.in-popup { margin-top: 0; border: 0; }
+.transaction-panel.in-popup #transactionToggle,
+.transaction-panel:not(.in-popup) #transactionsPopupClose { display: none; }
+#layoutWidthToggle[aria-pressed="true"] { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); }
+@media (min-width: 981px) {
+  html.layout-wide main,
+  html.layout-wide .bar { max-width: none; }
+}
+@media (max-width: 980px) {
+  #transactionsPopupOpen,
+  #layoutWidthToggle { display: none; }
+}

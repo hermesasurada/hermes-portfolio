@@ -342,8 +342,39 @@ showHiddenTransactions = storageGet(transactionStorage.showHidden) === "1";
 syncHiddenTransactionsToggle();
 document.querySelector(".transaction-panel > .toolbar").addEventListener("click", event => {
   if (event.target.closest("button, a, input, select, label")) return;
+  if (event.currentTarget.closest(".in-popup")) return;   // 팝업 안에서는 늘 펼친 상태
   setTransactionsExpanded(!transactionsExpanded, true);
 });
+document.getElementById("transactionsPopupOpen").addEventListener("click", openTransactionsPopup);
+document.getElementById("transactionsPopupClose").addEventListener("click", closeTransactionsPopup);
+// 닫으면 접는다 — 펼친 채로 두면 계좌를 바꿀 때마다 보이지 않는 거래내역을 다시 받는다.
+document.getElementById("transactionsModal").addEventListener("close", () => setTransactionsExpanded(false));
+document.getElementById("transactionsModal").addEventListener("click", event => {
+  if (event.target === event.currentTarget) closeTransactionsPopup();
+});
+window.matchMedia?.("(min-width: 981px)")?.addEventListener?.("change", placeTransactionPanel);
+placeTransactionPanel();
+
+// PC 본문 폭 전환(2026-11-15 사용자 지시): 기본(최대 1760px) ↔ 전체. 사이드바 폭(300~320px)은 그대로.
+function applyLayoutWidth(wide) {
+  document.documentElement.classList.toggle("layout-wide", wide);
+  const btn = document.getElementById("layoutWidthToggle");
+  if (!btn) return;
+  btn.setAttribute("aria-pressed", String(wide));
+  btn.title = wide ? "본문 폭: 전체 → 기본" : "본문 폭: 기본 → 전체(사이드바 폭은 그대로)";
+}
+function toggleLayoutWidth() {
+  const wide = !document.documentElement.classList.contains("layout-wide");
+  storageSet(layoutStorage.wide, wide ? "1" : "0");
+  applyLayoutWidth(wide);
+  // 폭에 맞춰 재는 것들(틀고정 열·행 수·전광판 배치·차트)을 다시 잡는다.
+  window.dispatchEvent(new Event("resize"));
+  if (data) render();
+  if (chartTicker && chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
+  else if (performanceChartOpen && performancePayload) renderPerformanceChart(performancePayload);
+}
+applyLayoutWidth(storageGet(layoutStorage.wide) === "1");
+document.getElementById("layoutWidthToggle").addEventListener("click", toggleLayoutWidth);
 document.getElementById("tradeAccount").addEventListener("change", () => {
   selectedTrade.accountId = document.getElementById("tradeAccount").value;
   renderTradeControls();

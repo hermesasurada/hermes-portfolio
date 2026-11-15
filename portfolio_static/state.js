@@ -32,6 +32,9 @@ const sidebarStorage = {
 const accountSelectionStorage = {
   state: "portfolio.accounts.selection"
 };
+const layoutStorage = {
+  wide: "portfolio.layout.wide"   // PC 본문 폭 기본(최대 1760px) ↔ 전체(2026-11-15)
+};
 const transactionStorage = {
   showHidden: "portfolio.transactions.showHidden"
 };

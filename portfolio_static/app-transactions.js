@@ -811,6 +811,48 @@ function renderTransactions(rows, resetPage = true) {
   renderTransactionPager(visible.length);
 }
 
+// ── PC 거래내역 팝업(2026-11-15 사용자 지시) ──
+// 981px 이상에서는 하단 패널을 #transactionsModalSlot으로 옮겨 팝업으로 연다(요소를 그대로 옮기므로
+// 필터·숨긴 내역·수정·삭제 처리기가 그대로 동작). 모바일은 하단 패널 그대로.
+let transactionPanelHome = null;
+function transactionsPopupMode() {
+  return Boolean(window.matchMedia?.("(min-width: 981px)")?.matches);
+}
+
+function placeTransactionPanel() {
+  const panel = document.querySelector(".transaction-panel");
+  const slot = document.getElementById("transactionsModalSlot");
+  if (!panel || !slot) return;
+  if (!transactionPanelHome && panel.parentNode !== slot) {
+    transactionPanelHome = { parent: panel.parentNode, next: panel.nextSibling };
+  }
+  if (transactionsPopupMode()) {
+    if (panel.parentNode !== slot) slot.appendChild(panel);
+    panel.classList.add("in-popup");
+  } else {
+    const modal = document.getElementById("transactionsModal");
+    if (modal?.open) modal.close();
+    if (panel.parentNode === slot && transactionPanelHome) {
+      transactionPanelHome.parent.insertBefore(panel, transactionPanelHome.next);
+    }
+    panel.classList.remove("in-popup");
+  }
+  syncTransactionPanel();
+}
+
+function openTransactionsPopup() {
+  const modal = document.getElementById("transactionsModal");
+  if (!modal || !transactionsPopupMode()) return;
+  placeTransactionPanel();
+  if (!modal.open) modal.showModal?.();
+  setTransactionsExpanded(true, true);
+}
+
+function closeTransactionsPopup() {
+  const modal = document.getElementById("transactionsModal");
+  if (modal?.open) modal.close();
+}
+
 function setTransactionsExpanded(expanded, shouldLoad = false) {
   transactionsExpanded = expanded;
   const panel = document.querySelector(".transaction-panel");

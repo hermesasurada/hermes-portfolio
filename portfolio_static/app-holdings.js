@@ -1063,9 +1063,15 @@ function performanceChartFromHash() {
 }
 
 function syncTransactionPanel() {
-  // 차트 화면에서는 하단 거래내역 패널을 숨긴다.
+  // 차트 화면·관심목록·성과에서는 거래내역을 숨긴다. PC는 패널이 팝업 안에 있으므로 여는 버튼을 숨기고
+  // 열려 있던 팝업은 닫는다(거래내역의 티커를 눌러 차트로 가는 경우).
+  const blocked = Boolean(performanceChartOpen || chartTicker || interestModeActive());
   const panel = document.querySelector(".transaction-panel");
-  if (panel) panel.classList.toggle("hidden", Boolean(performanceChartOpen || chartTicker || interestModeActive()));
+  const inPopup = Boolean(panel?.classList.contains("in-popup"));
+  if (panel) panel.classList.toggle("hidden", blocked && !inPopup);
+  document.getElementById("transactionsPopupOpen")?.classList.toggle("hidden", blocked);
+  const modal = document.getElementById("transactionsModal");
+  if (inPopup && blocked && modal?.open) modal.close();
 }
 
 let frozenColumnsFrame = 0;
