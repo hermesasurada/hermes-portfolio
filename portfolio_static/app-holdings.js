@@ -1103,6 +1103,17 @@ function initListVisibleRowsControl() {
   });
 }
 
+// 가로 스크롤바는 상자 안쪽 높이를 차지한다 — 빼먹으면 마지막 행이 스크롤바에 가린다(2026-11-15 보고, PC 14px).
+// 세로 스크롤바는 폭 0으로 숨기므로 offsetHeight − clientHeight − 위아래 테두리가 곧 가로 스크롤바 두께다.
+function horizontalScrollbarHeight(wrap) {
+  const scrollWidth = Number(wrap.scrollWidth) || 0;
+  const clientWidth = Number(wrap.clientWidth) || 0;
+  if (scrollWidth <= clientWidth) return 0;
+  const style = typeof getComputedStyle === "function" ? getComputedStyle(wrap) : null;
+  const borders = (parseFloat(style?.borderTopWidth) || 0) + (parseFloat(style?.borderBottomWidth) || 0);
+  return Math.max(0, (Number(wrap.offsetHeight) || 0) - (Number(wrap.clientHeight) || 0) - borders);
+}
+
 function syncTableViewportRows() {
   document.querySelectorAll(".holdings-section .table-wrap").forEach(wrap => {
     const body = wrap.querySelector("tbody");
@@ -1114,7 +1125,7 @@ function syncTableViewportRows() {
     if (!rowHeight) return;
     const headHeight = head ? head.getBoundingClientRect().height : 0;
     // Honor the requested row count even when the page itself needs vertical scrolling.
-    const wanted = headHeight + rowHeight * selectedListVisibleRows + 2;
+    const wanted = headHeight + rowHeight * selectedListVisibleRows + 2 + horizontalScrollbarHeight(wrap);
     wrap.style.setProperty("--list-rows-max-height", `${Math.round(wanted)}px`);
   });
 }

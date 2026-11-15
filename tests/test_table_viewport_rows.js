@@ -45,6 +45,15 @@ assert.equal(mobile.vars['--list-rows-max-height'], '516px');
 const interest = makeWrap(47.5, 70);
 run([interest]);
 assert.equal(interest.vars['--list-rows-max-height'], '642px');
+// 가로 스크롤바가 있으면 그 두께(offsetHeight − clientHeight − 테두리)만큼 더 잡는다 — 마지막 행이 가리지 않게.
+const scrolled = Object.assign(makeWrap(42, 70), { scrollWidth: 2400, clientWidth: 1200, offsetHeight: 576, clientHeight: 562 });
+ctx.getComputedStyle = () => ({ borderTopWidth: '0px', borderBottomWidth: '0px' });
+run([scrolled]);
+assert.equal(scrolled.vars['--list-rows-max-height'], `${70 + 42 * 12 + 2 + 14}px`);
+// 가로로 넘치지 않으면 더하지 않는다
+const fits = Object.assign(makeWrap(42, 70), { scrollWidth: 1200, clientWidth: 1200, offsetHeight: 576, clientHeight: 562 });
+run([fits]);
+assert.equal(fits.vars['--list-rows-max-height'], `${70 + 42 * 12 + 2}px`);
 // A short viewport does not silently override the requested number of rows.
 ctx.window.innerHeight = 500;
 const short = makeWrap(47.5, 48);

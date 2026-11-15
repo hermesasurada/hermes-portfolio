@@ -33,7 +33,7 @@
 - 거래내역 API는 전체 이력(200건 제한 금지), 프런트에서 필터 후 20건씩. 테스트 `test_transaction_filter.js`.
 - 배당이력 팝업 PC 최소 너비 600px.
 - 관심목록 고정열은 CSS sticky만(로고·종목명, 삭제 열 고정 금지). 종목명 `left`는 `--interest-logo-col`. 셀은 `overflow: hidden`, 등락 열은 세션 배지 자리 `padding-right: 9px`.
-- 표는 기본 12행 + 헤더만 보이고 안에서 스크롤. 높이는 `syncTableViewportRows()`가 실측(rAF 금지). 테스트 `test_table_viewport_rows.js`.
+- 표는 기본 12행 + 헤더만 보이고 안에서 스크롤. 높이는 `syncTableViewportRows()`가 실측(rAF 금지), 가로로 넘치면 가로 스크롤바 두께(`horizontalScrollbarHeight`, offsetHeight − clientHeight − 테두리)를 더한다(빼먹으면 마지막 행이 스크롤바에 가린다, 2026-11-15). 테스트 `test_table_viewport_rows.js`.
 - 배당 탭: 당월 포함 3개월만 펼침(`dividendMonthCollapsed`), 매달 1~5일은 전월부터 표시(서버 `dividend_list_start`), '오늘' 마커는 지급일<오늘과 그 이후 사이(`isPastPayment`). 배당 수량은 **배당락일 기준 보유분**(`entitled_quantity`, 배당락 뒤 매도는 받고 매수는 못 받음; 미국 거래는 미국 장 날짜로 기록). 테스트 `test_dividend_month_collapse.js`, `test_dividend_today_marker.js`.
 - 배당 탭 주당배당금·목록 배당율: 분기배당 개별 기업의 공시 증액=빨강 굵게, 공시 전 다음 회차 증액 예상(작년 같은 분기 증액)=주황 굵게(`dividend_raise.py`, 목록은 stats `dividend_raise`). 테스트 `test_dividend_raise.py`, `test_dividend_raise_marker.js`.
 - 목록의 기간 수익률은 항상 서버 `performance_tr`(배당 포함, 2026-11-07 토글 폐지). 품질 P는 `perfText`가 흐리게. 테스트 `test_dividend_returns.js`.
