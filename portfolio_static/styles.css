@@ -6939,3 +6939,42 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
   #transactionsPopupOpen,
   #layoutWidthToggle { display: none; }
 }
+
+/* ── PC 개별종목 2단 배치(2026-11-15): 차트 화면이 1840px 이상이면 왼쪽 차트 | 오른쪽 지표 레일 ──
+   syncChartRailLayout이 .chart-rail을 붙인다. 레일은 스크롤해도 따라오고, 지표판은 2열 세로 우선(모바일과 같은 순서). */
+@media (min-width: 981px) {
+  .chart-view.chart-rail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 440px;
+    grid-template-areas: "head rail" "stage rail";
+    grid-template-rows: auto 1fr;
+    column-gap: 16px;
+    align-items: start;
+  }
+  .chart-view.chart-rail > .chart-head { grid-area: head; }
+  .chart-view.chart-rail > .chart-stage { grid-area: stage; }
+  .chart-view.chart-rail > .chart-stats {
+    grid-area: rail;
+    position: sticky;
+    top: 68px;
+    max-height: calc(100dvh - 80px);
+    overflow-y: auto;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+  .chart-view.chart-rail #chartStats .cstat-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(var(--mobile-rows, 24), 30px);
+    grid-auto-flow: column;
+    border-right: 0;
+    border-bottom: 0;
+  }
+  .chart-view.chart-rail #chartStats .cstat-row {
+    order: var(--mobile-order, 0);
+    height: 30px;
+    border-right: 1px solid var(--line);
+  }
+  .chart-view.chart-rail #chartStats .cstat-row.empty { display: none; }
+  .chart-view.chart-rail .cstat-compare-wrap { overflow-x: auto; }
+}

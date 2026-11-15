@@ -273,9 +273,12 @@ function renderCompareLineChart(payload) {
   const useLog = Boolean(chartLogScale);   // 비교 %는 (1+%/100) 비율로 로그축에 매핑
   const ratioOf = pct => 1 + pct / 100;
   const scale = useLog ? compareLogScale(values.map(ratioOf)) : niceChartScale([...values, 0]);
-  const width = 980;
   const compactChart = window.matchMedia?.("(max-width: 980px)")?.matches;
-  const height = compactChart ? 900 : 560;
+  syncChartRailLayout();
+  const sizingCanvas = document.getElementById("chartCanvas");
+  const width = chartViewBoxWidth(sizingCanvas, compactChart);   // 개별 차트와 같은 배율 상한(2026-11-15)
+  const height = chartViewBoxHeight(sizingCanvas, width, compactChart ? 900 : 560, compactChart);
+  renderedChartBox = { width: document.getElementById("chartView")?.clientWidth || 0, height: window.innerHeight || 0 };
   const pad = { top: 42, right: 108, bottom: 22, left: 52 };
   const plotW = width - pad.left - pad.right;
   const rsiGap = compactChart ? 24 : 18;

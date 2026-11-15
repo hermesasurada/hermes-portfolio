@@ -522,6 +522,18 @@ document.addEventListener("click", event => {
 });
 window.addEventListener("hashchange", syncChartRoute);
 window.addEventListener("resize", schedulePcFrozenColumns);
+// 차트는 화면 폭에 맞춰 viewBox를 정하므로(2026-11-15) 폭이나(레일 배치일 때) 높이가 바뀌면 다시 그린다.
+let chartResizeTimer = 0;
+window.addEventListener("resize", () => {
+  clearTimeout(chartResizeTimer);
+  chartResizeTimer = setTimeout(() => {
+    if (!chartTicker || performanceChartOpen || !chartPayload) return;
+    const view = document.getElementById("chartView");
+    const widthChanged = Math.abs((view?.clientWidth || 0) - renderedChartBox.width) >= 8;
+    const heightChanged = view?.classList.contains("chart-rail") && Math.abs((window.innerHeight || 0) - renderedChartBox.height) >= 24;
+    if (widthChanged || heightChanged) renderLineChart(chartPayload);
+  }, 150);
+});
 // 창 높이가 바뀌면 10행 뷰포트도 다시 잡는다(낮은 화면은 뷰포트가 상한).
 window.addEventListener("resize", scheduleTableViewportRows);
 document.querySelectorAll(".tab-btn").forEach(btn => {

@@ -347,8 +347,10 @@ function renderPerformanceChart(payload) {
   const scale = tightChartScale(values);
   const min = scale.min;
   const max = scale.max;
-  const width = 980;
   const isMobileChart = Boolean(window.matchMedia?.("(max-width: 980px)")?.matches);
+  syncChartRailLayout();   // 성과 화면은 레일을 쓰지 않는다(개별종목에서 넘어왔으면 풀린다)
+  // 넓은 화면에서 그림을 늘리지 않고 넓게 그린다(개별종목 차트와 같은 배율 상한, 2026-11-15).
+  const width = chartViewBoxWidth(document.getElementById("chartCanvas"), isMobileChart);
   const height = isMobileChart ? 864 : 432;
   // 우측은 % 끝라벨만 — 금액은 호버 툴팁에서 본다(여백을 넓게 먹던 원인)
   const pad = { top: 22, right: 74, bottom: 22, left: 56 };

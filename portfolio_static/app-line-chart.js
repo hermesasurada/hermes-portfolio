@@ -1431,6 +1431,47 @@ function bindChartInteractions(points, payload, geometry) {
   });
 }
 
+// ── PC 차트 크기·배치(2026-11-15 사용자 지시) ──
+// 예전엔 980 단위 그림을 화면 폭만큼 그대로 늘려서, 전체 폭(2,000px대)에서는 축 글자·선·오버레이가 2배로 커지고
+// 높이도 커져 지표가 화면 밖으로 밀렸다. 화면 배율은 기본 폭 최대치(본문 1760px일 때 약 1.4배)에서 멈추고,
+// 남는 폭은 viewBox를 넓혀 같은 기간을 더 촘촘히 그린다. 모바일(≤980px)은 예전 그대로 980 단위.
+const CHART_BASE_WIDTH = 980;
+const CHART_MAX_SCALE = 1.4;
+// 차트 화면이 이 폭 이상이면 오른쪽에 지표 레일(440px)을 둔다. 레일을 둬도 차트가 기본 폭 최대치(약 1,340px)
+// 아래로 줄지 않는 폭이다 — 1920px 모니터의 전체 폭(약 1,540px)에서는 레일 없이 차트만 넓어진다.
+const CHART_RAIL_MIN_WIDTH = 1840;
+
+function chartViewBoxWidth(canvasEl, compact = false) {
+  const px = Number(canvasEl?.clientWidth) || 0;
+  if (compact || px <= CHART_BASE_WIDTH * CHART_MAX_SCALE) return CHART_BASE_WIDTH;
+  return Math.round(px / CHART_MAX_SCALE);
+}
+
+// 레일 배치에서는 차트를 화면 아래까지 채운다(기본 높이 ~ 1.6배 사이). 그 밖에는 기본 높이 그대로.
+function chartViewBoxHeight(canvasEl, width, baseHeight, compact = false) {
+  const view = document.getElementById("chartView");
+  if (compact || !view?.classList?.contains("chart-rail")) return baseHeight;
+  const px = Number(canvasEl?.clientWidth) || 0;
+  if (!px || !width) return baseHeight;
+  const scale = px / width;
+  const top = (canvasEl.getBoundingClientRect?.().top || 0) + (window.scrollY || 0);
+  const available = (window.innerHeight || 0) - top - 64;   // 아래 비교 검색 줄과 여백
+  return Math.round(Math.min(baseHeight * 1.6, Math.max(baseHeight, available / scale)));
+}
+
+// 개별종목 화면에서만, 넓을 때 2단(차트 | 지표 레일). 그리기 전에 불러야 캔버스 폭을 제대로 잰다.
+function syncChartRailLayout() {
+  const view = document.getElementById("chartView");
+  if (!view?.classList) return false;
+  const compact = Boolean(window.matchMedia?.("(max-width: 980px)")?.matches);
+  view.classList.remove("chart-rail");
+  const on = !compact && Boolean(chartTicker) && !performanceChartOpen && (view.clientWidth || 0) >= CHART_RAIL_MIN_WIDTH;
+  view.classList.toggle("chart-rail", on);
+  return on;
+}
+
+let renderedChartBox = { width: 0, height: 0 };
+
 function renderLineChart(payload) {
   syncChartBottomControls(true);
   // 기간이 정해진 뒤 단위를 맞춘다 — 전체 기간이 10년 미만이면 월봉→주봉 등으로 자동 하향.
@@ -1495,8 +1536,11 @@ function renderLineChart(payload) {
     : denseLowerChartScale(scaleValues, compactChart ? 7 : 9, compactChart ? 8 : 11);
   const min = scale.min;
   const max = scale.max;
-  const width = 980;
-  const height = compactChart ? 900 : 530;
+  syncChartRailLayout();
+  const sizingCanvas = document.getElementById("chartCanvas");
+  const width = chartViewBoxWidth(sizingCanvas, compactChart);
+  const height = chartViewBoxHeight(sizingCanvas, width, compactChart ? 900 : 530, compactChart);
+  renderedChartBox = { width: document.getElementById("chartView")?.clientWidth || 0, height: window.innerHeight || 0 };
   const last = values[values.length - 1];
   const overlayMetrics = chartOverlayMetrics(values);
   const extremeRadius = compactChart ? 7 : 4;
