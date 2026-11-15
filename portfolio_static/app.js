@@ -346,6 +346,10 @@ document.querySelector(".transaction-panel > .toolbar").addEventListener("click"
   setTransactionsExpanded(!transactionsExpanded, true);
 });
 document.getElementById("transactionsPopupOpen").addEventListener("click", openTransactionsPopup);
+// 종목 차트 툴바의 '내역' — 그 종목의 전 계좌 거래. 차트에 보이는 현재가 기준.
+document.getElementById("chartTxHistoryOpen").addEventListener("click", () => {
+  if (chartPayload) openTickerTransactions(chartPayload.ticker, chartPayload.name, chartPayload.current_price);
+});
 document.getElementById("transactionsPopupClose").addEventListener("click", closeTransactionsPopup);
 // 닫으면 접는다 — 펼친 채로 두면 계좌를 바꿀 때마다 보이지 않는 거래내역을 다시 받는다.
 document.getElementById("transactionsModal").addEventListener("close", () => setTransactionsExpanded(false));

@@ -1007,6 +1007,8 @@ function syncDetailTabs() {
   document.querySelector("#chartView .chart-head")?.classList.toggle("hidden", performanceChartOpen);
   document.querySelector("#chartView .chart-identity")?.classList.toggle("hidden", performanceChartOpen);
   document.getElementById("chartInterestOpen")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
+  // 종목 '내역'은 관심목록 옆 툴바 버튼(2026-11-15 사용자 지시, 예전엔 차트 컨트롤의 거래 묶음)
+  document.getElementById("chartTxHistoryOpen")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
   document.getElementById("chartBottomControls")?.classList.toggle("hidden", !showingChart);
   // 성과차트는 컨트롤이 '부드럽게'와 기간뿐이라 감싸는 박스를 없앤다
   document.getElementById("chartBottomControls")?.classList.toggle("perf-mode", performanceChartOpen);
