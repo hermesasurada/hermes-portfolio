@@ -54,7 +54,7 @@ assert.doesNotMatch(html, /data-ticker-tx-more/);
 assert.match(run('tickerTransactionsMarkup([], "NVDA", null, 3)'), /data-ticker-tx-more/);
 assert.match(run('tickerTransactionsSummaryMarkup([], "NVDA", 1, 2)'), /최근 2년 거래 없음 · 2년 전 1건 생략/);
 // 내역 버튼은 차트 툴바의 관심목록 바로 옆(2026-11-15), 차트 컨트롤 '거래' 묶음에서는 빠진다
-assert.match(h.readStatic('index.html'), /id="chartInterestOpen"[^>]*>관심목록<\/button>\s*<button[^>]*id="chartTxHistoryOpen"[^>]*aria-controls="tickerTxModal"[^>]*>내역<\/button>/);
+assert.match(h.readStatic('index.html'), /id="chartInterestOpen"[^>]*>관심목록<\/button>\s*<button[^>]*id="chartTxHistoryOpen"[^>]*aria-controls="tickerTxModal"[^>]*>거래내역<\/button>/);
 assert.doesNotMatch(h.readStatic('app-line-chart.js'), /data-chart-tx-history/);
 assert.match(h.readStatic('app-holdings.js'), /chartTxHistoryOpen"\)\?\.classList\.toggle\("hidden", !chartTicker \|\| performanceChartOpen\)/);
 console.log('ticker transactions popup ok');
