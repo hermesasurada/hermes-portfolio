@@ -847,8 +847,11 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
 /* 칸은 내용 폭 아래로 줄지 않고(max-content) 남는 폭만 균등하게 나눈다(1fr).
    균등 분할이면 가장 긴 값(나스닥 등)에 모든 칸이 맞춰져 폭을 낭비하고 말줄임이 생긴다.
    줄지 않으니 모자랄 때는 가로로 넘치고, JS는 그 넘침으로 캐러셀 복귀를 판정한다. */
+/* 지수·환율 묶음은 500px(1920 기본 폭에서 실제로 차지하던 폭)까지만 늘린다 — 전체 폭(2026-11-16 사용자 지시)에서
+   칸이 290px씩 벌어져 듬성해졌다. 남는 폭은 계좌 요약 열(1fr)이 흡수해 시장 칸은 오른쪽에 같은 간격으로 모인다.
+   고정 상한 트랙이 fr보다 먼저 자라므로 기본 폭 화면의 배치는 그대로다. */
 .hero-strip.hero-combined .hero-page-shell {
-  grid-template-columns: max-content minmax(max-content, 1fr) minmax(max-content, 1fr);
+  grid-template-columns: minmax(max-content, 1fr) minmax(max-content, 500px) minmax(max-content, 500px);
   cursor: default;
   user-select: auto;
 }

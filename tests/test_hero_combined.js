@@ -14,7 +14,8 @@ assert.match(css, /\.hero-index-grid > \.hero-index-item \{\s*display: grid;[^}]
 assert.doesNotMatch(css, /^\.hero-index-item \{/m, '특이도 낮은 기본 규칙이 돌아오면 .ticker-link에 다시 덮인다');
 assert.match(h.mediaBlocks(css, '(max-width: 980px)').map(b => b.text).join('\n'), /\.hero-index-grid > \.hero-index-item \{[^}]*border-left: 0;/);
 // 합친 모드: 칸은 내용 폭 아래로 줄지 않고(max-content) 남는 폭만 나눈다 — 그래야 모자랄 때 넘치고, JS가 그 넘침으로 판정한다.
-assert.match(css, /\.hero-strip\.hero-combined \.hero-page-shell \{[^}]*grid-template-columns: max-content minmax\(max-content, 1fr\) minmax\(max-content, 1fr\);/);
+assert.match(css, /\.hero-strip\.hero-combined \.hero-page-shell \{[^}]*grid-template-columns: minmax\(max-content, 1fr\) minmax\(max-content, 500px\) minmax\(max-content, 500px\);/);
+// 전체 폭(2026-11-16): 지수·환율 묶음은 500px까지만 늘고 남는 폭은 계좌 요약 열이 흡수 — 칸이 듬성하게 벌어지지 않는다.
 assert.match(css, /\.hero-strip\.hero-combined \.hero-index-grid \{[^}]*repeat\(3, minmax\(max-content, 1fr\)\)/);
 // width:100%를 남기면 면의 margin-left가 트랙 밖으로 밀려 늘 넘친다(실측 오판 이력).
 assert.match(css, /\.hero-strip\.hero-combined \.hero-page-shell > \.hero-summary-page \{ grid-area: auto; width: auto; \}/);
