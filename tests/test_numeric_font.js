@@ -37,6 +37,14 @@ for (const grid of ['#holdings > tr > td:nth-child(n+3)', '#interestRows > tr > 
   assert.ok(block.includes('font-family: var(--list-num-font)'), `${grid}가 고정폭을 쓰지 않는다`);
   assert.ok(block.includes('tabular-nums'), `${grid}에 tabular-nums가 빠지면 자릿수가 어긋난다`);
 }
+// 거래내역(계좌 표·종목 팝업) 숫자 칸도 같은 고정폭(2026-11-16). 편집 행·빈 안내 행은 제외.
+for (const grid of ['#transactions > tr:not(.tx-editing) > td:not([colspan]):is(:first-child, :nth-child(n+6):nth-child(-n+11))',
+  '.ticker-tx-table tbody td:is(:first-child, :nth-child(n+4))']) {
+  const at = css.indexOf(grid);
+  assert.ok(at > 0, `거래내역 숫자 규칙 없음: ${grid}`);
+  const block = css.slice(at, css.indexOf('}', at));
+  assert.ok(block.includes('font-family: var(--list-num-font)'), `${grid}가 고정폭을 쓰지 않는다`);
+}
 const geist = fs.readFileSync(path.join(root, "GeistMono-Variable-latin.woff2"));
 assert.equal(geist.toString("ascii", 0, 4), "wOF2");
 assert.match(css, /@font-face\s*\{\s*font-family: "Geist Mono";\s*src: url\("\/static\/GeistMono-Variable-latin\.woff2"\)/);

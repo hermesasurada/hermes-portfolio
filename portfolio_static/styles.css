@@ -6861,6 +6861,16 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 .ticker-tx-stat { white-space: nowrap; }
 .ticker-tx-table td.ticker-tx-account { text-align: left; }
 .ticker-tx-table .tx-hidden-row td { opacity: .5; }
+/* 거래내역 숫자 칸(거래일·단가·수량·잔고·금액·현재가·현재대비)은 계좌·관심목록 표와 같은 고정폭 숫자 글꼴(2026-11-16).
+   계좌 거래내역(#transactions, PC 팝업·모바일 하단 공용): 1·6~11열. 편집 행·빈 안내 행 제외.
+   종목 거래내역 팝업(.ticker-tx-table): 1·4~7열. 계좌·티커·종목명·유형 칩·관리 버튼은 기존 서체. */
+#transactions > tr:not(.tx-editing) > td:not([colspan]):is(:first-child, :nth-child(n+6):nth-child(-n+11)),
+.ticker-tx-table tbody td:is(:first-child, :nth-child(n+4)) {
+  font-family: var(--list-num-font);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: var(--list-num-tracking);
+}
 .ticker-tx-empty { padding: 18px 4px; font-size: 13px; text-align: center; }
 .ticker-tx-more { align-self: center; flex: 0 0 auto; margin-top: 8px; font-size: 12px; }
 
