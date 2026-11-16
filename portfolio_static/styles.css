@@ -6999,3 +6999,20 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
   /* 비교 지표표는 행이 많아 줄일 수 없다 — 차트 높이 안에서 표 안쪽을 스크롤한다(아래 끝은 차트와 맞춘다). */
   .chart-view.chart-rail .cstat-compare-wrap { flex: 1 1 0; min-height: 0; overflow: auto; }
 }
+
+/* ── 모바일 개별종목 툴바 한 줄(2026-11-16 사용자 지시) ──
+   '목록'은 아이콘 버튼(라벨은 aria-label), 편입 ETF·촉매·일정의 개수 배지는 숨긴다(PC는 그대로).
+   그래도 넘치는 종목(구성종목·네이버 증권까지 붙는 ETF 등)은 줄바꿈 대신 가로로 밀어 본다. */
+@media (max-width: 980px) {
+  .holdings-section .toolbar .title-tools:has(> #chartBack:not(.hidden)) {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  /* 스크롤바 정책: 표준 scrollbar-width는 쓰지 않고(webkit이 전체 무시) ::-webkit-scrollbar에 높이 0 */
+  .holdings-section .toolbar .title-tools:has(> #chartBack:not(.hidden))::-webkit-scrollbar { width: 0; height: 0; }
+  .holdings-section .toolbar .title-tools:has(> #chartBack:not(.hidden)) > * { flex: 0 0 auto; }
+  #chartBack.chart-back-btn { display: inline-grid; place-items: center; padding: 0; aspect-ratio: 1; }
+  #chartBack.chart-back-btn > span { display: none; }
+  #chartBack.chart-back-btn .nav-icon { display: block; }
+  .title-tools :is(#chartEtfExposure, #chartCompanyEvents) .company-events-badge { display: none; }
+}

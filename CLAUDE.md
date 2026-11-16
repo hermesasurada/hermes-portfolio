@@ -42,6 +42,7 @@
 - **종목 태그**(2026-10-12, `app-ticker-tags.js`·서버 `ticker_tags.py`·표 `ticker_tags`): 종목(티커)마다 자유 태그, 서버 저장이라 기기 공통. 편집은 차트 헤더(태그 칩 + ✎, 입력 `#반도체 #CPU`, 쓰던 태그 제안), 종목당 10개·20자. 필터는 컨트롤 영역 '태그'(섹터와 같은 패널, **선택한 태그 중 하나라도 가진 종목 = OR**)로 세부내역·배당·관심목록에 공통 적용, 선택은 `detailStorage.tagFilter`(이 브라우저). 차트의 태그 칩을 누르면 그 태그로 거른 목록으로 돌아간다. **목록에는 태그를 보이지 않는다**(2026-10-15 사용자 지시 — 칩은 차트 헤더에서만, 차트 헤더의 태그는 로고 밑 별도 행). 수집 대상에서 빼도 태그는 남는다. 테스트 `test_ticker_tags.js`, `test_ticker_tags_clean_store_and_count`.
 - 관심목록 컬럼 폭 권위는 `<colgroup>`. 60행 초과 그룹은 창 렌더링(`renderInterestRowsWindow`): 행 높이는 그려진 행 평균, 이름 열 폭은 행 데이터 전체(`syncTickerNameColumnWidth`), 그릴 구간은 목록 길이 안으로, 목록 구성이 바뀌면 스크롤 맨 위. `#interestRows tr` 전수 순회 금지. 테스트 `test_interest_virtual_rows.js`.
 - 차트에서 목록으로 돌아오면 스크롤 복원(`rememberListScroll`/`restoreListScroll`). 테스트 `test_list_scroll_restore.js`.
+- 모바일(≤980px) 개별종목 툴바는 한 줄(2026-11-16 사용자 지시): `목록`은 목록 아이콘 버튼(`.chart-back-btn`, `aria-label`, PC는 글자), 편입 ETF·촉매·일정 개수 배지는 숨김, 그래도 넘치면 줄바꿈 대신 가로 스크롤. 테스트 `test_mobile_chart_toolbar.js`.
 - 모바일(≤980px) 개별종목을 열면 툴바(목록·관심목록·거래내역…)가 화면 맨 위에 오게 페이지 스크롤(`scrollChartToolbarToTop`, 2026-11-16 사용자 지시). 스켈레톤 직후 한 번, 문서가 짧아 못 내려갔으면 그린 뒤 한 번 더(그 사이 더 내려 봤으면 그대로). PC는 표 스크롤이라 해당 없음. 테스트 `test_mobile_chart_scroll.js`.
 - 휴장일 행 등락금액은 `→0`(`isHolidayPreviousSession`), 환율 적용 시 환율 변동분은 표기. 테스트 `test_holiday_change_amount.js`.
 - 차트 툴팁 등락은 `changePercentParts` 공유(SVG는 parts로 조립). 테스트 `test_chart_moving_averages.js`.
