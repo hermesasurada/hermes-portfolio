@@ -576,9 +576,13 @@ function syncHeroLayout() {
   applyHeroPageVisibility();
 }
 
-function toggleHeroSummaryPage() {
+// step: +1 다음 면, -1 이전 면. 스와이프·가로 휠은 방향대로(2026-11-16 사용자 지시 — 예전엔 어느 쪽으로 밀어도 다음),
+// 다음 버튼은 늘 +1. 끝에서는 반대쪽 끝으로 돈다.
+function toggleHeroSummaryPage(step = 1) {
   if (heroCombined()) return; // 한 줄에 다 보이면 넘길 면이 없다
-  heroSummaryPage = heroSummaryPages[(heroSummaryPages.indexOf(heroSummaryPage) + 1) % heroSummaryPages.length];
+  const n = heroSummaryPages.length;
+  const move = step < 0 ? -1 : 1;
+  heroSummaryPage = heroSummaryPages[(heroSummaryPages.indexOf(heroSummaryPage) + move + n) % n];
   storageSet(heroSummaryStorage.page, heroSummaryPage);
   renderHeroSummaryPage();
 }
@@ -661,7 +665,7 @@ function renderHeroSummaryPage() {
 }
 
 function initHeroSummaryCarousel() {
-  document.getElementById("heroNext")?.addEventListener("click", toggleHeroSummaryPage);
+  document.getElementById("heroNext")?.addEventListener("click", () => toggleHeroSummaryPage(1));
   document.getElementById("heroDots")?.addEventListener("click", event => {
     const page = event.target.closest?.(".hero-summary-dot")?.dataset.heroPage;
     if (!page || page === heroSummaryPage) return;
@@ -694,7 +698,8 @@ function initHeroSummaryCarousel() {
       clearDrag();
       if (Math.abs(deltaX) >= 36 && Math.abs(deltaX) > Math.abs(deltaY) * 1.15) {
         swiped = true;
-        toggleHeroSummaryPage();
+        // 왼쪽으로 밀면(손가락이 왼쪽으로) 다음 면, 오른쪽으로 밀면 이전 면 — 사진 넘기기와 같은 방향.
+        toggleHeroSummaryPage(deltaX < 0 ? 1 : -1);
       }
     });
     shell.addEventListener("pointercancel", clearDrag);
@@ -723,7 +728,8 @@ function initHeroSummaryCarousel() {
       if (!wheelLocked) {
         wheelDistance += event.shiftKey ? event.deltaY : event.deltaX;
         if (Math.abs(wheelDistance) >= 32) {
-          toggleHeroSummaryPage();
+          // 트랙패드 가로 스크롤: 오른쪽으로 넘기는 제스처(deltaX>0)가 다음 면.
+          toggleHeroSummaryPage(wheelDistance > 0 ? 1 : -1);
           wheelLocked = true;
         }
       }

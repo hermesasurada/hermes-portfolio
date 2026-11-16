@@ -70,6 +70,15 @@ assert.match(fxItems[2].title, /100 JPY 기준 원화/);
 context.toggleHeroSummaryPage();
 assert.equal(savedPage, 'portfolio');
 assert.equal(ids.heroFxPage.inert, true);
+// 방향 인식(2026-11-16): -1은 이전 면 — 계좌 요약에서 뒤로 가면 끝(환율)으로 돈다.
+context.toggleHeroSummaryPage(-1);
+assert.equal(savedPage, 'fx');
+context.toggleHeroSummaryPage(-1);
+assert.equal(savedPage, 'indexes');
+context.toggleHeroSummaryPage(1);
+assert.equal(savedPage, 'fx');
+context.toggleHeroSummaryPage(1);
+assert.equal(savedPage, 'portfolio');
 context.data.fx = {};
 context.findTickerMeta = () => null;
 context.renderHeroSummaryPage();
@@ -115,6 +124,10 @@ assert.match(carousel, /"dragstart", event => event\.preventDefault\(\)/);
 assert.match(css, /a\.hero-index-item \{[^}]*-webkit-user-drag: none/);
 // 스와이프 직후의 click은 삼켜 면 전환과 차트 이동이 겹치지 않게 한다.
 assert.match(carousel, /if \(!swiped\) return;/);
+// 스와이프·가로 휠은 방향대로: 왼쪽으로 밀면 다음, 오른쪽이면 이전. 다음 버튼은 늘 다음.
+assert.match(carousel, /toggleHeroSummaryPage\(deltaX < 0 \? 1 : -1\)/);
+assert.match(carousel, /toggleHeroSummaryPage\(wheelDistance > 0 \? 1 : -1\)/);
+assert.match(carousel, /"heroNext"\)\?\.addEventListener\("click", \(\) => toggleHeroSummaryPage\(1\)\)/);
 // 환율 칸은 등락률이 아니라 전일 대비 금액(원). 등락률은 툴팁에.
 context.data = {fx: {USD: 1354.45, EUR: 1537.1, JPY: 8.606}};
 const fxMeta = {USDKRW: {change: -5.11005, change_pct: -0.3758}, EURKRW: {change: 7.88, change_pct: 0.51}, JPYKRW: {change: -0.028567, change_pct: -0.33}};
