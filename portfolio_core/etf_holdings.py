@@ -64,7 +64,20 @@ def etf_holdings_available(ticker: str, name: str = "") -> bool:
     """버튼 표시 기준. 일본 ETF처럼 이름으로 안 잡히는 ETF는 수집 결과로 판정한다. 레버리지는 수집하지 않으니 버튼도 없다."""
     if is_leveraged_product(name) or ticker in _leveraged_group():
         return False
-    return _entry(ticker) is not None or asset_class(ticker, name or "") == "etf"
+    if _entry(ticker) is not None:
+        return True
+    explicit = _explicit_types().get(ticker)
+    return explicit == "etf" if explicit else asset_class(ticker, name or "") == "etf"
+
+
+def _explicit_types() -> dict[str, str]:
+    """관심목록의 개별주/ETF 구분(검색 조건의 그 구분)이 이름 추정보다 우선한다(2026-11-16 사용자 지시 —
+    1489.T 등 일본 ETF가 이름에 'ETF'가 없어 수집 대상에서 빠졌다). 읽기 실패는 이름 추정으로 돌아간다."""
+    try:
+        from .interest_watchlists import explicit_asset_types
+        return explicit_asset_types()
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 def load_etf_universe() -> dict:
@@ -74,6 +87,7 @@ def load_etf_universe() -> dict:
     with connect() as conn:
         rows = conn.execute("SELECT ticker, name, display_name FROM tickers").fetchall()
     known = {key for key in _cache() if not key.startswith("_")}
+    explicit = _explicit_types()
     leveraged = _leveraged_group() | {
         row["ticker"] for row in rows
         if is_leveraged_product(row["name"]) or is_leveraged_product(row["display_name"])
@@ -81,7 +95,8 @@ def load_etf_universe() -> dict:
     return {
         "etfs": [{"ticker": row["ticker"], "name": row["name"] or row["ticker"]} for row in rows
                  if row["ticker"] not in leveraged
-                 and (row["ticker"] in known or asset_class(row["ticker"], row["name"] or "") == "etf")],
+                 and (row["ticker"] in known
+                      or (explicit.get(row["ticker"]) or asset_class(row["ticker"], row["name"] or "")) == "etf")],
         "leveraged": sorted(leveraged),
     }
 

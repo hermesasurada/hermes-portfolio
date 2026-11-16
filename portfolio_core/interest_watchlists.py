@@ -247,6 +247,17 @@ def watchlist_asset_types(migration: dict) -> dict:
     return types
 
 
+def explicit_asset_types() -> dict[str, str]:
+    """관심목록의 개별주/ETF 구분(옛 '○○ ETF'·'○○ 개별주' 그룹 소속) — {ticker: 'etf'|'stock'}.
+    이름 추정(asset_class)보다 우선한다. 일본 ETF는 영문명에 'ETF'가 없어(Exchange Traded Fd) 이름으로는 개별주로 잡힌다."""
+    with connect() as conn:
+        row = conn.execute("SELECT value FROM interest_watchlist_settings WHERE key = ?", (COUNTRY_MERGE_KEY,)).fetchone()
+    try:
+        return watchlist_asset_types(json.loads(row["value"]) if row else {})
+    except (TypeError, ValueError):
+        return {}
+
+
 def load_interest_watchlists() -> dict:
     with connect() as conn:
         seed_initial_interest_watchlists(conn)
