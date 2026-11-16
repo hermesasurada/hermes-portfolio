@@ -102,6 +102,9 @@ const defaultSortDir = {
   trend_return: -1,
   trend_deviation: 1,   // 작을수록 꾸준 — 첫 클릭에 꾸준한 종목이 위로
   trend_strength: -1,
+  trend10_return: -1,
+  trend10_deviation: 1,
+  trend10_strength: -1,
   risk_reward_score: -1,
   beta: -1,
   beta_adj: -1,

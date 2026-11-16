@@ -30,7 +30,7 @@ from .paths import KST
 from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
 from .tickers import is_korean_stock_ticker, ticker_currency, normalize_tickers
 
-TECHNICAL_CACHE_VERSION = 20  # 20: 추세를 배당 포함 가격으로·이탈폭 5년 환산·강도 분자 연속복리(2026-11-15). 19: 추세 강도 추가(2026-11-07). 18: 추세 이탈폭 추가(2026-11-07). 17: 추세 수익률 창 3년→5년(2026-10-23). 16: 추세 수익률·R² 추가. 15: 매수·매도 타점 참고(폐지)
+TECHNICAL_CACHE_VERSION = 21  # 21: 10년 추세(trend10_*) 추가(2026-11-16). 20: 추세를 배당 포함 가격으로·이탈폭 5년 환산·강도 분자 연속복리(2026-11-15). 19: 추세 강도 추가(2026-11-07). 18: 추세 이탈폭 추가(2026-11-07). 17: 추세 수익률 창 3년→5년(2026-10-23). 16: 추세 수익률·R² 추가. 15: 매수·매도 타점 참고(폐지)
 TECHNICAL_LOOKBACK_DAYS = 11 * 366
 PRICE_ADJUSTED_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
@@ -61,9 +61,15 @@ def trend_performance(daily: list[float]) -> dict[str, float | None]:
       (2년 이력 종목 +1,585% ÷ 45.7 = 34.7) 다른 종목과 비교가 되지 않았다.
     """
     closes = [float(c) for c in daily[-TREND_WINDOW_DAYS:] if c is not None and float(c) > 0]
+    return _log_trend(closes, "trend", TREND_MIN_DAYS, TREND_WINDOW_DAYS)
+
+
+def _log_trend(closes: list[float], prefix: str, min_days: int, scale_days: int | None) -> dict[str, float | None]:
+    """trend_performance 본체. prefix_return·_r2·_deviation·_strength를 낸다.
+    scale_days가 있으면 이탈폭을 그 창 길이 기준으로 환산한다(× √(scale_days ÷ 실제 일수))."""
     n = len(closes)
-    if n < TREND_MIN_DAYS:
-        return {"trend_return": None, "trend_r2": None, "trend_deviation": None, "trend_strength": None}
+    if n < min_days:
+        return {f"{prefix}_return": None, f"{prefix}_r2": None, f"{prefix}_deviation": None, f"{prefix}_strength": None}
     ys = [math.log(c) for c in closes]
     x_mean = (n - 1) / 2
     y_mean = sum(ys) / n
@@ -74,19 +80,55 @@ def trend_performance(daily: list[float]) -> dict[str, float | None]:
     ss_res = sum((y - (y_mean + slope * (x - x_mean))) ** 2 for x, y in enumerate(ys))
     r2 = None if ss_tot <= 0 else max(0.0, 1 - ss_res / ss_tot)
     annual = (math.exp(slope * 252) - 1) * 100
-    deviation = math.sqrt(ss_res / n) * 100 * math.sqrt(TREND_WINDOW_DAYS / n)
+    deviation = math.sqrt(ss_res / n) * 100 * (math.sqrt(scale_days / n) if scale_days else 1.0)
     shown_annual, shown_deviation = round(annual, 2), round(deviation, 1)
     return {
-        "trend_return": shown_annual,
-        "trend_r2": None if r2 is None else round(r2, 3),
-        "trend_deviation": shown_deviation,
+        f"{prefix}_return": shown_annual,
+        f"{prefix}_r2": None if r2 is None else round(r2, 3),
+        f"{prefix}_deviation": shown_deviation,
         # 표에 보이는 두 값으로 검산되도록 반올림한 값으로 계산한다: ln(1 + 추세 수익률) ÷ 이탈폭.
         # 이탈폭 0(완전 직선·횡보)은 정의하지 않는다.
-        "trend_strength": (
+        f"{prefix}_strength": (
             round(math.log1p(shown_annual / 100) * 100 / shown_deviation, 2)
             if shown_deviation > 0 and shown_annual > -100 else None
         ),
     }
+
+
+
+TREND10_YEARS = 10
+TREND10_START_TOLERANCE_DAYS = 31  # 이력 시작이 10년 전 경계에서 이만큼 늦어도 10년치로 본다(수집 시작일·연휴)
+
+
+def trend_performance_10y(daily: list[float], dates: list[str]) -> dict[str, float | None]:
+    """10년 추세 수익률·이탈폭·강도·R²(trend10_*). 2026-11-16 사용자 지시 — 5년 추세만으로는
+    '오래 꾸준히 올랐는지'가 안 보였다(CAH: 5년 강도 3.98로 최상위지만 2016~2020년 연 −3.6% 횡보 뒤 급등,
+    10년 강도 0.55). 산식은 5년 추세와 같고 창만 최근 10년(달력 기준)이다.
+
+    5년과 달리 10년이 안 되는 이력은 계산하지 않는다(빈 칸) — 짧은 이력을 환산해 채우면
+    '10년 동안 꾸준했다'는 뜻이 사라진다. 그래서 이탈폭 환산도 하지 않는다(늘 10년치).
+    시장마다 연간 거래일이 달라(미국 약 2,515·한국 2,450) 행 수가 아니라 날짜로 자른다.
+    """
+    empty = {"trend10_return": None, "trend10_r2": None, "trend10_deviation": None, "trend10_strength": None}
+    if not daily or len(daily) != len(dates):
+        return empty
+    try:
+        end = date.fromisoformat(str(dates[-1])[:10])
+        first = date.fromisoformat(str(dates[0])[:10])
+    except ValueError:
+        return empty
+    try:
+        start = end.replace(year=end.year - TREND10_YEARS)
+    except ValueError:  # 2월 29일
+        start = end.replace(year=end.year - TREND10_YEARS, day=28)
+    if first > start + timedelta(days=TREND10_START_TOLERANCE_DAYS):
+        return empty
+    start_text = start.isoformat()
+    closes = [
+        float(c) for d, c in zip(dates, daily)
+        if str(d)[:10] >= start_text and c is not None and float(c) > 0
+    ]
+    return _log_trend(closes, "trend10", TREND_MIN_DAYS, None)
 
 
 # 접미사별 현지 기준지수 — 같은 날짜 수익률을 비교하므로 같은 시간대의 지수여야 한다.
@@ -495,6 +537,7 @@ def calculate_technical_stats(
         },
         "performance": recent_performance(rows),
         **trend_performance(daily),
+        **trend_performance_10y(daily, [row["date"] for row in rows]),
         "drawdown_52w": high_52w_drawdown(daily),
         "atr_pct": None if (value := atr_percent(rows)) is None else round(value, 4),
         **_entry_seat_pct(daily, weekly),
@@ -693,6 +736,7 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
             payload["performance_tr_quality"] = tr_performance["quality"]
             # 추세 3종은 기간 수익률과 같은 배당 포함 가격으로 다시 낸다(calculate_technical_stats는 종가 기준).
             payload.update(trend_performance(tr_performance["growth"]))
+            payload.update(trend_performance_10y(tr_performance["growth"], [row["date"] for row in price_rows]))
             payload["risk_reward"] = total_return_periods(
                 price_rows,
                 dividend_rows_by_ticker.get(ticker, []),

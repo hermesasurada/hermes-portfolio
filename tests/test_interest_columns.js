@@ -6,7 +6,7 @@ const h = require("./harness");
 // β·β″ 툴팁 문구는 format.js에 한 번만 정의돼 있다 — 컬럼 정의가 그걸 참조한다(전체 로드로 함께 들어온다).
 const context = h.loadScripts(h.createContext());
 const run = code => h.evaluate(context, code);
-assert.equal(run("INTEREST_TABLE_COLUMN_COUNT"), 62);
+assert.equal(run("INTEREST_TABLE_COLUMN_COUNT"), 65);
 // 헤더에 산식 툴팁이 붙어 있어야 한다(값만 보고는 무엇인지 알 수 없는 지표).
 for (const [key, needle] of [["beta", "공분산"], ["beta_adj", "표준편차"]]) {
   const column = run(`INTEREST_COLUMNS.find(c => c.key === "${key}")`);
@@ -15,11 +15,11 @@ for (const [key, needle] of [["beta", "공분산"], ["beta_adj", "표준편차"]
 }
 // MM/DD in Roboto Mono needs room for both group-boundary paddings.
 assert.equal(run("INTEREST_COLUMNS.find(c => c.key === 'next_earnings_date').width"), 52);
-assert.equal(run("new Set(INTEREST_COLUMNS.map(c => c.key)).size"), 62);
-assert.equal(run("INTEREST_COLUMNS.filter(c => c.numeric).length"), 58);
+assert.equal(run("new Set(INTEREST_COLUMNS.map(c => c.key)).size"), 65);
+assert.equal(run("INTEREST_COLUMNS.filter(c => c.numeric).length"), 61);
 assert.equal(run("INTEREST_COLUMNS.filter(c => !c.numeric).map(c => c.key).join(',')"), 'logo,name,rating_rank,delete');
 const numericCells = run("interestRowCells({}, {}, INTEREST_COLUMNS.map(c => ({...c, cell: () => 'test'})))");
-assert.equal((numericCells.match(/numeric-cell/g) || []).length, 58);
+assert.equal((numericCells.match(/numeric-cell/g) || []).length, 61);
 assert.match(numericCells, /class="group-start numeric-cell"/);
 assert.doesNotMatch(run("interestRowCells({}, {}, INTEREST_COLUMNS.filter(c => !c.numeric).map(c => ({...c, cell: () => 'text'})))"), /numeric-cell/);
 assert.equal(run("visibleInterestColumns([]).length"), 5);
@@ -28,8 +28,8 @@ assert.equal(run("visibleInterestColumns([{ free_cash_flow: 0 }]).some(c => c.ke
 assert.equal(run("visibleInterestColumns([{ extended_change_pct: 1 }], true).some(c => c.key === 'extended_change_pct')"), false);
 assert.equal(run("visibleInterestColumns([{ dividend_growth_5y: 3 }]).some(c => c.key === 'dividend_growth_5y')"), true);
 const allHeaders = run("interestTableHead(INTEREST_COLUMNS)");
-assert.equal((allHeaders.match(/data-interest-col=/g) || []).length, 62);
-assert.equal((allHeaders.match(/data-interest-sort-key=/g) || []).length, 61);
+assert.equal((allHeaders.match(/data-interest-col=/g) || []).length, 65);
+assert.equal((allHeaders.match(/data-interest-sort-key=/g) || []).length, 64);
 const few = run("interestTableHead(visibleInterestColumns([{ rsi_week: 40, rsi_month: 45 }]))");
 assert.match(few, /colspan="2" class="group-start" data-interest-group-head="momentum"/);
 const colIndex = key => run(`INTEREST_COLUMNS.findIndex(c => c.key === '${key}')`);
@@ -40,14 +40,16 @@ assert.equal(run("INTEREST_COLUMNS.filter(c => c.group === 'dividend').map(c => 
   'dividend_yield,dividend_growth_5y,dividend_streak_years,dividend_growth_streak_years,payout_ratio');
 assert.equal(colIndex('dividend_yield'), colIndex('price_to_book') + 1);
 assert.equal(run("INTEREST_COLUMNS.filter(c => c.group === 'trend').map(c => c.key).join(',')"), 'trend_return,trend_deviation,trend_strength');
+assert.equal(run("INTEREST_COLUMNS.filter(c => c.group === 'trend10').map(c => c.key).join(',')"), 'trend10_return,trend10_deviation,trend10_strength');
 assert.equal(run("INTEREST_COLUMNS.some(c => c.group === 'dividend-policy')"), false);
 const groupedHead = run("interestTableHead(INTEREST_COLUMNS)");
 assert.match(groupedHead, /colspan="5" class="group-start" data-interest-group-head="dividend">배당</);
-assert.match(groupedHead, /colspan="3" class="group-start" data-interest-group-head="trend">추세</);
-assert.equal((run("interestEmptyRow('none', INTEREST_COLUMNS)").match(/<td /g) || []).length, 62);
+assert.match(groupedHead, /colspan="3" class="group-start" data-interest-group-head="trend">추세 5년</);
+assert.match(groupedHead, /colspan="3" class="group-start" data-interest-group-head="trend10">추세 10년</);
+assert.equal((run("interestEmptyRow('none', INTEREST_COLUMNS)").match(/<td /g) || []).length, 65);
 // 5년 → 10년 → 추세 수익률 → 이탈폭 → 강도(2026-11-07)
-assert.deepEqual(JSON.parse(run("JSON.stringify(INTEREST_COLUMNS.slice(INTEREST_COLUMNS.findIndex(c=>c.key==='perf_5y')).slice(0,5).map(c=>c.key))")),
-  ['perf_5y', 'perf_10y', 'trend_return', 'trend_deviation', 'trend_strength']);
+assert.deepEqual(JSON.parse(run("JSON.stringify(INTEREST_COLUMNS.slice(INTEREST_COLUMNS.findIndex(c=>c.key==='perf_5y')).slice(0,8).map(c=>c.key))")),
+  ['perf_5y', 'perf_10y', 'trend_return', 'trend_deviation', 'trend_strength', 'trend10_return', 'trend10_deviation', 'trend10_strength']);
 assert.match(run("interestEmptyRow('<unsafe>', visibleInterestColumns([]))"), /&lt;unsafe&gt;/);
 run(`
   const testCol = { innerHTML: '' }, testHead = { innerHTML: '' };

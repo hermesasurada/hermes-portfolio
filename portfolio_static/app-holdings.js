@@ -932,7 +932,7 @@ function filteredRows(options = {}) {
 // 예전엔 두 표가 목록을 따로 들고 있어 같은 열이 표마다 반대로 정렬됐다(이격 오름차순이
 // 관심목록에서만 빈 값을 맨 위로, 실적일 오름차순이 계좌표에서만 빈 값을 맨 위로).
 const MISSING_LAST_SORT_KEYS = new Set([
-  "extended_change_pct", "next_earnings_date", "trend_return", "trend_deviation", "trend_strength", "risk_reward_score", "ma20_pct", "ma50_pct", "ma200_pct",
+  "extended_change_pct", "next_earnings_date", "trend_return", "trend_deviation", "trend_strength", "trend10_return", "trend10_deviation", "trend10_strength", "risk_reward_score", "ma20_pct", "ma50_pct", "ma200_pct",
 ]);
 function sortValueMissing(value, key) {
   // 실적일은 날짜 문자열이라 빈 문자열·null이 곧 '없음'이다.
@@ -1336,6 +1336,9 @@ function renderTable() {
       <td class="group-start">${trendReturnText(r.trend_return)}</td>
       <td>${trendDeviationText(r.trend_deviation)}</td>
       <td>${trendStrengthText(r.trend_strength)}</td>
+      <td class="group-start">${trendReturnText(r.trend10_return)}</td>
+      <td>${trendDeviationText(r.trend10_deviation)}</td>
+      <td>${trendStrengthText(r.trend10_strength)}</td>
       <td class="group-start">${marketCapMarkup(r)}</td>
       <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
       <td><span class="row-actions">${favoriteStarMarkup(r)}${r.is_watchlist ? "" : `<button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button>`}</span></td>
