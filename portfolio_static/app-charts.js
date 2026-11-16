@@ -571,6 +571,25 @@ function restoreListScroll() {
   window.scrollTo(0, memory.windowY);
 }
 
+// 모바일(≤980px)은 페이지 전체가 스크롤된다. 개별종목을 열면 상단 요약 카드 아래의
+// 툴바(목록·관심목록·거래내역…)가 화면 맨 위에 오게 맞춘다(2026-11-16 사용자 지시).
+// 열 때는 스켈레톤뿐이라 문서가 짧아 끝까지 못 내려갈 수 있다 — 차트를 그린 뒤 한 번 더 맞추되,
+// 그 사이 사용자가 더 내려 봤으면(목표보다 아래) 건드리지 않는다.
+function chartToolbarScrollTarget() {
+  if (!window.matchMedia?.("(max-width: 980px)").matches) return null;
+  const toolbar = document.querySelector(".holdings-section .toolbar");
+  if (!toolbar) return null;
+  return Math.max(0, Math.round(toolbar.getBoundingClientRect().top + (window.scrollY || 0)));
+}
+
+function scrollChartToolbarToTop({ onlyIfAbove = false } = {}) {
+  const target = chartToolbarScrollTarget();
+  if (target == null) return;
+  const current = window.scrollY || 0;
+  if (onlyIfAbove && current >= target) return;
+  if (Math.abs(current - target) > 1) window.scrollTo(0, target);
+}
+
 // 같은 종목을 기간만 바꿔 다시 부르면 티커 비교로는 옛 응답을 걸러 내지 못한다 — 요청 순번으로 마지막 것만 받는다.
 let chartLoadToken = 0;
 async function openChart(ticker) {
@@ -595,6 +614,7 @@ async function openChart(ticker) {
   if (rangeHost) rangeHost.innerHTML = "";
   document.getElementById("chartMeta").textContent = "loading...";
   document.getElementById("chartCanvas").innerHTML = `<div class="chart-skeleton"></div>`;
+  scrollChartToolbarToTop();
   const token = ++chartLoadToken;
   chartLoadInFlight = apiFetchChart(cleanTicker, usExtendedEnabled(), priceChartRequestOptions());
   try {
@@ -603,6 +623,7 @@ async function openChart(ticker) {
     chartPayload = payload;
     document.getElementById("tableTitle").textContent = payload.name || payload.ticker;
     renderLineChart(payload);
+    scrollChartToolbarToTop({ onlyIfAbove: true });
   } catch (err) {
     if (token !== chartLoadToken || chartTicker !== cleanTicker) return;
     document.getElementById("chartMeta").textContent = "";
