@@ -1453,6 +1453,43 @@ def test_nintendo_march_fiscal_groups_september_interim_with_march_final():
         assert final["date"].month == 3 and final["date"].year == year
 
 
+def test_japan_stock_uses_company_fiscal_year_end_for_dividend_year():
+    """일본 개별주는 야후 lastFiscalYearEnd의 월을 배당연도 종료월로 쓴다(2026-11-16 캡콤 '최근 공시배당은 2027년').
+    종목별 오버라이드 없이도 9월 중간 + 이듬해 3월 결산이 '결산 연도' 한 묶음이고 재라벨을 타지 않는다."""
+    import json, sqlite3
+    from datetime import datetime, timezone
+    from portfolio_core.dividend_history import _japan_fiscal_end_month
+
+    conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
+    conn.execute("CREATE TABLE ticker_stats_cache (ticker TEXT, raw_json TEXT)")
+    march = int(datetime(2026, 3, 31, tzinfo=timezone.utc).timestamp())
+    december = int(datetime(2025, 12, 31, tzinfo=timezone.utc).timestamp())
+    conn.execute("INSERT INTO ticker_stats_cache VALUES (?, ?)", ("9697.T", json.dumps({"info": {"lastFiscalYearEnd": march}})))
+    conn.execute("INSERT INTO ticker_stats_cache VALUES (?, ?)", ("7751.T", json.dumps({"info": {"lastFiscalYearEnd": december}})))
+    assert _japan_fiscal_end_month(conn, "9697.T", "Capcom Co., Ltd.") == 3
+    assert _japan_fiscal_end_month(conn, "7751.T", "Canon Inc.") == 12
+    assert _japan_fiscal_end_month(conn, "1489.T", "NEXT FUNDS Nikkei 225 High Dividend ETF") is None   # ETF
+    assert _japan_fiscal_end_month(conn, "AAPL", "Apple Inc.") is None                                 # 일본 외
+    assert _japan_fiscal_end_month(conn, "6758.T", "Sony") is None                                     # 자료 없음
+
+    rows = [
+        {"record_date": None, "ex_date": ex, "pay_date": pay, "declaration_date": None,
+         "amount": amount, "source": "yf-history"}
+        for ex, pay, amount in [
+            ("2025-03-28", "2025-06-23", 22.0), ("2025-09-29", "2025-11-17", 20.0),
+            ("2026-03-30", "2026-06-19", 25.0), ("2026-09-29", "2026-11-16", 23.0),
+        ]
+    ]
+    events, _ = _attributed_history_events(rows, "9697.T", False, 3, fixed_fiscal=True)
+    annual = _aggregate_annual_dividends(events)
+    _mark_fiscal_finals(annual, {2025, 2026})
+    assert sorted(e["amount"] for e in annual[2026]["events"]) == [20.0, 25.0]
+    assert [e["amount"] for e in annual[2027]["events"]] == [23.0]          # 2026-09 중간배당 = 2027년 3월기
+    final = next(e for e in annual[2026]["events"] if e["is_final"])
+    assert (final["date"].year, final["date"].month) == (2026, 3)
+
+
 def test_fast_retailing_august_fiscal_groups_february_interim_with_august_final():
     """패스트리테일링은 8월 결산 — 2월 중간배당과 8월 결산배당이 한 사업연도다(2026-11-07 사용자 지적).
     이듬해 2월 회차가 앞 사업연도에 붙으면 반기배당인데 한 해 3회차로 보인다."""

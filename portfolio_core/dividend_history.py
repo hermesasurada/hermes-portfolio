@@ -8,7 +8,8 @@
 from __future__ import annotations
 
 from collections import Counter
-from datetime import date
+from datetime import date, datetime, timezone
+import json
 from statistics import median
 from typing import Any
 
@@ -201,6 +202,23 @@ def _dividend_fiscal_end_month(ticker: str, adjusted_events: list[dict]) -> int 
     if raise_month is None:
         return None
     return (raise_month - 2) % 12 + 1   # 인상월 직전 달 (1월 인상 → 12월)
+
+
+def _japan_fiscal_end_month(conn, ticker: str, name: str) -> int | None:
+    """일본 개별주의 사업연도 종료월(야후 lastFiscalYearEnd). 2026-11-16 사용자 지적(캡콤 '최근 공시배당은 2027년 배당').
+    일본은 결산배당 기준일 = 사업연도 말, 중간배당 기준일 = 반기 말이라 배당연도가 곧 사업연도다
+    (3월 결산이면 9월 중간 + 이듬해 3월 결산이 'N년 3월기' 한 묶음, 라벨은 결산 연도). 인상월 자동 판정은
+    결산배당이 중간배당보다 큰 관례 때문에 3월을 인상월로 오인해 역년으로 묶었다(9월분이 결산배당으로 표시).
+    ETF·자료 없음은 None(기존 판정)."""
+    if not str(ticker or "").upper().endswith(".T") or asset_class(ticker, name or "") == "etf":
+        return None
+    row = conn.execute("SELECT raw_json FROM ticker_stats_cache WHERE ticker = ?", (ticker,)).fetchone()
+    try:
+        info = (json.loads(row["raw_json"] or "{}").get("info") or {}) if row else {}
+        stamp = info.get("lastFiscalYearEnd")
+        return datetime.fromtimestamp(int(stamp), timezone.utc).month if stamp else None
+    except (TypeError, ValueError, OverflowError, OSError):
+        return None
 
 
 def _active_dividend_year(today: date, fiscal_end_month: int | None) -> int:
@@ -542,6 +560,7 @@ def _attributed_history_events(
     splits: list[dict] | None = None,
     calendar_year: bool = False,
     korean_fund: bool = False,
+    fixed_fiscal: bool = False,
 ) -> tuple[list[dict], int]:
     """DB 행 → 귀속연도가 매겨진 이벤트 목록 + 결산배당 횟수."""
     # 해외 역년결산/신규배당 종목의 anchor — 오버라이드 우선, 없으면 가장 이른 배당 회차의 월
@@ -612,6 +631,7 @@ def _attributed_history_events(
     relabel = (
         not is_korean
         and not calendar_year
+        and not fixed_fiscal
         and str(ticker or "").upper() not in FISCAL_END_MONTH_OVERRIDES
         and str(ticker or "").upper() not in PAY_DATE_YEAR_TICKERS
         # anchor를 명시한 종목은 그 라벨이 곧 사업연도다. 다수결 재라벨을 태우면
@@ -987,22 +1007,27 @@ def load_dividend_history(ticker: str) -> dict:
         adjusted_events.sort(key=lambda item: item["date"])
         pay_date_year_ticker = ticker_row["ticker"].upper() in PAY_DATE_YEAR_TICKERS
         monthly_distribution = _is_monthly_distribution(adjusted_events)
+        company_fiscal_end = (
+            None if ticker_row["ticker"].upper() in FISCAL_END_MONTH_OVERRIDES or monthly_distribution
+            else _japan_fiscal_end_month(conn, ticker_row["ticker"], ticker_row["name"])
+        )
         fiscal_end_month = (
             None
             if is_korean or pay_date_year_ticker or monthly_distribution
-            else _dividend_fiscal_end_month(ticker_row["ticker"], adjusted_events)
+            else company_fiscal_end or _dividend_fiscal_end_month(ticker_row["ticker"], adjusted_events)
         )
 
     events, final_dividend_count = _attributed_history_events(
         event_rows, ticker_row["ticker"], is_korean, fiscal_end_month, split_rows,
         calendar_year=monthly_distribution,
         korean_fund=is_korean and asset_class(ticker_row["ticker"], ticker_row["name"]) == "etf",
+        fixed_fiscal=company_fiscal_end is not None,
     )
     annual = _aggregate_annual_dividends(events)
 
     # 재라벨(한국·오버라이드 제외) 종목은 역년 기준이므로 active_year=올해.
     # NVDA 등 오버라이드는 회계연도 기준 그대로.
-    is_override = ticker_row["ticker"].upper() in FISCAL_END_MONTH_OVERRIDES
+    is_override = ticker_row["ticker"].upper() in FISCAL_END_MONTH_OVERRIDES or company_fiscal_end is not None
     active_year = (
         _active_dividend_year(today, fiscal_end_month)
         if is_korean or is_override

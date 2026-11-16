@@ -74,7 +74,7 @@
 - DB 접근은 `with connect() as conn:`. 기본 표 DDL은 `portfolio_core/schema.sql`(`ensure_base_tables`).
 - β·β″는 같은 기준지수(한국 KODEX 200TR, 그 외 S&P 500). 국내 기준 이력이 없으면 둘 다 결측. 문구는 `format.js` `BETA_TOOLTIP`/`BETA_ADJ_TOOLTIP` 한 곳.
 - 변동성 손익비: 비겹침 창 5y/3y/1y 가중 0.4/0.3/0.3, 기간점수(초과수익÷변동성)를 ±2로 자르고 없는 창은 0점(재분배 금지). 자세한 산식은 `risk_reward.py` 모듈 설명.
-- 배당 귀속연도는 '최근 인상월 직전' 결산월, 예외는 `FISCAL_END_MONTH_OVERRIDES`(NVDA 3, JPM 9).
+- 배당 귀속연도는 '최근 인상월 직전' 결산월, 예외는 `FISCAL_END_MONTH_OVERRIDES`(NVDA 3, JPM 9). 일본 개별주는 야후 `lastFiscalYearEnd` 월을 그대로 쓰고 재라벨을 타지 않는다(`_japan_fiscal_end_month`, 2026-11-16 — 3월 결산이면 9월 중간+이듬해 3월 결산이 결산 연도 라벨, 캡콤 9월분 = 2027년). 오버라이드가 있으면 오버라이드 우선.
 - 해외 배당 지급일은 StockAnalysis에서 **빈 칸만** 보강(금액 금지 — 분할 미보정). 코스닥은 `kosdaq`, 복수 종류주는 하이픈→점. 일본만 `estimated_jp_pay_date`로 추정 표시.
 
 ## 성과 스냅샷
