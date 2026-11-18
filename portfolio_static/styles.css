@@ -484,8 +484,10 @@ h1 {
   white-space: nowrap;
   cursor: pointer;
 }
-.cycle-toggle-btn:hover {
-  background: color-mix(in srgb, var(--brand) 8%, var(--surface-2));
+@media (hover: hover) {
+  .cycle-toggle-btn:hover {
+    background: color-mix(in srgb, var(--brand) 8%, var(--surface-2));
+  }
 }
 .cycle-toggle-btn:focus-visible {
   outline: 2px solid var(--focus);
@@ -2570,10 +2572,12 @@ tr:hover .fav-star,
   font-size: 17px;
   line-height: 1;
 }
-.chart-head-toggle:hover {
-  background: var(--brand-soft);
-  border-color: var(--brand);
-  color: var(--brand);
+@media (hover: hover) {
+  .chart-head-toggle:hover {
+    background: var(--brand-soft);
+    border-color: var(--brand);
+    color: var(--brand);
+  }
 }
 .chart-head-toggle.active {
   background: var(--button-active);
@@ -5649,10 +5653,14 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   font-weight: 500;
 }
 .controls :is(.ghost-btn, .cycle-toggle-btn) { min-width: 0; padding: 0 10px; }
-.controls :is(.ghost-btn, .header-icon-btn, .theme-btn, .cycle-toggle-btn):hover, .controls .us-price-control:hover {
-  border-color: var(--brand);
-  background: var(--brand-soft);
-  color: var(--brand);
+/* 터치 기기는 탭한 뒤에도 :hover가 남아, 끈 토글(연장·갱신)이 켜짐과 같은 색으로 보였다(2026-11-18).
+   hover 강조는 마우스가 있는 기기에서만 준다. */
+@media (hover: hover) {
+  .controls :is(.ghost-btn, .header-icon-btn, .theme-btn, .cycle-toggle-btn):hover, .controls .us-price-control:hover {
+    border-color: var(--brand);
+    background: var(--brand-soft);
+    color: var(--brand);
+  }
 }
 .controls .auto-refresh-control.enabled .cycle-toggle-btn, .controls .us-price-control.enabled {
   border-color: var(--brand);

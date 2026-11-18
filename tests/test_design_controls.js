@@ -66,4 +66,13 @@ for (const file of ['index.html','state.js','app.js','app-holdings.js','styles.c
 assert.doesNotMatch(css, /SA News식|backdrop-filter: blur\(18px\)/);
 assert.match(css, /--up: #dc3545/);
 assert.match(css, /--down: #1976d2/);
+// 토글(연장·갱신·차트 머리 토글)의 hover 강조는 마우스 기기에서만 — 터치에선 탭 뒤 :hover가 남아
+// 끈 상태가 켜짐처럼 보였다(2026-11-18, 모바일 연장 버튼).
+for (const sel of ['.controls .us-price-control:hover', '.cycle-toggle-btn:hover', '.chart-head-toggle:hover']) {
+  const at = css.indexOf(sel);
+  assert.ok(at > 0, `${sel} 규칙 없음`);
+  const before = css.slice(0, at);
+  const open = before.lastIndexOf('@media (hover: hover) {');
+  assert.ok(open > before.lastIndexOf('\n}'), `${sel}가 (hover: hover) 안에 없다`);
+}
 console.log('Design controls: always-on watchlist editing, mobile expansion, active filters and palette invariants passed.');
