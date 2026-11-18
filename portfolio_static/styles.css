@@ -6918,6 +6918,7 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
   .controls { gap: 3px; flex-wrap: nowrap; }
   .ctrl-group { gap: 3px; }
   .controls .ctrl-group :is(.cycle-toggle-btn, .us-price-control) { padding: 0 4px; font-size: 11px; }
+  .controls .ctrl-group .us-price-control { padding: 0 7px; }   /* 연장은 두 글자라 좌우를 조금 더(2026-11-18) */
   .controls .ctrl-group .ghost-btn { display: inline-grid; place-items: center; width: 30px; min-width: 30px; padding: 0; }
   .controls .ctrl-group .ghost-btn > span { display: none; }
   .controls .ctrl-group .ghost-btn .nav-icon { display: block; }

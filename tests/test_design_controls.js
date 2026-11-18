@@ -75,4 +75,6 @@ for (const sel of ['.controls .us-price-control:hover', '.cycle-toggle-btn:hover
   const open = before.lastIndexOf('@media (hover: hover) {');
   assert.ok(open > before.lastIndexOf('\n}'), `${sel}가 (hover: hover) 안에 없다`);
 }
+// 폰 폭 연장 버튼은 다른 순환 버튼(4px)보다 좌우 여백을 조금 더(2026-11-18)
+assert.match(css, /@media \(max-width: 480px\) \{[^@]*\.controls \.ctrl-group \.us-price-control \{ padding: 0 7px; \}/);
 console.log('Design controls: always-on watchlist editing, mobile expansion, active filters and palette invariants passed.');
