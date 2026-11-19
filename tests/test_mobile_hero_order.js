@@ -12,4 +12,8 @@ assert.doesNotMatch(mobile, /\.hero-strip \{[^}]*order:/);
 const html = h.readStatic('index.html');
 assert.ok(html.indexOf('class="side-col"') < html.indexOf('id="heroStrip"'), 'DOM 순서는 선택기 → 전광판');
 
+// 관심목록 탭에서도 전광판을 숨기지 않는다(2026-11-20 사용자 지시).
+const app = h.readStatic('app.js');
+assert.doesNotMatch(app, /heroStrip"\)\?\.classList\.toggle\("hidden"/, '전광판을 탭에 따라 숨기지 말 것');
+
 console.log('mobile hero order tests passed');

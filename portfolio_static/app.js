@@ -157,7 +157,7 @@ function initDataHelpModal() {
 function render() {
   renderAccounts();
   renderInterestWatchlists();
-  document.getElementById("heroStrip")?.classList.toggle("hidden", interestModeActive());
+  // 전광판은 계좌·관심목록·성과 어느 탭에서나 보인다(2026-11-20 사용자 지시 — 예전엔 관심목록에서 숨김).
   renderCurrencyFilter();   // 계좌·관심그룹이 바뀌면 통화 선택지도 따라간다
   renderSummary();
   renderTable();
