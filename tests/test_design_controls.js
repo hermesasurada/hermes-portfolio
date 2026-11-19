@@ -77,4 +77,17 @@ for (const sel of ['.controls .us-price-control:hover', '.cycle-toggle-btn:hover
 }
 // 폰 폭 연장 버튼은 다른 순환 버튼(4px)보다 좌우 여백을 조금 더(2026-11-18)
 assert.match(css, /@media \(max-width: 480px\) \{[^@]*\.controls \.ctrl-group \.us-price-control \{ padding: 0 7px; \}/);
+// PC 개별종목 머리(2026-11-19): 이름·로고 크게, 정규·장외 가격 같은 크기, 태그는 가격 오른쪽, 컨센서스 3열×2줄
+{
+  const at = css.lastIndexOf('/* ── PC 개별종목 머리(2026-11-19');
+  assert.ok(at > 0, 'PC 개별종목 머리 블록 없음');
+  const block = css.slice(at, css.indexOf('\n}\n', at));
+  assert.match(block, /@media \(min-width: 981px\)/);
+  assert.match(block, /strong#chartName \{ font-size: 24px; \}/);
+  assert.match(block, /\.chart-icon-slot \.asset-icon \{ width: 60px; height: 60px;/);
+  assert.match(block, /\.chart-price-row\.extended \.chart-price-current \{ font-size: 23px; \}/);
+  assert.match(css, /\.chart-price-current \{ font-size: 23px; \}/);
+  assert.match(block, /\.chart-identity > \.chart-tags \{ flex: 0 1 auto;/);
+  assert.match(block, /\.consensus-grid \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); \}/);
+}
 console.log('Design controls: always-on watchlist editing, mobile expansion, active filters and palette invariants passed.');

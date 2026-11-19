@@ -2902,7 +2902,7 @@ tr:hover .fav-star,
   color: var(--brand);
   text-decoration: none;
 }
-/* 6필드 한 줄(데스크톱). 모바일은 2열 → 3줄. */
+/* 6필드: PC는 3열×2줄(파일 끝 PC 개별종목 머리 블록), 모바일은 2열×3줄. */
 .consensus-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -6754,7 +6754,7 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 .watch-modal[open] :is(.dividend-history-table-wrap, .chart-help-body, .cash-flows-table-wrap) { overscroll-behavior: contain; }
 
 /* ── 모바일 차트 헤더 정리(2026-10-14) ──────────────────────────────────────── */
-/* 태그는 로고 밑 별도 행(2026-10-15 사용자 지시) — 로고 왼쪽 끝부터 한 줄을 통째로 쓴다 */
+/* 태그는 로고 밑 별도 행(2026-10-15 사용자 지시) — PC는 2026-11-19부터 가격 오른쪽(파일 끝 블록) */
 .chart-identity { row-gap: 6px; }
 .chart-identity > :is(.chart-tags, .chart-tag-form) { flex: 1 0 100%; margin-top: 0; }
 /* 빈 chartMeta 칸이 간격(gap)만 먹어 가격 아래가 휑했다 */
@@ -7027,4 +7027,22 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
   #chartBack.chart-back-btn > span { display: none; }
   #chartBack.chart-back-btn .nav-icon { display: block; }
   .title-tools :is(#chartEtfExposure, #chartCompanyEvents) .company-events-badge { display: none; }
+}
+
+/* ── PC 개별종목 머리(2026-11-19 사용자 지시) ──
+   종목명·로고를 키우고, 정규·장외(프리·애프터) 두 가격 줄을 같은 글자크기로 맞춘다.
+   태그는 로고 밑 별도 행 대신 가격 오른쪽 빈 곳에 둔다(모바일은 이름 줄 아래 그대로).
+   오른쪽 레일의 애널리스트 컨센서스는 6칸 한 줄 → 3칸씩 두 줄. */
+@media (min-width: 981px) {
+  .chart-icon-slot .asset-icon { width: 60px; height: 60px; font-size: 16px; }
+  .chart-head strong#chartName { font-size: 24px; }
+  .chart-head #chartTicker { font-size: 13px; }
+  .chart-price-row.extended .chart-price-current { font-size: 23px; }
+  .chart-price-row.extended .chart-price-pill { min-height: 21px; padding: 0 7px; font-size: 11.5px; }
+  .chart-price-summary { margin-right: 0; }
+  .chart-identity > .chart-tags { flex: 0 1 auto; align-self: center; padding-left: 12px; border-left: 1px solid var(--line); }
+  .chart-identity > .chart-tag-form { flex: 1 1 360px; align-self: center; }
+  .consensus-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .consensus-cell:nth-child(3n) { border-right: 0; }
+  .consensus-cell:nth-child(-n + 3) { border-bottom: 1px solid var(--line); }
 }

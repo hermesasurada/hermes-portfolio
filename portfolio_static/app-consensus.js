@@ -114,7 +114,7 @@ function consensusBlockMarkup(ticker) {
   const rangeText = quote.tp_low != null && quote.tp_high != null
     ? `${consensusPriceText(quote.tp_low, currency)} ~ ${consensusPriceText(quote.tp_high, currency)}`
     : "-";
-  // 한 줄(데스크톱 6열, 모바일 2열=3줄). 커버 애널·기준일은 리포트 모달에 있으므로 생략.
+  // PC 3열×2줄, 모바일 2열×3줄. 커버 애널·기준일은 리포트 모달에 있으므로 생략.
   const rows = [
     ["투자의견", ratingChipMarkup(quote.rating_label)],
     ["매수강도", buyStrengthMarkup(quote.buy_strength)],

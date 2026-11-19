@@ -13,6 +13,7 @@
 - **상승=빨강(`--up`), 하락=파랑(`--down`)**. 변경 금지.
 - 표 세로 스크롤바 숨김·가로만: `::-webkit-scrollbar { width:0; height:8px }`. 축 pseudo에 width 금지, 표준 `scrollbar-width` 선언 금지(webkit이 전체 무시).
 - 모바일(≤980px) 표 글자 크기는 `--grid-fs`·`--grid-fs-sub`·`--grid-fs-chip`·`--grid-fs-tiny` 네 변수로만. 개별 px 금지. 테스트 `test_mobile_grid_scale.js`.
+- PC 개별종목 머리(2026-11-19, 981px 이상): 종목명 24px·로고 60px, 정규·장외 가격 줄은 같은 크기(23px), 태그는 가격 오른쪽(모바일은 이름 줄 아래 별도 행 유지), 애널리스트 컨센서스는 3열×2줄(모바일 2열×3줄). 규칙은 styles.css 끝 블록.
 - 상단 헤더(2026-11-05): 버튼은 전 폭에서 한 모양(30px, 테두리, 켜짐은 `--brand-soft`)으로 오른쪽 정렬, `연장`은 스위치 없는 버튼. 상단 버튼·차트 머리 토글의 hover 강조는 `@media (hover: hover)` 안에만 — 터치에선 탭 뒤 `:hover`가 남아 끈 토글이 켜짐처럼 보인다(2026-11-18). 980px 이하는 `v2`·도움말 없이 제목과 메뉴를 한 줄로, 480px 이하는 일정·입출금을 아이콘(`.nav-icon`, 버튼 `aria-label` 필수)으로, 345px 이하는 로고를 뺀다.
 - PC 전용(≥981px, 2026-11-15 사용자 지시): ① 계좌 탭 하단 거래내역은 통화 버튼 오른쪽 `거래내역` 버튼(`#transactionsPopupOpen`)으로 팝업(`#transactionsModal`)에서 본다 — 패널 요소(`.transaction-panel`)를 `placeTransactionPanel`이 팝업 자리로 옮기는 방식이라 필터·수정 처리기를 다시 묶지 않는다. 팝업 안은 늘 펼침, 닫으면 접는다. 모바일은 하단 패널 그대로. ② 상단 `전체 폭` 버튼(`#layoutWidthToggle`, 켜짐 `--brand-soft`)이 `html.layout-wide`로 `main`·`.bar`의 최대 폭(1760px)만 푼다. 사이드바 열 폭은 그대로, 설정은 `layoutStorage.wide`. 테스트 `test_pc_transactions_popup_layout.js`. 오류 띠는 `ResizeObserver loop` 경고를 띄우지 않는다.
 - 종목 검색과 관리종목은 대화상자 하나(`#tickerSearchModal`). 목록에 없으면 `새 종목 찾기`·Enter로 조회해 추가한다. 사이드바 탭은 브랜드색 띠에 선택 탭 채움이고, 모바일 패널 접기·펼치기는 선택된 탭을 다시 눌러서 한다(화살표 없음). 성과는 사이드바 세 번째 탭(`data-sidebar-tab="performance"`)이고 저장하지 않는 화면 상태라 `performanceChartOpen`에서 파생한다.
