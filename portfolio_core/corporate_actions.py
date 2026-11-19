@@ -256,7 +256,17 @@ def fetch_yahoo_stock_splits(ticker: str) -> list[tuple[str, float]]:
     symbol = normalize_yfinance_symbol(ticker)
     if not symbol:
         return []
-    series = yf.Ticker(symbol).get_splits(period="max")
+    try:
+        series = yf.Ticker(symbol).get_splits(period="max")
+    except Exception:
+        # 갓 상장한 종목(이력 며칠)은 야후가 period=max를 거부하고("must be one of: 1d, 5d"),
+        # yfinance 1.3이 그걸 AttributeError로 터뜨린다(2026-11-20 ANT 상장 다음 날). 1년 창으로 다시 본다.
+        # 1년 창은 옛 분할을 못 보므로 '분할 없음'일 때만 믿는다 — 분할이 잡히면 전체 이력이 아니라서
+        # 기존 행을 지울 수 있으니 원래 오류를 그대로 올린다(빈 결과면 refresh가 기존 행을 남긴다).
+        fallback = yf.Ticker(symbol).get_splits(period="1y")
+        if fallback is not None and not fallback.empty:
+            raise
+        return []
     if series is None or series.empty:
         return []
     return [

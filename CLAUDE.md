@@ -64,6 +64,7 @@
 
 ## 데이터 정합성 (backend)
 - `daily_prices.close`는 raw 종가(`auto_adjust=False`). 분할 보정은 `stock_splits` 비율로 옛 스케일 연속 구간만. 스파이크 가드는 '튀었다 복귀'만 제거, 이력 맨 앞 1~5행 다른 스케일은 제거, 스케일 변화 뒤에도 검사 계속. 분할 보정은 거래량(×)·adj_close(÷)도 맞춘다.
+- 분할 조회는 야후 `period=max`. 갓 상장 종목은 야후가 max를 거부하고 yfinance가 AttributeError를 내므로 1년 창으로 다시 보고 '분할 없음'일 때만 받아들인다(2026-11-20 ANT, `fetch_yahoo_stock_splits`). 테스트 `test_split_fetch_new_listing.py`.
 - 야후가 분할 없이 가격만 바꾼 경우(1321.T) `stock_splits`에 `source='manual'`로 넣는다. 수동 분할은 야후 배당에도 적용되고 야후 갱신이 지우지 않는다.
 - 배당 중복 병합(`dedupe_dividend_event_rows`): 교차통화, 이종 출처 같은 금액, **같은 출처라도 금액·지급일 같고 3일 이내**, 5일 이내 정수배 분할 미반영 사본. 저장이 아니라 읽을 때 거른다.
 - 미국 종목은 Polygon 상장일(`ticker_listing_dates`, 종목당 한 번) 이전 배당을 버린다(티커 재사용 종목).
