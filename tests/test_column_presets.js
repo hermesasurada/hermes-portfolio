@@ -22,8 +22,10 @@ assert.equal(run('columnInPreset("rsi_day", "tech", "detail", "", false)'), true
 assert.equal(run('columnInPreset("yield_on_cost", "dividend", "detail", "", false)'), true);
 assert.equal(run('columnInPreset("trend10_strength", "trend", "detail", "", false)'), true);
 assert.equal(run('columnInPreset("trade", "summary", "detail", "", false)'), true);
-// 좁은 화면의 계좌표 '요약'은 보유 현황만(연장·현재단가·수량 제외). PC와 다른 묶음은 그대로.
-for (const key of ['extended_change_pct', 'current_price', 'qty']) {
+// 좁은 화면의 계좌표 '요약'은 현재단가·수량만 뺀다 — 연장은 보인다(2026-11-20 사용자 지시). PC와 다른 묶음은 그대로.
+assert.equal(run('columnInPreset("extended_change_pct", "summary", "detail", "", true)'), true);
+assert.equal(run('columnInPreset("extended_change_pct", "summary", "interest", "", true)'), true);
+for (const key of ['current_price', 'qty']) {
   assert.equal(run(`columnInPreset("${key}", "summary", "detail", "", true)`), false, key);
   assert.equal(run(`columnInPreset("${key}", "summary", "detail", "", false)`), true, key);
 }

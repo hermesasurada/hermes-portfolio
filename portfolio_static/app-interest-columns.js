@@ -206,9 +206,9 @@ const COLUMN_PRESET_INTEREST_GROUPS = {
 function columnPresetOptions(table) {
   return COLUMN_PRESETS.filter(preset => !preset.tables || preset.tables.includes(table));
 }
-// 좁은 화면의 계좌표 '요약'은 보유 현황만 남긴다(등락·등락금액·평가액·비중·거래) — 종목 열이 화면의 절반을 써서
-// 연장·현재단가·수량까지 두면 평가액이 세 번째 화면으로 밀린다. PC '요약'과 다른 묶음에는 영향이 없다.
-const COLUMN_PRESET_COMPACT_SUMMARY_HIDDEN = new Set(["extended_change_pct", "current_price", "qty"]);
+// 좁은 화면의 계좌표 '요약'은 보유 현황 위주(등락·연장·등락금액·평가액·비중·거래) — 종목 열이 화면의 절반을 써서
+// 현재단가·수량까지 두면 평가액이 세 번째 화면으로 밀린다. 연장은 남긴다(2026-11-20 사용자 지시). PC '요약'과 다른 묶음에는 영향이 없다.
+const COLUMN_PRESET_COMPACT_SUMMARY_HIDDEN = new Set(["current_price", "qty"]);
 function columnPresetCompact() {
   return Boolean(window.matchMedia?.("(max-width: 980px)")?.matches);
 }
