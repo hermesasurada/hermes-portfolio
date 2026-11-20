@@ -336,9 +336,11 @@ function renderPerformanceChart(payload) {
   syncPerformanceReturnSummary();
   // 넓은 화면에서 그림을 늘리지 않고 넓게 그린다(개별종목 차트와 같은 배율 상한, 2026-11-15).
   // 화면 높이에도 맞춘다(2026-11-20 개편 — 개별종목 차트와 같은 규칙): PC는 기본 높이의 0.75~1.6배.
+  // 화면 아래까지 채우지 않고 100px을 남긴다(2026-11-20 사용자 지시 — 차트 영역만 줄인다).
   const canvasEl = document.getElementById("chartCanvas");
-  const width = chartViewBoxWidth(canvasEl, isMobileChart, isMobileChart ? 0 : 432);
-  const height = isMobileChart ? 864 : chartViewBoxHeight(canvasEl, width, 432, false);
+  const PERF_CHART_RESERVE = 100;
+  const width = chartViewBoxWidth(canvasEl, isMobileChart, isMobileChart ? 0 : 432, PERF_CHART_RESERVE);
+  const height = isMobileChart ? 864 : chartViewBoxHeight(canvasEl, width, 432, false, PERF_CHART_RESERVE);
   // 선 끝 라벨은 '이름 수익률'(2026-11-20 사용자 지시) — 가장 긴 라벨만큼 오른쪽 여백을 연다. 금액은 호버 툴팁.
   const endFont = isMobileChart ? 24 : 10.5;   // CSS .perf-end-label과 같은 값(모바일은 viewBox 980을 약 0.35배로 줄여 그리므로 24 ≈ 실제 8.5px)
   const textWidth = text => [...String(text)].reduce((sum, ch) => sum + (/[\u3131-\uD79D]/.test(ch) ? 1 : 0.6) * endFont, 0);

@@ -57,4 +57,12 @@ assert.match(pc, /\.chart-view\.chart-rail #chartStats \.cstat-row \{[^}]*order:
   assert.equal(ctx.chartViewBoxWidth(wide, false, 530), 980);
   assert.equal(ctx.chartViewBoxWidth(wide, true, 900), 980);             // 모바일 제외
 }
+// reserve: 차트별로 화면 아래에 더 남길 높이(성과 차트 100px, 2026-11-20)
+{
+  const c = { clientWidth: 1020, getBoundingClientRect: () => ({ top: 396 }) };
+  ctx.window.scrollY = 0; ctx.window.innerHeight = 1100;
+  const w = ctx.chartViewBoxWidth(c, false, 432, 100);
+  assert.equal(ctx.chartViewBoxHeight(c, w, 432, false, 100), Math.round((1100 - 396 - 64 - 100) / (1020 / w)));
+  assert.ok(ctx.chartViewBoxHeight(c, w, 432, false, 100) < ctx.chartViewBoxHeight(c, w, 432, false));
+}
 console.log('PC chart sizing: capped scale, rail height fill, rail threshold and layout ok');

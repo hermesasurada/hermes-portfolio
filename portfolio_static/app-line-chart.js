@@ -1434,19 +1434,19 @@ const CHART_MAX_SCALE = 1.4;
 // 아래로 줄지 않는 폭이다 — 1920px 모니터의 전체 폭(약 1,540px)에서는 레일 없이 차트만 넓어진다.
 const CHART_RAIL_MIN_WIDTH = 1840;
 
-// 차트 아래로 쓸 수 있는 화면 높이(px) — 아래 비교 검색 줄과 여백 64px을 남긴다.
-function chartAvailableHeight(canvasEl) {
+// 차트 아래로 쓸 수 있는 화면 높이(px) — 아래 비교 검색 줄과 여백 64px을 남긴다. reserve는 차트별로 더 남길 높이.
+function chartAvailableHeight(canvasEl, reserve = 0) {
   const top = (canvasEl?.getBoundingClientRect?.().top || 0) + (window.scrollY || 0);
-  return (window.innerHeight || 0) - top - 64;
+  return (window.innerHeight || 0) - top - 64 - reserve;
 }
 
 // fitHeight(기본 높이)를 주면 배율을 화면 높이에도 맞춘다(2026-11-20 디자인 재검토 04): 넓지만 낮은 화면에서
 // 폭만 보고 키우면 글자·RSI 칸만 커지고 가격 칸이 납작해진다. 그때는 배율을 낮추고(최소 1) viewBox를 넓혀 더 촘촘히 그린다.
-function chartViewBoxWidth(canvasEl, compact = false, fitHeight = 0) {
+function chartViewBoxWidth(canvasEl, compact = false, fitHeight = 0, reserve = 0) {
   const px = Number(canvasEl?.clientWidth) || 0;
   if (compact || px <= CHART_BASE_WIDTH) return CHART_BASE_WIDTH;
   let scale = Math.min(CHART_MAX_SCALE, px / CHART_BASE_WIDTH);
-  if (fitHeight > 0) scale = Math.min(scale, Math.max(1, chartAvailableHeight(canvasEl) / fitHeight));
+  if (fitHeight > 0) scale = Math.min(scale, Math.max(1, chartAvailableHeight(canvasEl, reserve) / fitHeight));
   return Math.round(px / scale);
 }
 
@@ -1454,13 +1454,13 @@ function chartViewBoxWidth(canvasEl, compact = false, fitHeight = 0) {
 // 한 단 배치는 0.75 ~ 1.6배 — 사이드바를 접어 넓어진 차트가 같은 배율로 커져 화면 아래로 넘치지 않게 낮출 수 있다
 // (2026-11-20 디자인 재검토 04). 모바일은 기본 높이 그대로.
 const CHART_ONE_COLUMN_MIN_HEIGHT_RATIO = 0.75;
-function chartViewBoxHeight(canvasEl, width, baseHeight, compact = false) {
+function chartViewBoxHeight(canvasEl, width, baseHeight, compact = false, reserve = 0) {
   if (compact) return baseHeight;
   const view = document.getElementById("chartView");
   const px = Number(canvasEl?.clientWidth) || 0;
   if (!px || !width) return baseHeight;
   const scale = px / width;
-  const available = chartAvailableHeight(canvasEl);
+  const available = chartAvailableHeight(canvasEl, reserve);
   const floor = view?.classList?.contains("chart-rail") ? baseHeight : baseHeight * CHART_ONE_COLUMN_MIN_HEIGHT_RATIO;
   return Math.round(Math.min(baseHeight * 1.6, Math.max(floor, available / scale)));
 }
