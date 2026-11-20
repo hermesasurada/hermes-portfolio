@@ -1205,7 +1205,17 @@ function syncColumnPresetControl() {
     select.innerHTML = columnPresetOptions(table).map(preset => `<option value="${preset.key}">${esc(preset.label)}</option>`).join("");
     select.dataset.table = table;
   }
-  select.value = activeColumnPreset(table);
+  const active = activeColumnPreset(table);
+  select.value = active;
+  // PC는 통화 선택처럼 버튼 묶음으로 바로 고른다(2026-11-20 사용자 지시). 모바일은 줄 폭 때문에 선택 상자.
+  const segments = document.getElementById("columnPresetSegments");
+  if (segments) {
+    segments.classList.toggle("hidden", control.classList.contains("hidden"));
+    segments.innerHTML = columnPresetOptions(table).map(preset => {
+      const on = preset.key === active;
+      return `<button class="seg-btn${on ? " active" : ""}" type="button" data-column-preset="${preset.key}" aria-pressed="${on}">${esc(preset.label)}</button>`;
+    }).join("");
+  }
 }
 function initColumnPresetControl() {
   const select = document.getElementById("columnPresetSelect");
@@ -1218,6 +1228,12 @@ function initColumnPresetControl() {
       if (wrap) wrap.scrollLeft = 0;
     });
     renderTable();
+  });
+  document.getElementById("columnPresetSegments")?.addEventListener("click", event => {
+    const value = event.target.closest?.(".seg-btn")?.dataset.columnPreset;
+    if (!value || value === select.value) return;
+    select.value = value;
+    select.dispatchEvent(new Event("change"));
   });
   // 좁은 화면과 PC는 기본 묶음과 '요약'의 구성이 다르다 — 폭이 그 경계를 넘으면 다시 맞춘다.
   window.matchMedia?.("(max-width: 980px)")?.addEventListener?.("change", () => renderTable());

@@ -7026,8 +7026,11 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 :is(.interest-asset-segments, .currency-segments) { height: 30px; }
 :is(.interest-asset-segments, .currency-segments) .seg-btn { height: 24px; }
 .currency-segments.single-option { display: none; }
-@media (min-width: 981px) { #interestAssetTypeToggle, #currencyFilterControl { display: none; } }
-@media (max-width: 980px) { .interest-asset-segments, .currency-segments { display: none; } }
+@media (min-width: 981px) { #interestAssetTypeToggle, #currencyFilterControl, #columnPresetControl { display: none; } }
+@media (max-width: 980px) { .interest-asset-segments, .currency-segments, .column-preset-segments { display: none; } }
+/* 열 묶음(2026-11-20): PC는 통화와 같은 버튼 묶음, 모바일은 '열' 선택 상자 */
+.column-preset-segments { height: 30px; }
+.column-preset-segments .seg-btn { height: 24px; }
 
 /* ── PC 전용(2026-11-15): 거래내역 팝업 · 본문 폭 전환 ── */
 .watch-modal.transactions-modal {

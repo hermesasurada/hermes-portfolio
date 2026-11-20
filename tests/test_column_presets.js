@@ -68,4 +68,7 @@ assert.ok(run(`visibleInterestColumns([${row}]).map(c => c.key)`).includes('perf
 
 assert.match(html, /<select id="columnPresetSelect"/);
 assert.match(h.readStatic('app-holdings.js'), /syncDetailColumnPreset\(\);\s*\n\s*const rows = applyTagFilter/);
+// PC는 통화처럼 버튼 묶음, 모바일은 선택 상자(2026-11-20 사용자 지시).
+assert.match(html, /<div class="segmented column-preset-segments" id="columnPresetSegments"/);
+assert.match(h.readStatic('app-holdings.js'), /data-column-preset="\$\{preset\.key\}"/);
 console.log('column presets ok');

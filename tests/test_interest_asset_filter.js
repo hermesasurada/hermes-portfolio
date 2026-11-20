@@ -50,8 +50,8 @@ assert.equal(h.evaluate(ctx, 'interestAssetType'), 'etf');
 assert.equal(ctx.localStorage.getItem('portfolio.detail.interestAssetType'), 'etf');
 assert.equal(ctx.document.getElementById('interestAssetTypeToggle').textContent, 'ETF');
 const css = h.readStatic('styles.css');
-assert.match(css, /@media \(min-width: 981px\) \{ #interestAssetTypeToggle, #currencyFilterControl \{ display: none; \} \}/);
-assert.match(css, /@media \(max-width: 980px\) \{ \.interest-asset-segments, \.currency-segments \{ display: none; \} \}/);
+assert.match(css, /@media \(min-width: 981px\) \{ #interestAssetTypeToggle, #currencyFilterControl, #columnPresetControl \{ display: none; \} \}/);
+assert.match(css, /@media \(max-width: 980px\) \{ \.interest-asset-segments, \.currency-segments, \.column-preset-segments \{ display: none; \} \}/);
 // 통화 버튼(2026-11-05): 선택 상자와 같은 값을 보이고, 목록에 통화가 하나면 숨긴다
 const segments = ctx.document.getElementById('currencySegments');
 ctx.renderCurrencySegments(['KRW', 'USD'], 'USD');
