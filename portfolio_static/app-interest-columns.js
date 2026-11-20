@@ -1,4 +1,5 @@
 // 관심목록의 순서·헤더·폭·셀 포맷을 함께 관리한다. 숨긴 열은 DOM에 만들지 않는다.
+// 열 순서는 계좌표와 같다(2026-11-20 사용자 지시): 등락·연장·현재단가 → 52주·손익비·β → 모멘텀 → 밸류 → 배당 → 수익률 → 추세 → 시총·실적 → 수익성…컨센서스.
 // 폭(2026-11-09 재조정): 전 관심그룹 값의 최장폭+좌우 여백 10px(묶음 경계는 +3~4). fixed 레이아웃이라
 // 폭보다 긴 값은 잘리므로 줄일 때는 전 그룹 실측으로 확인한다. 극단값 열(매출 성장 등)은 넓히지 않았다.
 const INTEREST_COLUMN_GROUPS = {
@@ -34,9 +35,8 @@ const INTEREST_COLUMNS = [
     cell: (r, group) => `${extendedChangeText(r) || "-"}` },
   { key: "current_price", width: 88, label: "현재단가", headClass: "interest-leaf-head", always: true,
     cell: (r, group) => `${currentPriceMarkup(r)}` },
-  { key: "market_cap_usd", width: 76, label: "시총/AUM", headClass: "group-start interest-leaf-head", cellClass: "group-start",
-    cell: (r, group) => `${marketCapMarkup(r)}` },
-  { key: "drawdown_52w", width: 56, label: "<span>52주高</span><span>대비</span>", headClass: "indicator-head interest-leaf-head", ariaLabel: "52주 고점 대비",
+
+  { key: "drawdown_52w", width: 56, label: "<span>52주高</span><span>대비</span>", headClass: "indicator-head group-start interest-leaf-head", cellClass: "group-start", ariaLabel: "52주 고점 대비",
     cell: (r, group) => `${signedPercentText(r.drawdown_52w, 1)}` },
   { key: "risk_reward_score", width: 46, label: "<span>변동성</span><span>손익비</span>", headClass: "indicator-head interest-leaf-head", title: "변동성 손익비 = 10 × Σ w(h) × 기간점수(h)\n기간점수(h) = clamp((연율수익(h) − 3%) ÷ max(변동성(h), 바닥), −2, +2)\n · 연율수익: KRW 환산 일간 총수익(배당 재투자)의 산술 연율\n · 변동성: 같은 기간 일간 수익률의 연율 표준편차(상승·하락 모두)\n · 바닥: 주식·ETF·지수 8% / 크립토 20% / FX·채권 3%\n · 창(비겹침): 5Y=3~5년 전 w=0.4 / 3Y=1~3년 전 w=0.3 / 1Y=최근 1년 w=0.3 — 없는 창은 0점(이력 1년이면 최대 30%만 반영)",
     cell: (r, group) => `${riskRewardScoreText(r.risk_reward_score)}` },
@@ -44,8 +44,7 @@ const INTEREST_COLUMNS = [
     cell: (r, group) => `${betaText(r.beta)}` },
   { key: "beta_adj", width: 48, label: "β″", headClass: "interest-leaf-head", title: BETA_ADJ_TOOLTIP,
     cell: (r, group) => `${betaText(r.beta_adj)}` },
-  { key: "next_earnings_date", width: 52, label: "실적", headClass: "group-start interest-leaf-head", cellClass: "group-start",
-    cell: (r, group) => `${earningsText(r.next_earnings_date)}` },
+
   { key: "rsi_day", width: 36, label: "<span>RSI</span><span>(일)</span>", headClass: "indicator-head group-start interest-leaf-head", group: "momentum", cellClass: "group-start",
     cell: (r, group) => `${indicatorText(r.rsi_day, "rsi")}` },
   { key: "rsi_week", width: 34, label: "<span>RSI</span><span>(주)</span>", headClass: "indicator-head interest-leaf-head", group: "momentum",
@@ -110,6 +109,10 @@ const INTEREST_COLUMNS = [
     cell: (r, group) => `${trendDeviationText(r.trend10_deviation)}` },
   { key: "trend10_strength", width: 48, label: "강도", headClass: "interest-leaf-head", group: "trend10", ariaLabel: "10년 추세 강도", title: "10년 추세 강도 = ln(1 + 10년 추세 수익률) ÷ 10년 추세 이탈폭\n5년 강도는 높은데 10년 강도가 낮으면 최근에만 좋았던 종목이다\n예: CAH 5년 3.98 → 10년 0.55, COST 1.55 → 2.14",
     cell: (r, group) => `${trendStrengthText(r.trend10_strength)}` },
+  { key: "market_cap_usd", width: 76, label: "시총/AUM", headClass: "group-start interest-leaf-head", cellClass: "group-start",
+    cell: (r, group) => `${marketCapMarkup(r)}` },
+  { key: "next_earnings_date", width: 52, label: "실적", headClass: "interest-leaf-head",
+    cell: (r, group) => `${earningsText(r.next_earnings_date)}` },
   { key: "gross_margin", width: 64, label: "<span>총이익률</span>", headClass: "indicator-head group-start interest-leaf-head", group: "profitability", ariaLabel: "매출총이익률", cellClass: "group-start",
     cell: (r, group) => `${fractionPercentText(r.gross_margin)}` },
   { key: "operating_margin", width: 72, label: "<span>영업</span><span>이익률</span>", headClass: "indicator-head interest-leaf-head", group: "profitability", ariaLabel: "영업이익률",

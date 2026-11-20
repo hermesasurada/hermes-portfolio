@@ -82,3 +82,14 @@ assert.match(headers[30], /data-key="payout_ratio"/);
 assert.match(cells[30], /fractionPercentText\(r.payout_ratio\)/);
 assert.match(html, /colspan="6"[^>]*data-detail-group="dividend"/);
 console.log('Account headers, cells and widths aligned; market cap and earnings date precede trade action.');
+
+// 관심목록 열 순서는 계좌표와 같다(2026-11-20 사용자 지시) — 두 표에 함께 있는 열은 같은 차례로 나온다.
+{
+  const h = require('./harness');
+  const ctx = h.loadScripts(h.createContext());
+  const interestKeys = h.plain(h.evaluate(ctx, 'INTEREST_COLUMNS.map(c => c.key)'));
+  const detailKeys = headers.map(th => (th.match(/data-(?:column-)?key="([a-z0-9_]+)"/) || [])[1]).filter(Boolean);
+  const shared = detailKeys.filter(key => interestKeys.includes(key));
+  assert.ok(shared.length >= 55, shared.length);
+  assert.deepEqual(interestKeys.filter(key => detailKeys.includes(key)), shared);
+}
