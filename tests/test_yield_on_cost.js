@@ -18,7 +18,7 @@ assert.equal(yieldOnCost(2, 100, 500, null), null);
 assert.equal(yieldOnCost(2, 100, 10 * 50 + 30 * 90, 40), 2.5);
 
 const html = yieldOnCostMarkup({ yield_on_cost: 4, dividend_yield: 2, cost_basis: 500, qty: 10, currency: 'USD' });
-assert.match(html, />4%</);
+assert.match(html, />4\.00%</);
 assert.match(html, /평단가 \$50 기준/);
 assert.equal(yieldOnCostMarkup({ yield_on_cost: null }), '-');
 

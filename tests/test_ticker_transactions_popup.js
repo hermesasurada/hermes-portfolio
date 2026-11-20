@@ -31,7 +31,7 @@ assert.equal(run('tickerTransactionChangePct({price: 100}, 200)'), 100);
 assert.equal(run('Math.round(tickerTransactionChangePct({price: 237.2}, 200) * 10) / 10'), -15.7);
 assert.equal(run('tickerTransactionChangePct({price: 100}, null)'), null);
 assert.equal(run('tickerTransactionChangePct({price: 0}, 50)'), null);
-assert.match(html, /▲<\/span>100%/);   // 단가 100 → 현재가 200
+assert.match(html, /▲<\/span>100\.00%/);   // 단가 100 → 현재가 200
 // 날짜는 YY.MM.DD, 현재대비 칸이 금액 앞(2026-10-28)
 assert.match(html, /<td>26\.10\.07<\/td>/);
 assert.doesNotMatch(html, /2026-10-07/);

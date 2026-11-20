@@ -110,9 +110,9 @@ console.log('chart moving averages UI ok');
 // vm 컨텍스트가 만든 배열이라 realm이 달라 deepStrictEqual이 못 쓴다 — JSON으로 비교한다.
 const changeLine = (point, previous) => JSON.stringify(
   ctx.chartPointTooltipLines(point, {}, previous).find(line => Array.isArray(line) && line[0]?.[0] === '등락'));
-assert.equal(changeLine(points[1], points[0]), JSON.stringify([['등락', '▲20%', 'up']]));
-assert.equal(changeLine({date: '2026-08-05', close: 90}, {close: 100}), JSON.stringify([['등락', '▼10%', 'down']]));
-assert.equal(changeLine({date: '2026-08-05', close: 100}, {close: 100}), JSON.stringify([['등락', '→0%', 'flat']]));
+assert.equal(changeLine(points[1], points[0]), JSON.stringify([['등락', '▲20.00%', 'up']]));
+assert.equal(changeLine({date: '2026-08-05', close: 90}, {close: 100}), JSON.stringify([['등락', '▼10.00%', 'down']]));
+assert.equal(changeLine({date: '2026-08-05', close: 100}, {close: 100}), JSON.stringify([['등락', '→0.00%', 'flat']]));
 // 첫 봉이나 기준가가 없으면 등락 줄을 만들지 않는다
 for (const previous of [null, undefined, {close: 0}, {close: null}]) {
   assert.equal(ctx.chartPointTooltipLines(points[1], {}, previous).some(line => Array.isArray(line) && line[0]?.[0] === '등락'), false);

@@ -601,15 +601,13 @@ function chartPriceClass(change) {
 }
 
 function chartPriceDirectionSymbol(cls) {
-  if (cls === "up") return "↑";
-  if (cls === "down") return "↓";
-  return "→";
+  return changeDirection(cls === "up" ? 1 : cls === "down" ? -1 : 0).arrow;   // 목록과 같은 ▲▼→
 }
 
 function chartPricePctPill(metric) {
   if (metric.changePct == null) return "";
   const cls = chartPriceClass(metric.changePct);
-  return `<span class="chart-price-pill ${cls}">${chartPriceDirectionSymbol(cls)}${fmt2.format(Math.abs(metric.changePct))}%</span>`;
+  return `<span class="chart-price-pill ${cls}">${chartPriceDirectionSymbol(cls)} ${pctFmt.format(Math.abs(metric.changePct))}%</span>`;
 }
 
 function chartExtendedLabel(meta) {
@@ -1356,7 +1354,7 @@ function bindChartInteractions(points, payload, geometry) {
     selectionSummaryText.textContent = [
       `${shortDateText(start.date)}–${shortDateText(end.date)}`,
       `${chartMoney(startPrice, payload.currency, payload.ticker)} → ${chartMoney(endPrice, payload.currency, payload.ticker)}`,
-      `${arrow} ${changePct > 0 ? "+" : ""}${fmt2.format(changePct)}% (${signedChartMoney(change, payload.currency, payload.ticker)})`,
+      `${arrow} ${pctFmt.format(Math.abs(changePct))}% (${signedChartMoney(change, payload.currency, payload.ticker)})`,
     ].join(" · ");
 
     const inset = geometry.pad.left + 8;

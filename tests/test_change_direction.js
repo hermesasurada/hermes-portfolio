@@ -13,7 +13,7 @@ for (const flat of [0, -0, null, undefined, '', 'abc', NaN, Infinity, -Infinity]
   assert.deepEqual(dir(flat), {cls: 'flat', arrow: '→'}, `보합이어야 한다: ${String(flat)}`);
 }
 // 쓰는 쪽이 같은 규칙을 따르는지 몇 군데 실제 출력으로 확인
-assert.match(ctx.signedPercentText(-2.5), /class="down"><span aria-hidden="true">▼<\/span>2\.5%/);
+assert.match(ctx.signedPercentText(-2.5), /class="down"><span aria-hidden="true">▼<\/span>2\.50%/);   // 끝자리 0을 자르지 않는다(2026-11-20)
 assert.match(ctx.changeKrwText(250000), /change-cell up"><span aria-hidden="true">▲/);
 assert.equal(ctx.chartPriceClass(0), 'flat');
 assert.equal(ctx.chartPriceClass('-3'), 'down');
@@ -39,3 +39,15 @@ for (const file of fs.readdirSync(dirStatic).filter(f => f.endsWith('.js'))) {
   });
 }
 console.log('Change direction: single definition, flat for zero/missing, callers aligned, no scattered ternaries');
+
+// 퍼센트 표기 규칙(2026-11-20): 자릿수 고정, 방향은 ▲▼. 차트 머리의 ↑↓와 지표판의 −부호는 없앤다.
+{
+  const fs = require('fs'), path = require('path');
+  const read = name => fs.readFileSync(path.join(__dirname, '..', 'portfolio_static', name), 'utf8');
+  assert.equal(ctx.signedPercentText(7, 1).replace(/<[^>]+>/g, ''), '▲7.0%');
+  assert.equal(ctx.signedPercentText(-33, 0).replace(/<[^>]+>/g, ''), '▼33%');
+  assert.equal(ctx.changePercentText(3.3, true).replace(/<[^>]+>/g, ''), '▲3.30%');
+  assert.equal(ctx.dividendYieldText(0.6), '0.60%');
+  assert.doesNotMatch(read('app-line-chart.js'), /[↑↓]/);
+  assert.match(read('app-chart-metrics.js'), /function chartStatPercent[\s\S]{0,400}return signedPercentText\(number, digits\);/);
+}

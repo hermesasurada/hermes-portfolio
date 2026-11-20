@@ -198,7 +198,7 @@ function accountChangeMarkup(stats) {
   const change = stats.change_krw;
   const pct = change / stats.previous_krw * 100;
   const { cls, arrow } = changeDirection(change);
-  return `<span class="account-change ${cls}" title="전일 대비"><span aria-hidden="true">${arrow}</span>${krwShort(Math.abs(change))} · ${fmt2.format(Math.abs(pct))}%</span>`;
+  return `<span class="account-change ${cls}" title="전일 대비"><span aria-hidden="true">${arrow}</span>${krwShort(Math.abs(change))} · ${pctFmt.format(Math.abs(pct))}%</span>`;
 }
 function normalizeSelection(accounts) {
   if (selectionMode !== "all" && selectedAccounts.size === accounts.length && accounts.length > 0) {
@@ -635,7 +635,7 @@ function renderHeroSummaryPage() {
     const { cls, arrow } = changeDirection(changePct);
     changeEl.className = `hero-index-change pct-chip ${cls}`;
     changeEl.textContent = Number.isFinite(changePct)
-      ? `${arrow} ${fmt2.format(Math.abs(changePct))}%`
+      ? `${arrow} ${pctFmt.format(Math.abs(changePct))}%`
       : "-";
   });
   document.querySelectorAll("[data-hero-fx]").forEach(item => {
@@ -653,7 +653,7 @@ function renderHeroSummaryPage() {
     const valueEl = item.querySelector(".hero-index-value");
     const changeEl = item.querySelector(".hero-index-change");
     if (valueEl) valueEl.textContent = Number.isFinite(price) && price > 0 ? fmt2.format(price) : "조회불가";
-    const pctNote = Number.isFinite(changePct) ? ` · 전일 대비 ${changePct > 0 ? "+" : changePct < 0 ? "−" : ""}${fmt2.format(Math.abs(changePct))}%` : "";
+    const pctNote = Number.isFinite(changePct) ? ` · 전일 대비 ${changePct > 0 ? "+" : changePct < 0 ? "−" : ""}${pctFmt.format(Math.abs(changePct))}%` : "";
     item.title = `${unit} ${currency} 기준 원화${pctNote}${data?.fx_updated ? ` · ${data.fx_updated} 갱신` : ""}`;
     if (!changeEl) return;
     const { cls, arrow } = changeDirection(changeAmount);
@@ -777,7 +777,7 @@ function updateHeroSummary(byAccount, totalStats, accounts) {
   const { cls, arrow } = changeDirection(change);
   changeEl.className = `hero-change ${cls}`;
   changeEl.textContent = `${arrow} ${krw(Math.abs(change))}${
-    pct == null ? "" : ` · ${pct > 0 ? "+" : pct < 0 ? "−" : ""}${fmt2.format(Math.abs(pct))}%`
+    pct == null ? "" : ` · ${pct > 0 ? "+" : pct < 0 ? "−" : ""}${pctFmt.format(Math.abs(pct))}%`
   }`;
   renderHeroSummaryPage();
 }

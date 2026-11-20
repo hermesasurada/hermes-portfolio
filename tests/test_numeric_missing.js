@@ -18,8 +18,9 @@ for (const fn of ['fractionPercentText', 'fractionSignedPercentText', 'rawPercen
   for (const missing of [null, undefined, '', 'abc']) assert.equal(ctx[fn](missing), '-', `${fn}(${missing})`);
 }
 for (const missing of [null, undefined, '']) assert.equal(ctx.marketCapText(missing, 'USD'), '-');
-assert.equal(ctx.fractionPercentText(0), '0%');
+assert.equal(ctx.fractionPercentText(0), '0.0%');   // 자릿수 고정(2026-11-20)
+assert.equal(ctx.fractionPercentText(0.07), '7.0%');
 assert.equal(ctx.fractionPercentText(0.256), '25.6%');
-assert.equal(ctx.rawPercentText(0), '0%');
+assert.equal(ctx.rawPercentText(0), '0.0%');
 assert.notEqual(ctx.marketCapText(0, 'USD'), '-');
 console.log('numeric missing ok');

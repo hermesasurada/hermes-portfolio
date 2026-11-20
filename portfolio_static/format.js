@@ -2,6 +2,13 @@ const fmt = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 });
 const fmt2 = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 2 });
 const fmt1 = new Intl.NumberFormat("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const lowPriceFmt = new Intl.NumberFormat("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// 퍼센트 자릿수 규칙(2026-11-20 사용자 승인 — 디자인 재검토 01): 끝자리 0을 자르지 않는다. 등락률·배당율은 소수 둘째 자리,
+// 열마다 정한 자릿수(기간 수익률 0~1자리 등)는 값과 무관하게 그대로 — 3.3%·2.43%가 한 열에 섞여 소수점이 어긋나던 것을 막는다.
+// 방향은 어디서나 ▲▼(보합 →) + 색. 부호(−/+)·↑↓로 방향을 적지 않는다(툴팁 문장과 손익비 점수는 예외).
+const pctFmt = new Intl.NumberFormat("ko-KR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fixedDigits(value, digits) {
+  return Number(value).toLocaleString("ko-KR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
 const btcQtyFmt = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 8 });
 
 // Display-only conversion: keep API cumulative price returns untouched.
@@ -131,7 +138,7 @@ function changeDirection(value) {
 // 마크업을 못 쓰는 SVG 툴팁은 parts만 받아 tspan으로 조립한다.
 function changePercentParts(pct) {
   if (!Number.isFinite(pct)) return null;
-  return { ...changeDirection(pct), text: `${fmt2.format(Math.abs(pct))}%` };
+  return { ...changeDirection(pct), text: `${pctFmt.format(Math.abs(pct))}%` };
 }
 // 기간 수익률 열(perf_*) ↔ 서버 기간 키. 배당 반영 품질 표시에 쓴다.
 const PERF_COLUMN_PERIODS = {
@@ -225,7 +232,7 @@ function signedPercentText(v, digits = 2) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "-";
   const { cls, arrow } = changeDirection(n);
-  return `<span class="${cls}"><span aria-hidden="true">${arrow}</span>${Math.abs(n).toLocaleString("ko-KR", { maximumFractionDigits: digits })}%</span>`;
+  return `<span class="${cls}"><span aria-hidden="true">${arrow}</span>${fixedDigits(Math.abs(n), digits)}%</span>`;
 }
 // 값 없음(null·undefined·"")은 null — Number(null)이 0이라 그대로 넘기면 ETF·코인의 배당성향이 "0%"로 보인다.
 function optionalNumber(value) {
@@ -236,7 +243,7 @@ function optionalNumber(value) {
 function fractionPercentText(v, digits = 1) {
   const n = optionalNumber(v);
   if (n === null) return "-";
-  return `${(n * 100).toLocaleString("ko-KR", { maximumFractionDigits: digits })}%`;
+  return `${fixedDigits(n * 100, digits)}%`;
 }
 function fractionSignedPercentText(v, digits = 1) {
   const n = optionalNumber(v);
@@ -245,14 +252,14 @@ function fractionSignedPercentText(v, digits = 1) {
 function rawPercentText(v, digits = 1) {
   const n = optionalNumber(v);
   if (n === null) return "-";
-  return `${n.toLocaleString("ko-KR", { maximumFractionDigits: digits })}%`;
+  return `${fixedDigits(n, digits)}%`;
 }
 function freeCashFlowText(v, currency) {
   return marketCapText(v, currency);
 }
 function dividendYieldText(v) {
   if (v == null || !Number.isFinite(Number(v)) || Number(v) === 0) return "-";
-  return `${fmt2.format(Number(v))}%`;
+  return `${pctFmt.format(Number(v))}%`;
 }
 // 분기배당 기업 증액 표시(2026-10-28, 판정은 서버 dividend_raise.py): 공시된 배당 증액은 빨강 굵게,
 // 공시 전 다음 회차 증액 예상(작년 같은 분기 증액)은 주황 굵게. 배당 탭 주당배당금과 목록 배당율이 같이 쓴다.

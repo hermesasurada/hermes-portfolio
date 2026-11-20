@@ -84,7 +84,7 @@ context.findTickerMeta = () => null;
 context.renderHeroSummaryPage();
 assert.deepEqual(fxItems.map(item => item.value.textContent), ['조회불가','조회불가','조회불가']);
 assert.equal(fxItems[0].change.textContent, '-');
-for (const [pct, text, cls] of [[1.23, '▲ 1.23%', 'up'], [-1.23, '▼ 1.23%', 'down'], [0, '→ 0%', 'flat']]) {
+for (const [pct, text, cls] of [[1.23, '▲ 1.23%', 'up'], [-1.23, '▼ 1.23%', 'down'], [0, '→ 0.00%', 'flat']]) {
   context.findTickerMeta = () => ({ current_price: 6000, change_pct: pct });
   vm.runInContext('renderHeroSummaryPage()', context);
   assert.equal(change.textContent, text);

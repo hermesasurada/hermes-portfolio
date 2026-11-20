@@ -46,6 +46,7 @@
 - 모바일(≤980px) 개별종목 툴바는 한 줄(2026-11-16 사용자 지시): `목록`은 목록 아이콘 버튼(`.chart-back-btn`, `aria-label`, PC는 글자), 편입 ETF·촉매·일정 개수 배지는 숨김, 그래도 넘치면 줄바꿈 대신 가로 스크롤. 테스트 `test_mobile_chart_toolbar.js`.
 - 모바일(≤980px) 개별종목을 열면 툴바(목록·관심목록·거래내역…)가 화면 맨 위에 오게 페이지 스크롤(`scrollChartToolbarToTop`, 2026-11-16 사용자 지시). 스켈레톤 직후 한 번, 문서가 짧아 못 내려갔으면 그린 뒤 한 번 더(그 사이 더 내려 봤으면 그대로). PC는 표 스크롤이라 해당 없음. 테스트 `test_mobile_chart_scroll.js`.
 - 등락 칩의 장 상태는 글자 배지 없이 칩 모양으로(2026-11-20 사용자 지시, 위첨자 '휴'·'종' 폐지): 정규장 진행 중=채운 칩, 장 종료·개장 전=실선 테두리만, 휴장=점선 테두리만. 테두리는 `outline`(offset −1px)이라 칩 크기·열 정렬 불변, 뜻은 툴팁·화면낭독 글자(`.sr-only`). `changeMarkup`(format.js). 차트 머리는 자리가 있어 '휴장'·'N.NN 종가' 글자 그대로. 테스트 `test_change_session_chip.js`.
+- 퍼센트 표기(2026-11-20 디자인 재검토 01): 끝자리 0을 자르지 않는다(`fixedDigits`·`pctFmt`, format.js) — 등락률·배당율 소수 둘째 자리, 그 밖은 열마다 정한 자릿수 그대로. 방향은 어디서나 ▲▼→ + 색(`changeDirection`), 차트 머리 ↑↓·지표판 −부호 금지(툴팁 문장·손익비 점수는 예외). 테스트 `test_change_direction.js`.
 - 휴장일 행 등락금액은 `→0`(`isHolidayPreviousSession`), 환율 적용 시 환율 변동분은 표기. 테스트 `test_holiday_change_amount.js`.
 - 차트 툴팁 등락은 `changePercentParts` 공유(SVG는 parts로 조립). 테스트 `test_chart_moving_averages.js`.
 - 배당 연속지급·증액 단위는 `Y`(`dividendStreakText`).

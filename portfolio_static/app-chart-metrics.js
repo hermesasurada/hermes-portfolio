@@ -7,10 +7,8 @@ function chartStatPercent(value, digits = 1) {
   const number = Number(value);
   if (!Number.isFinite(number)) return "-";
   // 상승=빨강·하락=파랑(2026-11-11 사용자 지시 — 예전 초록/빨강은 시장 색 규칙과 반대였다).
-  return `<span class="${changeDirection(number).cls}">${number.toLocaleString("ko-KR", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  })}%</span>`;
+  // 방향은 목록과 같은 ▲▼(2026-11-20 — 예전엔 −부호였다).
+  return signedPercentText(number, digits);
 }
 
 function chartStatIndicator(value, kind) {
