@@ -95,7 +95,7 @@ ctx.syncChartIntervalControl();
 assert.equal(elements.chartUnitControls.classList.hidden, false);
 set('performanceChartOpen', true);
 ctx.syncChartIntervalControl();
-assert.equal(elements.chartUnitControls.classList.hidden, true);
+assert.equal(elements.chartUnitControls.classList.hidden, false);   // 성과 화면도 단위(일/주)를 보인다(2026-11-21)
 assert.doesNotMatch(ctx.renderChartRangeButtons(), /chart-marker-full/);
 for (const compare of [true, false]) {
   set('chartComparePayloads', compare ? [{}] : []);

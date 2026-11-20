@@ -6515,12 +6515,16 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 /* 성과차트 상단(2026-11-01 정리): 범례 두 묶음(계좌 | 비교지수)을 한 줄에, 부드럽게·기간 버튼은
    그 줄 오른쪽 끝(PC). 표시 기간·수익률 기준은 차트 안 왼쪽 위 수익률 오버레이로 옮겼다. */
 .perf-legend-groups { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; }
+@media (min-width: 981px) { .perf-controls-slot { margin-left: auto; } }
 .perf-legend-section { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.perf-account-section { flex-wrap: wrap; }
 .perf-group-label { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
-/* 차트 컨트롤(부드럽게·기간)은 계좌 칩 줄 끝 자리(.perf-controls-slot)로 옮겨 와 함께 둔다(2026-11-21 사용자 지시). */
+/* 차트 컨트롤(부드럽게·기간·단위)은 범례 끝 자리(.perf-controls-slot)로 옮겨 온다(2026-11-21 사용자 지시):
+   PC는 비교 줄 오른쪽, 모바일은 비교 줄 아래 별도 행. 단위는 기간 옆(뒤)에. */
 .perf-controls-slot { display: inline-flex; align-items: center; }
 .perf-controls-slot > .chart-bottom-controls.perf-mode { position: static; width: auto; margin: 0; }
+/* 단위는 기간 뒤 — 모바일은 감싸는 상자가 display: contents라 버튼 자체에 순서를 준다 */
+.chart-bottom-controls.perf-mode :is(#chartUnitControls, #chartIntervalToggle) { order: 9; }
+.perf-chip-short { display: none; }
 /* ── 성과 요약 띠(2026-11-20 디자인 개편) — 범례 위. 왼쪽 큰 숫자 = 계좌 수익률, 오른쪽 = 고정환율·지수 대비 초과수익 ── */
 .perf-summary {
   display: flex;
@@ -6589,9 +6593,14 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .chart-bottom-controls .chart-head-toggle, .chart-bottom-controls .chart-range-btn { min-height: 30px; font-size: 11px; }
   .perf-legend-groups { display: grid; gap: 6px; }
   .perf-legend-section { align-items: flex-start; }
-  /* 계좌 칩 줄 끝의 차트 컨트롤 — 칩 뒤에 이어 붙고, 남는 폭이 없으면 다음 줄 오른쪽 */
-  .perf-controls-slot { margin-left: auto; }
-  .perf-group-label { flex: 0 0 44px; padding-top: 6px; }
+  /* 차트 컨트롤은 비교 줄 아래 별도 행(칩과 같은 들여쓰기) */
+  .perf-controls-slot { padding-left: 38px; }
+  /* 비교 줄은 한 줄(2026-11-21 사용자 지시): 이름을 줄이고(S&P 500 → S&P) 칩 여백을 좁힌다 */
+  .perf-index-section .perf-legend { flex-wrap: nowrap; gap: 4px; }
+  .perf-index-section .perf-legend-item { gap: 4px; padding-inline: 4px; font-size: 11.5px; white-space: nowrap; }   /* 360px 폭에서도 한 줄 */
+  .perf-chip-full { display: none; }
+  .perf-chip-short { display: inline; }
+  .perf-group-label { flex: 0 0 30px; padding-top: 6px; }
   .perf-legend { gap: 6px; }
   /* 요약 띠: 큰 숫자 아래로 비교 칸이 두 칸씩 */
   .perf-summary { gap: 10px; }

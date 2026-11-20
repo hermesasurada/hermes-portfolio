@@ -22,8 +22,9 @@ assert.match(legend, /선택 &lt;계좌>/);
 assert.match(legend, /data-perf-focus="portfolio"/);
 assert.equal((legend.match(/data-index=/g) || []).length, 5);   // 비트코인 추가(2026-11-21)
 assert.match(legend, /data-index="BTC"[^>]*>[\s\S]*?비트코인</);
-// 차트 컨트롤(부드럽게·기간)은 계좌 칩 줄 끝 자리로 옮겨 온다(2026-11-21).
-assert.match(legend, /perf-account-section[\s\S]*perf-fx-toggle[\s\S]*<span class="perf-controls-slot"><\/span><\/div><div class="perf-legend-section">/);
+// 2026-11-21: 컨트롤 자리는 비교 줄 뒤(범례 맨 끝) — PC는 그 줄 오른쪽, 모바일은 별도 행. 라벨은 '비교'.
+assert.match(legend, /perf-index-section"><span class="perf-group-label">비교<\/span>[\s\S]*<\/div><\/div><span class="perf-controls-slot"><\/span><\/div>$/);
+assert.match(legend, /<span class="perf-chip-full">S&amp;P 500<\/span><span class="perf-chip-short">S&amp;P<\/span>/);
 // 표시 기간 최종 수익률 오버레이(2026-11-01) — 기간·수익률 기준을 함께 싣고, 강조한 계좌로 바뀐다.
 h.evaluate(ctx, 'chartRange = "6m";');
 const ret = [

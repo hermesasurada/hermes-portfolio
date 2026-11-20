@@ -43,7 +43,7 @@ function syncPerformanceTitle(text) {
 // 순서는 S&P 500 → 나스닥 → 코스피 → 니케이(2026-09-16 사용자 지시).
 // 색은 지수에 고정 — 순서를 바꿔도 같은 지수가 같은 색을 유지해야 눈이 안 헷갈린다.
 const PERF_INDEX_META = [
-  ["SP500", "S&P 500", "#c026d3"],      // 292° 푸시아
+  ["SP500", "S&P 500", "#c026d3", "S&P"],      // 292° 푸시아 — 넷째 칸은 모바일 칩의 짧은 이름
   ["NASDAQ", "나스닥", "#16a34a"],       // 142° 그린
   ["KOSPI", "코스피", "#d97706"],        // 32° 앰버
   ["NIKKEI225", "니케이", "#0891b2"],    // 192° 시안
@@ -120,8 +120,13 @@ function performanceWeeklyPoints(points) {
   }
   return out;
 }
-function performanceUsesWeekly() {
+// 단위(일/주, 2026-11-21 사용자 지시): 3년 이상은 늘 주봉, 그보다 짧으면 고른 단위(기본 일).
+let performanceIntervalPreference = "day";
+function performanceWeeklyForced() {
   return chartDisplayedYears() + 0.01 >= 3;
+}
+function performanceUsesWeekly() {
+  return performanceWeeklyForced() || performanceIntervalPreference === "week";
 }
 
 function performanceSeries(payload) {
@@ -255,10 +260,13 @@ function renderPerformanceLegend(series = []) {
     .map(item => `<button type="button" class="perf-legend-item perf-account-focus" data-perf-focus="${esc(item.key)}" aria-pressed="${item.key === performanceFocusKey}" title="${esc(item.name)} 선 강조 · 다시 누르면 해제"><i style="background:${item.color}"></i>${esc(item.name)}</button>`)
     .join("");
   const indexChips = PERF_INDEX_META
-    .map(([key, label, color]) => {
+    .map(([key, label, color, short]) => {
       const on = !!performanceIndexes[key];
-      // 꺼짐은 점까지 회색 — 색이 남아 있으면 켜진 것처럼 보인다
-      return `<button class="perf-legend-item perf-index-toggle${on ? " active" : ""}" type="button" data-index="${key}" aria-pressed="${on ? "true" : "false"}" title="${esc(label)} ${on ? "숨기기" : "표시"}"><i style="background:${on ? color : "var(--chart-axis)"}"></i>${esc(label)}</button>`;
+      // 꺼짐은 점까지 회색 — 색이 남아 있으면 켜진 것처럼 보인다. 모바일은 한 줄에 들도록 짧은 이름(있으면).
+      const text = short
+        ? `<span class="perf-chip-full">${esc(label)}</span><span class="perf-chip-short">${esc(short)}</span>`
+        : esc(label);
+      return `<button class="perf-legend-item perf-index-toggle${on ? " active" : ""}" type="button" data-index="${key}" aria-pressed="${on ? "true" : "false"}" aria-label="${esc(label)}" title="${esc(label)} ${on ? "숨기기" : "표시"}"><i style="background:${on ? color : "var(--chart-axis)"}"></i>${text}</button>`;
     })
     .join("");
   // 고정환율 칩: 켜짐/꺼짐 토글. 환노출이 없어 선이 생기지 않는 선택(원화 계좌만)에서는 칩을 흐리게 표시.
@@ -267,7 +275,7 @@ function renderPerformanceLegend(series = []) {
   const fxChip = `<button class="perf-legend-item perf-fx-toggle${fxOn ? " active" : ""}${fxAvailable ? "" : " unavailable"}" type="button" data-perf-fx="1" aria-pressed="${fxOn ? "true" : "false"}" title="${fxOn ? "고정환율 선 숨기기" : "고정환율 선 표시"} · 기준일 환율로 고정해 환율 변동을 걷어낸 시간가중 수익률(점선)"><i class="dashed" style="border-color:${fxOn ? "var(--brand)" : "var(--chart-axis)"}"></i>고정환율</button>`;
   // 고정환율 칩은 계좌 줄에 함께 둔다 — 계좌 선에 딸린 옵션이라 별도 '환율' 줄을
   // 만들면 한 줄을 통째로 쓰면서도 칩은 하나뿐이었다(2026-09-16 사용자 지시).
-  return `<div class="perf-summary hidden" id="perfSummary" aria-live="polite"></div><div class="perf-legend-groups"><div class="perf-legend-section perf-account-section"><span class="perf-group-label" title="계좌 칩을 누르면 그 선을 강조">계좌</span><div class="perf-legend" role="group" aria-label="계좌 선 강조와 고정환율 표시">${accountChips || '<span class="perf-empty-label">표시할 계좌 없음</span>'}${fxChip}</div><span class="perf-controls-slot"></span></div><div class="perf-legend-section"><span class="perf-group-label">비교지수</span><div class="perf-legend" role="group" aria-label="비교지수 표시">${indexChips}</div></div></div>`;
+  return `<div class="perf-summary hidden" id="perfSummary" aria-live="polite"></div><div class="perf-legend-groups"><div class="perf-legend-section perf-account-section"><span class="perf-group-label" title="계좌 칩을 누르면 그 선을 강조">계좌</span><div class="perf-legend" role="group" aria-label="계좌 선 강조와 고정환율 표시">${accountChips || '<span class="perf-empty-label">표시할 계좌 없음</span>'}${fxChip}</div></div><div class="perf-legend-section perf-index-section"><span class="perf-group-label">비교</span><div class="perf-legend" role="group" aria-label="비교지수 표시">${indexChips}</div></div><span class="perf-controls-slot"></span></div>`;
 }
 
 function bindPerformanceHover(series, geometry) {
@@ -381,7 +389,10 @@ function renderPerformanceChart(payload) {
   const endNameWidth = Math.ceil(Math.max(0, ...series.map(item => textWidth(endName(item)))));
   const endValueWidth = Math.ceil(Math.max(0, ...series.map(item => textWidth(pctChartLabel1(item.points[item.points.length - 1].close), 0.62))));
   const endGap = Math.round(endFont * 0.6);
-  const pad = { top: 22, right: Math.min(isMobileChart ? 320 : 240, Math.max(74, 7 + endNameWidth + endGap + endValueWidth + 6)), bottom: 22, left: 56 };
+  // 모바일은 끝 라벨을 두지 않고 차트로 채운다(2026-11-21 사용자 지시) — 수익률은 위 요약 띠와 호버 툴팁에서 본다.
+  const pad = isMobileChart
+    ? { top: 22, right: 16, bottom: 22, left: 56 }
+    : { top: 22, right: Math.min(240, Math.max(74, 7 + endNameWidth + endGap + endValueWidth + 6)), bottom: 22, left: 56 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const range = max - min || 1;
@@ -397,7 +408,7 @@ function renderPerformanceChart(payload) {
   const vGrid = perfVerticalGrid(minTime, maxTime, chartRange);
   const labelEvery = Math.max(1, Math.ceil(vGrid.lines.length / 8));
   // (#3) per-line total performance shown at each line's right end, de-collided vertically
-  const endLabels = declutterChartLabels(series
+  const endLabels = isMobileChart ? [] : declutterChartLabels(series
     .map(item => {
       const lastPoint = item.points[item.points.length - 1];
       const last = lastPoint.close;
@@ -449,6 +460,8 @@ function renderPerformanceChart(payload) {
     <div id="compareTooltip" class="compare-tooltip hidden" aria-hidden="true"></div>
   `;
   syncPerformanceReturnSummary();
+  if (typeof syncChartIntervalControl === "function") syncChartIntervalControl();   // 기간에 따라 일/주 표시가 바뀐다
+  if (typeof syncChartDisplayControls === "function") syncChartDisplayControls(true);   // '부드럽게' 글자
   performanceRenderedBox = { width: document.getElementById("chartView")?.clientWidth || 0, height: window.innerHeight || 0 };
   renderChartRangeControls();
   bindPerformanceHover(series, { width, height, pad, plotW, plotH, minTime, maxTime, xForTime, yFor });

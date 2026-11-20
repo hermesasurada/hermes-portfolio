@@ -132,10 +132,22 @@ function syncChartIntervalControl() {
   const toggle = document.getElementById("chartIntervalToggle");
   if (!toggle) return;
   const labels = { day: "일", week: "주", month: "월" };
+  // 성과 화면도 단위를 보인다(2026-11-21 사용자 지시): 3년 이상은 주 고정, 그보다 짧으면 일 ↔ 주.
+  if (performanceChartOpen) {
+    const forced = performanceWeeklyForced();
+    const current = performanceUsesWeekly() ? "week" : "day";
+    toggle.classList.toggle("hidden", false);
+    document.getElementById("chartUnitControls")?.classList.toggle("hidden", false);
+    toggle.textContent = labels[current];
+    toggle.disabled = forced;
+    toggle.setAttribute("aria-label", forced ? "주 단위 — 3년 이상 기간은 주 단위로 그린다" : `현재 ${labels[current]} 단위, 클릭하면 ${current === "day" ? "주" : "일"}`);
+    toggle.title = forced ? "3년 이상 기간은 주 단위로 그린다" : `성과 단위: ${labels[current]} → ${current === "day" ? "주" : "일"}`;
+    return;
+  }
   const allowed = allowedChartIntervals();
   const next = allowed[(allowed.indexOf(chartInterval) + 1) % allowed.length];
-  toggle.classList.toggle("hidden", !chartTicker || performanceChartOpen);
-  document.getElementById("chartUnitControls")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
+  toggle.classList.toggle("hidden", !chartTicker);
+  document.getElementById("chartUnitControls")?.classList.toggle("hidden", !chartTicker);
   toggle.textContent = labels[chartInterval] || "일";
   toggle.setAttribute("aria-pressed", "true");
   toggle.disabled = allowed.length < 2;
@@ -152,6 +164,13 @@ function initChartIntervalControl() {
   if (!toggle) return;
   syncChartIntervalControl();
   toggle.addEventListener("click", () => {
+    if (performanceChartOpen) {
+      if (performanceWeeklyForced()) return;
+      performanceIntervalPreference = performanceIntervalPreference === "week" ? "day" : "week";
+      syncChartIntervalControl();
+      if (performancePayload) renderPerformanceChart(performancePayload);
+      return;
+    }
     const allowed = allowedChartIntervals();
     chartInterval = allowed[(allowed.indexOf(chartInterval) + 1) % allowed.length];
     chartIntervalPreference = chartInterval;
@@ -194,6 +213,11 @@ function syncChartDisplayControls(visible = Boolean(chartTicker || performanceCh
     typeToggle.setAttribute("aria-pressed", "true");
     typeToggle.setAttribute("aria-label", `현재 ${chartType === "line" ? "선" : "캔들"} 차트, 클릭하면 ${nextTypeLabel}`);
     typeToggle.title = `차트 종류: ${chartType === "line" ? "선" : "캔들"} → ${nextTypeLabel}`;
+  }
+  // 성과 화면은 아이콘 대신 글자 '부드럽게'(2026-11-21 사용자 지시), 종목 차트는 좁은 툴바라 아이콘 그대로.
+  if (smoothToggle) {
+    smoothToggle.textContent = performanceChartOpen ? "부드럽게" : "\u223F";
+    smoothToggle.classList.toggle("icon-toggle", !performanceChartOpen);
   }
   smoothToggle?.classList.toggle("active", chartSmoothLines);
   smoothToggle?.setAttribute("aria-pressed", String(chartSmoothLines));

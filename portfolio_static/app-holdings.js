@@ -1054,7 +1054,8 @@ function syncDetailTabs() {
   // 성과차트는 컨트롤이 '부드럽게'와 기간뿐이라 감싸는 박스를 없앤다
   document.getElementById("chartBottomControls")?.classList.toggle("perf-mode", performanceChartOpen);
   // 실제 버튼 id는 chartIntervalToggle — 없는 id를 토글해 성과차트에 '일'이 남아 있었다
-  document.getElementById("chartIntervalToggle")?.classList.toggle("hidden", !chartTicker || performanceChartOpen);
+  // 단위 버튼은 종목·성과 차트 모두 보인다(성과는 2026-11-21부터) — 자세한 표시는 syncChartIntervalControl.
+  document.getElementById("chartIntervalToggle")?.classList.toggle("hidden", !chartTicker && !performanceChartOpen);
   document.getElementById("chartDisplayControls")?.classList.toggle("hidden", !showingChart);
   document.getElementById("performanceDetailControl")?.classList.toggle("hidden", !performanceChartOpen);
   document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart || showingInterest);
