@@ -164,6 +164,7 @@ function render() {
   renderTradeControls();
   syncMobileCollapsePanels();
   syncTableScrollNudges();   // 표 폭·표시 탭이 바뀌면 화살표 필요 여부 재판정
+  syncColumnPresetNavActive();   // 표가 다시 그려지면 열 위치가 바뀐다
 }
 
 function portfolioRefreshTickers() {

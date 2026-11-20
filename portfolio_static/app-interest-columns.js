@@ -235,6 +235,21 @@ function activeColumnPreset(table) {
   const chosen = columnPresetChoice[table];
   return columnPresetOptions(table).some(preset => preset.key === chosen) ? chosen : columnPresetDefault();
 }
+// 표에 실제로 거는 묶음. PC는 걸러 내지 않고 모든 열을 그린 채 버튼으로 묶음 위치까지 가로로 옮긴다
+// (2026-11-20 사용자 지시) — 그래서 PC는 늘 '전체'. 좁은 화면만 고른 묶음으로 거른다.
+function effectiveColumnPreset(table, compact = columnPresetCompact()) {
+  return compact ? activeColumnPreset(table) : "all";
+}
+// PC 버튼이 스크롤해 가는 열(묶음의 대표 열). 묶음 열이 표 곳곳에 흩어져 있어(β는 52주 옆, 추세는 맨 뒤)
+// '묶음의 첫 열'로 잡으면 엉뚱한 곳으로 간다. 대표 열이 없는 표(값이 없어 숨김)면 그 묶음의 첫 보이는 열.
+const COLUMN_PRESET_NAV_ANCHORS = {
+  tech: "rsi_day", value: "trailing_pe", dividend: "dividend_yield", perf: "perf_1w",
+  trend: "trend_return", fund: "gross_margin", consensus: "target_price",
+};
+// PC 버튼 묶음 — '전체'는 걸러 보기 전용이라 빠지고, '요약'이 맨 앞(왼쪽 끝)이다.
+function columnPresetNavOptions(table) {
+  return columnPresetOptions(table).filter(preset => preset.key !== "all");
+}
 function setColumnPreset(table, preset) {
   activeColumnPreset(table);   // 저장값을 먼저 읽어 둔다
   columnPresetChoice[table] = preset;
@@ -252,7 +267,7 @@ function hasInterestColumnValue(row, field) {
 const INTEREST_STAR_ONLY_WIDTH = 44;
 
 function visibleInterestColumns(rows, isIndexGroup = false, {starOnly = false} = {}) {
-  const preset = activeColumnPreset("interest");
+  const preset = effectiveColumnPreset("interest");
   return INTEREST_COLUMNS.filter(column => column.always || (
     !(isIndexGroup && column.key === "extended_change_pct")
     && columnInPreset(column.key, preset, "interest", column.group)

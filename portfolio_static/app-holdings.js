@@ -1171,7 +1171,7 @@ function syncDetailColumnPreset() {
     style.id = "detailColumnPresetStyle";
     document.head.appendChild(style);
   }
-  const preset = activeColumnPreset("detail");
+  const preset = effectiveColumnPreset("detail");
   // 묶음을 고르면 열이 몇 개뿐이라 표의 최소 폭(660px) 규칙을 푼다 — 그대로 두면 남은 열이 그 폭을 나눠 가져 벌어진다.
   document.getElementById("detailTableWrap")?.classList.toggle("column-preset", preset !== "all");
   const hidden = preset === "all" ? [] : leaves.filter(leaf => !columnInPreset(leaf.key, preset, "detail"));
@@ -1205,17 +1205,100 @@ function syncColumnPresetControl() {
     select.innerHTML = columnPresetOptions(table).map(preset => `<option value="${preset.key}">${esc(preset.label)}</option>`).join("");
     select.dataset.table = table;
   }
-  const active = activeColumnPreset(table);
-  select.value = active;
-  // PC는 통화 선택처럼 버튼 묶음으로 바로 고른다(2026-11-20 사용자 지시). 모바일은 줄 폭 때문에 선택 상자.
+  select.value = activeColumnPreset(table);
+  // PC는 통화 선택처럼 버튼 묶음(2026-11-20 사용자 지시) — 누르면 그 묶음 위치로 가로 스크롤하고,
+  // 지금 보이는 묶음에 불이 들어온다(syncColumnPresetNavActive). 모바일은 줄 폭 때문에 선택 상자로 걸러 본다.
   const segments = document.getElementById("columnPresetSegments");
   if (segments) {
     segments.classList.toggle("hidden", control.classList.contains("hidden"));
-    segments.innerHTML = columnPresetOptions(table).map(preset => {
-      const on = preset.key === active;
-      return `<button class="seg-btn${on ? " active" : ""}" type="button" data-column-preset="${preset.key}" aria-pressed="${on}">${esc(preset.label)}</button>`;
-    }).join("");
+    if (segments.dataset.table !== table) {
+      segments.innerHTML = columnPresetNavOptions(table).map(preset =>
+        `<button class="seg-btn" type="button" data-column-preset="${preset.key}" aria-pressed="false">${esc(preset.label)}</button>`).join("");
+      segments.dataset.table = table;
+    }
+    syncColumnPresetNavActive();
   }
+}
+function columnPresetWrap(table) {
+  return document.getElementById(table === "interest" ? "interestTableWrap" : "detailTableWrap");
+}
+// 묶음마다 첫 열의 헤더 칸. 보이지 않는 열(값이 없어 숨긴 연장 등)은 건너뛴다.
+function columnPresetFirstHeads(table) {
+  const wrap = columnPresetWrap(table);
+  if (!wrap?.querySelector) return [];
+  const columns = table === "interest"
+    ? interestRenderedColumns.map(column => ({ key: column.key, group: column.group || "",
+      th: wrap.querySelector(`thead th[data-interest-col="${column.index}"]`) }))
+    : detailLeafColumns().map(leaf => ({ key: leaf.key, group: "", th: leaf.th }));
+  const visible = columns.filter(column => column.th?.offsetParent && !COLUMN_PRESET_ALWAYS.has(column.key));
+  return columnPresetNavOptions(table).map(preset => ({
+    key: preset.key,
+    th: (visible.find(column => column.key === COLUMN_PRESET_NAV_ANCHORS[preset.key])
+      || visible.find(column => columnInPreset(column.key, preset.key, table, column.group, false)))?.th || null,
+  })).filter(item => item.th);
+}
+// 그 묶음 첫 열이 틀고정 열(로고·종목명) 바로 오른쪽에 오는 가로 스크롤 값. '요약'은 맨 왼쪽.
+function columnPresetScrollTargets(table) {
+  const wrap = columnPresetWrap(table);
+  if (!wrap?.getBoundingClientRect) return [];
+  const box = wrap.getBoundingClientRect();
+  const frozen = wrap.querySelector(table === "interest" ? 'thead th[data-interest-col="1"]' : "thead th.name-head");
+  const frozenRight = frozen ? frozen.getBoundingClientRect().right - box.left : 0;
+  const max = Math.max(0, wrap.scrollWidth - wrap.clientWidth);
+  return columnPresetFirstHeads(table).map(item => ({
+    key: item.key,
+    left: item.key === "summary" ? 0
+      : Math.max(0, Math.min(max, Math.round(wrap.scrollLeft + item.th.getBoundingClientRect().left - box.left - frozenRight))),
+  }));
+}
+function scrollToColumnPreset(table, key) {
+  const wrap = columnPresetWrap(table);
+  const target = columnPresetScrollTargets(table).find(item => item.key === key);
+  if (!wrap || !target) return;
+  animateScrollLeft(wrap, target.left);
+}
+// 가로 스크롤을 짧게 움직인다. 브라우저의 scrollTo({behavior:"smooth"})는 이 표에서 짧은 거리를 자주 놓쳐
+// (실측: 1030→1167이 제자리) 직접 프레임마다 옮기고, 끝에는 목표값을 확정한다. 움직임 줄이기 설정이면 바로 이동.
+let columnPresetScrollAnimation = 0;
+function animateScrollLeft(wrap, to, duration = 240) {
+  cancelAnimationFrame(columnPresetScrollAnimation);
+  const from = wrap.scrollLeft;
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches || Math.abs(to - from) < 2) {
+    wrap.scrollLeft = to;
+    return;
+  }
+  const start = performance.now();
+  const step = now => {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - (1 - t) ** 3;
+    wrap.scrollLeft = from + (to - from) * eased;
+    if (t < 1) columnPresetScrollAnimation = requestAnimationFrame(step);
+    else syncColumnPresetNavActive();
+  };
+  columnPresetScrollAnimation = requestAnimationFrame(step);
+  setTimeout(() => {   // 화면이 가려져 프레임이 멈춰도 목표 자리에는 닿게
+    if (Math.abs(wrap.scrollLeft - to) > 1) { cancelAnimationFrame(columnPresetScrollAnimation); wrap.scrollLeft = to; }
+    syncColumnPresetNavActive();
+  }, duration + 200);
+}
+// 지금 틀고정 열 바로 오른쪽에 있는 묶음(스크롤 값이 그 묶음 시작을 지난 마지막 묶음)에 불을 켠다.
+// 오른쪽 끝까지 밀었으면 끝에 걸린 묶음들 중 마지막.
+function syncColumnPresetNavActive() {
+  const segments = document.getElementById("columnPresetSegments");
+  if (!segments || segments.classList.contains("hidden")) return;
+  const table = segments.dataset.table || "detail";
+  const wrap = columnPresetWrap(table);
+  const targets = columnPresetScrollTargets(table);
+  // 묶음 순서와 표의 열 순서가 다를 수 있어 '지난 것 중 가장 오른쪽'을 고른다.
+  const scrolled = (wrap?.scrollLeft || 0) + 4;
+  const passed = targets.filter(item => item.left <= scrolled).sort((a, b) => b.left - a.left);
+  const current = passed[0]?.key || targets[0]?.key || "";
+  segments.querySelectorAll("[data-column-preset]").forEach(button => {
+    const on = button.dataset.columnPreset === current;
+    button.classList.toggle("active", on);
+    button.setAttribute("aria-pressed", String(on));
+    button.disabled = !targets.some(item => item.key === button.dataset.columnPreset);   // 이 표에 그 묶음 열이 없다
+  });
 }
 function initColumnPresetControl() {
   const select = document.getElementById("columnPresetSelect");
@@ -1229,11 +1312,18 @@ function initColumnPresetControl() {
     });
     renderTable();
   });
-  document.getElementById("columnPresetSegments")?.addEventListener("click", event => {
+  const segments = document.getElementById("columnPresetSegments");
+  segments?.addEventListener("click", event => {
     const value = event.target.closest?.(".seg-btn")?.dataset.columnPreset;
-    if (!value || value === select.value) return;
-    select.value = value;
-    select.dispatchEvent(new Event("change"));
+    if (value) scrollToColumnPreset(segments.dataset.table || "detail", value);
+  });
+  // 스크롤이 멈추면(60ms) 다시 잰다 — 마지막 위치를 놓치지 않게 매번 미룬다(rAF는 가려진 창에서 멈췄다).
+  let navTimer = 0;
+  ["detailTableWrap", "interestTableWrap"].forEach(id => {
+    document.getElementById(id)?.addEventListener("scroll", () => {
+      clearTimeout(navTimer);
+      navTimer = setTimeout(syncColumnPresetNavActive, 60);
+    }, { passive: true });
   });
   // 좁은 화면과 PC는 기본 묶음과 '요약'의 구성이 다르다 — 폭이 그 경계를 넘으면 다시 맞춘다.
   window.matchMedia?.("(max-width: 980px)")?.addEventListener?.("change", () => renderTable());

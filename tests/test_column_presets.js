@@ -59,8 +59,13 @@ assert.equal(run('activeColumnPreset("interest")'), 'all');
 h.evaluate(ctx, 'setColumnPreset("detail", "consensus")');   // 계좌표에 없는 묶음은 기본값으로
 assert.equal(run('activeColumnPreset("detail")'), 'all');
 
-// 관심목록은 열 정의를 걸러 그린다.
+// 관심목록은 좁은 화면에서만 열 정의를 걸러 그린다. PC는 늘 전체(버튼은 그 위치로 스크롤 — 2026-11-20 사용자 지시).
 h.evaluate(ctx, 'setColumnPreset("interest", "dividend")');
+const rowPc = '{ticker: "AAA", dividend_yield: 2, perf_1y: 10, rsi_day: 40, trailing_pe: 12, extended_change_pct: 1}';
+assert.ok(run(`visibleInterestColumns([${rowPc}]).map(c => c.key)`).includes('perf_1y'), 'PC는 거르지 않는다');
+assert.equal(run('effectiveColumnPreset("detail", false)'), 'all');
+assert.deepEqual(run('columnPresetNavOptions("detail").map(p => p.key)'), ['summary', 'tech', 'value', 'dividend', 'perf', 'trend']);
+ctx.window.matchMedia = () => ({ matches: true, addEventListener() {} });
 const row = '{ticker: "AAA", dividend_yield: 2, perf_1y: 10, rsi_day: 40, trailing_pe: 12, extended_change_pct: 1}';
 assert.deepEqual(run(`visibleInterestColumns([${row}]).map(c => c.key)`), ['logo', 'name', 'display_change_pct', 'current_price', 'dividend_yield', 'delete']);
 h.evaluate(ctx, 'setColumnPreset("interest", "all")');
