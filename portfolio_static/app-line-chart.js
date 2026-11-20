@@ -138,7 +138,7 @@ function syncChartIntervalControl() {
     const current = performanceUsesWeekly() ? "week" : "day";
     toggle.classList.toggle("hidden", false);
     document.getElementById("chartUnitControls")?.classList.toggle("hidden", false);
-    toggle.textContent = labels[current];
+    toggle.textContent = `단위:${labels[current]}`;   // 성과 화면은 버튼에 '단위:'를 붙인다(2026-11-21 사용자 지시)
     toggle.disabled = forced;
     toggle.setAttribute("aria-label", forced ? "주 단위 — 3년 이상 기간은 주 단위로 그린다" : `현재 ${labels[current]} 단위, 클릭하면 ${current === "day" ? "주" : "일"}`);
     toggle.title = forced ? "3년 이상 기간은 주 단위로 그린다" : `성과 단위: ${labels[current]} → ${current === "day" ? "주" : "일"}`;

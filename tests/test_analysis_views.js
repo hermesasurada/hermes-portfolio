@@ -14,7 +14,7 @@ const legend = ctx.renderPerformanceLegend(series);
 // 범례는 두 줄뿐 — 고정환율 칩은 계좌 줄에 얹고 별도 '환율' 줄은 두지 않는다.
 assert.match(legend, /aria-label="계좌 선 강조와 고정환율 표시"/);
 assert.match(legend, /aria-label="비교지수 표시"/);
-assert.equal((legend.match(/perf-legend-section/g) || []).length, 2);
+assert.equal((legend.match(/perf-legend-section/g) || []).length, 3);   // 계좌 · 비교 · 컨트롤(2026-11-21)
 assert.doesNotMatch(legend, /perf-group-label">환율</);
 const fxAt = legend.indexOf('perf-fx-toggle'), indexAt = legend.indexOf('perf-index-toggle');
 assert.ok(fxAt > legend.indexOf('perf-account-focus') && fxAt < indexAt, '고정환율 칩은 계좌 칩 뒤·비교지수 앞');
@@ -23,7 +23,7 @@ assert.match(legend, /data-perf-focus="portfolio"/);
 assert.equal((legend.match(/data-index=/g) || []).length, 5);   // 비트코인 추가(2026-11-21)
 assert.match(legend, /data-index="BTC"[^>]*>[\s\S]*?비트코인</);
 // 2026-11-21: 컨트롤 자리는 비교 줄 뒤(범례 맨 끝) — PC는 그 줄 오른쪽, 모바일은 별도 행. 라벨은 '비교'.
-assert.match(legend, /perf-index-section"><span class="perf-group-label">비교<\/span>[\s\S]*<\/div><\/div><span class="perf-controls-slot"><\/span><\/div>$/);
+assert.match(legend, /perf-index-section"><span class="perf-group-label">비교<\/span>[\s\S]*<div class="perf-legend-section perf-controls-section"><span class="perf-group-label">컨트롤<\/span><span class="perf-controls-slot"><\/span><\/div><\/div>$/);
 assert.match(legend, /<span class="perf-chip-full">S&amp;P 500<\/span><span class="perf-chip-short">S&amp;P<\/span>/);
 // 표시 기간 최종 수익률 오버레이(2026-11-01) — 기간·수익률 기준을 함께 싣고, 강조한 계좌로 바뀐다.
 h.evaluate(ctx, 'chartRange = "6m";');
