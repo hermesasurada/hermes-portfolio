@@ -392,10 +392,12 @@ function indicatorToneAttr(v, kind) {
   const center = 50;
   const span = kind === "rsi" ? 20 : 50;
   const intensity = Math.max(0, Math.min(1, Math.abs(n - center) / span));
-  const tone = n < center ? "var(--down)" : n > center ? "var(--up)" : "var(--muted)";
-  const pct = Math.round(intensity * 100);
-  const weight = intensity >= 0.72 ? 800 : intensity >= 0.36 ? 700 : 600;
-  return `style="color: color-mix(in srgb, ${tone} ${pct}%, var(--muted)); font-weight: ${weight}"`;
+  // 과매도·과매수는 글자색이 아니라 옅은 바탕으로 알린다(2026-11-20 디자인 재검토 02) — 파란 글자는 하락 표시와 헷갈린다.
+  // 50에서 멀수록 바탕이 짙어지고 글자가 굵어진다. 낮으면 하락색, 높으면 상승색 계열의 틴트.
+  const tone = n < center ? "var(--down)" : n > center ? "var(--up)" : "transparent";
+  const pct = Math.round(intensity * 26);
+  const weight = intensity >= 0.72 ? 700 : intensity >= 0.36 ? 600 : 500;
+  return `style="--tone: color-mix(in srgb, ${tone} ${pct}%, transparent); font-weight: ${weight}"`;
 }
 function indicatorText(v, kind) {
   if (v == null || !Number.isFinite(Number(v))) return "-";

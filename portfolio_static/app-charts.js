@@ -106,7 +106,7 @@ function performanceSeries(payload) {
     {
       key: "portfolio",
       name: "선택 계좌",
-      color: "var(--brand)",
+      color: "var(--chart-price)",   // 데이터 선은 선택색(--brand)이 아니라 가격선 색
       points: normalizePerformancePoints(portfolioRaw, chartRange, bounds, true),
       primary: true,
       amount: true,

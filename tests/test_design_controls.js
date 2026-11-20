@@ -115,3 +115,29 @@ console.log('Design controls: always-on watchlist editing, mobile expansion, act
   assert.match(css, /\.chart-tags \.tag-chip \{ overflow: visible; \}/);
   assert.match(h.readStatic('app-ticker-tags.js'), /class="tag-chip chart-tag"[^>]*><span>#\$\{esc\(tag\)\}<\/span><\/button>/);
 }
+
+// 디자인 재검토 02(2026-11-20): 선택·조작 색은 바이올렛, 데이터 색(하락 파랑·가격선)과 분리.
+{
+  const h = require('./harness');
+  const light = css.slice(css.indexOf(':root {'), css.indexOf('}', css.indexOf(':root {')));
+  const darkStart = css.indexOf(':root[data-theme="dark"] {');
+  const dark = css.slice(darkStart, css.indexOf('}', darkStart));
+  const token = (block, name) => block.match(new RegExp(`--${name}: (#[0-9a-f]{6})`))[1];
+  for (const block of [light, dark]) {
+    assert.equal(token(block, 'accent'), token(block, 'brand'));
+    assert.equal(token(block, 'focus'), token(block, 'brand'));
+    assert.notEqual(token(block, 'brand'), token(block, 'down'), '선택색과 하락색이 같으면 안 된다');
+    assert.notEqual(token(block, 'brand'), token(block, 'chart-price'));
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(token(block, 'brand').slice(i, i + 2), 16));
+    assert.ok(r > g && b > r, `선택색은 바이올렛 계열(파랑에 빨강이 섞임): ${token(block, 'brand')}`);
+  }
+  // 데이터 선은 선택색을 쓰지 않는다.
+  assert.doesNotMatch(h.readStatic('app-charts.js'), /color: "var\(--brand\)"/);
+  assert.match(h.readStatic('app.js'), /const chartCompareColors = \["var\(--chart-price\)"/);
+  // RSI·BB 치우침은 글자색이 아니라 바탕 틴트.
+  const ctx = h.loadScripts(h.createContext());
+  const low = ctx.indicatorText(28, 'rsi');
+  assert.match(low, /--tone: color-mix\(in srgb, var\(--down\) 26%, transparent\)/);
+  assert.doesNotMatch(low, /style="color:/);
+  assert.match(css, /\.indicator-tone \{[^}]*background: var\(--tone, transparent\);[^}]*color: var\(--ink\);/);
+}
