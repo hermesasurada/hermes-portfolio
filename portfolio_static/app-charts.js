@@ -9,11 +9,22 @@ function accountPerformanceTitle(payload) {
 }
 
 // 범례는 차트(플롯) 영역 밖 — 캔버스 위 별도 호스트에 둔다.
+// 성과 화면에서는 차트 컨트롤(부드럽게·기간)을 계좌 칩 줄 끝으로 옮겨 온다(2026-11-21 사용자 지시 — 예전엔 오른쪽 위에 따로 떠 있었다).
+// 범례를 다시 그리기 전에 컨트롤을 원래 자리(차트 상자 맨 앞)로 돌려놓아야 innerHTML 교체에 지워지지 않는다.
+function restoreChartControlsHome() {
+  const control = document.getElementById("chartBottomControls");
+  const stage = document.querySelector("#chartView .chart-stage");
+  if (control && stage && control.parentElement !== stage) stage.insertBefore(control, stage.firstChild);
+}
 function syncPerformanceLegendHost(html) {
   const host = document.getElementById("perfLegendHost");
   if (!host) return;
+  restoreChartControlsHome();
   host.innerHTML = html || "";
   host.classList.toggle("hidden", !html);
+  const slot = host.querySelector(".perf-controls-slot");
+  const control = document.getElementById("chartBottomControls");
+  if (slot && control) slot.appendChild(control);
 }
 
 // 성과 타이틀은 차트 헤드가 아니라 툴바(목록·상세 버튼 우측)에 띄운다.
@@ -36,6 +47,7 @@ const PERF_INDEX_META = [
   ["NASDAQ", "나스닥", "#16a34a"],       // 142° 그린
   ["KOSPI", "코스피", "#d97706"],        // 32° 앰버
   ["NIKKEI225", "니케이", "#0891b2"],    // 192° 시안
+  ["BTC", "비트코인", "#64748b"],        // 무채색 슬레이트 — 남은 색상환 자리가 계좌·지수 색과 붙어 채도 없는 색으로(2026-11-21)
 ];
 
 // useTwr: 계좌 선은 평가액 변화율이 아니라 시간가중 지수(point.twr, 백엔드 체인)로 %를 그린다.
@@ -95,6 +107,23 @@ function pushFixedFxSeries(series, base, rawPoints, bounds) {
   });
 }
 
+// 3년 이상 기간은 주봉으로 그린다(2026-11-21 사용자 지시) — 일별 점 수백~수천 개가 선을 뭉갠다.
+// 주마다 마지막 점만 남기고(첫 점=0% 기준점은 늘 남긴다), 마지막 점도 늘 남겨 끝 라벨 값이 일별과 같다.
+function performanceWeeklyPoints(points) {
+  if (points.length < 3) return points;
+  const weekKey = time => Math.floor((time / 86400000 + 3) / 7);   // 1970-01-01은 목요일 → +3으로 월요일 시작 주
+  const out = [points[0]];
+  for (let i = 1; i < points.length; i += 1) {
+    const point = points[i];
+    const next = points[i + 1];
+    if (!next || weekKey(next.time) !== weekKey(point.time)) out.push(point);
+  }
+  return out;
+}
+function performanceUsesWeekly() {
+  return chartDisplayedYears() + 0.01 >= 3;
+}
+
 function performanceSeries(payload) {
   const portfolioRaw = payload?.points || [];
   const accountSeries = payload?.account_series || [];
@@ -139,7 +168,10 @@ function performanceSeries(payload) {
       primary: false,
     });
   });
-  return series.filter(item => item.points.length >= 2);
+  const weekly = performanceUsesWeekly();
+  return series
+    .map(item => (weekly ? { ...item, points: performanceWeeklyPoints(item.points) } : item))
+    .filter(item => item.points.length >= 2);
 }
 
 // 범례 = 색 표시 + 지수 on/off 한 줄. 계좌 선은 정보 칩(고정), 비교 지수는
@@ -235,7 +267,7 @@ function renderPerformanceLegend(series = []) {
   const fxChip = `<button class="perf-legend-item perf-fx-toggle${fxOn ? " active" : ""}${fxAvailable ? "" : " unavailable"}" type="button" data-perf-fx="1" aria-pressed="${fxOn ? "true" : "false"}" title="${fxOn ? "고정환율 선 숨기기" : "고정환율 선 표시"} · 기준일 환율로 고정해 환율 변동을 걷어낸 시간가중 수익률(점선)"><i class="dashed" style="border-color:${fxOn ? "var(--brand)" : "var(--chart-axis)"}"></i>고정환율</button>`;
   // 고정환율 칩은 계좌 줄에 함께 둔다 — 계좌 선에 딸린 옵션이라 별도 '환율' 줄을
   // 만들면 한 줄을 통째로 쓰면서도 칩은 하나뿐이었다(2026-09-16 사용자 지시).
-  return `<div class="perf-summary hidden" id="perfSummary" aria-live="polite"></div><div class="perf-legend-groups"><div class="perf-legend-section"><span class="perf-group-label" title="계좌 칩을 누르면 그 선을 강조">계좌</span><div class="perf-legend" role="group" aria-label="계좌 선 강조와 고정환율 표시">${accountChips || '<span class="perf-empty-label">표시할 계좌 없음</span>'}${fxChip}</div></div><div class="perf-legend-section"><span class="perf-group-label">비교지수</span><div class="perf-legend" role="group" aria-label="비교지수 표시">${indexChips}</div></div></div>`;
+  return `<div class="perf-summary hidden" id="perfSummary" aria-live="polite"></div><div class="perf-legend-groups"><div class="perf-legend-section perf-account-section"><span class="perf-group-label" title="계좌 칩을 누르면 그 선을 강조">계좌</span><div class="perf-legend" role="group" aria-label="계좌 선 강조와 고정환율 표시">${accountChips || '<span class="perf-empty-label">표시할 계좌 없음</span>'}${fxChip}</div><span class="perf-controls-slot"></span></div><div class="perf-legend-section"><span class="perf-group-label">비교지수</span><div class="perf-legend" role="group" aria-label="비교지수 표시">${indexChips}</div></div></div>`;
 }
 
 function bindPerformanceHover(series, geometry) {
@@ -341,12 +373,15 @@ function renderPerformanceChart(payload) {
   const PERF_CHART_RESERVE = 100;
   const width = chartViewBoxWidth(canvasEl, isMobileChart, isMobileChart ? 0 : 432, PERF_CHART_RESERVE);
   const height = isMobileChart ? 864 : chartViewBoxHeight(canvasEl, width, 432, false, PERF_CHART_RESERVE);
-  // 선 끝 라벨은 '이름 수익률'(2026-11-20 사용자 지시) — 가장 긴 라벨만큼 오른쪽 여백을 연다. 금액은 호버 툴팁.
+  // 선 끝 라벨은 '이름 수익률'(2026-11-20 사용자 지시)을 두 열로 맞춘다(2026-11-21): 이름은 왼쪽 정렬, 수익률은 오른쪽 정렬.
+  // 가장 긴 이름·수익률 폭만큼 오른쪽 여백을 연다. 금액은 호버 툴팁.
   const endFont = isMobileChart ? 24 : 10.5;   // CSS .perf-end-label과 같은 값(모바일은 viewBox 980을 약 0.35배로 줄여 그리므로 24 ≈ 실제 8.5px)
-  const textWidth = text => [...String(text)].reduce((sum, ch) => sum + (/[\u3131-\uD79D]/.test(ch) ? 1 : 0.6) * endFont, 0);
+  const textWidth = (text, latin = 0.56) => [...String(text)].reduce((sum, ch) => sum + (/[\u3131-\uD79D]/.test(ch) ? 1 : latin) * endFont, 0);
   const endName = item => (item.fixed ? "고정환율" : item.name);
-  const endRight = Math.ceil(Math.max(0, ...series.map(item => textWidth(`${endName(item)} ${pctChartLabel1(item.points[item.points.length - 1].close)}`))));
-  const pad = { top: 22, right: Math.min(isMobileChart ? 300 : 220, Math.max(74, endRight + 14)), bottom: 22, left: 56 };
+  const endNameWidth = Math.ceil(Math.max(0, ...series.map(item => textWidth(endName(item)))));
+  const endValueWidth = Math.ceil(Math.max(0, ...series.map(item => textWidth(pctChartLabel1(item.points[item.points.length - 1].close), 0.62))));
+  const endGap = Math.round(endFont * 0.6);
+  const pad = { top: 22, right: Math.min(isMobileChart ? 320 : 240, Math.max(74, 7 + endNameWidth + endGap + endValueWidth + 6)), bottom: 22, left: 56 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const range = max - min || 1;
@@ -399,9 +434,12 @@ function renderPerformanceChart(payload) {
       ${series.map(item => `
         <path class="perf-line ${item.primary ? "primary" : item.fixed ? "fixed" : "index"}" data-perf-series="${esc(item.key)}"${item.base ? ` data-perf-base="${esc(item.base)}"` : ""} d="${pathFor(item.points)}" style="stroke:${item.color}"></path>
       `).join("")}
-      ${endLabels.map(label => `
-        <text class="perf-end-label${label.fixed ? " fixed" : ""}" data-perf-series="${esc(label.key)}"${label.base ? ` data-perf-base="${esc(label.base)}"` : ""} x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}"><tspan class="perf-end-name">${esc(label.name)}</tspan> <tspan class="perf-end-value">${esc(pctChartLabel1(label.close))}</tspan></text>
-      `).join("")}
+      ${endLabels.map(label => {
+        const attrs = `data-perf-series="${esc(label.key)}"${label.base ? ` data-perf-base="${esc(label.base)}"` : ""} y="${(clampY(label.y) + endFont * 0.33).toFixed(2)}" style="fill:${label.color}"`;
+        const nameX = pad.left + plotW + 7;
+        return `<text class="perf-end-label perf-end-name${label.fixed ? " fixed" : ""}" ${attrs} x="${nameX.toFixed(2)}">${esc(label.name)}</text>`
+          + `<text class="perf-end-label perf-end-value${label.fixed ? " fixed" : ""}" ${attrs} x="${(nameX + endNameWidth + endGap + endValueWidth).toFixed(2)}" text-anchor="end">${esc(pctChartLabel1(label.close))}</text>`;
+      }).join("")}
       <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
       <g id="chartHoverGroup" class="chart-hover hidden">
         <line id="chartHoverLine" class="chart-hover-line" x1="0" x2="0" y1="${pad.top}" y2="${pad.top + plotH}"></line>

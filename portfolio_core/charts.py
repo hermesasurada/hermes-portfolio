@@ -439,7 +439,8 @@ def _append_market_chart_point(
             points.append(point)
 
 
-PERFORMANCE_INDEXES = ("SP500", "NASDAQ", "KOSPI", "NIKKEI225")
+# 비교군 — 비트코인(BTC, 원화 시세)은 2026-11-21 사용자 지시로 추가. 주말에도 시세가 있어 점이 더 촘촘하다.
+PERFORMANCE_INDEXES = ("SP500", "NASDAQ", "KOSPI", "NIKKEI225", "BTC")
 PERFORMANCE_RANGE_MONTHS = {
     "1m": 1,
     "6m": 6,

@@ -20,7 +20,10 @@ const fxAt = legend.indexOf('perf-fx-toggle'), indexAt = legend.indexOf('perf-in
 assert.ok(fxAt > legend.indexOf('perf-account-focus') && fxAt < indexAt, '고정환율 칩은 계좌 칩 뒤·비교지수 앞');
 assert.match(legend, /선택 &lt;계좌>/);
 assert.match(legend, /data-perf-focus="portfolio"/);
-assert.equal((legend.match(/data-index=/g) || []).length, 4);
+assert.equal((legend.match(/data-index=/g) || []).length, 5);   // 비트코인 추가(2026-11-21)
+assert.match(legend, /data-index="BTC"[^>]*>[\s\S]*?비트코인</);
+// 차트 컨트롤(부드럽게·기간)은 계좌 칩 줄 끝 자리로 옮겨 온다(2026-11-21).
+assert.match(legend, /perf-account-section[\s\S]*perf-fx-toggle[\s\S]*<span class="perf-controls-slot"><\/span><\/div><div class="perf-legend-section">/);
 // 표시 기간 최종 수익률 오버레이(2026-11-01) — 기간·수익률 기준을 함께 싣고, 강조한 계좌로 바뀐다.
 h.evaluate(ctx, 'chartRange = "6m";');
 const ret = [
@@ -52,7 +55,16 @@ const perfJs = fs.readFileSync(path.join(root, 'app-charts.js'), 'utf8');
 assert.doesNotMatch(perfJs, /perfReturnSummary|perf-return-|performanceSummaryDefaultPosition|perf-overview|performanceOverview/);
 assert.doesNotMatch(fs.readFileSync(path.join(root, 'styles.css'), 'utf8'), /perf-return-/);
 // 선 끝 라벨은 '이름 수익률'(2026-11-20 사용자 지시)
-assert.match(perfJs, /<tspan class="perf-end-name">\$\{esc\(label\.name\)\}<\/tspan> <tspan class="perf-end-value">/);
+// 이름 열(왼쪽 정렬)과 수익률 열(오른쪽 정렬)로 맞춘다(2026-11-21).
+assert.match(perfJs, /class="perf-end-label perf-end-name[^"]*"[^`]*>\$\{esc\(label\.name\)\}<\/text>/);
+assert.match(perfJs, /class="perf-end-label perf-end-value[^`]*text-anchor="end">/);
+// 3년 이상은 주봉: 주마다 마지막 점, 첫·마지막 점은 늘 남긴다.
+{
+  const day = d => ({ date: d, time: Date.parse(d + 'T00:00:00Z'), close: 0 });
+  const pts = ['2026-01-05','2026-01-06','2026-01-09','2026-01-12','2026-01-14','2026-01-16','2026-01-19','2026-01-20'].map(day);
+  const weekly = h.plain(ctx.performanceWeeklyPoints(pts)).map(p => p.date);
+  assert.deepEqual(weekly, ['2026-01-05', '2026-01-09', '2026-01-16', '2026-01-20']);
+}
 function node(key) {
   return {dataset:{perfFocus:key, perfSeries:key}, attrs:{},
     classList:{ toggle(name, on) { this[name] = on; } },

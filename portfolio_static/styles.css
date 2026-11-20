@@ -6516,19 +6516,11 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
    그 줄 오른쪽 끝(PC). 표시 기간·수익률 기준은 차트 안 왼쪽 위 수익률 오버레이로 옮겼다. */
 .perf-legend-groups { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; }
 .perf-legend-section { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.perf-account-section { flex-wrap: wrap; }
 .perf-group-label { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
-@media (min-width: 981px) {
-  .chart-view:has(> #perfLegendHost:not(.hidden)) { position: relative; }
-  .chart-view:has(> #perfLegendHost:not(.hidden)) > .chart-stage { position: static; }
-  .chart-view:has(> #perfLegendHost:not(.hidden)) .chart-bottom-controls.perf-mode {
-    position: absolute;
-    top: 12px;
-    right: 14px;
-    width: auto;
-    margin: 0;
-  }
-  #perfLegendHost { padding-right: 150px; }
-}
+/* 차트 컨트롤(부드럽게·기간)은 계좌 칩 줄 끝 자리(.perf-controls-slot)로 옮겨 와 함께 둔다(2026-11-21 사용자 지시). */
+.perf-controls-slot { display: inline-flex; align-items: center; }
+.perf-controls-slot > .chart-bottom-controls.perf-mode { position: static; width: auto; margin: 0; }
 /* ── 성과 요약 띠(2026-11-20 디자인 개편) — 범례 위. 왼쪽 큰 숫자 = 계좌 수익률, 오른쪽 = 고정환율·지수 대비 초과수익 ── */
 .perf-summary {
   display: flex;
@@ -6597,12 +6589,16 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .chart-bottom-controls .chart-head-toggle, .chart-bottom-controls .chart-range-btn { min-height: 30px; font-size: 11px; }
   .perf-legend-groups { display: grid; gap: 6px; }
   .perf-legend-section { align-items: flex-start; }
+  /* 계좌 칩 줄 끝의 차트 컨트롤 — 칩 뒤에 이어 붙고, 남는 폭이 없으면 다음 줄 오른쪽 */
+  .perf-controls-slot { margin-left: auto; }
   .perf-group-label { flex: 0 0 44px; padding-top: 6px; }
   .perf-legend { gap: 6px; }
   /* 요약 띠: 큰 숫자 아래로 비교 칸이 두 칸씩 */
   .perf-summary { gap: 10px; }
   .perf-summary-value { font-size: 24px; }
-  .perf-summary-compare { flex-basis: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+  /* 비교 칸은 한 줄에 셋(2026-11-21 사용자 지시 — 고정환율 + 지수 5개 = 두 줄) */
+  .perf-summary-compare { flex-basis: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 10px; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+  .perf-summary-label, .perf-summary-item small { font-size: 10.5px; }
   .perf-summary-item b { font-size: 14px; }
   .perf-line.perf-focused { stroke-width: 5; }
   /* 기준선 예상경로도 모바일에선 가늘게 */
