@@ -32,3 +32,14 @@ const payload = memo => `{trade_date: "2026-10-16", account_id: 1, ticker: "AAPL
 assert.doesNotMatch(run(`tradeConfirmRows(${payload('')})`), />메모</);
 assert.match(run(`tradeConfirmRows(${payload('목표가 120')})`), />메모<[\s\S]*목표가 120/);
 console.log('transaction memo ok');
+
+// 거래 줄 버튼 정리(2026-11-20 디자인 재검토 08): 편집만 늘 보이고 메모·숨김·삭제는 ⋯(details) 안.
+{
+  const beforeMenu = view.slice(0, view.indexOf('<details class="tx-more">'));
+  assert.match(beforeMenu, /data-tx-edit="7"/);
+  assert.doesNotMatch(beforeMenu, /data-tx-memo="7"|data-tx-hide=|data-tx-delete=/);
+  const menu = view.slice(view.indexOf('<div class="tx-more-menu">'));
+  for (const hook of ['data-tx-memo="7"', 'data-tx-hide="7"', 'data-tx-delete="7"']) assert.ok(menu.includes(hook), hook);
+  assert.match(view, /<summary class="tx-action-btn tx-more-toggle has-memo"/);   // 메모가 있으면 ⋯에도 표시
+  assert.doesNotMatch(bare, /tx-more-toggle has-memo/);
+}

@@ -496,6 +496,13 @@ document.getElementById("currencySegments").addEventListener("click", event => {
 // 티커 링크·배당이력 버튼은 문서 위임 한 곳에서만 처리한다.
 // (렌더마다 개별 addEventListener를 다시 붙이면 교체되지 않은 영역에
 //  리스너가 누적되어 클릭 1회에 open*가 N회 호출되는 버그가 있었다)
+// 거래 줄의 ⋯ 메뉴: 바깥·메뉴 안 버튼을 누르거나 Esc를 누르면 닫는다(app-transactions.js).
+document.addEventListener("click", handleTransactionMoreMenuClick);
+document.addEventListener("keydown", event => {
+  if (event.key !== "Escape" || !document.querySelector("details.tx-more[open]")) return;
+  event.preventDefault();   // 메뉴만 닫고 거래내역 팝업은 그대로 둔다
+  closeTransactionMoreMenus();
+});
 document.addEventListener("click", event => {
   const profileBtn = event.target.closest?.("[data-company-profile]");
   if (profileBtn) {

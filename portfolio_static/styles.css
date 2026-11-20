@@ -1086,16 +1086,18 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
 .interest-group.active .interest-count {
   color: var(--brand);
 }
+/* 관심목록 그룹 줄의 버튼(끌기·이름 수정·삭제)은 항상 보이되 테두리·바탕 없이 조용하게 둔다(2026-11-20 디자인 재검토 08) —
+   그룹 12줄에 테두리 버튼이 줄마다 두세 개라 이름보다 버튼이 먼저 보였다. 올리거나 초점이 가면 예전 모양으로 떠오른다. */
 .interest-drag-handle {
   width: 24px;
   min-width: 24px;
   height: 28px;
   display: inline-grid;
   place-items: center;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  background: var(--panel);
-  color: var(--muted);
+  background: transparent;
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
   font-size: 16px;
   font-weight: 800;
   line-height: 1;
@@ -1149,6 +1151,14 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
   font-weight: 700;
   line-height: 1;
 }
+/* 그룹 줄 안의 버튼만 조용하게(위 .interest-drag-handle 주석 참고). 이름 수정 폼의 ✓·×와 새 그룹 +는 예전 모양 그대로. */
+.interest-group > .interest-icon-btn {
+  border-color: transparent;
+  background: transparent;
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
+}
+.interest-group > .interest-icon-btn:hover,
+.interest-group > .interest-icon-btn:focus-visible { color: var(--brand); }
 .interest-icon-placeholder {
   width: 26px;
   min-width: 26px;
@@ -5465,6 +5475,29 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   vertical-align: middle;
 }
 .tx-action-btn + .tx-action-btn { margin-left: 4px; }
+/* 거래 줄의 ⋯ 메뉴(2026-11-20 디자인 재검토 08): 편집만 늘 보이고 메모·숨김·삭제는 ⋯를 누르면 같은 줄 왼쪽으로 펼친다.
+   줄 안에서 옆으로 펼치므로 표의 스크롤 상자에 위아래로 잘리지 않는다. */
+.tx-list td.tx-actions { position: relative; }
+.tx-more { display: inline-block; margin-left: 4px; vertical-align: middle; }   /* 메뉴는 칸(td) 기준으로 놓아 편집 버튼을 가리지 않는다 */
+.tx-more > summary { list-style: none; width: 26px; padding: 0; font-size: 14px; letter-spacing: 0; user-select: none; }
+.tx-more > summary::-webkit-details-marker { display: none; }
+.tx-more[open] > summary { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
+.tx-more-menu {
+  position: absolute;
+  top: 50%;
+  right: calc(100% - 2px);
+  z-index: 4;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+.tx-more-menu .tx-action-btn + .tx-action-btn { margin-left: 0; }
 .tx-action-btn:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
 .tx-action-btn.tx-del:hover { border-color: var(--sell); color: var(--sell); background: transparent; }
 .tx-action-btn.tx-save { border-color: var(--brand); background: var(--brand); color: var(--on-accent); }

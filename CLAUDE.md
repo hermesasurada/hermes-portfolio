@@ -23,7 +23,7 @@
 - 전광판: 계좌·관심목록·성과 어느 탭에서나 표시(2026-11-20 사용자 지시, 관심목록 숨김 폐지). 세 면(계좌·지수·환율) 한 자리, 점 3개 + 다음 버튼. PC에서 일곱 칸이 들어가면 전부 펼침(`syncHeroLayout`, 실측 판정). 일곱 칸은 안 들어가도 계좌 요약 + 한 묶음(지수 3칸·환율 3칸 모두)이 들어가는 PC 폭(1440px 등)은 **부분 펼침**(2026-11-20 디자인 재검토 06, `.hero-combined.hero-partial`): 계좌 요약은 늘 보이고 옆 묶음만 지수 ↔ 환율로 넘긴다(점 2개, 환율을 볼 때 `.hero-partial-fx`). 980px 이하는 쓰지 않는다. 테스트 `test_hero_partial.js`. 펼침의 지수·환율 묶음은 500px(1920 기본 폭의 실제 폭)까지만 늘고 계좌 요약 바로 뒤에 왼쪽으로 붙는다(남는 폭은 오른쪽 끝) — 전체 폭에서도 칸 간격 유지(2026-11-16 사용자 지시). 지수·환율 칸은 `repeat(3, minmax(0,1fr))`, 좁은 화면은 세 줄. 환율 칸 등락은 **금액(원)**, 엔화는 **100엔 기준**(`HERO_FX_UNITS`). 칸 클릭은 app.js 문서 위임. 스와이프·가로 휠은 방향대로(왼쪽으로 밀면 다음, 오른쪽이면 이전, 끝에서 반대 끝으로 순환 — 2026-11-16 사용자 지시), 다음 버튼은 늘 다음(`toggleHeroSummaryPage(step)`). 스와이프에 `setPointerCapture`·pointerdown `preventDefault` 금지. 테스트 `test_hero_summary.js`, `test_hero_combined.js`.
 - 대비·터치 영역(2026-11-20 디자인 재검토 07): 라이트 `--muted`는 `#5f6b7c`(회색 바탕 위에서도 4.5:1 이상 — 더 옅게 바꾸지 말 것, 테스트가 계산한다). 980px 이하는 작은 버튼(전광판 점·상단 버튼·차트 버튼·태그 칩·연필 등)의 눌리는 영역만 `::before`로 넓힌다(`--hit-y`·`--hit-x`, 이웃과의 틈 절반까지) — 보이는 크기·간격은 그대로. `::after`는 `.chart-ma-toggle` 밑줄이 쓴다. 넘침을 자르는 상자 안의 버튼은 잘리므로 상자에 안쪽 여백+음수 바깥 여백(개별종목 툴바), 태그 칩은 글자(`span`)만 말줄임.
 - 팝업(`dialog.watch-modal`)은 UA `:modal`의 `position: fixed`에 기댄다 — 전역 `body > :not(dialog)` relative 규칙에 dialog를 다시 넣지 말 것(넣으면 팝업이 문서에 붙어 배경과 함께 스크롤). 열려 있는 동안 `html:has(dialog.watch-modal[open])`이 뒤 화면 스크롤을 잠근다. 팝업 높이는 `100dvh` 기준(100vh는 모바일 주소창만큼 넘친다).
-- 관심목록 그룹·종목 편집 컨트롤은 **항상 보인다**(편집 토글 부활 금지). 모바일은 검색 상시, 섹터·통화·지수는 '필터' 버튼으로 접음. 테스트 `test_design_controls.js`.
+- 관심목록 그룹·종목 편집 컨트롤은 **항상 보인다**(편집 토글 부활 금지). 그룹 줄의 끌기·이름 수정·삭제 버튼은 테두리·바탕 없이 조용하게 두고 올리면 떠오른다(2026-11-20 디자인 재검토 08, `.interest-group > .interest-icon-btn`). 모바일은 검색 상시, 섹터·통화·지수는 '필터' 버튼으로 접음. 테스트 `test_design_controls.js`.
 - 차트 마우스오버 십자선(2026-11-08 사용자 지시): 세로선·점은 가까운 봉에 붙고, 가로선은 커서 높이를 따른다. 오른쪽 축에 그 높이의 가격(로그 축이면 로그 역변환), RSI 칸에서는 RSI 값을 띄운다(`showCrosshairY`, geometry의 `valueForY`·`rsiValueForY`). 매매 마커에 올리면 마커 높이.
 
 ## 프런트 구조 (classic script, 빌드 없음)
@@ -33,6 +33,7 @@
 - 주기 갱신은 `scheduleAutoRefresh` 한 곳. 테스트 `test_auto_refresh.js`.
 - 값 없음(null·undefined·"")은 어디서나 null — `Number(null)=0` 함정. `optionalNumber`/`finiteChartNumber`/`finiteMetric` 규칙 동일. 테스트 `test_numeric_missing.js`.
 - 거래 수정 시 잔고에 반영됐던 거래의 유형·수량·단가가 바뀌면 `#txEditHoldingsModal`로 한 번 묻는다. 서버는 되돌리기+재적용을 한 트랜잭션으로. 테스트 `test_transaction_edit_holdings.js`.
+- 거래 줄의 관리 칸은 `편집`만 늘 보이고 메모·숨김·삭제는 `⋯`(`details.tx-more`) 안(2026-11-20 디자인 재검토 08). 메뉴는 칸 왼쪽으로 같은 줄에 펼친다(표 스크롤 상자에 위아래로 안 잘리게). 메모가 있으면 ⋯에도 `has-memo`. 닫기(바깥·메뉴 버튼·Esc)는 app.js 문서 위임 → `handleTransactionMoreMenuClick`·`closeTransactionMoreMenus`. 테스트 `test_transaction_memo.js`.
 - 거래내역 API는 전체 이력(200건 제한 금지), 프런트에서 필터 후 20건씩. 테스트 `test_transaction_filter.js`.
 - 배당이력 팝업 PC 최소 너비 600px.
 - 관심목록 고정열은 CSS sticky만(로고·종목명, 삭제 열 고정 금지). 종목명 `left`는 `--interest-logo-col`. 셀은 `overflow: hidden`.

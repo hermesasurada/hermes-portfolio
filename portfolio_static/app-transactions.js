@@ -564,6 +564,9 @@ function txViewRow(tx, endingQty) {
   const hidden = transactionIsHidden(tx);
   const hideLabel = hidden ? "보임" : "숨김";
   const balanceText = endingQty == null ? "-" : tradeQtyText(endingQty, tx.ticker);
+  // 줄마다 버튼 넷이 늘어서지 않게 편집만 내놓고 메모·숨김·삭제는 ⋯ 아래로 모은다(2026-11-20 디자인 재검토 08).
+  // 메모가 있는 거래는 ⋯에도 표시가 남는다.
+  const hasMemo = Boolean(String(tx.memo || "").trim());
   return `
     <tr class="${hidden ? "tx-hidden-row" : ""}">
       <td>${esc(tx.trade_date)}</td>
@@ -578,13 +581,30 @@ function txViewRow(tx, endingQty) {
       <td>${currentPriceText}</td>
       <td>${compareText}</td>
       <td class="tx-actions">
-        <button class="tx-action-btn${String(tx.memo || "").trim() ? " has-memo" : ""}" type="button" data-tx-memo="${tx.id}" title="${String(tx.memo || "").trim() ? "메모 편집" : "메모 추가"}">메모</button>
         <button class="tx-action-btn" type="button" data-tx-edit="${tx.id}" title="편집">편집</button>
-        <button class="tx-action-btn" type="button" data-tx-hide="${tx.id}" data-tx-hidden="${hidden ? "0" : "1"}" title="${hideLabel}">${hideLabel}</button>
-        <button class="tx-action-btn tx-del" type="button" data-tx-delete="${tx.id}" title="삭제">삭제</button>
+        <details class="tx-more">
+          <summary class="tx-action-btn tx-more-toggle${hasMemo ? " has-memo" : ""}" aria-label="메모·${hideLabel}·삭제" title="메모·${hideLabel}·삭제">⋯</summary>
+          <div class="tx-more-menu">
+            <button class="tx-action-btn${hasMemo ? " has-memo" : ""}" type="button" data-tx-memo="${tx.id}" title="${hasMemo ? "메모 편집" : "메모 추가"}">메모</button>
+            <button class="tx-action-btn" type="button" data-tx-hide="${tx.id}" data-tx-hidden="${hidden ? "0" : "1"}" title="${hideLabel}">${hideLabel}</button>
+            <button class="tx-action-btn tx-del" type="button" data-tx-delete="${tx.id}" title="삭제">삭제</button>
+          </div>
+        </details>
       </td>
     </tr>
   `;
+}
+
+// ⋯ 메뉴는 한 번에 하나만 열리고, 바깥을 누르거나 Esc를 누르거나 메뉴 안 버튼을 누르면 닫힌다.
+function closeTransactionMoreMenus(except = null) {
+  document.querySelectorAll("details.tx-more[open]").forEach(menu => {
+    if (menu !== except) menu.open = false;
+  });
+}
+// 문서 위임은 app.js 한 곳에서 건다(클릭·Esc) — 여기서는 판단만 한다.
+function handleTransactionMoreMenuClick(event) {
+  const menu = event.target?.closest?.("details.tx-more");
+  closeTransactionMoreMenus(menu && !event.target.closest(".tx-more-menu") ? menu : null);
 }
 
 function bindTransactionRowActions(tbody) {
