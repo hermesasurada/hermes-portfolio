@@ -893,6 +893,21 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
 .hero-strip.hero-combined .hero-index-item .hero-index-change.pct-chip { grid-area: chip; justify-self: start; }
 .hero-strip.hero-combined .hero-index-item .hero-index-value { grid-area: value; }
 
+/* ── 부분 펼침(2026-11-20 디자인 재검토 06) ─────────────────────────────
+   일곱 칸은 안 들어가도 계좌 요약 + 한 묶음(지수 3칸 또는 환율 3칸)이 들어가는 폭(1440px 화면 등)에서
+   syncHeroLayout이 .hero-combined.hero-partial을 붙인다. 계좌 요약은 늘 보이고 옆 묶음만 지수 ↔ 환율로 넘긴다.
+   칸 배치는 합친 전광판 규칙을 그대로 쓰고, 넘길 면이 있으니 점(지수·환율 둘)과 다음 버튼은 되살린다. */
+.hero-strip.hero-combined.hero-partial {
+  grid-template-columns: minmax(0, 1fr) auto 34px;
+  padding: 8px 14px 8px 24px;
+}
+.hero-strip.hero-combined.hero-partial .hero-summary-dots,
+.hero-strip.hero-combined.hero-partial .hero-summary-nav { display: inline-flex; }
+.hero-strip.hero-partial .hero-summary-dot[data-hero-page="portfolio"] { display: none; }
+/* 안 보는 묶음은 자리도 비운다(캐러셀의 visibility 숨김은 열을 차지한다). */
+.hero-strip.hero-partial:not(.hero-partial-fx) .hero-page-shell > .hero-fx-page,
+.hero-strip.hero-partial.hero-partial-fx .hero-page-shell > .hero-index-page { display: none !important; }
+
 /* ── 레이아웃 · 계좌 패널 · 거래내역 패널 ────────────────────────────────── */
 .layout {
   display: grid;

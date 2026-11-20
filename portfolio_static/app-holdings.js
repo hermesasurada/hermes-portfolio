@@ -554,25 +554,44 @@ let heroSummaryPage = heroSummaryPages.includes(storageGet(heroSummaryStorage.pa
 // (2026-09-26 사용자 지시). 고정 폭이 아니라 '실제로 들어가는가'로 판정한다 — 합친 모드의
 // 칸은 내용 폭 아래로 줄지 않으므로(minmax(max-content, 1fr)) 모자라면 가로로 넘친다.
 // 값 자릿수·글꼴·사이드바 유무가 달라도 같은 기준이 맞는다. 모자라면 기존 캐러셀.
+// 일곱 칸은 안 들어가도 계좌 요약 + 지수 3칸(또는 환율 3칸)이 들어가면 '부분 펼침'(2026-11-20 디자인 재검토 06):
+// 계좌 요약은 늘 보이고 그 옆 묶음만 지수 ↔ 환율로 넘긴다. 클래스는 hero-combined(칸 배치 공유) + hero-partial,
+// 환율을 보는 중이면 hero-partial-fx. 어느 묶음도 안 들어가면 예전 캐러셀.
 function heroCombined() {
-  return Boolean(document.getElementById("heroStrip")?.classList.contains("hero-combined"));
+  const classes = document.getElementById("heroStrip")?.classList;
+  return Boolean(classes?.contains("hero-combined") && !classes.contains("hero-partial"));
 }
-function heroFitsCombined(strip) {
+function heroPartial() {
+  return Boolean(document.getElementById("heroStrip")?.classList.contains("hero-partial"));
+}
+const HERO_LAYOUT_CLASSES = ["hero-combined", "hero-partial", "hero-partial-fx"];
+// 클래스를 잠깐 바꿔 넘침을 재고 원래대로 돌려놓는다. 같은 프레임 안의 동기 측정이라 화면에 깜빡이지 않는다.
+function heroFitsWith(strip, classes) {
   const shell = document.getElementById("heroPageShell");
   if (!shell) return false;
-  const had = strip.classList.contains("hero-combined");
-  strip.classList.add("hero-combined");
-  // 같은 프레임 안의 동기 측정이라 잠깐 붙였다 떼도 화면에 깜빡이지 않는다.
+  const saved = HERO_LAYOUT_CLASSES.filter(name => strip.classList.contains(name));
+  HERO_LAYOUT_CLASSES.forEach(name => strip.classList.toggle(name, classes.includes(name)));
   const fits = shell.scrollWidth <= shell.clientWidth + 1;
-  if (!had) strip.classList.remove("hero-combined");
+  HERO_LAYOUT_CLASSES.forEach(name => strip.classList.toggle(name, saved.includes(name)));
   return fits;
+}
+function heroFitsPartial(strip) {
+  return heroFitsWith(strip, ["hero-combined", "hero-partial"])
+    && heroFitsWith(strip, ["hero-combined", "hero-partial", "hero-partial-fx"]);
+}
+function heroFitsCombined(strip) {
+  return heroFitsWith(strip, ["hero-combined"]);
 }
 function syncHeroLayout() {
   const strip = document.getElementById("heroStrip");
   if (!strip) return;
   const combined = heroFitsCombined(strip);
-  if (strip.classList.contains("hero-combined") === combined) return;
-  strip.classList.toggle("hero-combined", combined);
+  // 부분 펼침은 PC 배치에서만 — 980px 이하는 지수·환율 칸이 세 줄 배치라 합친 칸 규칙과 섞이지 않게 한다.
+  const desktop = !window.matchMedia?.("(max-width: 980px)")?.matches;
+  const partial = desktop && !combined && heroFitsPartial(strip);
+  if (heroCombined() === combined && heroPartial() === partial) return;
+  strip.classList.toggle("hero-combined", combined || partial);
+  strip.classList.toggle("hero-partial", partial);
   applyHeroPageVisibility();
 }
 
@@ -580,9 +599,12 @@ function syncHeroLayout() {
 // 다음 버튼은 늘 +1. 끝에서는 반대쪽 끝으로 돈다.
 function toggleHeroSummaryPage(step = 1) {
   if (heroCombined()) return; // 한 줄에 다 보이면 넘길 면이 없다
-  const n = heroSummaryPages.length;
+  // 부분 펼침은 계좌 요약이 늘 보이므로 지수 ↔ 환율 두 면만 돈다(저장된 '계좌' 면은 지수로 본다).
+  const pages = heroPartial() ? ["indexes", "fx"] : heroSummaryPages;
+  const current = Math.max(0, pages.indexOf(heroSummaryPage));
+  const n = pages.length;
   const move = step < 0 ? -1 : 1;
-  heroSummaryPage = heroSummaryPages[(heroSummaryPages.indexOf(heroSummaryPage) + move + n) % n];
+  heroSummaryPage = pages[(current + move + n) % n];
   storageSet(heroSummaryStorage.page, heroSummaryPage);
   renderHeroSummaryPage();
 }
@@ -593,16 +615,24 @@ function applyHeroPageVisibility() {
   if (!portfolioPage || !indexPage) return;
   const fxPage = document.getElementById("heroFxPage");
   const combined = heroCombined();
+  const partial = heroPartial();
+  const partialFx = partial && heroSummaryPage === "fx";
+  document.getElementById("heroStrip")?.classList.toggle("hero-partial-fx", partialFx);
   [["portfolio", portfolioPage], ["indexes", indexPage], ["fx", fxPage]].forEach(([key, page]) => {
     if (!page) return;
     // 합친 모드에서 숨김이 남으면 inert가 지수·환율 링크 클릭까지 막는다.
-    const hidden = !combined && heroSummaryPage !== key;
+    // 부분 펼침: 계좌 요약은 늘 보이고 지수·환율 중 하나만 보인다.
+    const hidden = partial
+      ? (key === "fx" ? !partialFx : key === "indexes" ? partialFx : false)
+      : !combined && heroSummaryPage !== key;
     page.classList.toggle("hidden", hidden);
     page.setAttribute("aria-hidden", String(hidden));
     page.inert = hidden;
   });
 
-  const nextLabel = {portfolio: "주요 지수 보기", indexes: "환율 보기", fx: "계좌 요약 보기"}[heroSummaryPage];
+  const nextLabel = partial
+    ? (partialFx ? "주요 지수 보기" : "환율 보기")
+    : {portfolio: "주요 지수 보기", indexes: "환율 보기", fx: "계좌 요약 보기"}[heroSummaryPage];
   const nextButton = document.getElementById("heroNext");
   if (nextButton) {
     nextButton.title = nextLabel;
@@ -610,7 +640,8 @@ function applyHeroPageVisibility() {
   }
   // 페이지 점 — 현재 면 표시. 세 면이 있다는 걸 알리고 바로 이동도 한다.
   document.querySelectorAll("#heroDots .hero-summary-dot").forEach(dot => {
-    dot.setAttribute("aria-current", String(dot.dataset.heroPage === heroSummaryPage));
+    const current = partial ? (partialFx ? "fx" : "indexes") : heroSummaryPage;
+    dot.setAttribute("aria-current", String(dot.dataset.heroPage === current));
   });
 }
 
