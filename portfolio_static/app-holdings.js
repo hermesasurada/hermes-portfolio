@@ -1479,9 +1479,11 @@ function renderTable() {
     return;
   }
   syncDetailColumnPreset();
-  const rows = applyTagFilter(statsRows(filteredRows()).filter(row => matchesNameFilter(row)));
+  const rows = applyTagFilter(statsRows(filteredRows()).map(attachConsensus).filter(row => matchesNameFilter(row)));
   sortRows(rows, "detail");
   if (rows.some(row => row.ticker && !statsData[row.ticker])) loadStatsForRows(rows);
+  // 애널리스트 컨센서스 열(2026-11-20, 관심목록과 같은 항목) — 도착하면 다시 그린다.
+  loadQuotesForRows(rows.filter(consensusCandidate).map(row => row.ticker), () => renderTable());
   // 연장 컬럼은 장 상태만이 아니라 실제 값 유무로도 감춘다 — 국내 종목만
   // 선택하면 전 행이 '-'인 빈 컬럼이 남았다. null을 Number()로 넘기면 0이
   // 되어 유한값으로 오판하므로 != null 검사를 먼저 한다(관심목록의
@@ -1566,6 +1568,27 @@ function renderTable() {
       <td>${trendStrengthText(r.trend10_strength)}</td>
       <td class="group-start">${marketCapMarkup(r)}</td>
       <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
+      <td class="group-start">${fractionPercentText(r.gross_margin)}</td>
+      <td>${fractionPercentText(r.operating_margin)}</td>
+      <td>${fractionPercentText(r.ebitda_margin)}</td>
+      <td>${fractionPercentText(r.profit_margin)}</td>
+      <td>${fractionPercentText(r.return_on_assets)}</td>
+      <td>${fractionPercentText(r.return_on_equity)}</td>
+      <td class="group-start">${fractionSignedPercentText(r.revenue_growth)}</td>
+      <td>${fractionSignedPercentText(r.earnings_growth)}</td>
+      <td>${fractionSignedPercentText(r.earnings_quarterly_growth)}</td>
+      <td class="group-start">${rawPercentText(r.debt_to_equity)}</td>
+      <td>${freeCashFlowText(r.free_cash_flow, r.financial_currency || r.currency)}</td>
+      <td class="group-start">${fractionPercentText(r.short_percent_float)}</td>
+      <td>${fractionPercentText(r.short_percent_shares)}</td>
+      <td>${numberText(r.short_ratio, 1)}</td>
+      <td class="group-start">${fractionPercentText(r.insider_ownership)}</td>
+      <td>${fractionPercentText(r.institutional_ownership)}</td>
+      <td class="group-start">${consensusPriceText(r.target_price, r.consensus_currency || r.currency)}</td>
+      <td>${upsideText(r.upside_pct)}</td>
+      <td>${dispersionText(r.dispersion_pct, quoteFor(r.ticker)?.dispersion_basis)}</td>
+      <td>${buyStrengthMarkup(r.buy_strength)}</td>
+      <td>${ratingChipMarkup(r.rating_label)}</td>
       <td><span class="row-actions">${favoriteStarMarkup(r)}${r.is_watchlist ? "" : `<button class="ghost-btn tx-pick" type="button" data-account="${esc(r.accountId)}" data-ticker="${esc(r.ticker)}">거래</button>`}</span></td>
     </tr>
   `;
@@ -1585,6 +1608,7 @@ function renderTable() {
   if (activeDetailTab === "dividend") renderDividendTable();
   schedulePcFrozenColumns();
   scheduleTableViewportRows();   // 10행 뷰포트는 rAF를 기다리지 않는다
+  syncColumnPresetNavActive();   // 컨센서스 등이 늦게 와 다시 그려지면 열 위치가 바뀐다
 }
 
 // 파일 끝 로드 마커 — 파스 에러·태그 미닫힘 시 이 줄이 실행되지 않아 부트 검사에 걸린다

@@ -19,14 +19,18 @@ assert.match(headRows[0].join(''), /colspan="6"[^>]*data-detail-group="dividend"
 const source = read('app-holdings.js');
 const body = source.slice(source.indexOf('<tr class="${tableRowClass(r)}">'), source.indexOf('// 다음 렌더의 펄스'));
 const cells = [...body.matchAll(/<td\b[^>]*>[\s\S]*?<\/td>/g)].map(m => m[0]);
-assert.equal(headers.length, 49);
+assert.equal(headers.length, 70);   // 2026-11-20: 관심목록의 수익성·성장·재무·공매도·보유율·컨센서스 21열 추가
 assert.equal(cells.length, headers.length);
 assert.match(headers[46], /data-key="market_cap_usd">시총\/AUM/);
 assert.match(headers[47], /data-key="next_earnings_date">실적일/);
-assert.match(headers[48], />거래</);
+assert.match(headers[69], />거래</);
+assert.match(headers[48], /class="indicator-head group-start" data-key="gross_margin"/);
+assert.match(headers[68], /data-key="rating_rank">투자의견/);
+assert.match(cells[48], /class="group-start">\$\{fractionPercentText\(r.gross_margin\)\}/);
+assert.match(cells[68], /ratingChipMarkup\(r.rating_label\)/);
 assert.match(cells[46], /marketCapMarkup\(r\)/);
 assert.match(cells[47], /earningsText\(r.next_earnings_date\)/);
-assert.match(cells[48], /tx-pick/);
+assert.match(cells[69], /tx-pick/);
 // 배당 묶음(배당율·성장·평단 배당율)은 P/B 다음(2026-11-07, 관심목록과 같은 배치)
 assert.match(headers[9], /drawdown_52w/);
 assert.match(headers[10], /risk_reward_score/);

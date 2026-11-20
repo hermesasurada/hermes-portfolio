@@ -181,8 +181,8 @@ const COLUMN_PRESETS = [
   { key: "dividend", label: "배당" },
   { key: "perf", label: "수익률" },
   { key: "trend", label: "추세·위험" },
-  { key: "fund", label: "재무", tables: ["interest"] },
-  { key: "consensus", label: "컨센서스", tables: ["interest"] },
+  { key: "fund", label: "재무" },
+  { key: "consensus", label: "컨센서스" },
 ];
 // 어느 묶음에서나 보이는 열.
 const COLUMN_PRESET_ALWAYS = new Set(["logo", "name", "display_change_pct", "current_price", "delete"]);
@@ -194,6 +194,11 @@ const COLUMN_PRESET_KEYS = {
   perf: ["perf_1w", "perf_1m", "perf_3m", "perf_6m", "perf_ytd", "perf_1y", "perf_3y", "perf_5y", "perf_10y"],
   trend: ["risk_reward_score", "beta", "beta_adj", "trend_return", "trend_deviation", "trend_strength",
     "trend10_return", "trend10_deviation", "trend10_strength"],
+  // 계좌표도 관심목록과 같은 재무·컨센서스 열을 가진다(2026-11-20) — 계좌표 열에는 group이 없어 키로 정한다.
+  fund: ["gross_margin", "operating_margin", "ebitda_margin", "profit_margin", "return_on_assets", "return_on_equity",
+    "revenue_growth", "earnings_growth", "earnings_quarterly_growth", "debt_to_equity", "free_cash_flow",
+    "short_percent_float", "short_percent_shares", "short_ratio", "insider_ownership", "institutional_ownership"],
+  consensus: ["target_price", "upside_pct", "dispersion_pct", "buy_strength", "rating_rank"],
 };
 // 관심목록에는 수량·평가액이 없어 '요약'이 비므로 시총·52주 고점 대비·실적일을 더한다.
 const COLUMN_PRESET_INTEREST_SUMMARY = ["market_cap_usd", "drawdown_52w", "next_earnings_date"];

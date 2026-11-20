@@ -2144,7 +2144,29 @@ tr.dividend-month-row:hover td {
 #detailTableWrap td:nth-child(46) { min-width: calc(44px * var(--col-scale, 1)); } /* 10년 추세 강도 */
 #detailTableWrap td:nth-child(47) { min-width: calc(70px * var(--col-scale, 1)); } /* 시총/AUM */
 #detailTableWrap td:nth-child(48) { min-width: calc(48px * var(--col-scale, 1)); } /* 실적일 */
-#detailTableWrap td:nth-child(49) { min-width: calc(54px * var(--col-scale, 1)); } /* 거래 */
+/* 수익성·성장·재무·공매도·보유율·컨센서스(2026-11-20 사용자 지시 — 관심목록과 같은 항목). 폭은 관심목록 열과 같다. */
+#detailTableWrap td:nth-child(49) { min-width: calc(64px * var(--col-scale, 1)); } /* 매출총이익률 */
+#detailTableWrap td:nth-child(50) { min-width: calc(72px * var(--col-scale, 1)); } /* 영업이익률 */
+#detailTableWrap td:nth-child(51) { min-width: calc(60px * var(--col-scale, 1)); } /* EBITDA 마진 */
+#detailTableWrap td:nth-child(52) { min-width: calc(60px * var(--col-scale, 1)); } /* 순이익률 */
+#detailTableWrap td:nth-child(53) { min-width: calc(54px * var(--col-scale, 1)); } /* ROA */
+#detailTableWrap td:nth-child(54) { min-width: calc(64px * var(--col-scale, 1)); } /* ROE */
+#detailTableWrap td:nth-child(55) { min-width: calc(62px * var(--col-scale, 1)); } /* 매출 성장(YoY) */
+#detailTableWrap td:nth-child(56) { min-width: calc(62px * var(--col-scale, 1)); } /* 이익 성장(YoY) */
+#detailTableWrap td:nth-child(57) { min-width: calc(72px * var(--col-scale, 1)); } /* 분기이익 성장(YoY) */
+#detailTableWrap td:nth-child(58) { min-width: calc(70px * var(--col-scale, 1)); } /* 부채비율 */
+#detailTableWrap td:nth-child(59) { min-width: calc(76px * var(--col-scale, 1)); } /* 잉여현금흐름 */
+#detailTableWrap td:nth-child(60) { min-width: calc(52px * var(--col-scale, 1)); } /* 유통주식 대비 공매도 비율 */
+#detailTableWrap td:nth-child(61) { min-width: calc(48px * var(--col-scale, 1)); } /* 발행주식 대비 공매도 비율 */
+#detailTableWrap td:nth-child(62) { min-width: calc(44px * var(--col-scale, 1)); } /* 공매도 상환 소요일 */
+#detailTableWrap td:nth-child(63) { min-width: calc(52px * var(--col-scale, 1)); } /* 내부자 보유율 */
+#detailTableWrap td:nth-child(64) { min-width: calc(58px * var(--col-scale, 1)); } /* 기관 보유율 */
+#detailTableWrap td:nth-child(65) { min-width: calc(76px * var(--col-scale, 1)); } /* 목표가 */
+#detailTableWrap td:nth-child(66) { min-width: calc(61px * var(--col-scale, 1)); } /* 업사이드 */
+#detailTableWrap td:nth-child(67) { min-width: calc(54px * var(--col-scale, 1)); } /* 편차 */
+#detailTableWrap td:nth-child(68) { min-width: calc(76px * var(--col-scale, 1)); } /* 매수강도 */
+#detailTableWrap td:nth-child(69) { min-width: calc(72px * var(--col-scale, 1)); } /* 투자의견 */
+#detailTableWrap td:nth-child(70) { min-width: calc(54px * var(--col-scale, 1)); } /* 거래 */
 /* 정렬 화살표는 헤더 아래 오른쪽 모서리에 겹쳐 띄운다(2026-11-09) — 예전엔 정렬하지 않은 열에도
    화살표 자리 16px를 늘 비워 둬서 헤더가 값보다 열을 넓혔다(P/B 값 28px인데 열 52px). */
 #detailTableWrap th[data-key]::after {
@@ -2464,8 +2486,9 @@ tr:hover .fav-star,
 }
 /* RSI·BB 값의 치우침은 바탕 틴트(--tone, format.js indicatorToneAttr). 음수 여백으로 칸 폭은 그대로 둔다. */
 .indicator-tone {
-  margin: -1px -4px;
-  padding: 1px 4px;
+  /* 계좌표 RSI·BB 칸은 오른쪽 여백이 1px이라 틴트가 넘치면 잘린다 — 오른쪽은 1px만 내민다. */
+  margin: -1px -1px -1px -3px;
+  padding: 1px 3px;
   border-radius: 4px;
   background: var(--tone, transparent);
   color: var(--ink);

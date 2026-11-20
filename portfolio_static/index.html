@@ -319,6 +319,12 @@
                 <th colspan="3" class="group-start detail-group-label" data-detail-group="trend10">추세 10년</th>
                 <th rowspan="2" class="group-start" data-key="market_cap_usd">시총/AUM</th>
                 <th rowspan="2" data-key="next_earnings_date">실적일</th>
+                <th colspan="6" class="group-start detail-group-label" data-detail-group="profitability">수익성</th>
+                <th colspan="3" class="group-start detail-group-label" data-detail-group="growth">성장</th>
+                <th colspan="2" class="group-start detail-group-label" data-detail-group="finance">재무</th>
+                <th colspan="3" class="group-start detail-group-label" data-detail-group="short-interest">공매도</th>
+                <th colspan="2" class="group-start detail-group-label" data-detail-group="ownership">보유율</th>
+                <th colspan="5" class="group-start detail-group-label" data-detail-group="consensus">컨센서스</th>
                 <th rowspan="2" data-column-key="trade">거래</th>
               </tr>
               <tr class="detail-col-head">
@@ -334,6 +340,27 @@
                 <th class="group-start" data-key="trend10_return" aria-label="10년 추세 수익률" title="10년 추세 수익률 = 최근 10년 배당 재투자 가격의 로그값에 직선을 맞춘 기울기의 연율 환산(5년 추세와 같은 산식, 창만 10년)&#10;5년 추세가 좋아도 그 전 몇 년을 횡보했으면 여기서 낮아진다 — 오래 꾸준히 올랐는지 보는 값&#10;이력이 10년보다 짧으면 비워 둔다">수익률</th>
                 <th data-key="trend10_deviation" aria-label="10년 추세 이탈폭" title="10년 추세 이탈폭 = 최근 10년 배당 재투자 가격이 추세 직선에서 벗어난 폭의 표준편차(잔차 표준편차, 로그 기준 %)&#10;작을수록 10년 내내 직선처럼 꾸준했다. 창이 길어 5년 이탈폭보다 큰 편이라 10년끼리만 비교한다&#10;예: CAH ±29%(2016~2020 횡보 뒤 급등), COST ±10%">이탈폭</th>
                 <th data-key="trend10_strength" aria-label="10년 추세 강도" title="10년 추세 강도 = ln(1 + 10년 추세 수익률) ÷ 10년 추세 이탈폭&#10;5년 강도는 높은데 10년 강도가 낮으면 최근에만 좋았던 종목이다&#10;예: CAH 5년 3.98 → 10년 0.55, COST 1.55 → 2.14">강도</th>
+                              <th class="indicator-head group-start" data-key="gross_margin" aria-label="매출총이익률"><span>총이익률</span></th>
+                <th class="indicator-head" data-key="operating_margin" aria-label="영업이익률"><span>영업</span><span>이익률</span></th>
+                <th class="indicator-head" data-key="ebitda_margin" aria-label="EBITDA 마진"><span>EBITDA</span><span>마진</span></th>
+                <th class="indicator-head" data-key="profit_margin" aria-label="순이익률"><span>순이익률</span></th>
+                <th data-key="return_on_assets">ROA</th>
+                <th data-key="return_on_equity">ROE</th>
+                <th class="indicator-head group-start" data-key="revenue_growth" aria-label="매출 성장(YoY)"><span>매출</span><span>(YoY)</span></th>
+                <th class="indicator-head" data-key="earnings_growth" aria-label="이익 성장(YoY)"><span>이익</span><span>(YoY)</span></th>
+                <th class="indicator-head" data-key="earnings_quarterly_growth" aria-label="분기이익 성장(YoY)"><span>분기이익</span><span>(YoY)</span></th>
+                <th class="indicator-head group-start" data-key="debt_to_equity" aria-label="부채비율"><span>부채</span><span>비율</span></th>
+                <th data-key="free_cash_flow" aria-label="잉여현금흐름">FCF</th>
+                <th class="indicator-head group-start" data-key="short_percent_float" aria-label="유통주식 대비 공매도 비율"><span>유통</span><span>비율</span></th>
+                <th class="indicator-head" data-key="short_percent_shares" aria-label="발행주식 대비 공매도 비율"><span>발행</span><span>비율</span></th>
+                <th class="indicator-head" data-key="short_ratio" aria-label="공매도 상환 소요일"><span>커버</span><span>일</span></th>
+                <th class="indicator-head group-start" data-key="insider_ownership" aria-label="내부자 보유율"><span>내부자</span></th>
+                <th class="indicator-head" data-key="institutional_ownership" aria-label="기관 보유율"><span>기관</span></th>
+                <th class="group-start" data-key="target_price">목표가</th>
+                <th data-key="upside_pct">업사이드</th>
+                <th data-key="dispersion_pct">편차</th>
+                <th data-key="buy_strength">매수강도</th>
+                <th data-key="rating_rank">투자의견</th>
               </tr>
             </thead>
             <tbody id="holdings"></tbody>

@@ -4,8 +4,8 @@ const h = require('./harness');
 const ctx = h.loadScripts(h.createContext());
 const run = code => h.plain(h.evaluate(ctx, code));
 
-// 선택지: 계좌표는 재무·컨센서스가 없다(열이 없다).
-assert.deepEqual(run('columnPresetOptions("detail").map(p => p.label)'), ['전체', '요약', '기술', '밸류', '배당', '수익률', '추세·위험']);
+// 선택지: 계좌표도 관심목록과 같은 묶음(2026-11-20부터 재무·컨센서스 열이 있다).
+assert.deepEqual(run('columnPresetOptions("detail").map(p => p.label)'), ['전체', '요약', '기술', '밸류', '배당', '수익률', '추세·위험', '재무', '컨센서스']);
 assert.deepEqual(run('columnPresetOptions("interest").map(p => p.label)'), ['전체', '요약', '기술', '밸류', '배당', '수익률', '추세·위험', '재무', '컨센서스']);
 
 // 종목·등락·현재가는 어느 묶음에서나 보인다. '전체'는 아무것도 숨기지 않는다.
@@ -47,7 +47,7 @@ const detailKeys = [...html.slice(html.indexOf('detail-group-head'), html.indexO
 assert.ok(detailKeys.length >= 45, detailKeys.length);
 for (const key of new Set(detailKeys)) {
   if (['ticker', 'name'].includes(key)) continue;   // 종목 열 안의 정렬 버튼
-  const inSome = ['summary', 'tech', 'value', 'dividend', 'perf', 'trend'].some(p => run(`columnInPreset("${key}", "${p}", "detail", "", false)`));
+  const inSome = ['summary', 'tech', 'value', 'dividend', 'perf', 'trend', 'fund', 'consensus'].some(p => run(`columnInPreset("${key}", "${p}", "detail", "", false)`));
   assert.ok(inSome, `계좌표 열 ${key}가 어느 묶음에도 없다`);
 }
 
@@ -56,15 +56,17 @@ assert.equal(run('activeColumnPreset("detail")'), 'all');
 h.evaluate(ctx, 'setColumnPreset("detail", "perf")');
 assert.equal(run('activeColumnPreset("detail")'), 'perf');
 assert.equal(run('activeColumnPreset("interest")'), 'all');
-h.evaluate(ctx, 'setColumnPreset("detail", "consensus")');   // 계좌표에 없는 묶음은 기본값으로
+h.evaluate(ctx, 'setColumnPreset("detail", "nonexistent")');   // 없는 묶음은 기본값으로
 assert.equal(run('activeColumnPreset("detail")'), 'all');
+assert.equal(run('columnInPreset("target_price", "consensus", "detail", "", false)'), true);
+assert.equal(run('columnInPreset("gross_margin", "fund", "detail", "", false)'), true);
 
 // 관심목록은 좁은 화면에서만 열 정의를 걸러 그린다. PC는 늘 전체(버튼은 그 위치로 스크롤 — 2026-11-20 사용자 지시).
 h.evaluate(ctx, 'setColumnPreset("interest", "dividend")');
 const rowPc = '{ticker: "AAA", dividend_yield: 2, perf_1y: 10, rsi_day: 40, trailing_pe: 12, extended_change_pct: 1}';
 assert.ok(run(`visibleInterestColumns([${rowPc}]).map(c => c.key)`).includes('perf_1y'), 'PC는 거르지 않는다');
 assert.equal(run('effectiveColumnPreset("detail", false)'), 'all');
-assert.deepEqual(run('columnPresetNavOptions("detail").map(p => p.key)'), ['summary', 'tech', 'value', 'dividend', 'perf', 'trend']);
+assert.deepEqual(run('columnPresetNavOptions("detail").map(p => p.key)'), ['summary', 'tech', 'value', 'dividend', 'perf', 'trend', 'fund', 'consensus']);
 ctx.window.matchMedia = () => ({ matches: true, addEventListener() {} });
 const row = '{ticker: "AAA", dividend_yield: 2, perf_1y: 10, rsi_day: 40, trailing_pe: 12, extended_change_pct: 1}';
 assert.deepEqual(run(`visibleInterestColumns([${row}]).map(c => c.key)`), ['logo', 'name', 'display_change_pct', 'current_price', 'dividend_yield', 'delete']);
