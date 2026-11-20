@@ -100,6 +100,7 @@
 - `scripts/repair_transaction_split_units.py`는 5종목 청산 거래 전용 수동 도구(기본 dry-run).
 
 ## 외부 서비스·운영
+- 다른 서비스의 종목 전광판(티커칩 시세 팝오버: wm·sa·td·xw·filings·지식증류 8768)은 이 서비스의 `/api/chart`를 받아 그린다. **기업명 오른쪽에 티커(응답의 ticker, 접미사 포함)를 작고 옅게** 함께 적는다(2026-11-21 사용자 지시, 각 세션에 전파).
 - 컨센서스는 analyst-reports(8767)를 `/api/quote`로 프록시. 죽으면 `{}` → 컨센서스만 빠진다. '리포트 상세'는 8767 모달을 iframe 임베드(`?embed=1&ticker=`, `postMessage ar-modal-close`).
 - 크론: `collect_quotes.py`(분 단위), `collect_prices.py`(일배치·`--dividends-only`), `portfolio_healthcheck.py`. 래퍼 `scripts/run_collector.sh`는 성공 시 한 줄만 로그.
 - 로고: 신규 종목은 hydrate 자동, 일괄은 `download_portfolio_logos.py`, 다크 분류 `detect_dark_logos.py`(/usr/bin/python3).
