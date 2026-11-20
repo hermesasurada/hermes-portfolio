@@ -53,6 +53,7 @@
 - 등락 칩의 장 상태는 글자 배지 없이 칩 모양으로(2026-11-20 사용자 지시, 위첨자 '휴'·'종' 폐지): 정규장 진행 중=채운 칩, 장 종료·개장 전=실선 테두리만, 휴장=점선 테두리만. 테두리는 `outline`(offset −1px)이라 칩 크기·열 정렬 불변, 뜻은 툴팁·화면낭독 글자(`.sr-only`). `changeMarkup`(format.js). 차트 머리는 자리가 있어 '휴장'·'N.NN 종가' 글자 그대로. 테스트 `test_change_session_chip.js`.
 - 퍼센트 표기(2026-11-20 디자인 재검토 01): 끝자리 0을 자르지 않는다(`fixedDigits`·`pctFmt`, format.js) — 등락률·배당율 소수 둘째 자리, 그 밖은 열마다 정한 자릿수 그대로. 방향은 어디서나 ▲▼→ + 색(`changeDirection`), 차트 머리 ↑↓·지표판 −부호 금지(툴팁 문장·손익비 점수는 예외). 테스트 `test_change_direction.js`.
 - 휴장일 행 등락금액은 `→0`(`isHolidayPreviousSession`), 환율 적용 시 환율 변동분은 표기. 테스트 `test_holiday_change_amount.js`.
+- 터치 툴팁 닫기(2026-11-21 사용자 지시): 성과·비교 차트(`bindHoverPointerEvents`)는 탭하면 그 자리에 고정되고 **다음 터치에 닫힌다**(차트 안이든 밖이든, 닫는 터치는 새로 띄우지 않음) — 종목 차트의 길게 누르기(`bindChartLongPress`)와 같은 규칙. 테스트 `test_chart_touch_dismiss.js`.
 - 차트 툴팁 등락은 `changePercentParts` 공유(SVG는 parts로 조립). 테스트 `test_chart_moving_averages.js`.
 - 배당 연속지급·증액 단위는 `Y`(`dividendStreakText`).
 - 각 JS 파일 끝 로드 마커 + index.html 부트 검사 유지(기대 목록은 script 태그에서 파생). 인라인 스크립트 주석에 닫는 script 태그 문자열 금지.

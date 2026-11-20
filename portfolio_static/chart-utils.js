@@ -86,14 +86,36 @@ function declutterChartLabels(labels, minGap) {
 }
 
 // 호버 레이어 포인터 와이어링: 이동/진입 시 표시, 터치는 핀 고정, 이탈 시 숨김
+// 성과·비교 차트의 호버. 마우스는 따라다니고, 터치는 누른 자리에 고정한다.
+// 고정된 툴팁은 다음 터치에 닫힌다(2026-11-21 사용자 지시 — 예전엔 닫을 방법이 없었다): 차트 밖이든 안이든
+// 한 번 더 누르면 닫히고, 그 터치는 새 툴팁을 띄우지 않는다. 종목 차트의 길게 누르기(bindChartLongPress)와 같은 규칙.
 function bindHoverPointerEvents(hoverLayer, showPoint, hide) {
   let touchPinned = false;
-  hoverLayer.addEventListener("pointermove", event => showPoint(event.clientX));
-  hoverLayer.addEventListener("pointerenter", event => showPoint(event.clientX));
+  let skipNextTouch = false;
+  const dismiss = event => {
+    if (event.pointerType !== "touch" || !touchPinned) return;
+    touchPinned = false;
+    document.removeEventListener("pointerdown", dismiss, true);
+    hide();
+    if (event.target === hoverLayer || hoverLayer.contains?.(event.target)) skipNextTouch = true;
+  };
+  hoverLayer.addEventListener("pointermove", event => {
+    if (event.pointerType === "touch" && !touchPinned) return;
+    showPoint(event.clientX);
+  });
+  hoverLayer.addEventListener("pointerenter", event => {
+    if (event.pointerType !== "touch") showPoint(event.clientX);
+  });
   hoverLayer.addEventListener("pointerdown", event => {
     if (event.pointerType !== "touch") return;
+    if (skipNextTouch) {   // 닫으려고 누른 터치
+      skipNextTouch = false;
+      return;
+    }
     touchPinned = true;
     showPoint(event.clientX);
+    // 지금 이벤트의 캡처 단계는 이미 지났으므로 이 터치로는 닫히지 않는다.
+    document.addEventListener("pointerdown", dismiss, true);
   });
   hoverLayer.addEventListener("pointerleave", () => {
     if (!touchPinned) hide();
