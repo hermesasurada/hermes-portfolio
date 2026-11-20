@@ -30,32 +30,29 @@ const ret = [
   {key:'SP500', name:'S&P 500', color:'#c026d3', points:[{date:'2026-05-01', close:0}, {date:'2026-10-31', close:4.8}]},
   {key:'KOSPI', name:'코스피', color:'#d97706', points:[{date:'2026-05-01', close:0}, {date:'2026-10-31', close:-17.4}]},
 ];
-const summary = ctx.performanceReturnSummary({twr_basis:'full'}, ret);
-assert.match(summary, /perf-return-caption">6M 수익률/);
-// 계좌만 크게 두지 않는다 — 계좌·고정환율·지수가 같은 격자 행(2026-11-01 사용자 지시)
-assert.doesNotMatch(summary, /perf-return-value/);
-const rows = summary.match(/<span class="perf-return-row(?!s)[^"]*">[\s\S]*?<\/b><\/span>/g);
-assert.equal(rows.length, 4);
-assert.ok(rows.every(row => row.startsWith('<span class="perf-return-row">')), '계좌·지수 같은 모양');
-assert.match(rows[0], /perf-return-row"><i style="background:var\(--brand\)"><\/i><span>선택 계좌<\/span><b class="down">-11\.9%/);
-assert.match(rows[1], /perf-return-row"><i class="dashed" style="color:var\(--brand\)"><\/i><span>고정환율<\/span><b class="down">-6\.1%/);
-assert.match(rows[2], /<span>S&amp;P 500<\/span><b class="up">\+4\.8%/);
-assert.match(rows[3], /<span>코스피<\/span><b class="down">-17\.4%/);
+// 성과 요약 띠(2026-11-20 디자인 개편): 큰 숫자 = 계좌 수익률, 비교 칸 = 고정환율(환율 효과)·지수 대비 초과수익(%p).
+const summary = ctx.performanceSummary({twr_basis:'full'}, ret);
+assert.match(summary, /perf-summary-caption">6M 수익률 · 선택 계좌</);
+assert.match(summary, /perf-summary-value down">-11\.9%</);
 assert.match(summary, /2026\.05\.01 – 2026\.10\.31 · 시간가중/);
-assert.match(ctx.performanceReturnSummary({twr_basis:'securities'}, ret), /증권 기준/);
-assert.match(ctx.performanceReturnSummary({}, ret), /기준 확인 필요/);
-const focused = ctx.performanceReturnSummary({twr_basis:'full'}, ret, 'account-1');
-assert.match(focused, /<span>Ray · 해외주식<\/span><b class="up">\+4\.3%/);
+const items = summary.match(/<div class="perf-summary-item">[\s\S]*?<\/div>/g);
+assert.equal(items.length, 3);
+assert.match(items[0], /<i class="dashed" style="color:var\(--brand\)"><\/i><span class="perf-summary-label">고정환율<\/span><b class="down">-6\.1%<\/b><small>환율 효과 -5\.8%p<\/small>/);
+assert.match(items[1], /S&amp;P 500 대비<\/span><b class="down">-16\.7%p<\/b><small>지수 \+4\.8%<\/small>/);
+assert.match(items[2], /코스피 대비<\/span><b class="up">\+5\.5%p<\/b><small>지수 -17\.4%<\/small>/);
+assert.match(ctx.performanceSummary({twr_basis:'securities'}, ret), /증권 기준/);
+assert.match(ctx.performanceSummary({}, ret), /기준 확인 필요/);
+const focused = ctx.performanceSummary({twr_basis:'full'}, ret, 'account-1');
+assert.match(focused, /수익률 · Ray · 해외주식<\/span><strong class="perf-summary-value up">\+4\.3%/);
 assert.doesNotMatch(focused, /고정환율/);
-assert.equal((focused.match(/perf-return-row"/g) || []).length, 3);   // 강조 계좌 + 지수 둘(지수 칸은 그대로)
-assert.equal(ctx.performanceReturnSummary({}, []), '');
-// 모바일은 오버레이를 플롯 위 띠로 내려 선과 겹치지 않는다.
-const perfCss = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
-const mobileCss = h.mediaBlocks(perfCss, '(max-width: 980px)').map(block => block.text).join('\n');
-assert.match(mobileCss, /\.perf-return-summary \{\s*position: static;\s*order: -1;/);
-assert.doesNotMatch(perfCss, /perf-return-row\.account/);
-// 표시 기간 줄은 오버레이로 합쳐 범례 호스트에 다시 두지 않는다.
-assert.doesNotMatch(fs.readFileSync(path.join(root, 'app-charts.js'), 'utf8'), /perf-overview|performanceOverview/);
+assert.equal((focused.match(/perf-summary-item"/g) || []).length, 2);
+assert.equal(ctx.performanceSummary({}, []), '');
+// 예전 플롯 안 수익률 상자(끌어 옮기기)는 없앴다 — 선을 가렸다.
+const perfJs = fs.readFileSync(path.join(root, 'app-charts.js'), 'utf8');
+assert.doesNotMatch(perfJs, /perfReturnSummary|perf-return-|performanceSummaryDefaultPosition|perf-overview|performanceOverview/);
+assert.doesNotMatch(fs.readFileSync(path.join(root, 'styles.css'), 'utf8'), /perf-return-/);
+// 선 끝 라벨은 '이름 수익률'(2026-11-20 사용자 지시)
+assert.match(perfJs, /<tspan class="perf-end-name">\$\{esc\(label\.name\)\}<\/tspan> <tspan class="perf-end-value">/);
 function node(key) {
   return {dataset:{perfFocus:key, perfSeries:key}, attrs:{},
     classList:{ toggle(name, on) { this[name] = on; } },

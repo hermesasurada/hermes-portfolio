@@ -68,8 +68,8 @@
 - 개별종목 지표판(2026-11-20 디자인 재검토 03): 지표 52개를 일곱 묶음(밸류에이션·배당·수익성·성장·재무·수급·기술 지표·기간 수익률·추세·위험)으로 나누고 묶음이 바뀌는 자리에 제목 줄(`.cstat-head`). 묶음 이름은 `chartStatMetricRows` 각 행의 첫 칸. 열 나누기는 `splitStatColumns`(제목이 열 끝에 홀로 남지 않게) — PC 4열, 모바일·레일 2열 각각 계산하고 2열 전용 빈 칸은 `.m-filler`. 열·행 끝 테두리는 nth-child가 아니라 `pc-col-end`·`pc-row-end` 클래스. 테스트 `test_chart_stat_groups.js`.
 - 환율 차트는 BB·일목·이평선 사용 안 함(`chartOverlaysApply`, 컨트롤은 disabled). 테스트 `test_fx_chart_overlays.js`.
 - 가격축 눈금은 `denseLowerChartScale(values, target, max)`(PC 9/11, 좁은 화면 7/8). 테스트 `test_chart_axis_density.js`.
-- 성과 차트(2026-11-20 디자인 재검토 10): 계좌 선은 굵게(2.4, 좁은 화면 5.6)·비교지수는 가늘고 옅게(1.1·불투명도 .68). 수익률 상자는 옮겨 둔 자리가 없으면 선이 가장 덜 지나는 모서리에 둔다(`performanceSummaryDefaultPosition`, 끌기 시작점·두 번 눌러 되돌리기도 같은 자리 — `bindChartOverlayDrag`의 `fallback`).
-- 차트 왼쪽 위 오버레이(종목 차트 '선택 기간' 상자 `#chartMetricDrag`, 성과 차트 수익률 `#perfReturnSummary`)는 끌어서 옮긴다(2026-11-12 사용자 지시). 위치는 움직일 수 있는 범위 안 비율(0~1)로 차트별 localStorage(`CHART_OVERLAY_POS_KEYS`), 두 번 누르면 기본 자리. 종목 차트 상자는 호버 층 위에 그리고 면만 포인터를 받는다. 모바일 성과 차트는 플롯 위 띠라 끌지 않는다. 공용 `bindChartOverlayDrag`(app-chart-metrics.js). 테스트 `test_chart_overlay_drag.js`.
+- 성과 차트(2026-11-20 디자인 재검토 10·개편): 계좌 선은 굵게(2.4, 좁은 화면 5.6)·비교지수는 가늘고 옅게(1.1·불투명도 .68). 범례 위에 **요약 띠**(`#perfSummary`, `performanceSummary`): 왼쪽 큰 숫자 = 표시 기간 계좌 수익률, 오른쪽 = 고정환율(환율 효과 %p)·켜 둔 지수 대비 초과수익(%p). 계좌 칩으로 강조하면 그 계좌 기준. 예전 플롯 안 수익률 상자(끌어 옮기기, 11-12)는 선을 가려 없앴다. **선 끝 라벨은 '이름 수익률'**(2026-11-20 사용자 지시, 고정환율 선은 '고정환율') — 가장 긴 라벨만큼 오른쪽 여백을 연다(`endFont`는 CSS `.perf-end-label`과 같은 값: PC 10.5·모바일 24). 높이는 개별종목처럼 화면에 맞춘다(0.75~1.6배, 범례·띠를 먼저 그린 뒤 잰다), 창 크기가 바뀌면 다시 그린다.
+- 종목 차트 왼쪽 위 '선택 기간' 상자(`#chartMetricDrag`)는 끌어서 옮긴다(2026-11-12 사용자 지시). 위치는 움직일 수 있는 범위 안 비율(0~1)로 차트별 localStorage(`CHART_OVERLAY_POS_KEYS`), 두 번 누르면 기본 자리. 종목 차트 상자는 호버 층 위에 그리고 면만 포인터를 받는다. 공용 `bindChartOverlayDrag`(app-chart-metrics.js). 테스트 `test_chart_overlay_drag.js`.
 - RSI 칸 높이는 가격 칸의 보조(모바일 126·PC 67). 끝 눈금이 30·50·70과 15 이내면 숫자 생략, 현재값 표시와 겹치는 눈금 숫자도 생략.
 
 ## 데이터 정합성 (backend)
@@ -92,7 +92,7 @@
 ## 성과 스냅샷
 - 거래·입출금 변경은 `BEGIN IMMEDIATE` 후 같은 연결로 `rebuild_account_snapshots_in_transaction`까지 한 트랜잭션. 조회 시 재계산 금지.
 - 기준일 = `accounts.history_start`(없으면 전 계좌 공통 최초 거래일). 기초 포지션은 현재 잔고 − 기준일 이후 순거래 역산. 원장 수량·단가는 일봉과 같은 분할 보정 단위.
-- 고정환율 선: 통화별 기준일 환율 r0, 외화 계좌의 원화 입출금은 `amount × r0/r_day`. 범례는 '계좌'와 '비교지수' 두 묶음(PC는 한 줄, 부드럽게·기간 버튼은 그 줄 오른쪽 끝), 고정환율 칩은 계좌 묶음 끝. 표시 기간 최종 수익률·기간·기준은 차트 안 왼쪽 위 오버레이(`performanceReturnSummary`) — 계좌·고정환율·켜 둔 비교지수를 같은 모양·굵기의 두 칸 격자로(계좌만 두드러지게 두지 않음), 강조한 계좌로 계좌 칸이 바뀜. 모바일(≤980px)은 선을 가리지 않게 플롯 위 띠(차트 상자 안 맨 위)로 내림. 원화 계좌만 선택하면 점선은 생략(실제 선과 같음). 테스트 `test_performance_fixed_fx.js`.
+- 고정환율 선: 통화별 기준일 환율 r0, 외화 계좌의 원화 입출금은 `amount × r0/r_day`. 범례는 '계좌'와 '비교지수' 두 묶음(PC는 한 줄, 부드럽게·기간 버튼은 그 줄 오른쪽 끝), 고정환율 칩은 계좌 묶음 끝. 표시 기간 수익률·기간·기준은 범례 위 요약 띠(`performanceSummary`, 위 '성과 차트' 항목). 테스트 `test_performance_fixed_fx.js`.
 - 비교지수 순서 S&P 500 → 나스닥 → 코스피 → 니케이(`PERF_INDEX_META`), 색은 지수에 고정.
 - 계좌 선은 TWR. 선택 계좌 전부에 입출금이 있으면 full, 아니면 securities. **계좌별 시리즈 포인트에도 trade_cash·flow 필수.** 입출금 존재가 데이터 완전성 인증은 아니다.
 - 입출금은 만원 단위 원문 ×10,000 KRW, 계좌1 입금도 currency='KRW'. **배당은 성과 계산에 넣지 않는다**(검산 차이를 배당으로 설명하지 말 것). 검산은 전 구간 현금잔고 ≥ 0. 계좌별 보정 이력(현물 증여·보정 입금·원장 대체 등)은 `docs/DECISIONS.md`.

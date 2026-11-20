@@ -6255,9 +6255,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .chart-rsi-axis {
     stroke-width: 3.5px;
   }
-  .perf-end-label {
-    stroke-width: 4px;
-  }
   .compare-rsi-end-label {
     stroke-width: 4px;
   }
@@ -6532,35 +6529,35 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   #perfLegendHost { padding-right: 150px; }
 }
-/* 표시 기간 최종 수익률 — 플롯 왼쪽 위 안쪽(반투명 면). PC는 끌어서 옮긴다(2026-11-12) — 위치는 chartOverlayPosition("performance"). */
-.perf-return-summary {
-  position: absolute;
-  top: 0;
-  /* 플롯 왼쪽 위 안쪽 — 위치는 JS가 viewBox 여백 비율로 넘긴다(margin %는 폭 기준이라 세로도 맞는다) */
-  left: calc(var(--perf-plot-left, 6%) + 10px);
-  margin-top: calc(var(--perf-plot-top, 2%) + 10px);
-  z-index: 2;
-  display: grid;
-  justify-items: start;
-  gap: 1px;
-  padding: 7px 10px 8px;
-  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--chart-bg) 84%, transparent);
-  backdrop-filter: blur(2px);
-  cursor: grab;
-  touch-action: none;
-  user-select: none;
+/* ── 성과 요약 띠(2026-11-20 디자인 개편) — 범례 위. 왼쪽 큰 숫자 = 계좌 수익률, 오른쪽 = 고정환율·지수 대비 초과수익 ── */
+.perf-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px 24px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
 }
-.perf-return-summary.dragging { cursor: grabbing; }
-.perf-return-caption { color: var(--muted); font-size: 11px; font-weight: 600; }
-.perf-return-meta { color: var(--muted); font-family: var(--grid-num-font); font-size: 10.5px; }
-/* 계좌·고정환율·비교지수 수익률 — 같은 크기의 두 칸 격자 */
-.perf-return-rows { display: grid; grid-template-columns: repeat(2, auto); gap: 2px 16px; margin: 2px 0 3px; }
-.perf-return-row { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font-size: 12px; white-space: nowrap; }
-.perf-return-row i { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
-.perf-return-row i.dashed { width: 12px; height: 2px; border-radius: 0; background: repeating-linear-gradient(90deg, currentColor 0 3px, transparent 3px 5px); }
-.perf-return-row b { margin-left: auto; padding-left: 8px; font-family: var(--grid-num-font); font-weight: 700; }
+.perf-summary-main { display: grid; align-content: center; gap: 2px; min-width: 0; }
+.perf-summary-caption { color: var(--muted); font-size: 11.5px; font-weight: 600; }
+.perf-summary-value { font-family: var(--grid-num-font); font-size: 28px; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; }
+.perf-summary-meta { color: var(--muted); font-family: var(--grid-num-font); font-size: 11px; }
+.perf-summary-compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  flex: 1 1 360px;
+  align-content: center;
+  gap: 8px 20px;
+  padding-left: 24px;
+  border-left: 1px solid var(--line);
+}
+.perf-summary-item { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 6px; row-gap: 1px; min-width: 0; }
+.perf-summary-item i { width: 8px; height: 8px; border-radius: 50%; }
+.perf-summary-item i.dashed { width: 12px; height: 2px; border-radius: 0; background: repeating-linear-gradient(90deg, currentColor 0 3px, transparent 3px 5px); }
+.perf-summary-label { overflow: hidden; color: var(--muted); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+.perf-summary-item b { grid-column: 2; font-family: var(--grid-num-font); font-size: 16px; font-weight: 700; }
+.perf-summary-item small { grid-column: 2; color: var(--muted); font-family: var(--grid-num-font); font-size: 11px; }
 .perf-empty-label { color: var(--muted); padding: 6px 0; }
 .perf-legend-item { min-height: 30px; height: auto; padding: 4px 8px; }
 .perf-account-focus { color: var(--ink); background: var(--panel); }
@@ -6571,6 +6568,12 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .perf-line.perf-focused { opacity: 1; stroke-width: 2.6; }
 .perf-account-title { font-weight: 600; color: var(--ink); font-size: 14px; }
 .perf-end-label { font-weight: 500; }
+/* 선 끝 라벨 '이름 수익률'(2026-11-20 사용자 지시): 이름은 본문 글꼴, 수익률은 숫자 글꼴·굵게 */
+@media (min-width: 981px) { .perf-end-label { font-size: 10.5px; } }
+/* 모바일은 viewBox 980을 약 0.35배로 줄여 그린다 — 이름까지 읽히게 24(실제 약 8.5px). app-charts.js endFont와 같은 값. */
+@media (max-width: 980px) { .perf-end-label { font-size: 24px; stroke-width: 6px; } }
+.perf-end-name { font-family: var(--grid-num-font); font-weight: 500; }
+.perf-end-value { font-weight: 700; }
 
 @media (max-width: 980px) {
   .chart-head .chart-identity { grid-template-columns: auto minmax(0, 1fr); width: 100%; gap: 8px; }
@@ -6594,24 +6597,11 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .perf-legend-section { align-items: flex-start; }
   .perf-group-label { flex: 0 0 44px; padding-top: 6px; }
   .perf-legend { gap: 6px; }
-  /* 모바일: 오버레이가 선을 가리므로 플롯 위 띠로(차트 상자 안 맨 위, 흐름 배치) */
-  .perf-return-summary {
-    position: static;
-    order: -1;
-    margin: 0;
-    padding: 7px 10px 6px;
-    border: 0;
-    border-bottom: 1px solid var(--line);
-    border-radius: 0;
-    background: none;
-    backdrop-filter: none;
-    cursor: default;
-    touch-action: auto;
-  }
-  .perf-return-rows { justify-self: stretch; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .perf-return-caption, .perf-return-meta { font-size: 10px; }
-  .perf-return-row { font-size: 10.5px; }
-  .perf-return-rows { gap: 1px 10px; }
+  /* 요약 띠: 큰 숫자 아래로 비교 칸이 두 칸씩 */
+  .perf-summary { gap: 10px; }
+  .perf-summary-value { font-size: 24px; }
+  .perf-summary-compare { flex-basis: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+  .perf-summary-item b { font-size: 14px; }
   .perf-line.perf-focused { stroke-width: 5; }
   /* 기준선 예상경로도 모바일에선 가늘게 */
   .chart-canvas .chart-ichi-line.kijun-projection { stroke-width: 0.7; }

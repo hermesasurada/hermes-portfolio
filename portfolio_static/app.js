@@ -540,8 +540,14 @@ let chartResizeTimer = 0;
 window.addEventListener("resize", () => {
   clearTimeout(chartResizeTimer);
   chartResizeTimer = setTimeout(() => {
-    if (!chartTicker || performanceChartOpen || !chartPayload) return;
     const view = document.getElementById("chartView");
+    if (performanceChartOpen && performancePayload) {
+      const changed = Math.abs((view?.clientWidth || 0) - performanceRenderedBox.width) >= 8
+        || (!window.matchMedia?.("(max-width: 980px)")?.matches && Math.abs((window.innerHeight || 0) - performanceRenderedBox.height) >= 24);
+      if (changed) renderPerformanceChart(performancePayload);
+      return;
+    }
+    if (!chartTicker || performanceChartOpen || !chartPayload) return;
     const widthChanged = Math.abs((view?.clientWidth || 0) - renderedChartBox.width) >= 8;
     // 높이는 PC에서만 따라간다 — 모바일은 주소창이 접힐 때마다 창 높이가 바뀐다.
     const desktop = !window.matchMedia?.("(max-width: 980px)")?.matches;

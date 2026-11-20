@@ -150,112 +150,59 @@ function performanceBasisText(payload) {
   return payload?.twr_basis === "full" ? "시간가중" : payload?.twr_basis === "securities" ? "시간가중 · 증권 기준" : "수익률 기준 확인 필요";
 }
 
-// 표시 기간의 최종 수익률 — 차트 왼쪽 위 안쪽에 겹쳐 둔다(2026-11-01 사용자 지시).
-// 예전 차트 위 '표시 기간 · 시간가중 수익률 · 시작점 = 0%' 줄을 여기로 합쳤다.
-// 계좌·고정환율·켜 둔 비교지수를 같은 모양·같은 굵기의 한 격자로 나란히 싣는다(계좌만 두드러지게 두지 않는다).
-// 모바일은 선을 가리지 않게 플롯 위(차트 상자 안 맨 위) 띠로 내린다 — CSS가 처리.
-// 계좌 칩으로 선을 강조하면 계좌 칸이 그 계좌 값으로 바뀐다.
-function performanceReturnRow(name, color, close, { dashed = false } = {}) {
-  const marker = dashed ? `<i class="dashed" style="color:${color}"></i>` : `<i style="background:${color}"></i>`;
-  return `<span class="perf-return-row">${marker}<span>${esc(name)}</span><b class="${changeDirection(close).cls}">${esc(pctChartLabel1(close))}</b></span>`;
+// 성과 요약 띠(2026-11-20 디자인 개편): 차트 위, 범례 위에 둔다 — 예전 플롯 안 수익률 상자는 선을 가렸다.
+// 왼쪽은 표시 기간의 계좌 수익률(크게), 오른쪽은 고정환율(환율 효과)과 켜 둔 비교지수 대비 초과수익(%p).
+// 각 선의 최종 수익률 자체는 선 끝 라벨(이름 + %)이 맡는다. 계좌 칩으로 선을 강조하면 그 계좌 기준으로 바뀐다.
+function pctPointLabel(value) {
+  return pctChartLabel1(value).replace(/%$/, "%p");
+}
+function performanceSummaryItem(label, value, note, { color = "", dashed = false, point = false } = {}) {
+  const marker = !color ? "" : dashed ? `<i class="dashed" style="color:${color}"></i>` : `<i style="background:${color}"></i>`;
+  const { cls } = changeDirection(value);
+  return `<div class="perf-summary-item">${marker}<span class="perf-summary-label">${esc(label)}</span>`
+    + `<b class="${cls}">${esc(point ? pctPointLabel(value) : pctChartLabel1(value))}</b>`
+    + (note ? `<small>${esc(note)}</small>` : "") + `</div>`;
 }
 
-function performanceReturnSummary(payload, series = [], focusKey = null) {
+function performanceSummary(payload, series = [], focusKey = null) {
   const target = (focusKey && series.find(item => item.key === focusKey && !item.fixed))
     || series.find(item => item.primary);
   const points = target?.points || [];
   if (points.length < 2) return "";
   const lastClose = item => item.points[item.points.length - 1].close;
   const last = points[points.length - 1];
+  const value = last.close;
   const fixed = series.find(item => item.fixed && item.base === target.key && item.points.length >= 2);
   const indexKeys = new Set(PERF_INDEX_META.map(([key]) => key));
-  const rows = [performanceReturnRow(target.name, target.color, last.close)];
-  if (fixed) rows.push(performanceReturnRow("고정환율", fixed.color, lastClose(fixed), { dashed: true }));
+  const items = [];
+  if (fixed) {
+    items.push(performanceSummaryItem("고정환율", lastClose(fixed), `환율 효과 ${pctPointLabel(value - lastClose(fixed))}`,
+      { color: fixed.color, dashed: true }));
+  }
   series
     .filter(item => indexKeys.has(item.key) && item.points.length >= 2)
-    .forEach(item => rows.push(performanceReturnRow(item.name, item.color, lastClose(item))));
+    .forEach(item => items.push(performanceSummaryItem(`${item.name} 대비`, value - lastClose(item),
+      `지수 ${pctChartLabel1(lastClose(item))}`, { color: item.color, point: true })));
   const range = chartRanges.find(item => item.key === chartRange);
   const rangeLabel = chartRange === "custom" ? "지정 기간" : range?.label || "";
-  return `<span class="perf-return-caption">${rangeLabel ? `${esc(rangeLabel)} ` : ""}수익률</span>`
-    + `<span class="perf-return-rows">${rows.join("")}</span>`
-    + `<span class="perf-return-meta">${esc(chartFullDateLabel(points[0].date))} – ${esc(chartFullDateLabel(last.date))} · ${esc(performanceBasisText(payload))}</span>`;
+  const { cls } = changeDirection(value);
+  return `<div class="perf-summary-main">`
+    + `<span class="perf-summary-caption">${rangeLabel ? `${esc(rangeLabel)} ` : ""}수익률 · ${esc(target.name)}</span>`
+    + `<strong class="perf-summary-value ${cls}">${esc(pctChartLabel1(value))}</strong>`
+    + `<span class="perf-summary-meta">${esc(chartFullDateLabel(points[0].date))} – ${esc(chartFullDateLabel(last.date))} · ${esc(performanceBasisText(payload))}</span>`
+    + `</div>`
+    + (items.length ? `<div class="perf-summary-compare">${items.join("")}</div>` : "");
 }
 
 function syncPerformanceReturnSummary() {
-  const host = document.getElementById?.("perfReturnSummary");
+  const host = document.getElementById?.("perfSummary");
   if (!host || !performancePayload) return;
-  const html = performanceReturnSummary(performancePayload, performanceRenderedSeries, performanceFocusKey);
+  const html = performanceSummary(performancePayload, performanceRenderedSeries, performanceFocusKey);
   host.innerHTML = html;
   host.classList.toggle("hidden", !html);
-  if (html) placePerformanceReturnSummary(host);
-}
-
-// PC에서는 플롯 안에 떠 있는 상자라 끌어 옮길 수 있다(2026-11-12). 모바일은 플롯 위 띠(흐름 배치)라 끌지 않는다.
-function performanceSummaryDraggable(host) {
-  return getComputedStyle(host).position === "absolute";
-}
-
-function performanceSummaryRange(host) {
-  const svg = host.parentElement?.querySelector("svg");
-  const svgWidth = svg?.getBoundingClientRect().width || 0;
-  return {
-    w: Math.max(0, svgWidth * (Number(host.dataset.plotWRatio) || 0) - host.offsetWidth - 20),
-    h: Math.max(0, svgWidth * (Number(host.dataset.plotHRatio) || 0) - host.offsetHeight - 20),
-  };
-}
-
-function applyPerformanceSummaryPosition(host, pos) {
-  if (!performanceSummaryDraggable(host)) {
-    host.style.transform = "";
-    return;
-  }
-  const { w, h } = performanceSummaryRange(host);
-  host.style.transform = `translate(${(pos.x * w).toFixed(1)}px, ${(pos.y * h).toFixed(1)}px)`;
-}
-
-// 옮겨 둔 자리가 없으면 선이 가장 덜 지나는 모서리에 둔다(2026-11-20 디자인 재검토 10) — 늘 왼쪽 위에 두면
-// 초반에 오른 선을 상자가 가렸다. 네 모서리에 상자를 놓았을 때 그 안에 들어오는 선의 표본 점을 세어 가장 적은 곳,
-// 같으면 왼쪽 위 → 왼쪽 아래 → 오른쪽 위 → 오른쪽 아래 순.
-function performanceSummaryDefaultPosition(host) {
-  const corners = [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 0 }, { x: 1, y: 1 }];
-  const paths = [...(host.parentElement?.querySelectorAll?.("svg .perf-line") || [])];
-  if (!paths.length || typeof paths[0].getTotalLength !== "function" || !performanceSummaryDraggable(host)) return corners[0];
-  const { w, h } = performanceSummaryRange(host);
-  const transform = host.style.transform;
-  host.style.transform = "";
-  const base = host.getBoundingClientRect();
-  host.style.transform = transform;
-  const points = [];
-  paths.forEach(path => {
-    const total = path.getTotalLength();
-    const matrix = path.getScreenCTM?.();
-    if (!total || !matrix) return;
-    for (let i = 0; i <= 48; i += 1) {
-      const point = path.getPointAtLength(total * i / 48);
-      points.push({ x: point.x * matrix.a + point.y * matrix.c + matrix.e, y: point.x * matrix.b + point.y * matrix.d + matrix.f });
-    }
-  });
-  let best = corners[0];
-  let fewest = Infinity;
-  corners.forEach(corner => {
-    const left = base.left + corner.x * w;
-    const top = base.top + corner.y * h;
-    const hits = points.filter(point => point.x >= left && point.x <= left + base.width && point.y >= top && point.y <= top + base.height).length;
-    if (hits < fewest) { best = corner; fewest = hits; }
-  });
-  return best;
-}
-
-function placePerformanceReturnSummary(host) {
-  applyPerformanceSummaryPosition(host, chartOverlaySavedPosition("performance") || performanceSummaryDefaultPosition(host));
-  bindChartOverlayDrag(host, "performance", {
-    range: () => performanceSummaryRange(host),
-    apply: pos => applyPerformanceSummaryPosition(host, pos),
-    enabled: () => performanceSummaryDraggable(host),
-    fallback: () => performanceSummaryDefaultPosition(host),
-  });
 }
 let performanceRenderedSeries = [];
+let performanceRenderedBox = { width: 0, height: 0 };   // 창 크기가 바뀌면 다시 그릴지 판단(app.js)
 
 function applyPerformanceFocus() {
   document.querySelectorAll("[data-perf-focus]").forEach(button => {
@@ -288,7 +235,7 @@ function renderPerformanceLegend(series = []) {
   const fxChip = `<button class="perf-legend-item perf-fx-toggle${fxOn ? " active" : ""}${fxAvailable ? "" : " unavailable"}" type="button" data-perf-fx="1" aria-pressed="${fxOn ? "true" : "false"}" title="${fxOn ? "고정환율 선 숨기기" : "고정환율 선 표시"} · 기준일 환율로 고정해 환율 변동을 걷어낸 시간가중 수익률(점선)"><i class="dashed" style="border-color:${fxOn ? "var(--brand)" : "var(--chart-axis)"}"></i>고정환율</button>`;
   // 고정환율 칩은 계좌 줄에 함께 둔다 — 계좌 선에 딸린 옵션이라 별도 '환율' 줄을
   // 만들면 한 줄을 통째로 쓰면서도 칩은 하나뿐이었다(2026-09-16 사용자 지시).
-  return `<div class="perf-legend-groups"><div class="perf-legend-section"><span class="perf-group-label" title="계좌 칩을 누르면 그 선을 강조">계좌</span><div class="perf-legend" role="group" aria-label="계좌 선 강조와 고정환율 표시">${accountChips || '<span class="perf-empty-label">표시할 계좌 없음</span>'}${fxChip}</div></div><div class="perf-legend-section"><span class="perf-group-label">비교지수</span><div class="perf-legend" role="group" aria-label="비교지수 표시">${indexChips}</div></div></div>`;
+  return `<div class="perf-summary hidden" id="perfSummary" aria-live="polite"></div><div class="perf-legend-groups"><div class="perf-legend-section"><span class="perf-group-label" title="계좌 칩을 누르면 그 선을 강조">계좌</span><div class="perf-legend" role="group" aria-label="계좌 선 강조와 고정환율 표시">${accountChips || '<span class="perf-empty-label">표시할 계좌 없음</span>'}${fxChip}</div></div><div class="perf-legend-section"><span class="perf-group-label">비교지수</span><div class="perf-legend" role="group" aria-label="비교지수 표시">${indexChips}</div></div></div>`;
 }
 
 function bindPerformanceHover(series, geometry) {
@@ -383,11 +330,21 @@ function renderPerformanceChart(payload) {
   const max = scale.max;
   const isMobileChart = Boolean(window.matchMedia?.("(max-width: 980px)")?.matches);
   syncChartRailLayout();   // 성과 화면은 레일을 쓰지 않는다(개별종목에서 넘어왔으면 풀린다)
+  // 범례·요약 띠를 먼저 채운다 — 차트 높이를 '남은 화면'으로 재므로 그 위 높이가 정해져 있어야 한다.
+  performanceRenderedSeries = series;
+  syncPerformanceLegendHost(renderPerformanceLegend(series));
+  syncPerformanceReturnSummary();
   // 넓은 화면에서 그림을 늘리지 않고 넓게 그린다(개별종목 차트와 같은 배율 상한, 2026-11-15).
-  const width = chartViewBoxWidth(document.getElementById("chartCanvas"), isMobileChart);
-  const height = isMobileChart ? 864 : 432;
-  // 우측은 % 끝라벨만 — 금액은 호버 툴팁에서 본다(여백을 넓게 먹던 원인)
-  const pad = { top: 22, right: 74, bottom: 22, left: 56 };
+  // 화면 높이에도 맞춘다(2026-11-20 개편 — 개별종목 차트와 같은 규칙): PC는 기본 높이의 0.75~1.6배.
+  const canvasEl = document.getElementById("chartCanvas");
+  const width = chartViewBoxWidth(canvasEl, isMobileChart, isMobileChart ? 0 : 432);
+  const height = isMobileChart ? 864 : chartViewBoxHeight(canvasEl, width, 432, false);
+  // 선 끝 라벨은 '이름 수익률'(2026-11-20 사용자 지시) — 가장 긴 라벨만큼 오른쪽 여백을 연다. 금액은 호버 툴팁.
+  const endFont = isMobileChart ? 24 : 10.5;   // CSS .perf-end-label과 같은 값(모바일은 viewBox 980을 약 0.35배로 줄여 그리므로 24 ≈ 실제 8.5px)
+  const textWidth = text => [...String(text)].reduce((sum, ch) => sum + (/[\u3131-\uD79D]/.test(ch) ? 1 : 0.6) * endFont, 0);
+  const endName = item => (item.fixed ? "고정환율" : item.name);
+  const endRight = Math.ceil(Math.max(0, ...series.map(item => textWidth(`${endName(item)} ${pctChartLabel1(item.points[item.points.length - 1].close)}`))));
+  const pad = { top: 22, right: Math.min(isMobileChart ? 300 : 220, Math.max(74, endRight + 14)), bottom: 22, left: 56 };
   const plotW = width - pad.left - pad.right;
   const plotH = height - pad.top - pad.bottom;
   const range = max - min || 1;
@@ -412,15 +369,13 @@ function renderPerformanceChart(payload) {
         base: item.base,
         fixed: Boolean(item.fixed),
         color: item.color,
+        name: endName(item),
         close: last,
         value: "",
         y: yFor(last),
       };
     })
-    , 13);
-  // (#3) 범례에 색·이름만 두고 %는 선 끝으로. 지수 on/off도 이 범례가 겸한다.
-  performanceRenderedSeries = series;
-  syncPerformanceLegendHost(renderPerformanceLegend(series));
+    , isMobileChart ? 30 : 14);
   document.getElementById("chartCanvas").innerHTML = `
     <svg class="line-chart perf-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="계좌 기간 성과 차트">
       <rect class="chart-bg" x="0" y="0" width="${width}" height="${height}"></rect>
@@ -443,7 +398,7 @@ function renderPerformanceChart(payload) {
         <path class="perf-line ${item.primary ? "primary" : item.fixed ? "fixed" : "index"}" data-perf-series="${esc(item.key)}"${item.base ? ` data-perf-base="${esc(item.base)}"` : ""} d="${pathFor(item.points)}" style="stroke:${item.color}"></path>
       `).join("")}
       ${endLabels.map(label => `
-        <text class="perf-end-label${label.fixed ? " fixed" : ""}" data-perf-series="${esc(label.key)}"${label.base ? ` data-perf-base="${esc(label.base)}"` : ""} x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}">${esc(pctChartLabel1(label.close))}</text>
+        <text class="perf-end-label${label.fixed ? " fixed" : ""}" data-perf-series="${esc(label.key)}"${label.base ? ` data-perf-base="${esc(label.base)}"` : ""} x="${(pad.left + plotW + 7).toFixed(2)}" y="${(clampY(label.y) + 3.5).toFixed(2)}" style="fill:${label.color}"><tspan class="perf-end-name">${esc(label.name)}</tspan> <tspan class="perf-end-value">${esc(pctChartLabel1(label.close))}</tspan></text>
       `).join("")}
       <rect id="chartHoverLayer" class="chart-hover-layer" x="${pad.left}" y="${pad.top}" width="${plotW}" height="${plotH}"></rect>
       <g id="chartHoverGroup" class="chart-hover hidden">
@@ -451,12 +406,10 @@ function renderPerformanceChart(payload) {
         ${series.map(item => `<circle id="perfDot-${item.key}" class="perf-hover-dot" r="3.6" cx="0" cy="0" style="stroke:${item.color}"></circle>`).join("")}
       </g>
     </svg>
-    <div id="perfReturnSummary" class="perf-return-summary hidden" title="각 선의 시작점 = 0% · 끌어서 옮기기 · 두 번 누르면 원래 자리"
-      data-plot-w-ratio="${(plotW / width).toFixed(5)}" data-plot-h-ratio="${(plotH / width).toFixed(5)}"
-      style="--perf-plot-left:${(pad.left / width * 100).toFixed(3)}%;--perf-plot-top:${(pad.top / width * 100).toFixed(3)}%"></div>
     <div id="compareTooltip" class="compare-tooltip hidden" aria-hidden="true"></div>
   `;
   syncPerformanceReturnSummary();
+  performanceRenderedBox = { width: document.getElementById("chartView")?.clientWidth || 0, height: window.innerHeight || 0 };
   renderChartRangeControls();
   bindPerformanceHover(series, { width, height, pad, plotW, plotH, minTime, maxTime, xForTime, yFor });
   bindPerformanceChartControls();
