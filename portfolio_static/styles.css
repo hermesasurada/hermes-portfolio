@@ -6975,11 +6975,12 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
   }
   .chart-view.chart-rail #chartStats .cstat-board {
     /* basis 0: 지표판이 레일(=격자 행) 높이를 밀어 올리지 않고 차트가 정한 높이를 나눠 쓴다.
-       차트가 낮을 때는 행 28px 아래로 줄이지 않는다(그때만 레일이 차트보다 길어진다). */
+       차트가 낮을 때는 행 24px 아래로 줄이지 않는다(그때만 레일이 차트보다 길어진다).
+       24px: 묶음 제목 줄이 생겨 30행이 된 뒤에도 1920×1080에서 컨센서스까지 차트 높이 안에 들어가는 값(2026-11-20, 예전 28px). */
     flex: 1 1 0;
-    min-height: calc(var(--mobile-rows, 24) * 28px);
+    min-height: calc(var(--mobile-rows, 24) * 24px);
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(var(--mobile-rows, 24), minmax(28px, 1fr));
+    grid-template-rows: repeat(var(--mobile-rows, 24), minmax(24px, 1fr));
     grid-auto-flow: column;
     border-right: 0;
     border-bottom: 0;
@@ -7029,4 +7030,13 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
   .consensus-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .consensus-cell:nth-child(3n) { border-right: 0; }
   .consensus-cell:nth-child(-n + 3) { border-bottom: 1px solid var(--line); }
+}
+
+/* ── PC 종목 차트는 한 단(2026-11-20 디자인 재검토 04) ──
+   종목을 보는 동안에는 사이드바(320px)와 전광판을 쓰지 않는다. 둘을 접어 차트가 본문 폭 전체를 쓰고
+   전광판 높이만큼 위에서 시작한다. '목록'으로 돌아오면 원래 두 단. 성과 차트와 모바일은 그대로. */
+@media (min-width: 981px) {
+  .layout.ticker-chart { grid-template-columns: minmax(0, 1fr); }
+  .layout.ticker-chart > .side-col,
+  .layout.ticker-chart #heroStrip { display: none; }
 }

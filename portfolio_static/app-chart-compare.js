@@ -276,8 +276,9 @@ function renderCompareLineChart(payload) {
   const compactChart = window.matchMedia?.("(max-width: 980px)")?.matches;
   syncChartRailLayout();
   const sizingCanvas = document.getElementById("chartCanvas");
-  const width = chartViewBoxWidth(sizingCanvas, compactChart);   // 개별 차트와 같은 배율 상한(2026-11-15)
-  const height = chartViewBoxHeight(sizingCanvas, width, compactChart ? 900 : 560, compactChart);
+  const baseHeight = compactChart ? 900 : 560;
+  const width = chartViewBoxWidth(sizingCanvas, compactChart, baseHeight);   // 개별 차트와 같은 배율 규칙(2026-11-15, 높이 맞춤 11-20)
+  const height = chartViewBoxHeight(sizingCanvas, width, baseHeight, compactChart);
   renderedChartBox = { width: document.getElementById("chartView")?.clientWidth || 0, height: window.innerHeight || 0 };
   const pad = { top: 42, right: 108, bottom: 22, left: 52 };
   const plotW = width - pad.left - pad.right;

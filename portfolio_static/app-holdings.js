@@ -1006,6 +1006,9 @@ function syncDetailTabs() {
   document.getElementById("interestTableWrap").classList.toggle("hidden", showingChart || !showingInterest);
   document.getElementById("chartView").classList.toggle("hidden", !showingChart);
   document.getElementById("chartBack").classList.toggle("hidden", !showingChart);
+  // 종목 차트를 보는 동안 PC는 사이드바·전광판을 접어 차트에 폭과 높이를 준다(2026-11-20 디자인 재검토 04).
+  // 성과 차트는 계좌 선택이 필요해 사이드바를 그대로 둔다. 숨김은 CSS(≥981px)가 맡는다.
+  document.querySelector(".layout")?.classList.toggle("ticker-chart", Boolean(chartTicker) && !performanceChartOpen);
   // 구성종목·네이버 증권은 차트 밖 툴바에 있어 목록으로 돌아오면 직접 치운다
   if (!chartTicker && typeof clearChartExternalLinks === "function") clearChartExternalLinks();
   // 성과 차트는 아이콘·이름('% 성과')이 툴바 타이틀과 겹친다. 헤드 줄 전체를 숨겨

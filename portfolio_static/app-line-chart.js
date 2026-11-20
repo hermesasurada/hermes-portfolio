@@ -1434,22 +1434,35 @@ const CHART_MAX_SCALE = 1.4;
 // 아래로 줄지 않는 폭이다 — 1920px 모니터의 전체 폭(약 1,540px)에서는 레일 없이 차트만 넓어진다.
 const CHART_RAIL_MIN_WIDTH = 1840;
 
-function chartViewBoxWidth(canvasEl, compact = false) {
-  const px = Number(canvasEl?.clientWidth) || 0;
-  if (compact || px <= CHART_BASE_WIDTH * CHART_MAX_SCALE) return CHART_BASE_WIDTH;
-  return Math.round(px / CHART_MAX_SCALE);
+// 차트 아래로 쓸 수 있는 화면 높이(px) — 아래 비교 검색 줄과 여백 64px을 남긴다.
+function chartAvailableHeight(canvasEl) {
+  const top = (canvasEl?.getBoundingClientRect?.().top || 0) + (window.scrollY || 0);
+  return (window.innerHeight || 0) - top - 64;
 }
 
-// 레일 배치에서는 차트를 화면 아래까지 채운다(기본 높이 ~ 1.6배 사이). 그 밖에는 기본 높이 그대로.
+// fitHeight(기본 높이)를 주면 배율을 화면 높이에도 맞춘다(2026-11-20 디자인 재검토 04): 넓지만 낮은 화면에서
+// 폭만 보고 키우면 글자·RSI 칸만 커지고 가격 칸이 납작해진다. 그때는 배율을 낮추고(최소 1) viewBox를 넓혀 더 촘촘히 그린다.
+function chartViewBoxWidth(canvasEl, compact = false, fitHeight = 0) {
+  const px = Number(canvasEl?.clientWidth) || 0;
+  if (compact || px <= CHART_BASE_WIDTH) return CHART_BASE_WIDTH;
+  let scale = Math.min(CHART_MAX_SCALE, px / CHART_BASE_WIDTH);
+  if (fitHeight > 0) scale = Math.min(scale, Math.max(1, chartAvailableHeight(canvasEl) / fitHeight));
+  return Math.round(px / scale);
+}
+
+// PC 종목 차트는 화면 아래까지 채운다. 레일 배치는 기본 높이 ~ 1.6배(레일의 지표판이 그 높이를 나눠 쓴다),
+// 한 단 배치는 0.75 ~ 1.6배 — 사이드바를 접어 넓어진 차트가 같은 배율로 커져 화면 아래로 넘치지 않게 낮출 수 있다
+// (2026-11-20 디자인 재검토 04). 모바일은 기본 높이 그대로.
+const CHART_ONE_COLUMN_MIN_HEIGHT_RATIO = 0.75;
 function chartViewBoxHeight(canvasEl, width, baseHeight, compact = false) {
+  if (compact) return baseHeight;
   const view = document.getElementById("chartView");
-  if (compact || !view?.classList?.contains("chart-rail")) return baseHeight;
   const px = Number(canvasEl?.clientWidth) || 0;
   if (!px || !width) return baseHeight;
   const scale = px / width;
-  const top = (canvasEl.getBoundingClientRect?.().top || 0) + (window.scrollY || 0);
-  const available = (window.innerHeight || 0) - top - 64;   // 아래 비교 검색 줄과 여백
-  return Math.round(Math.min(baseHeight * 1.6, Math.max(baseHeight, available / scale)));
+  const available = chartAvailableHeight(canvasEl);
+  const floor = view?.classList?.contains("chart-rail") ? baseHeight : baseHeight * CHART_ONE_COLUMN_MIN_HEIGHT_RATIO;
+  return Math.round(Math.min(baseHeight * 1.6, Math.max(floor, available / scale)));
 }
 
 // 개별종목 화면에서만, 넓을 때 2단(차트 | 지표 레일). 그리기 전에 불러야 캔버스 폭을 제대로 잰다.
@@ -1531,8 +1544,9 @@ function renderLineChart(payload) {
   const max = scale.max;
   syncChartRailLayout();
   const sizingCanvas = document.getElementById("chartCanvas");
-  const width = chartViewBoxWidth(sizingCanvas, compactChart);
-  const height = chartViewBoxHeight(sizingCanvas, width, compactChart ? 900 : 530, compactChart);
+  const baseHeight = compactChart ? 900 : 530;
+  const width = chartViewBoxWidth(sizingCanvas, compactChart, baseHeight);
+  const height = chartViewBoxHeight(sizingCanvas, width, baseHeight, compactChart);
   renderedChartBox = { width: document.getElementById("chartView")?.clientWidth || 0, height: window.innerHeight || 0 };
   const last = values[values.length - 1];
   const overlayMetrics = chartOverlayMetrics(values);

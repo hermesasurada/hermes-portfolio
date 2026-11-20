@@ -526,7 +526,7 @@ document.addEventListener("click", event => {
 });
 window.addEventListener("hashchange", syncChartRoute);
 window.addEventListener("resize", schedulePcFrozenColumns);
-// 차트는 화면 폭에 맞춰 viewBox를 정하므로(2026-11-15) 폭이나(레일 배치일 때) 높이가 바뀌면 다시 그린다.
+// 차트는 화면 폭·높이에 맞춰 viewBox를 정하므로(2026-11-15, 높이는 11-20부터 PC 전체) 폭이나 높이가 바뀌면 다시 그린다.
 let chartResizeTimer = 0;
 window.addEventListener("resize", () => {
   clearTimeout(chartResizeTimer);
@@ -534,7 +534,9 @@ window.addEventListener("resize", () => {
     if (!chartTicker || performanceChartOpen || !chartPayload) return;
     const view = document.getElementById("chartView");
     const widthChanged = Math.abs((view?.clientWidth || 0) - renderedChartBox.width) >= 8;
-    const heightChanged = view?.classList.contains("chart-rail") && Math.abs((window.innerHeight || 0) - renderedChartBox.height) >= 24;
+    // 높이는 PC에서만 따라간다 — 모바일은 주소창이 접힐 때마다 창 높이가 바뀐다.
+    const desktop = !window.matchMedia?.("(max-width: 980px)")?.matches;
+    const heightChanged = desktop && Math.abs((window.innerHeight || 0) - renderedChartBox.height) >= 24;
     if (widthChanged || heightChanged) renderLineChart(chartPayload);
   }, 150);
 });
