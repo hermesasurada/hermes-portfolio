@@ -152,7 +152,7 @@ function renderChartTags() {
     return;
   }
   const tags = tagsFor(ticker);
-  host.innerHTML = `${tags.map(tag => `<button class="tag-chip chart-tag" type="button" data-tag-filter="${esc(tag)}" title="#${esc(tag)} 태그로 목록 거르기">#${esc(tag)}</button>`).join("")}`
+  host.innerHTML = `${tags.map(tag => `<button class="tag-chip chart-tag" type="button" data-tag-filter="${esc(tag)}" title="#${esc(tag)} 태그로 목록 거르기"><span>#${esc(tag)}</span></button>`).join("")}`
     + `<button class="chart-tag-edit" id="chartTagEdit" type="button" title="태그 편집">${tags.length ? "✎" : "＃ 태그"}</button>`;
 }
 

@@ -94,3 +94,24 @@ assert.match(css, /@media \(max-width: 480px\) \{[^@]*\.controls \.ctrl-group \.
   assert.match(block, /\.consensus-grid \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); \}/);
 }
 console.log('Design controls: always-on watchlist editing, mobile expansion, active filters and palette invariants passed.');
+
+// 디자인 재검토 07(2026-11-20): 보조 글자 대비, 좁은 화면의 터치 영역.
+{
+  const h = require('./harness');
+  const lum = hex => {
+    const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const contrast = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+  const light = css.slice(css.indexOf(':root {'), css.indexOf('}', css.indexOf(':root {')));
+  const token = name => light.match(new RegExp(`--${name}: (#[0-9a-f]{6})`))[1];
+  for (const surface of ['bg', 'panel', 'surface-2']) {
+    assert.ok(contrast(token('muted'), token(surface)) >= 4.5, `보조 글자 대비 ${surface}`);
+  }
+  const narrow = h.mediaBlocks(css, '(max-width: 980px)').map(block => block.text).join('\n');
+  assert.match(narrow, /::before \{\s*content: "";\s*position: absolute;\s*inset: var\(--hit-y, 0px\) var\(--hit-x, 0px\);/);
+  assert.match(narrow, /\.chart-head-toggle, \.chart-range-btn \{ --hit-y: -5px; --hit-x: -1px; \}/);
+  // 태그 칩은 글자만 말줄임(칩이 넘침을 자르면 터치 영역도 잘린다).
+  assert.match(css, /\.chart-tags \.tag-chip \{ overflow: visible; \}/);
+  assert.match(h.readStatic('app-ticker-tags.js'), /class="tag-chip chart-tag"[^>]*><span>#\$\{esc\(tag\)\}<\/span><\/button>/);
+}

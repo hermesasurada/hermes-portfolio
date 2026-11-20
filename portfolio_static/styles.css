@@ -24,7 +24,7 @@
   --index-row-hover: #eef1f5;
   --index-row-line: #94a3b8;
   --ink: #202b3c;
-  --muted: #697586;
+  --muted: #5f6b7c;   /* 2026-11-20: #697586은 회색 바탕(--bg·--surface-2) 위에서 4.3:1이라 기준(4.5:1)에 못 미쳤다. 지금 값은 4.95:1 이상 */
   --line: #e3e7ed;
   /* brand / semantic */
   --accent: #2563eb;
@@ -7055,3 +7055,35 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
   .layout.ticker-chart > .side-col,
   .layout.ticker-chart #heroStrip { display: none; }
 }
+
+/* ── 좁은 화면의 터치 영역(2026-11-20 디자인 재검토 07) ──
+   보이는 크기·간격은 그대로 두고(모바일 여백·행 높이·차트 버튼 26px은 사용자 결정) 눌리는 영역만 넓힌다.
+   ::before로 버튼 둘레의 빈 틈을 덮는다 — 이웃 버튼과 겹치지 않게 실측한 틈의 절반까지만.
+   (.chart-ma-toggle이 ::after를 밑줄에 쓰므로 ::before를 쓴다.) */
+@media (max-width: 980px) {
+  :is(.hero-summary-dot, .chart-back-btn, .chart-interest-open, .chart-name-edit-btn, .chart-identity .fav-star,
+      .chart-tags .tag-chip, .chart-tag-edit, .chart-head-toggle, .chart-range-btn, .consensus-report-link,
+      .controls .ghost-btn, .controls .header-icon-btn, .controls .cycle-toggle-btn, .controls .theme-btn) {
+    position: relative;
+  }
+  :is(.hero-summary-dot, .chart-back-btn, .chart-interest-open, .chart-name-edit-btn, .chart-identity .fav-star,
+      .chart-tags .tag-chip, .chart-tag-edit, .chart-head-toggle, .chart-range-btn, .consensus-report-link,
+      .controls .ghost-btn, .controls .header-icon-btn, .controls .cycle-toggle-btn, .controls .theme-btn)::before {
+    content: "";
+    position: absolute;
+    inset: var(--hit-y, 0px) var(--hit-x, 0px);
+  }
+  .hero-summary-dot { --hit-y: -19px; --hit-x: -2px; }                         /* 6px 점 → 높이 44px */
+  .controls :is(.ghost-btn, .header-icon-btn, .cycle-toggle-btn, .theme-btn) { --hit-y: -7px; --hit-x: -1px; }   /* 30 → 44 */
+  .chart-back-btn, .chart-interest-open { --hit-y: -6px; --hit-x: -4px; }      /* 28 → 40 */
+  .chart-name-edit-btn, .chart-identity .fav-star { --hit-y: -10px; --hit-x: -2px; }   /* 22·24 → 42·44 */
+  .chart-tags .tag-chip { --hit-y: -5px; --hit-x: -2px; }                      /* 18 → 28 (위아래 줄과의 틈이 10px) */
+  .chart-tag-edit { --hit-y: -12px; --hit-x: -2px; }                           /* 18 → 42 */
+  .chart-head-toggle, .chart-range-btn { --hit-y: -5px; --hit-x: -1px; }       /* 26 → 36 (두 줄 사이 틈 10px) */
+  .consensus-report-link { --hit-y: -11px; --hit-x: -4px; }                    /* 22 → 44 */
+  /* 개별종목 툴바는 가로 스크롤 상자라 위아래로 나온 터치 영역이 잘린다 — 안쪽 여백을 주고 같은 만큼 바깥 여백을 빼 자리는 그대로 둔다. */
+  .holdings-section .toolbar .title-tools:has(> #chartBack:not(.hidden)) { padding-block: 6px; margin-block: -6px; }
+}
+/* 차트 머리의 태그 칩은 글자만 말줄임하고 칩 자체는 넘침을 자르지 않는다 — 잘라 내면 위 터치 영역(::before)도 잘린다. */
+.chart-tags .tag-chip { overflow: visible; }
+.chart-tags .tag-chip > span { display: block; overflow: hidden; font-size: inherit; text-overflow: ellipsis; }   /* inherit: .chart-head span(11.5px)에 끌려가지 않게 */
