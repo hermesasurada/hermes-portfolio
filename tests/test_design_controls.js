@@ -88,8 +88,8 @@ assert.match(css, /@media \(max-width: 480px\) \{[^@]*\.controls \.ctrl-group \.
   assert.match(block, /@media \(min-width: 981px\)/);
   assert.match(block, /strong#chartName \{ font-size: 24px; \}/);
   assert.match(block, /\.chart-icon-slot \.asset-icon \{ width: 60px; height: 60px;/);
-  assert.match(block, /\.chart-price-row\.extended \.chart-price-current \{ font-size: 23px; \}/);
-  assert.match(css, /\.chart-price-current \{ font-size: 23px; \}/);
+  assert.match(block, /\.chart-price-row\.extended \.chart-price-current \{ font-size: 24px; \}/);
+  assert.match(css, /\.chart-price-current \{ font-size: 24px; \}/);
   assert.match(block, /\.chart-identity > \.chart-tags \{ flex: 0 1 auto;/);
   assert.match(block, /\.consensus-grid \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); \}/);
 }

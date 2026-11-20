@@ -290,7 +290,7 @@ h1 {
   color: var(--ink);
   font-size: 15px;
   line-height: 1.2;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0;
 }
 .service-brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
@@ -318,7 +318,7 @@ h1 {
   background: var(--surface-2);
   color: var(--muted);
   font-size: 10.5px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1;
 }
 .help-icon-btn:hover {
@@ -482,7 +482,7 @@ h1 {
   background: transparent;
   color: var(--ink);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
 }
@@ -515,7 +515,7 @@ h1 {
 .us-market-status {
   color: var(--muted);
   font-size: 10.5px;
-  font-weight: 800;
+  font-weight: 700;
   min-width: 78px;
   width: auto;
   text-align: left;
@@ -599,7 +599,7 @@ textarea {
   box-shadow: none;
   color: var(--ink);
   font-size: 10.5px;
-  font-weight: 750;
+  font-weight: 700;
 }
 .visible-rows-control input {
   width: 48px;
@@ -700,7 +700,7 @@ main {
   cursor: pointer;
 }
 .hero-summary-nav span {
-  font-size: 27px;
+  font-size: 28px;
   line-height: 1;
   transform: translateY(-1px);
 }
@@ -1075,7 +1075,7 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
   border-radius: 8px;
   color: var(--muted);
   font-size: 14px;
-  font-weight: 850;
+  font-weight: 700;
   line-height: 1;
 }
 .interest-group.active .interest-group-icon {
@@ -1127,7 +1127,7 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
   background: transparent;
   color: color-mix(in srgb, var(--muted) 72%, transparent);
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1;
   cursor: grab;
   user-select: none;
@@ -1249,7 +1249,7 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
   background: var(--brand);
   color: var(--on-accent);
   font-size: 11.5px;
-  font-weight: 800;
+  font-weight: 700;
 }
 .interest-main-form .interest-bulk-open {
   border-color: var(--line);
@@ -1887,7 +1887,7 @@ th:first-child, td:first-child { text-align: left; }
   background: var(--brand-soft);
   color: var(--brand);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1;
 }
 .dividend-name {
@@ -1902,7 +1902,7 @@ th:first-child, td:first-child { text-align: left; }
 }
 .dividend-list .ticker-link {
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 700;
 }
 .dividend-list .dividend-name .ticker-link {
   color: var(--ink);   /* 2026-11-20: 예전엔 파란 링크색 — 계좌·관심목록 표와 같은 본문색으로, 올리면 선택색 */
@@ -1955,7 +1955,7 @@ tr.dividend-today-row:hover td {
 }
 .dividend-today-marker strong {
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 700;
 }
 .dividend-today-marker time {
   color: var(--muted);
@@ -2013,7 +2013,7 @@ tr.dividend-month-row:hover td {
   gap: 10px;
   color: var(--ink);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
 }
 .dividend-month-toggle {
   display: inline-flex;
@@ -2064,14 +2064,14 @@ tr.dividend-month-row:hover td {
 }
 .confirmed-date {
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 700;
 }
 .tax-dividend,
 .net-dividend,
 .net-krw,
 .dividend-yield,
 .dividend-growth {
-  font-weight: 800;
+  font-weight: 700;
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
@@ -2305,7 +2305,7 @@ th.pc-frozen-edge {
   flex: 0 0 auto;
   overflow: hidden;
   font-size: 10.5px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0;
   position: relative;
 }
@@ -2697,7 +2697,7 @@ tr:hover .fav-star,
   background: var(--panel);
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
 }
 .chart-name-edit-form button[type="submit"] {
@@ -2744,14 +2744,14 @@ tr:hover .fav-star,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 17px;
+  font-weight: 700;
   line-height: 1.2;
 }
 .chart-head span {
   color: var(--muted);
   font-size: 11.5px;
-  font-weight: 800;
+  font-weight: 700;
 }
 #chartTicker {
   color: var(--muted);
@@ -2829,13 +2829,13 @@ tr:hover .fav-star,
   box-shadow: none !important;
   color: var(--ink);
   font-size: 11.5px;
-  font-weight: 650;
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
 }
 .sector-filter-item:hover { background: var(--surface-hover) !important; }
 .sector-filter-item.checked { color: var(--brand); }
-.sector-filter-check { width: 12px; flex: 0 0 auto; color: var(--brand); font-weight: 800; }
+.sector-filter-check { width: 12px; flex: 0 0 auto; color: var(--brand); font-weight: 700; }
 
 /* 섹터 칩: 중립 종이 톤 — 정보 라벨(등락색과 무관) */
 .sector-chip {
@@ -2848,7 +2848,7 @@ tr:hover .fav-star,
   border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
   color: var(--muted);
   font-size: var(--fs-xs);
-  font-weight: 650;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3107,7 +3107,7 @@ tr:hover .fav-star,
   min-width: 0;
   padding: 6px 10px;
   border-right: 1px solid var(--line);
-  font-size: 13.5px;
+  font-size: 13px;
 }
 .cstat-compare-corner,
 .cstat-compare-key {
@@ -3120,7 +3120,7 @@ tr:hover .fav-star,
   display: flex;
   align-items: center;
   color: var(--muted);
-  font-weight: 800;
+  font-weight: 700;
 }
 .cstat-compare-ticker {
   position: relative;
@@ -3129,7 +3129,7 @@ tr:hover .fav-star,
   align-content: center;
   min-height: 38px;
   text-align: center;
-  font-weight: 900;
+  font-weight: 700;
 }
 .cstat-compare-ticker.removable {
   padding-right: 24px;
@@ -3181,7 +3181,7 @@ tr:hover .fav-star,
 .cstat-compare-key small {
   color: var(--muted);
   font-size: 10.5px;
-  font-weight: 800;
+  font-weight: 700;
 }
 .cstat-compare-val {
   display: flex;
@@ -3228,7 +3228,7 @@ tr:hover .fav-star,
   overflow: hidden;
   padding: 5px 11px;
   color: var(--ink);
-  font-size: 13.5px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   text-align: right;
   text-overflow: ellipsis;
@@ -3536,7 +3536,7 @@ tr:hover .fav-star,
   fill: var(--chart-price);
   font-size: var(--chart-num-size);
   font-family: var(--chart-num-font);
-  font-weight: 900;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   text-anchor: end;
   pointer-events: none;
@@ -3614,7 +3614,7 @@ tr:hover .fav-star,
   fill: var(--chart-rsi);
   font-size: var(--chart-num-size);
   font-family: var(--chart-num-font);
-  font-weight: 900;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   text-anchor: end;
   paint-order: stroke;
@@ -3649,7 +3649,7 @@ tr:hover .fav-star,
 .chart-extreme text {
   font-size: var(--chart-num-size);
   font-family: var(--chart-num-font);
-  font-weight: 800;
+  font-weight: 700;
   paint-order: stroke;
   stroke: var(--chart-label-halo);
   stroke-width: 4px;
@@ -3684,8 +3684,8 @@ tr:hover .fav-star,
 }
 .chart-metric-title {
   fill: var(--muted);
-  font-size: 8.5px;
-  font-weight: 800;
+  font-size: 8px;
+  font-weight: 700;
   letter-spacing: 0;
 }
 .chart-metric-label {
@@ -3698,7 +3698,7 @@ tr:hover .fav-star,
   fill: var(--chart-ink);
   font-size: var(--chart-num-size);
   font-family: var(--chart-num-font);
-  font-weight: 800;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .chart-metric-value.up { fill: var(--up); }
@@ -3813,7 +3813,7 @@ tr:hover .fav-star,
 .chart-selection-summary-text {
   fill: var(--chart-ink);
   font-size: 11.5px;
-  font-weight: 800;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -4081,7 +4081,7 @@ tr:hover .fav-star,
 .compare-rsi-end-label {
   font-size: var(--chart-num-size);
   font-family: var(--chart-num-font);
-  font-weight: 900;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   paint-order: stroke;
   stroke: var(--chart-bg);
@@ -4110,7 +4110,7 @@ tr:hover .fav-star,
 .compare-tooltip.hidden { display: none !important; }
 .compare-tooltip .ct-date {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--muted);
   margin-bottom: 6px;
 }
@@ -4134,7 +4134,7 @@ tr:hover .fav-star,
 .compare-tooltip .ct-row.simple .ct-value {
   text-align: right;
   color: var(--muted);
-  font-weight: 750;
+  font-weight: 700;
 }
 .compare-tooltip .ct-logo {
   width: 18px;
@@ -4149,11 +4149,11 @@ tr:hover .fav-star,
   border: 0;
 }
 .compare-tooltip .ct-name {
-  font-weight: 800;
+  font-weight: 700;
 }
 .compare-tooltip .ct-pct {
   text-align: right;
-  font-weight: 800;
+  font-weight: 700;
 }
 .compare-tooltip .ct-price {
   text-align: right;
@@ -4198,7 +4198,7 @@ tr:hover .fav-star,
   fill: #fff;
   font-size: var(--chart-num-size);
   font-family: var(--chart-num-font);
-  font-weight: 900;
+  font-weight: 700;
   paint-order: stroke;
   stroke: rgba(0, 0, 0, .18);
   stroke-width: 1px;
@@ -4212,7 +4212,7 @@ tr:hover .fav-star,
   place-items: center;
   color: var(--muted);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 700;
 }
 .transaction-panel { margin-top: 16px; }
 
@@ -4226,7 +4226,7 @@ tr:hover .fav-star,
 .company-profile-popover { position: fixed; inset: auto; margin: 0; box-sizing: border-box; width: min(400px, calc(100vw - 20px)); max-height: calc(100dvh - 20px); overflow: auto; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--company-profile-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color: var(--ink); box-shadow: var(--shadow); font-family: inherit; font-size: 12.5px; text-align: left; }
 .company-profile-head { display: flex; align-items: start; gap: 8px; justify-content: space-between; }
 .company-profile-title { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
-.company-profile-close { flex: 0 0 24px; width: 24px; height: 24px; min-height: 24px; margin: -2px -2px 0 0; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--muted); font-size: 19px; cursor: pointer; }
+.company-profile-close { flex: 0 0 24px; width: 24px; height: 24px; min-height: 24px; margin: -2px -2px 0 0; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--muted); font-size: 20px; cursor: pointer; }
 .company-profile-content { line-height: 1.55; overflow-wrap: anywhere; }
 .company-profile-content p { margin: 6px 0; }
 .company-profile-meta, .company-profile-muted { color: var(--muted); }
@@ -4269,7 +4269,7 @@ tr:hover .fav-star,
 #cashFlowAmount, #cashFlowDate { font-family: var(--chart-num-font); }
 #cashFlowEntryStatus { font-size: 12px; color: var(--muted); }
 .cash-flows-year-nav { display: flex; align-items: center; gap: 6px; }
-.cash-flows-year-nav button { width: 28px; height: 28px; min-width: 28px; padding: 0; font-size: 21px; line-height: 1; }
+.cash-flows-year-nav button { width: 28px; height: 28px; min-width: 28px; padding: 0; font-size: 20px; line-height: 1; }
 .cash-flows-year-nav strong { min-width: 60px; text-align: center; font-family: var(--chart-num-font); }
 .cash-flows-accounts { display: flex; flex-wrap: wrap; gap: 5px; max-height: 120px; overflow: auto; flex-shrink: 0; }
 .cash-flows-accounts button { display: inline-flex; align-items: center; gap: 5px; height: 26px; min-height: 26px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--muted); font-size: 11px; line-height: 16px; white-space: nowrap; box-shadow: none; }
@@ -4316,7 +4316,7 @@ tr:hover .fav-star,
   text-align: left;
   text-overflow: ellipsis;
 }
-@media (max-width: 640px) {
+@media (max-width: 700px) {
   .cash-flows-modal .cash-flows-card { padding: 10px; gap: 8px; }
   .cash-flows-table th, .cash-flows-table td { padding: 4px 6px; font-size: 11px; }
   .cash-flows-table tr > :first-child { font-size: 11px; }
@@ -4356,7 +4356,7 @@ tr:hover .fav-star,
   box-shadow: none;
   color: var(--ink);
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 600;
 }
 .ticker-search-results {
   max-height: min(440px, calc(100vh - 180px));
@@ -4386,7 +4386,7 @@ tr:hover .fav-star,
 .ticker-search-result strong {
   color: var(--accent-2);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .ticker-search-result span {
@@ -4446,7 +4446,7 @@ tr:hover .fav-star,
 .chart-interest-title span {
   color: var(--accent-2);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
 }
 .chart-interest-list {
   display: grid;
@@ -4521,14 +4521,14 @@ tr:hover .fav-star,
   min-width: 0;
   overflow: hidden;
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .chart-interest-count {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .interest-bulk-modal {
@@ -4551,7 +4551,7 @@ tr:hover .fav-star,
   gap: 7px;
   color: var(--ink);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
 }
 .interest-bulk-select-all input {
@@ -4595,7 +4595,7 @@ tr:hover .fav-star,
   overflow: hidden;
   color: var(--ink);
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -4603,7 +4603,7 @@ tr:hover .fav-star,
   margin-top: 2px;
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .interest-bulk-empty {
@@ -4613,7 +4613,7 @@ tr:hover .fav-star,
   padding: 18px;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
   line-height: 1.45;
   text-align: center;
 }
@@ -4629,7 +4629,7 @@ tr:hover .fav-star,
 .schedule-head { align-items: flex-start; }
 .schedule-head #scheduleClose { flex: 0 0 auto; white-space: nowrap; }
 .schedule-title { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; min-width: 0; }
-.schedule-title > strong { font-size: 18px; font-weight: 600; }
+.schedule-title > strong { font-size: 17px; font-weight: 600; }
 .schedule-nav { display: inline-flex; align-items: center; gap: 4px; }
 .schedule-nav > strong { min-width: 92px; font-size: 14px; text-align: center; }
 .schedule-nav-btn {
@@ -4848,7 +4848,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   min-width: 72px;
   padding: 0 12px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
 }
 .modal-head {
   justify-content: space-between;
@@ -4881,11 +4881,11 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .trade-confirm-key {
   background: var(--surface-2);
   color: var(--muted);
-  font-weight: 800;
+  font-weight: 700;
 }
 .trade-confirm-val {
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -4922,7 +4922,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .dividend-history-title span {
   color: var(--accent-2);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
 }
 .dividend-history-table-wrap {
   /* 높이 상한은 모달 max-height가 담당 — grid 1fr 안에서 자체 스크롤 */
@@ -4941,7 +4941,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   min-width: 100%;
   border-collapse: collapse;
   table-layout: auto;
-  font-size: 13.5px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
 .dividend-history-table th,
@@ -4962,7 +4962,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   background: var(--surface-2);
   color: var(--muted);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   text-align: center;
 }
 .dividend-history-table th:first-child,
@@ -5084,7 +5084,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   margin-left: 1px;
   color: var(--muted);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 700;
   vertical-align: 3px;
 }
 .dividend-detail-btn {
@@ -5106,7 +5106,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 
 /* ── 반응형 ① 모바일(≤560px) — 배당이력 모달 ───────────────────────────── */
-@media (max-width: 560px) {
+@media (max-width: 700px) {
   /* 1열 4줄(약 150px)이던 요약을 2열 2줄로 — 표가 더 길게 보이고 팝업이 한 화면에 들어간다 */
   .dividend-history-stats { margin-top: 0; }
   .dividend-history-stats .cstat-row {
@@ -5162,7 +5162,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   background: var(--surface-2);
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
 }
 .diagnostics-box {
   border: 1px solid var(--line);
@@ -5186,7 +5186,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .diag-key {
   flex: 0 0 110px;
   color: var(--muted);
-  font-weight: 800;
+  font-weight: 700;
 }
 .diag-val {
   flex: 1;
@@ -5197,12 +5197,12 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   color: var(--ink);
   font-weight: 700;
 }
-.diag-ok { color: var(--buy); font-weight: 800; }
+.diag-ok { color: var(--buy); font-weight: 700; }
 .diag-chip {
   padding: 2px 8px;
   border-radius: var(--radius-sm);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
 }
 .diag-chip.bad { background: rgba(193, 18, 31, .12); color: var(--sell); }
 .diag-chip.warn { background: rgba(153, 92, 0, .14); color: var(--warn); }
@@ -5231,7 +5231,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   border-bottom: 1px solid var(--line);
   color: var(--ink);
   font-size: 15px;
-  font-weight: 900;
+  font-weight: 700;
 }
 .help-section-icon {
   width: 26px;
@@ -5244,7 +5244,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   background: color-mix(in srgb, var(--brand) 10%, var(--panel));
   color: var(--brand);
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1;
 }
 .help-block dl {
@@ -5256,13 +5256,13 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .help-block dt {
   color: var(--ink);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
 }
 .help-block dd {
   margin: 0;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.45;
 }
 /* dd 안의 계산/해석/기준 라벨 */
@@ -5273,7 +5273,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   background: var(--panel);
   color: var(--muted);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
   line-height: 1.45;
 }
 .range-fields {
@@ -5397,12 +5397,12 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .trade-dialog-title strong {
   color: var(--ink);
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
 }
 .trade-dialog-title span {
   color: var(--muted);
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 600;
 }
 .trade-dialog-head .ghost-btn {
   width: auto;
@@ -5421,7 +5421,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .trade-dialog-section-title {
   color: var(--muted);
   font-size: 10.5px;
-  font-weight: 850;
+  font-weight: 700;
 }
 .trade-dialog-stack {
   display: grid;
@@ -5452,7 +5452,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .field label {
   color: var(--muted);
   font-size: 10.5px;
-  font-weight: 800;
+  font-weight: 700;
 }
 .field input, .field select, .field textarea { width: 100%; }
 .trade-dialog-card input,
@@ -5466,7 +5466,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .trade-row-amount #tradeCurrency {
   text-align: center;
   font-size: 13px;
-  font-weight: 850;
+  font-weight: 700;
 }
 #tradeName[readonly] {
   background: var(--surface-2);
@@ -5525,7 +5525,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   min-width: 0;
   padding: 0 8px;
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: -0.02em;
   cursor: pointer;
   display: inline-flex;
@@ -5590,7 +5590,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   color: var(--muted);
   padding: 0 8px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
 }
 .seg-btn.active {
   background: var(--brand);
@@ -5617,7 +5617,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
-  font-weight: 800;
+  font-weight: 700;
 }
 .status {
   color: var(--muted);
@@ -6256,7 +6256,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 
 /* Narrow screens keep content-based sizing, with horizontal scrolling as needed. */
-@media (max-width: 568px) {
+@media (max-width: 700px) {
   .watch-modal.dividend-history-modal {
     width: fit-content;
     /* dialog UA 기본 max-width: calc(100% - 6px - 2em)가 폭을 되물리므로 해제 */
@@ -6268,7 +6268,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 
 /* ── 반응형 ③ 모바일(≤560px) — 통계 보드·차트 ──────────────────────────── */
-@media (max-width: 560px) {
+@media (max-width: 700px) {
   .watch-modal {
     width: calc(100vw - 16px);
   }
@@ -6473,7 +6473,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 
 /* ── 분석 화면: 정보 위계와 조작 상태 ──────────────────────────────── */
 .chart-head { align-items: flex-start; padding: 4px 0 12px; border-bottom: 1px solid var(--line); }
-.chart-head strong#chartName { font-size: 19px; font-weight: 600; color: var(--ink); }
+.chart-head strong#chartName { font-size: 20px; font-weight: 600; color: var(--ink); }
 .chart-head #chartTicker { font-size: 12px; font-weight: 400; }
 /* PC에서는 가격을 종목명 바로 옆에 붙인다(2026-09-15 사용자 지시).
    오른쪽 끝으로 밀면 이름과 시선이 화면 폭만큼 떨어진다. 980px 이하는 아래 줄로 내려간다. */
@@ -6481,7 +6481,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .chart-price-current, .chart-price-row.extended .chart-price-current {
   font-family: var(--chart-num-font); font-weight: 500;
 }
-.chart-price-current { font-size: 23px; }
+.chart-price-current { font-size: 24px; }
 .chart-price-pill { font-family: var(--chart-num-font); font-weight: 500; }
 .chart-price-row-label, .chart-head span.chart-session-note { font-size: 10.5px; font-weight: 500; }
 .chart-meta { font-weight: 400; }
@@ -6564,7 +6564,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .chart-head { display: flex; flex-wrap: wrap; gap: 8px; }
   .chart-head strong#chartName { font-size: 17px; }
   .chart-price-summary { grid-column: 1 / -1; margin: 2px 0 0; width: 100%; padding: 8px 0 0; border-left: 0; border-top: 1px solid var(--line); justify-self: start; }
-  .chart-price-current { font-size: 21px; }
+  .chart-price-current { font-size: 20px; }
   .chart-price-row.extended .chart-price-current { font-size: 16px; }
   .chart-bottom-controls .chart-head-toggle, .chart-bottom-controls .chart-range-btn { min-height: 30px; font-size: 11px; }
   .perf-legend-groups { display: grid; gap: 6px; }
@@ -6693,7 +6693,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 /* 조건별 적용 체크(2026-10-24) — 끈 조건은 남겨 두되 흐리게 */
 .screen-row input.screen-enabled { width: 16px; height: 16px; padding: 0; margin: 0; accent-color: var(--brand); cursor: pointer; }
 .screen-row-off :is(select, .screen-value-wrap) { opacity: .45; }
-@media (max-width: 520px) {
+@media (max-width: 700px) {
   .screen-row { grid-template-columns: 20px minmax(0, 1fr) 64px 32px; }
   .screen-row .screen-enabled { grid-row: 1 / span 2; }
   .screen-row .screen-field { grid-column: 2 / -1; }
@@ -6710,7 +6710,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .chart-line-end-label {
   font-size: var(--chart-num-size);
   font-family: var(--chart-num-font);
-  font-weight: 800;
+  font-weight: 700;
   paint-order: stroke;
   stroke: var(--chart-label-halo);
   stroke-width: 3.5px;
@@ -6738,7 +6738,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   fill: var(--chart-ichi-kijun);
   font-size: calc(var(--chart-num-size) * .82);
   font-family: var(--chart-num-font);
-  font-weight: 800;
+  font-weight: 700;
   paint-order: stroke;
   stroke: var(--chart-label-halo);
   stroke-width: 3.5px;
@@ -6748,7 +6748,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 /* ── 차트 컨트롤: 도움말 버튼·모바일 두 줄 배치(2026-10-10) ───────────────── */
 .chart-indicator-caption,
 .chart-controls-break { display: none; }
-.chart-help-btn { min-width: 28px; font-weight: 800; }
+.chart-help-btn { min-width: 28px; font-weight: 700; }
 .chart-bottom-controls.perf-mode .chart-help-btn { display: none; }
 
 /* 차트 지표 설명 팝업 */
@@ -6756,7 +6756,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .chart-help-card { display: flex; flex-direction: column; gap: 10px; max-height: calc(100dvh - 24px); box-sizing: border-box; }
 .chart-help-body { overflow-y: auto; display: grid; gap: 14px; padding-right: 2px; font-size: 12.5px; line-height: 1.6; }
 .chart-help-body section { display: grid; gap: 4px; }
-.chart-help-body h3 { margin: 0; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.chart-help-body h3 { margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
 .chart-help-body ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
 .chart-help-body dl { margin: 0; display: grid; gap: 2px; }
 .chart-help-body dt { font-weight: 700; margin-top: 4px; }
@@ -6781,7 +6781,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   background: var(--brand-soft);
   color: var(--brand);
   font-size: 9px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -6832,7 +6832,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   background: var(--panel);
   color: var(--muted);
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
 }
 .chart-tag-form button[type="submit"] { border-color: var(--brand); background: var(--brand); color: var(--on-accent); }
@@ -6912,7 +6912,7 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
   background: var(--brand-soft); color: var(--brand); font-size: 10.5px; font-weight: 600; line-height: 16px;
 }
 /* 좁은 화면: 구성종목·편입 ETF 두 표 모두 티커 열을 빼서 등락·비중이 가로 스크롤 없이 보이게(2026-11-09) */
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   .etf-holdings-table th:nth-child(3), .etf-holdings-table td:nth-child(3) { display: none; }
   .etf-holdings-table td.etf-holdings-name { max-width: 150px; }
 }
@@ -6938,7 +6938,7 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 .company-event-year { color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
 .company-event-body { min-width: 0; }
 .company-event-head { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
-.company-event-title { min-width: 0; font-size: 13.5px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+.company-event-title { min-width: 0; font-size: 13px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
 .company-event-condition { margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
 .company-event-chip {
   flex: 0 0 auto; padding: 0 6px; border-radius: 9px; background: var(--brand-soft); color: var(--brand);
@@ -7132,7 +7132,7 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
   .chart-icon-slot .asset-icon { width: 60px; height: 60px; font-size: 16px; }
   .chart-head strong#chartName { font-size: 24px; }
   .chart-head #chartTicker { font-size: 13px; }
-  .chart-price-row.extended .chart-price-current { font-size: 23px; }
+  .chart-price-row.extended .chart-price-current { font-size: 24px; }
   .chart-price-row.extended .chart-price-pill { min-height: 21px; padding: 0 7px; font-size: 11.5px; }
   .chart-price-summary { margin-right: 0; }
   .chart-identity > .chart-tags { flex: 0 1 auto; align-self: center; padding-left: 12px; border-left: 1px solid var(--line); }
