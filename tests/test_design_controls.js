@@ -57,8 +57,11 @@ assert.doesNotMatch(css, /watchlist-editing/);
 assert.doesNotMatch(fs.readFileSync(path.join(root, 'index.html'), 'utf8'), /interestEditToggle/);
 // 삭제(×) 열은 고정하지 않는다 — 오른쪽 sticky는 가로 스크롤 중 마지막 열을 덮는다.
 assert.doesNotMatch(css, /\.interest-delete-col[^{]*\{[^}]*position: sticky/);
-// 세션 배지(종)가 잘리지 않도록 등락 열은 배지 폭만큼 오른쪽 패딩을 확보한다.
-assert.match(css, /#interestTableWrap \.interest-detail-list td\[data-interest-col="2"\] \{\s*padding-right: 9px;/);
+// 장 상태는 칩 모양으로(2026-11-20): 위첨자 '휴'·'종' 배지와 그 자리 패딩은 없앤다.
+assert.doesNotMatch(css, /change-session-note|change-with-session/);
+assert.doesNotMatch(css, /#interestTableWrap \.interest-detail-list td\[data-interest-col="2"\] \{\s*padding-right: 9px;/);
+assert.match(css, /\.pct-chip\.session-closed,\s*\.pct-chip\.session-holiday \{\s*background: transparent;\s*outline: 1px solid[^}]*outline-offset: -1px;/);
+assert.match(css, /\.pct-chip\.session-holiday \{ outline-style: dashed;/);
 assert.match(css, /\.title-tools:not\(\.filters-expanded\) :is\(#interestSectorControl, #tagFilterControl, #currencyFilterControl\)/);
 for (const file of ['index.html','state.js','app.js','app-holdings.js','styles.css']) {
   assert.doesNotMatch(fs.readFileSync(path.join(root,file),'utf8'), /showIndexes|ignoreIndexes|function indexRows\(/);

@@ -1351,14 +1351,6 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
 .interest-detail-list td[data-interest-col="2"] {
   width: 86px;
 }
-/* 세션 배지(종)는 폭 0으로 셀 오른쪽 패딩 위에 겹쳐 뜬다(위 .change-session-note 참고).
-   셀을 overflow:hidden으로 자르므로 그 자리를 패딩으로 확보하지 않으면 배지가 잘린다.
-   배지 유무로 우측 정렬이 어긋나지 않게 열 전체에 같은 값을 준다.
-   #interestTableWrap을 붙인 이유: 좁은 화면의 여백 축소 규칙(:is(#id …))보다 우선해야 한다. */
-#interestTableWrap .interest-detail-list th[data-interest-col="2"],
-#interestTableWrap .interest-detail-list td[data-interest-col="2"] {
-  padding-right: 9px;
-}
 .interest-detail-list th[data-interest-col="3"],
 .interest-detail-list td[data-interest-col="3"] {
   width: 78px;
@@ -2399,32 +2391,23 @@ tr:hover .fav-star,
 .pct-chip.up { background: color-mix(in srgb, var(--up) 10%, transparent); }
 .pct-chip.down { background: color-mix(in srgb, var(--down) 10%, transparent); }
 .pct-chip.flat { color: var(--muted); background: var(--surface-2); }
-.change-with-session {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 1px;
-  white-space: nowrap;
+/* 장 상태는 칩 모양으로(2026-11-20 사용자 지시, 예전 위첨자 '휴'·'종' 배지 대체 — format.js changeMarkup).
+   채운 칩 = 정규장 진행 중, 테두리만 실선 = 장 종료·개장 전, 테두리만 점선 = 휴장.
+   테두리는 안쪽으로 그린 outline이라 칩 크기·열 정렬이 그대로다(border는 칩마다 다른 여백을 흔든다). */
+.pct-chip.session-closed,
+.pct-chip.session-holiday {
+  background: transparent;
+  outline: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+  outline-offset: -1px;
 }
-.change-with-session {
-  position: relative;
-}
-.change-session-note {
-  /* 레이아웃 폭 0 — 칩 오른쪽 여백에 겹쳐 띄운다. 배지가 폭을 차지하면
-     우측 정렬 셀에서 배지 있는 행의 칩만 왼쪽으로 밀려 열이 어긋난다
-     (실측: 세부내역 276→269). 관심목록은 열 폭이 빠듯해 자리를 비워두는
-     방식으로는 오히려 정렬이 깨졌다. */
+.pct-chip.session-holiday { outline-style: dashed; outline-color: color-mix(in srgb, currentColor 60%, transparent); }
+.sr-only {
   position: absolute;
-  left: 100%;
-  top: 0;
-  margin-left: 1px;
-  color: var(--muted);
-  font-size: 8px;
-  font-weight: 750;
-  line-height: 1;
-  letter-spacing: -.02em;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
   white-space: nowrap;
-  transform: translateY(-.6em);
 }
 .up { color: var(--up); }
 .down { color: var(--down); }

@@ -34,7 +34,7 @@
 - 거래 수정 시 잔고에 반영됐던 거래의 유형·수량·단가가 바뀌면 `#txEditHoldingsModal`로 한 번 묻는다. 서버는 되돌리기+재적용을 한 트랜잭션으로. 테스트 `test_transaction_edit_holdings.js`.
 - 거래내역 API는 전체 이력(200건 제한 금지), 프런트에서 필터 후 20건씩. 테스트 `test_transaction_filter.js`.
 - 배당이력 팝업 PC 최소 너비 600px.
-- 관심목록 고정열은 CSS sticky만(로고·종목명, 삭제 열 고정 금지). 종목명 `left`는 `--interest-logo-col`. 셀은 `overflow: hidden`, 등락 열은 세션 배지 자리 `padding-right: 9px`.
+- 관심목록 고정열은 CSS sticky만(로고·종목명, 삭제 열 고정 금지). 종목명 `left`는 `--interest-logo-col`. 셀은 `overflow: hidden`.
 - 표는 기본 12행 + 헤더만 보이고 안에서 스크롤. 높이는 `syncTableViewportRows()`가 실측(rAF 금지), 가로로 넘치면 가로 스크롤바 두께(`horizontalScrollbarHeight`, offsetHeight − clientHeight − 테두리)를 더한다(빼먹으면 마지막 행이 스크롤바에 가린다, 2026-11-15). 테스트 `test_table_viewport_rows.js`.
 - 배당 탭: 당월 포함 3개월만 펼침(`dividendMonthCollapsed`), 매달 1~5일은 전월부터 표시(서버 `dividend_list_start`), '오늘' 마커는 지급일<오늘과 그 이후 사이(`isPastPayment`). 배당 수량은 **배당락일 기준 보유분**(`entitled_quantity`, 배당락 뒤 매도는 받고 매수는 못 받음; 미국 거래는 미국 장 날짜로 기록). 테스트 `test_dividend_month_collapse.js`, `test_dividend_today_marker.js`.
 - 배당 탭 주당배당금·목록 배당율: 분기배당 개별 기업의 공시 증액=빨강 굵게, 공시 전 다음 회차 증액 예상(작년 같은 분기 증액)=주황 굵게(`dividend_raise.py`, 목록은 stats `dividend_raise`). 테스트 `test_dividend_raise.py`, `test_dividend_raise_marker.js`.
@@ -45,6 +45,7 @@
 - 차트에서 목록으로 돌아오면 스크롤 복원(`rememberListScroll`/`restoreListScroll`). 테스트 `test_list_scroll_restore.js`.
 - 모바일(≤980px) 개별종목 툴바는 한 줄(2026-11-16 사용자 지시): `목록`은 목록 아이콘 버튼(`.chart-back-btn`, `aria-label`, PC는 글자), 편입 ETF·촉매·일정 개수 배지는 숨김, 그래도 넘치면 줄바꿈 대신 가로 스크롤. 테스트 `test_mobile_chart_toolbar.js`.
 - 모바일(≤980px) 개별종목을 열면 툴바(목록·관심목록·거래내역…)가 화면 맨 위에 오게 페이지 스크롤(`scrollChartToolbarToTop`, 2026-11-16 사용자 지시). 스켈레톤 직후 한 번, 문서가 짧아 못 내려갔으면 그린 뒤 한 번 더(그 사이 더 내려 봤으면 그대로). PC는 표 스크롤이라 해당 없음. 테스트 `test_mobile_chart_scroll.js`.
+- 등락 칩의 장 상태는 글자 배지 없이 칩 모양으로(2026-11-20 사용자 지시, 위첨자 '휴'·'종' 폐지): 정규장 진행 중=채운 칩, 장 종료·개장 전=실선 테두리만, 휴장=점선 테두리만. 테두리는 `outline`(offset −1px)이라 칩 크기·열 정렬 불변, 뜻은 툴팁·화면낭독 글자(`.sr-only`). `changeMarkup`(format.js). 차트 머리는 자리가 있어 '휴장'·'N.NN 종가' 글자 그대로. 테스트 `test_change_session_chip.js`.
 - 휴장일 행 등락금액은 `→0`(`isHolidayPreviousSession`), 환율 적용 시 환율 변동분은 표기. 테스트 `test_holiday_change_amount.js`.
 - 차트 툴팁 등락은 `changePercentParts` 공유(SVG는 parts로 조립). 테스트 `test_chart_moving_averages.js`.
 - 배당 연속지급·증액 단위는 `Y`(`dividendStreakText`).

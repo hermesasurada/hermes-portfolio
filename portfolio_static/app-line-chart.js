@@ -630,7 +630,7 @@ function chartShouldShowExtendedLine(meta, metric, hasExtendedMarket) {
   return true;
 }
 
-// 차트 헤더는 자리가 있어 표의 한 글자 배지('종') 대신 읽히는 말로 쓴다 — '10.13 종가', '휴장'
+// 차트 헤더는 자리가 있어 표의 칩 모양 표시 대신 읽히는 말로 쓴다 — '10.13 종가', '휴장'
 function chartSessionNoteText(note) {
   if (note?.kind !== "session_closed") return "휴장";
   const date = String(note?.price_date || "").slice(5).replace("-", ".");

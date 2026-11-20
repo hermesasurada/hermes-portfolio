@@ -151,7 +151,7 @@ function changePercentText(pct, chip = false) {
   if (!parts) return "-";
   return `<span class="change-cell ${chip ? "pct-chip " : ""}${parts.cls}"><span aria-hidden="true">${parts.arrow}</span>${parts.text}</span>`;
 }
-// 세션 배지 툴팁 — 휴장('휴')과 장 종료·개장 전('종')을 같은 문구 규칙으로.
+// 등락 칩 장 상태 툴팁 — 휴장과 장 종료·개장 전을 같은 문구 규칙으로.
 // 차트 시세 표기(app-line-chart.js)도 이 함수를 공유한다.
 function sessionNoteTitle(note) {
   const dateText = String(note?.price_date || "").replaceAll("-", ".");
@@ -170,13 +170,15 @@ function dividendStreakText(years, floor) {
   return `${Math.round(n)}Y${floor ? "+" : ""}`;
 }
 
+// 등락 칩의 장 상태는 글자 배지 대신 칩 모양으로 보인다(2026-11-20 사용자 지시 — 위첨자 '휴'·'종' 폐지).
+// 정규장 진행 중 = 채운 칩(그대로), 장 종료·개장 전 = 테두리만(실선), 휴장 = 테두리만(점선).
+// 테두리는 inset 그림자라 칩 크기가 같고 폭도 늘지 않는다. 뜻은 툴팁과 화면낭독용 글자로 남긴다.
 function changeMarkup(row) {
-  const change = changePercentText(row.display_change_pct, true);
   const note = row?.change_session_note;
-  // 배지('휴'·'종')는 CSS에서 absolute로 띄워 레이아웃 폭을 차지하지 않는다.
-  // 폭을 차지하면 우측 정렬 셀에서 그 행의 등락 칩만 왼쪽으로 밀린다.
-  if (!note?.label) return change;
-  return `<span class="change-with-session">${change}<sup class="change-session-note" title="${esc(sessionNoteTitle(note))}">${esc(note.label)}</sup></span>`;
+  const parts = changePercentParts(row?.display_change_pct);
+  if (!parts || !note?.label) return changePercentText(row?.display_change_pct, true);
+  const closed = note.kind === "session_closed";
+  return `<span class="change-cell pct-chip ${parts.cls} ${closed ? "session-closed" : "session-holiday"}" title="${esc(sessionNoteTitle(note))}"><span aria-hidden="true">${parts.arrow}</span>${parts.text}<span class="sr-only"> · ${closed ? "장 종료" : "휴장"}</span></span>`;
 }
 // 표 로딩 스켈레톤 — colspan 한 셀에 폭 다른 바를 여러 행 깔아 형태를 암시
 function skeletonRows(colspan, rows = 8) {
