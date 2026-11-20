@@ -59,6 +59,7 @@
 - 일목선(따뜻한 색, 계단선)과 이평선(차가운 색)은 **같은 색 금지**(`test_chart_line_distinction.js`). 전환·기준선은 `vector-effect: non-scaling-stroke`로 화면 두께, 980px 이하 0.7. 선 끝 이름표 '전환·기준·20·50·200'은 선행 26봉 자리가 있을 때만.
 - 기준선 예상경로: 서버 `_kijun_flat_projection` → `ichi_kijun_flat`, 현재가에 닿는 봉에 'N거래일 뒤'.
 - 차트 컨트롤: 980px 이하 두 줄(1줄 형태·단위·기간·매수·매도·?, 2줄 보조지표·이동평균선), 버튼 26px. '?'는 `#chartHelpModal`, **설명 문구는 개조식 명사형**. 모바일 CSS 테스트는 `h.mediaBlocks(css, '(max-width: 980px)')`로 블록 전부를 읽는다.
+- 개별종목 지표판(2026-11-20 디자인 재검토 03): 지표 52개를 일곱 묶음(밸류에이션·배당·수익성·성장·재무·수급·기술 지표·기간 수익률·추세·위험)으로 나누고 묶음이 바뀌는 자리에 제목 줄(`.cstat-head`). 묶음 이름은 `chartStatMetricRows` 각 행의 첫 칸. 열 나누기는 `splitStatColumns`(제목이 열 끝에 홀로 남지 않게) — PC 4열, 모바일·레일 2열 각각 계산하고 2열 전용 빈 칸은 `.m-filler`. 열·행 끝 테두리는 nth-child가 아니라 `pc-col-end`·`pc-row-end` 클래스. 테스트 `test_chart_stat_groups.js`.
 - 환율 차트는 BB·일목·이평선 사용 안 함(`chartOverlaysApply`, 컨트롤은 disabled). 테스트 `test_fx_chart_overlays.js`.
 - 가격축 눈금은 `denseLowerChartScale(values, target, max)`(PC 9/11, 좁은 화면 7/8). 테스트 `test_chart_axis_density.js`.
 - 차트 왼쪽 위 오버레이(종목 차트 '선택 기간' 상자 `#chartMetricDrag`, 성과 차트 수익률 `#perfReturnSummary`)는 끌어서 옮긴다(2026-11-12 사용자 지시). 위치는 움직일 수 있는 범위 안 비율(0~1)로 차트별 localStorage(`CHART_OVERLAY_POS_KEYS`), 두 번 누르면 기본 자리. 종목 차트 상자는 호버 층 위에 그리고 면만 포인터를 받는다. 모바일 성과 차트는 플롯 위 띠라 끌지 않는다. 공용 `bindChartOverlayDrag`(app-chart-metrics.js). 테스트 `test_chart_overlay_drag.js`.

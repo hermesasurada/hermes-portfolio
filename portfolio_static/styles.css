@@ -2983,12 +2983,31 @@ tr:hover .fav-star,
   overflow: hidden;
   border-right: 1px solid var(--line);
 }
-#chartStats .cstat-row:nth-child(4n) {
+/* 열·행의 끝은 renderChartStats가 클래스로 알린다(2열 전용 빈 칸이 뒤에 붙어 nth-child로는 셀 수 없다). */
+#chartStats .cstat-row.pc-col-end {
   border-right: 0;
 }
-#chartStats .cstat-row:nth-last-child(-n + 4) {
+#chartStats .cstat-row.pc-row-end {
   border-bottom: 0;
 }
+/* 묶음 제목 줄(2026-11-20 디자인 재검토 03) — 지표 52개를 일곱 묶음으로 끊어 읽게 한다. */
+.cstat-row.cstat-head {
+  grid-template-columns: minmax(0, 1fr);
+  background: color-mix(in srgb, var(--muted) 13%, var(--panel));
+}
+.cstat-h {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 11px;
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 2열 배치(모바일·레일)에서만 쓰는 빈 칸 */
+#chartStats .cstat-row.m-filler { display: none; }
 .cstat-compare-wrap {
   display: inline-block;
   width: fit-content;
@@ -6052,22 +6071,6 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   #chartStats .cstat-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  #chartStats .cstat-row:nth-child(4n) {
-    border-right: 1px solid var(--line);
-  }
-  #chartStats .cstat-row:nth-child(2n) {
-    border-right: 0;
-  }
-  #chartStats .cstat-row:nth-last-child(-n + 4) {
-    border-bottom: 1px solid var(--line);
-  }
-  #chartStats .cstat-row:nth-last-child(-n + 2) {
-    border-bottom: 0;
-  }
-  :root[data-theme="dark"] #chartStats .cstat-row:nth-child(4n),
-  :root[data-theme="dark"] #chartStats .cstat-row:nth-last-child(-n + 4) {
-    border-color: var(--line);
-  }
   .cstat-column:nth-child(2) {
     border-right: 0;
   }
@@ -6220,22 +6223,18 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     border-bottom: 0;
   }
   #chartStats .cstat-row,
-  #chartStats .cstat-row:nth-child(2n),
-  #chartStats .cstat-row:nth-child(4n) {
+  #chartStats .cstat-row.pc-col-end,
+  #chartStats .cstat-row.pc-row-end {
     order: var(--mobile-order, 0);
     height: 26px;
     border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
   }
   #chartStats .cstat-row.empty {
     display: none;
   }
-  #chartStats .cstat-row:nth-last-child(-n + 2),
-  #chartStats .cstat-row:nth-last-child(-n + 4) {
-    border-bottom: 1px solid var(--line);
-  }
-  :root[data-theme="dark"] #chartStats .cstat-row:nth-last-child(-n + 2),
-  :root[data-theme="dark"] #chartStats .cstat-row:nth-last-child(-n + 4) {
-    border-bottom-color: var(--line);
+  #chartStats .cstat-row.m-filler {
+    display: grid;
   }
   .cstat-column,
   .cstat-column:nth-child(2) {
@@ -6989,8 +6988,10 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
     order: var(--mobile-order, 0);
     height: auto;
     border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
   }
   .chart-view.chart-rail #chartStats .cstat-row.empty { display: none; }
+  .chart-view.chart-rail #chartStats .cstat-row.m-filler { display: grid; }
   /* 비교 지표표는 행이 많아 줄일 수 없다 — 차트 높이 안에서 표 안쪽을 스크롤한다(아래 끝은 차트와 맞춘다). */
   .chart-view.chart-rail .cstat-compare-wrap { flex: 1 1 0; min-height: 0; overflow: auto; }
 }
