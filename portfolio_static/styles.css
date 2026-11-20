@@ -572,6 +572,22 @@ textarea {
   background: transparent;
   font-size: 10.5px;
 }
+/* 묶음을 고른 계좌표는 전역 최소 폭(660px)을 풀고 내용 폭대로(좁은 화면에서 남은 열이 벌어지지 않게). */
+#detailTableWrap.column-preset table { min-width: 100%; }
+/* 열 묶음 선택(2026-11-20) — 글자 폭만큼만. 기본 화살표(약 18px) 대신 작은 ▾를 글자 뒤에 둔다. */
+.column-preset-control { gap: 4px; }
+.column-preset-control select {
+  width: auto;
+  min-width: 0;
+  padding: 0 11px 0 1px;
+  color: var(--ink);
+  font-weight: 600;
+  appearance: none;
+  -webkit-appearance: none;
+  background: linear-gradient(45deg, transparent 50%, var(--muted) 50%) right 5px center / 4px 4px no-repeat,
+              linear-gradient(-45deg, transparent 50%, var(--muted) 50%) right 1px center / 4px 4px no-repeat;
+  cursor: pointer;
+}
 .name-filter-control input {
   width: 112px;
   min-width: 0;
@@ -7130,3 +7146,14 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 /* 차트 머리의 태그 칩은 글자만 말줄임하고 칩 자체는 넘침을 자르지 않는다 — 잘라 내면 위 터치 영역(::before)도 잘린다. */
 .chart-tags .tag-chip { overflow: visible; }
 .chart-tags .tag-chip > span { display: block; overflow: hidden; font-size: inherit; text-overflow: ellipsis; }   /* inherit: .chart-head span(11.5px)에 끌려가지 않게 */
+
+/* ── PC 도구 줄을 한 줄로(2026-11-20) ──
+   '열' 선택이 더해져 1440px 화면(본문 1,026px)에서 넘쳤다. 명칭 검색 칸은 남는 폭에 맞춰 줄고(최소 96px),
+   1600px 미만에서는 행 수 뒤의 ' rows' 단위를 뺀다(숫자는 남는다). */
+@media (min-width: 981px) {
+  #nameFilterControl { flex: 1 1 96px; max-width: 149px; }   /* 줄바꿈 판정은 96px로, 남는 폭이 있으면 149px까지 자란다 */
+  #nameFilterControl input { width: 100%; min-width: 0; }
+}
+@media (min-width: 981px) and (max-width: 1599px) {
+  .row-count-unit { display: none; }
+}

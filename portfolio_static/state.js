@@ -14,6 +14,7 @@ const detailStorage = {
   interestScreenEnabled: "portfolio.detail.interestScreenEnabled",   // 조건은 둔 채 적용만 끄기(2026-10-24)
   tagFilter: "portfolio.detail.tagFilter",             // 목록 태그 필터 선택(2026-10-12)
   currencyFilter: "portfolio.detail.currencyFilter",
+  columnPreset: "portfolio.detail.columnPreset",       // 표에 보일 열 묶음(2026-11-20) — {"detail":"summary","interest":"all"}
   chartInterval: "portfolio.chart.interval",
   chartType: "portfolio.chart.type",
   chartLogScale: "portfolio.chart.logScale",

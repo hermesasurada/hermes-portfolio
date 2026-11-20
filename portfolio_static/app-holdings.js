@@ -1037,6 +1037,7 @@ function syncDetailTabs() {
   document.getElementById("interestTableWrap").classList.toggle("hidden", showingChart || !showingInterest);
   document.getElementById("chartView").classList.toggle("hidden", !showingChart);
   document.getElementById("chartBack").classList.toggle("hidden", !showingChart);
+  syncColumnPresetControl();
   // 종목 차트를 보는 동안 PC는 사이드바·전광판을 접어 차트에 폭과 높이를 준다(2026-11-20 디자인 재검토 04).
   // 성과 차트는 계좌 선택이 필요해 사이드바를 그대로 둔다. 숨김은 CSS(≥981px)가 맡는다.
   document.querySelector(".layout")?.classList.toggle("ticker-chart", Boolean(chartTicker) && !performanceChartOpen);
@@ -1138,6 +1139,89 @@ function setListVisibleRows(value) {
     renderInterestRowsWindow(true);
     syncTableViewportRows();
   }
+}
+
+// ── 열 묶음 선택(2026-11-20 디자인 재검토 05, 묶음 정의는 app-interest-columns.js) ──
+// 계좌표는 행 템플릿을 건드리지 않고, 헤더에서 잎 열의 순서를 읽어 '고른 묶음에 없는 열'을 숨기는 규칙을
+// <style> 하나에 만든다(td는 nth-child, th는 data-leaf). 관심목록은 열 정의를 걸러 그리므로 여기서 할 일이 없다.
+function detailLeafColumns() {
+  const wrap = document.getElementById("detailTableWrap");
+  if (!wrap?.querySelectorAll) return [];
+  const sub = [...wrap.querySelectorAll("thead tr.detail-col-head > th")];
+  const leaves = [];
+  let subIndex = 0;
+  wrap.querySelectorAll("thead tr.detail-group-head > th").forEach(th => {
+    const span = Number(th.getAttribute("colspan")) || 0;
+    if (!span) { leaves.push({ th }); return; }
+    for (let i = 0; i < span; i += 1) leaves.push({ th: sub[subIndex++], groupTh: th });
+  });
+  return leaves.filter(leaf => leaf.th).map((leaf, index) => ({
+    ...leaf,
+    index: index + 1,
+    key: leaf.th.dataset.key || leaf.th.dataset.columnKey
+      || (leaf.th.classList.contains("logo-col") ? "logo" : leaf.th.classList.contains("name-head") ? "name" : ""),
+  }));
+}
+function syncDetailColumnPreset() {
+  const leaves = detailLeafColumns();
+  if (!leaves.length || !document.head?.appendChild) return;
+  let style = document.getElementById("detailColumnPresetStyle");
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "detailColumnPresetStyle";
+    document.head.appendChild(style);
+  }
+  const preset = activeColumnPreset("detail");
+  // 묶음을 고르면 열이 몇 개뿐이라 표의 최소 폭(660px) 규칙을 푼다 — 그대로 두면 남은 열이 그 폭을 나눠 가져 벌어진다.
+  document.getElementById("detailTableWrap")?.classList.toggle("column-preset", preset !== "all");
+  const hidden = preset === "all" ? [] : leaves.filter(leaf => !columnInPreset(leaf.key, preset, "detail"));
+  const selectors = [];
+  const groups = new Map();
+  leaves.forEach(leaf => {
+    leaf.th.dataset.leaf = String(leaf.index);
+    if (leaf.groupTh) groups.set(leaf.groupTh, (groups.get(leaf.groupTh) || []).concat(leaf));
+  });
+  hidden.forEach(leaf => {
+    selectors.push(`#detailTableWrap tbody td:nth-child(${leaf.index})`, `#detailTableWrap thead th[data-leaf="${leaf.index}"]`);
+  });
+  // 묶음 제목(배당·추세…)은 그 아래 열이 모두 숨을 때 함께 숨긴다.
+  groups.forEach((members, groupTh) => {
+    if (members.every(leaf => hidden.includes(leaf))) {
+      selectors.push(`#detailTableWrap thead th[data-detail-group="${groupTh.dataset.detailGroup}"]`);
+    }
+  });
+  const css = selectors.length ? `${selectors.join(",\n")} { display: none; }` : "";
+  if (style.textContent !== css) style.textContent = css;
+}
+function syncColumnPresetControl() {
+  const control = document.getElementById("columnPresetControl");
+  const select = document.getElementById("columnPresetSelect");
+  if (!control || !select) return;
+  const showingChart = Boolean(chartTicker) || performanceChartOpen;
+  const interest = interestModeActive();
+  control.classList.toggle("hidden", showingChart || (!interest && activeDetailTab !== "detail"));
+  const table = interest ? "interest" : "detail";
+  if (select.dataset.table !== table) {
+    select.innerHTML = columnPresetOptions(table).map(preset => `<option value="${preset.key}">${esc(preset.label)}</option>`).join("");
+    select.dataset.table = table;
+  }
+  select.value = activeColumnPreset(table);
+}
+function initColumnPresetControl() {
+  const select = document.getElementById("columnPresetSelect");
+  if (!select) return;
+  select.addEventListener("change", () => {
+    setColumnPreset(select.dataset.table || "detail", select.value);
+    // 열이 줄면 가로 스크롤 위치가 표 밖에 남는다 — 맨 왼쪽으로 돌린다.
+    ["detailTableWrap", "interestTableWrap"].forEach(id => {
+      const wrap = document.getElementById(id);
+      if (wrap) wrap.scrollLeft = 0;
+    });
+    renderTable();
+  });
+  // 좁은 화면과 PC는 기본 묶음과 '요약'의 구성이 다르다 — 폭이 그 경계를 넘으면 다시 맞춘다.
+  window.matchMedia?.("(max-width: 980px)")?.addEventListener?.("change", () => renderTable());
+  syncColumnPresetControl();
 }
 
 function initListVisibleRowsControl() {
@@ -1288,6 +1372,7 @@ function renderTable() {
     renderInterestMainTable();
     return;
   }
+  syncDetailColumnPreset();
   const rows = applyTagFilter(statsRows(filteredRows()).filter(row => matchesNameFilter(row)));
   sortRows(rows, "detail");
   if (rows.some(row => row.ticker && !statsData[row.ticker])) loadStatsForRows(rows);

@@ -63,7 +63,7 @@ assert.match(headers[26], /dividend_growth_5y/);
 assert.match(headers[27], /data-key="yield_on_cost"[\s\S]*평단[\s\S]*배당율/);
 assert.match(cells[27], /noPosition \? "-" : yieldOnCostMarkup\(r\)/);
 const interestColumns = read('app-interest-columns.js');
-assert.doesNotMatch(interestColumns, /yield_on_cost/);
+assert.doesNotMatch(interestColumns, /key: "yield_on_cost"/);   // 열 정의에 없다(열 묶음 키 목록에는 계좌표용으로 이름이 있다)
 const css = read('styles.css');
 assert.match(css, /td:nth-child\(28\) \{ min-width: calc\(54px \* var\(--col-scale, 1\)\); \} \/\* 평단 배당율/);
 // 폭은 --col-scale 배율을 타되 기본값(데스크톱)은 원래 값 그대로다.

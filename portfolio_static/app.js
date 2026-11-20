@@ -473,6 +473,7 @@ document.getElementById("interestHeldToggle").addEventListener("change", () => {
   render();
 });
 initListVisibleRowsControl();
+initColumnPresetControl();
 initInterestAssetTypeControl();
 initInterestScreen();
 initTickerTags();

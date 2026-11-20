@@ -169,6 +169,78 @@ const INTEREST_TABLE_COLUMN_COUNT = INTEREST_COLUMNS.length;
 
 let interestRenderedColumns = INTEREST_COLUMNS;
 
+// ── 열 묶음(2026-11-20 사용자 승인, 디자인 재검토 05) — 계좌표·관심목록 공용 ─────────────────────
+// 계좌표는 49열, 관심목록은 60열 남짓이라 가로 스크롤 하나로는 원하는 값을 찾기 어렵다(휴대폰은 화면의 6배).
+// 도구 줄의 '열' 선택으로 종목·등락·현재가 옆에 고른 묶음만 붙여 본다. '전체'는 예전 그대로의 가로 스크롤 표.
+// 묶음은 열의 데이터 키로 정한다 — 계좌표 헤더의 data-key, 관심목록 열 정의의 key가 같은 이름을 쓴다.
+const COLUMN_PRESETS = [
+  { key: "all", label: "전체" },
+  { key: "summary", label: "요약" },
+  { key: "tech", label: "기술" },
+  { key: "value", label: "밸류" },
+  { key: "dividend", label: "배당" },
+  { key: "perf", label: "수익률" },
+  { key: "trend", label: "추세·위험" },
+  { key: "fund", label: "재무", tables: ["interest"] },
+  { key: "consensus", label: "컨센서스", tables: ["interest"] },
+];
+// 어느 묶음에서나 보이는 열.
+const COLUMN_PRESET_ALWAYS = new Set(["logo", "name", "display_change_pct", "current_price", "delete"]);
+const COLUMN_PRESET_KEYS = {
+  summary: ["extended_change_pct", "qty", "change_krw", "value_krw", "weight_pct", "trade"],
+  tech: ["drawdown_52w", "rsi_day", "rsi_week", "rsi_month", "bb_day", "bb_week", "bb_month", "ma20_pct", "ma50_pct", "ma200_pct"],
+  value: ["trailing_pe", "forward_pe", "price_to_book", "market_cap_usd", "next_earnings_date"],
+  dividend: ["dividend_yield", "dividend_growth_5y", "yield_on_cost", "dividend_streak_years", "dividend_growth_streak_years", "payout_ratio"],
+  perf: ["perf_1w", "perf_1m", "perf_3m", "perf_6m", "perf_ytd", "perf_1y", "perf_3y", "perf_5y", "perf_10y"],
+  trend: ["risk_reward_score", "beta", "beta_adj", "trend_return", "trend_deviation", "trend_strength",
+    "trend10_return", "trend10_deviation", "trend10_strength"],
+};
+// 관심목록에는 수량·평가액이 없어 '요약'이 비므로 시총·52주 고점 대비·실적일을 더한다.
+const COLUMN_PRESET_INTEREST_SUMMARY = ["market_cap_usd", "drawdown_52w", "next_earnings_date"];
+// 관심목록 전용 묶음은 열 정의의 group으로 정한다.
+const COLUMN_PRESET_INTEREST_GROUPS = {
+  fund: ["profitability", "growth", "finance", "short-interest", "ownership"],
+  consensus: ["consensus"],
+};
+
+function columnPresetOptions(table) {
+  return COLUMN_PRESETS.filter(preset => !preset.tables || preset.tables.includes(table));
+}
+// 좁은 화면의 계좌표 '요약'은 보유 현황만 남긴다(등락·등락금액·평가액·비중·거래) — 종목 열이 화면의 절반을 써서
+// 연장·현재단가·수량까지 두면 평가액이 세 번째 화면으로 밀린다. PC '요약'과 다른 묶음에는 영향이 없다.
+const COLUMN_PRESET_COMPACT_SUMMARY_HIDDEN = new Set(["extended_change_pct", "current_price", "qty"]);
+function columnPresetCompact() {
+  return Boolean(window.matchMedia?.("(max-width: 980px)")?.matches);
+}
+// table: "detail"(계좌표) | "interest"(관심목록). group은 관심목록 열 정의의 group.
+function columnInPreset(key, preset, table = "detail", group = "", compact = columnPresetCompact()) {
+  if (!preset || preset === "all") return true;
+  if (compact && table === "detail" && preset === "summary" && COLUMN_PRESET_COMPACT_SUMMARY_HIDDEN.has(key)) return false;
+  if (COLUMN_PRESET_ALWAYS.has(key)) return true;
+  if (COLUMN_PRESET_KEYS[preset]?.includes(key)) return true;
+  if (table !== "interest") return false;
+  if (preset === "summary" && COLUMN_PRESET_INTEREST_SUMMARY.includes(key)) return true;
+  return Boolean(COLUMN_PRESET_INTEREST_GROUPS[preset]?.includes(group));
+}
+
+// 고른 묶음은 표마다 이 브라우저에 기억한다. 고른 적이 없으면 좁은 화면은 '요약', PC는 '전체'.
+let columnPresetChoice = null;
+function columnPresetDefault() {
+  return columnPresetCompact() ? "summary" : "all";
+}
+function activeColumnPreset(table) {
+  if (!columnPresetChoice) {
+    try { columnPresetChoice = JSON.parse(storageGet(detailStorage.columnPreset) || "{}") || {}; } catch { columnPresetChoice = {}; }
+  }
+  const chosen = columnPresetChoice[table];
+  return columnPresetOptions(table).some(preset => preset.key === chosen) ? chosen : columnPresetDefault();
+}
+function setColumnPreset(table, preset) {
+  activeColumnPreset(table);   // 저장값을 먼저 읽어 둔다
+  columnPresetChoice[table] = preset;
+  storageSet(detailStorage.columnPreset, JSON.stringify(columnPresetChoice));
+}
+
 function hasInterestColumnValue(row, field) {
   if (field === "next_earnings_date") return Boolean(row[field]);
   if (field === "rating_rank") return row[field] != null;
@@ -180,8 +252,10 @@ function hasInterestColumnValue(row, field) {
 const INTEREST_STAR_ONLY_WIDTH = 44;
 
 function visibleInterestColumns(rows, isIndexGroup = false, {starOnly = false} = {}) {
+  const preset = activeColumnPreset("interest");
   return INTEREST_COLUMNS.filter(column => column.always || (
     !(isIndexGroup && column.key === "extended_change_pct")
+    && columnInPreset(column.key, preset, "interest", column.group)
     && rows.some(row => hasInterestColumnValue(row, column.key))
   )).map(column => starOnly && column.key === "delete" ? {...column, width: INTEREST_STAR_ONLY_WIDTH} : column);
 }
