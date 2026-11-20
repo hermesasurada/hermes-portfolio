@@ -63,10 +63,37 @@ function cashFlowsAmountMarkup(entries) {
     const text = new Intl.NumberFormat("ko-KR", {
       maximumFractionDigits: digits,
     }).format(Math.abs(currency === "KRW" ? amount / 10000 : amount));
+    // 입금·출금은 +/− 부호로만 구분하고 본문색으로 적는다(2026-11-20 디자인 재검토 10) —
+    // 빨강·파랑은 시세의 상승·하락 색이라 입출금에 쓰면 뜻이 섞인다.
     const sign = amount > 0 ? "+" : amount < 0 ? "−" : "";
-    const { cls } = changeDirection(amount);
-    return `<span class="cash-flows-amount ${cls}">${sign}${text}${currency === "KRW" ? "" : `<small>${esc(currency)}</small>`}</span>`;
+    return `<span class="cash-flows-amount">${sign}${text}${currency === "KRW" ? "" : `<small>${esc(currency)}</small>`}</span>`;
   }).join("");
+}
+
+// 보정·추정·증여처럼 설명이 필요한 메모만 보인다. 정기 입금 메모와 건수는 잡음이다.
+const CASH_FLOW_NOTABLE_NOTE = /보정|추정|증여|현물|상장폐지|정산|매수일 기준/;
+
+// 기본 보기는 날짜순 목록(2026-11-20 디자인 재검토 10): 계좌가 아홉 개면 표의 칸 대부분이 빈 값이라 내역을 찾기 어렵다.
+// 한 줄 = 그날 그 계좌의 순입출금. 계좌×날짜 표는 '표' 버튼으로 본다.
+function cashFlowsListMarkup(matrix) {
+  const { accounts, rows, totals } = matrix;
+  const body = rows.flatMap(row => accounts.filter(a => row.cells.has(String(a.id))).map(a => {
+    const entries = row.cells.get(String(a.id));
+    const note = entries.filter(e => CASH_FLOW_NOTABLE_NOTE.test(e.note || "")).map(e => e.note).join(" · ");
+    return `<tr data-account-id="${esc(a.id)}" data-flow-date="${esc(row.date)}">
+      <th scope="row"><time datetime="${esc(row.date)}">${esc(row.date.slice(5))}</time></th>
+      <td class="cash-flows-list-account">${esc([a.memberName, a.name].filter(Boolean).join(" · "))}</td>
+      <td>${cashFlowsAmountMarkup(entries)}</td>
+      <td class="cash-flows-list-note"${note ? ` title="${esc(note)}"` : ""}>${esc(note)}</td>
+    </tr>`;
+  }));
+  const all = accounts.flatMap(a => totals.get(String(a.id)) || []);
+  return `<table class="cash-flows-table cash-flows-list">
+    <caption class="sr-only">일자별 계좌별 순입출금, 최신 날짜순</caption>
+    <thead><tr><th scope="col">일자</th><th scope="col">계좌</th><th scope="col">금액(만원)</th><th scope="col">메모</th></tr></thead>
+    <tbody><tr class="cash-flows-total"><th scope="row">${matrix.year == null ? "순입금 합계" : "연간 순입금"}</th><td class="cash-flows-list-account">${accounts.length}개 계좌</td><td>${cashFlowsAmountMarkup(all)}</td><td></td></tr>
+    ${body.join("")}</tbody>
+  </table>`;
 }
 
 function cashFlowsTableMarkup(matrix) {
@@ -76,7 +103,7 @@ function cashFlowsTableMarkup(matrix) {
     // Routine import notes and total counts add noise; retain explanations only
     // for estimated/corrective funding and exceptional non-cash settlements.
     const title = date ? (entries || [])
-      .filter(e => /보정|추정|증여|현물|상장폐지|정산|매수일 기준/.test(e.note || ""))
+      .filter(e => CASH_FLOW_NOTABLE_NOTE.test(e.note || ""))
       .map(e => `${Number(e.amount).toLocaleString("ko-KR", { maximumFractionDigits: 8 })} ${e.currency || "KRW"} · ${e.note}`)
       .join("\n") : "";
     return `<td data-account-id="${esc(a.id)}" data-flow-date="${esc(date)}"${title ? ` title="${esc(title)}"` : ""}>${cashFlowsAmountMarkup(entries)}</td>`;
@@ -110,6 +137,15 @@ function initCashFlowsModal() {
   const entryFields = document.getElementById("cashFlowEntryFields");
   const entrySave = document.getElementById("cashFlowEntrySave");
   let saving = false;
+  // 보기: 목록(기본) ↔ 표. 이 브라우저에 기억한다.
+  const viewButton = document.getElementById("cashFlowsView");
+  const savedView = typeof storageGet === "function" ? storageGet("portfolio.cashFlows.view") : null;
+  let view = savedView === "table" ? "table" : "list";
+  viewButton?.addEventListener("click", () => {
+    view = view === "list" ? "table" : "list";
+    if (typeof storageSet === "function") storageSet("portfolio.cashFlows.view", view);
+    renderMatrix();
+  });
   document.getElementById("cashFlowsAdd").addEventListener("click", () => {
     if (!fullMatrix) return;
     entryForm.reset();
@@ -164,8 +200,14 @@ function initCashFlowsModal() {
     yearLabel.textContent = `${selectedYear}년`;
     prevYear.disabled = selectedYear <= minYear;
     nextYear.disabled = selectedYear >= maxYear;
-    modal.style.setProperty("--cash-flows-width", `${Math.max(440, 86 + matrix.accounts.length * 96 + 32)}px`);
-    wrap.innerHTML = matrix.accounts.length ? cashFlowsTableMarkup(matrix) : "";
+    const list = view === "list";
+    modal.style.setProperty("--cash-flows-width", list ? "620px" : `${Math.max(440, 86 + matrix.accounts.length * 96 + 32)}px`);
+    wrap.innerHTML = !matrix.accounts.length ? "" : list ? cashFlowsListMarkup(matrix) : cashFlowsTableMarkup(matrix);
+    if (viewButton) {
+      viewButton.textContent = list ? "표" : "목록";
+      viewButton.title = list ? "계좌×날짜 표로 보기" : "날짜순 목록으로 보기";
+      viewButton.setAttribute("aria-label", viewButton.title);
+    }
     wrap.scrollTop = 0;
     wrap.scrollLeft = 0;
     status.textContent = !matrix.accounts.length ? "표시할 계좌를 선택하세요."

@@ -213,12 +213,46 @@ function applyPerformanceSummaryPosition(host, pos) {
   host.style.transform = `translate(${(pos.x * w).toFixed(1)}px, ${(pos.y * h).toFixed(1)}px)`;
 }
 
+// 옮겨 둔 자리가 없으면 선이 가장 덜 지나는 모서리에 둔다(2026-11-20 디자인 재검토 10) — 늘 왼쪽 위에 두면
+// 초반에 오른 선을 상자가 가렸다. 네 모서리에 상자를 놓았을 때 그 안에 들어오는 선의 표본 점을 세어 가장 적은 곳,
+// 같으면 왼쪽 위 → 왼쪽 아래 → 오른쪽 위 → 오른쪽 아래 순.
+function performanceSummaryDefaultPosition(host) {
+  const corners = [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 0 }, { x: 1, y: 1 }];
+  const paths = [...(host.parentElement?.querySelectorAll?.("svg .perf-line") || [])];
+  if (!paths.length || typeof paths[0].getTotalLength !== "function" || !performanceSummaryDraggable(host)) return corners[0];
+  const { w, h } = performanceSummaryRange(host);
+  const transform = host.style.transform;
+  host.style.transform = "";
+  const base = host.getBoundingClientRect();
+  host.style.transform = transform;
+  const points = [];
+  paths.forEach(path => {
+    const total = path.getTotalLength();
+    const matrix = path.getScreenCTM?.();
+    if (!total || !matrix) return;
+    for (let i = 0; i <= 48; i += 1) {
+      const point = path.getPointAtLength(total * i / 48);
+      points.push({ x: point.x * matrix.a + point.y * matrix.c + matrix.e, y: point.x * matrix.b + point.y * matrix.d + matrix.f });
+    }
+  });
+  let best = corners[0];
+  let fewest = Infinity;
+  corners.forEach(corner => {
+    const left = base.left + corner.x * w;
+    const top = base.top + corner.y * h;
+    const hits = points.filter(point => point.x >= left && point.x <= left + base.width && point.y >= top && point.y <= top + base.height).length;
+    if (hits < fewest) { best = corner; fewest = hits; }
+  });
+  return best;
+}
+
 function placePerformanceReturnSummary(host) {
-  applyPerformanceSummaryPosition(host, chartOverlayPosition("performance"));
+  applyPerformanceSummaryPosition(host, chartOverlaySavedPosition("performance") || performanceSummaryDefaultPosition(host));
   bindChartOverlayDrag(host, "performance", {
     range: () => performanceSummaryRange(host),
     apply: pos => applyPerformanceSummaryPosition(host, pos),
     enabled: () => performanceSummaryDraggable(host),
+    fallback: () => performanceSummaryDefaultPosition(host),
   });
 }
 let performanceRenderedSeries = [];
@@ -605,6 +639,8 @@ async function openChart(ticker) {
   syncPerformanceLegendHost("");
   if (chartTicker !== cleanTicker) chartComparePayloads = [];
   chartTicker = cleanTicker;
+  // 검색 팝업의 '최근 본 종목'에 올린다.
+  if (typeof rememberRecentTicker === "function") rememberRecentTicker(cleanTicker);
   discardHiddenListRowsForChart();
   syncTransactionPanel();
   syncDetailTabs();

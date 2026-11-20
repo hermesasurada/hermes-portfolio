@@ -1081,6 +1081,16 @@ a.hero-index-item:focus-visible { outline: 2px solid var(--focus); outline-offse
 .interest-group.active .interest-group-icon {
   color: var(--brand);
 }
+.interest-group-line-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.interest-group-line-icon[data-icon="more"] { stroke-width: 3; }   /* 점 셋은 굵은 둥근 선 끝으로 그린다 */
 .interest-group-select:hover .interest-group-name {
   color: var(--brand);
 }
@@ -4001,11 +4011,13 @@ tr:hover .fav-star,
   stroke-linejoin: round;
   pointer-events: none;
 }
+/* 내 계좌 선이 주인공(2026-11-20 디자인 재검토 10): 계좌는 굵게, 비교지수는 가늘고 옅게. */
 .perf-line.primary {
-  stroke-width: 1.8;
+  stroke-width: 2.4;
 }
 .perf-line.index {
-  opacity: .82;
+  stroke-width: 1.1;
+  opacity: .68;
 }
 /* 고정환율 선: 실제 선과 같은 색, 점선으로 구분. 살짝 가늘고 흐리게. */
 .perf-line.fixed {
@@ -4291,6 +4303,19 @@ tr:hover .fav-star,
 .cash-flows-total .cash-flows-amount { font-weight: 500; }
 .cash-flows-amount small { color: var(--muted); font-size: 10px; font-weight: 400; margin-left: 4px; }
 .cash-flows-empty { color: var(--muted); }
+/* 날짜순 목록 보기(2026-11-20): 일자 · 계좌 · 금액 · 메모 */
+.cash-flows-list { table-layout: auto; }
+.cash-flows-list thead th { text-align: left; }
+.cash-flows-list thead th:nth-child(3) { text-align: right; }
+.cash-flows-list td { border-right: 0; }
+.cash-flows-list .cash-flows-list-account { text-align: left; }
+.cash-flows-list .cash-flows-list-note {
+  max-width: 220px;
+  overflow: hidden;
+  color: var(--muted);
+  text-align: left;
+  text-overflow: ellipsis;
+}
 @media (max-width: 640px) {
   .cash-flows-modal .cash-flows-card { padding: 10px; gap: 8px; }
   .cash-flows-table th, .cash-flows-table td { padding: 4px 6px; font-size: 11px; }
@@ -4372,6 +4397,14 @@ tr:hover .fav-star,
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* 빈 검색어일 때의 묶음 제목(최근 본 종목·찐관심) */
+.ticker-search-section {
+  padding: 8px 12px 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .02em;
 }
 .ticker-search-empty {
   min-height: 92px;
@@ -6122,7 +6155,10 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
     stroke-width: 3;
   }
   .perf-line.primary {
-    stroke-width: 4.4;
+    stroke-width: 5.6;
+  }
+  .perf-line.index {
+    stroke-width: 2.6;
   }
   .perf-line.fixed {
     stroke-width: 2.6;
@@ -7157,3 +7193,11 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 @media (min-width: 981px) and (max-width: 1599px) {
   .row-count-unit { display: none; }
 }
+
+/* ── 배당 탭 손질(2026-11-20 디자인 재검토 10) ──
+   값이 하나도 없는 세금·세율·환율 열은 접고, 같은 종목·같은 회차가 대상마다 이어지는 줄은 둘째 줄부터
+   대상별 숫자만 남긴다(윗줄과의 경계선을 지워 한 묶음으로 읽히게). */
+#dividendTableWrap.dividend-no-tax :is(td.tax-dividend, td.tax-rate, th[data-key="tax"], th[data-key="tax_rate"]),
+#dividendTableWrap.dividend-no-fx :is(td.fx-rate, th[data-key="fx_rate"]) { display: none; }
+/* 줄 사이 선은 윗줄의 아래 테두리다 — 이어지는 줄 바로 위 줄의 선을 지운다. */
+.dividend-list tr:has(+ tr.dividend-same-row) > td { border-bottom-color: transparent; }

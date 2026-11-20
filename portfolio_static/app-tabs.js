@@ -214,7 +214,12 @@ function renderDividendTable() {
   }
   const [todayYear, todayMonth, todayDay] = today.split("-").map(Number);
   const todayLabel = `${todayMonth}월 ${todayDay}일`;
-  document.getElementById("dividendRows").innerHTML = rows.length ? groupedRows.map(item => {
+  // 값이 하나도 없는 세금·세율·환율 열은 접는다(2026-11-20 디자인 재검토 10) — 원화 계좌만 고르면 세 열이 모두 '-'였다.
+  const wrap = document.getElementById("dividendTableWrap");
+  const nonZero = key => rows.some(row => Number.isFinite(Number(row[key])) && Number(row[key]) !== 0);
+  wrap?.classList?.toggle("dividend-no-tax", !nonZero("tax") && !nonZero("tax_rate"));
+  wrap?.classList?.toggle("dividend-no-fx", !rows.some(row => row.fx_rate != null && Number.isFinite(Number(row.fx_rate))));
+  document.getElementById("dividendRows").innerHTML = rows.length ? groupedRows.map((item, itemIndex) => {
     if (item.kind === "today") return `
       <tr class="dividend-today-row">
         <td colspan="15">
@@ -240,6 +245,27 @@ function renderDividendTable() {
   `;
     if (dividendMonthCollapsed(item.monthKey, today)) return "";
     const paid = isPastPayment(item.row);
+    // 같은 종목·같은 회차가 대상(계좌 주인)마다 한 줄씩 이어지면, 둘째 줄부터는 대상별 숫자만 남긴다 —
+    // 지급일·종목명·주당배당금·배당율·배당락일·상세는 윗줄과 같아 되풀이하지 않는다. 합치지 않으므로 값은 그대로다.
+    if (dividendRowContinues(groupedRows[itemIndex - 1], item)) return `
+    <tr class="${paid ? "dividend-paid-row" : "dividend-upcoming-row"} dividend-same-row">
+      <td></td>
+      <td class="dividend-target" title="${esc(item.row.target || item.row.member || "-")}"><span class="dividend-target-icon" aria-label="${esc(item.row.target || item.row.member || "-")}">${esc(targetInitial(item.row.target || item.row.member))}</span></td>
+      <td class="dividend-name"><span class="sr-only">${esc(item.row.name || item.row.ticker || "-")}</span></td>
+      <td></td>
+      <td>${dividendQtyCell(item.row)}</td>
+      <td>${dividendMoneyText(item.row.gross, item.row.currency)}</td>
+      <td class="tax-dividend">${taxMoneyText(item.row.tax, item.row.currency)}</td>
+      <td class="tax-rate">${taxRateText(item.row.tax_rate)}</td>
+      <td class="net-dividend">${dividendMoneyText(item.row.net, item.row.currency)}</td>
+      <td class="fx-rate">${dividendFxText(item.row.fx_rate)}</td>
+      <td class="net-krw">${dividendKrwText(item.row.net_krw)}</td>
+      <td class="dividend-yield"></td>
+      <td class="dividend-growth"></td>
+      <td class="dividend-ex-date"></td>
+      <td class="dividend-detail-cell"></td>
+    </tr>
+  `;
     return `
     <tr class="${paid ? "dividend-paid-row" : "dividend-upcoming-row"}">
       <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
@@ -533,6 +559,17 @@ function dividendMonthCollapsed(key, today = todayLocal()) {
 
 // 배당 수량은 배당락일 기준 보유분이다(서버 entitled_quantity). 지금 보유와 다르면 이유를 툴팁으로 —
 // 배당락 뒤에 판 주식도 이번 배당은 받고, 배당락 뒤에 산 주식은 못 받는다(2026-10-03 사용자 지시).
+// 윗줄과 같은 종목·같은 회차(지급일·배당락일·주당배당금·통화)인가 — 그러면 대상별 숫자만 보인다.
+function dividendRowContinues(previous, item) {
+  if (previous?.kind !== "row" || item?.kind !== "row" || previous.monthKey !== item.monthKey) return false;
+  const a = previous.row, b = item.row;
+  return Boolean(a.ticker) && a.ticker === b.ticker
+    && String(a.pay_date || "") === String(b.pay_date || "")
+    && String(a.ex_date || "") === String(b.ex_date || "")
+    && Number(a.amount) === Number(b.amount)
+    && (a.currency || "") === (b.currency || "");
+}
+
 function dividendQtyCell(row) {
   const qty = Number(row.qty) || 0;
   const text = fmt2.format(qty);

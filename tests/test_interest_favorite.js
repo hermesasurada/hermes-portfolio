@@ -16,9 +16,9 @@ assert.match(off, /class="fav-star"[^>]*aria-pressed="false"[^>]*title="찐관�
 assert.equal(ctx.favoriteStarMarkup({ticker: '^GSPC', category: 'index'}), '');
 assert.equal(ctx.favoriteStarMarkup({ticker: 'USDKRW=X', category: 'fx'}), '');
 
-// 그룹 목록: 찐관심은 ★ 아이콘, 이름변경·삭제 버튼 없음(순서 이동 핸들은 유지)
+// 그룹 목록: 찐관심은 별 아이콘, 이름변경·삭제 버튼 없음(순서 이동 핸들은 유지)
 const fav = ctx.interestGroupMarkup(h.evaluate(ctx, 'interestWatchlists[1]'));
-assert.match(fav, /interest-group-icon" aria-hidden="true">★/);
+assert.match(fav, /interest-group-icon" aria-hidden="true"><svg class="interest-group-line-icon" data-icon="favorite"/);   // 2026-11-20: 글자 ★ → 선 아이콘
 assert.doesNotMatch(fav, /data-interest-rename=|data-interest-group-delete=/);
 assert.match(fav, /data-interest-drag="16"/);
 assert.match(ctx.interestGroupMarkup(h.evaluate(ctx, 'interestWatchlists[0]')), /data-interest-group-delete="3"/);

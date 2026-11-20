@@ -358,14 +358,18 @@ function clampUnit(value) {
   return Number.isFinite(number) ? Math.min(1, Math.max(0, number)) : 0;
 }
 
-function chartOverlayPosition(kind) {
+// 사용자가 옮겨 둔 자리. 없으면 null — 기본 자리는 차트마다 다를 수 있다(성과 차트는 선이 덜 지나는 모서리).
+function chartOverlaySavedPosition(kind) {
   try {
     const saved = JSON.parse(storageGet(CHART_OVERLAY_POS_KEYS[kind]) || "null");
     if (saved && typeof saved === "object") return { x: clampUnit(saved.x), y: clampUnit(saved.y) };
   } catch {
     // 깨진 값은 기본 자리로
   }
-  return { x: 0, y: 0 };
+  return null;
+}
+function chartOverlayPosition(kind) {
+  return chartOverlaySavedPosition(kind) || { x: 0, y: 0 };
 }
 
 function saveChartOverlayPosition(kind, pos) {
@@ -374,14 +378,15 @@ function saveChartOverlayPosition(kind, pos) {
 
 // range(): 지금 움직일 수 있는 거리(화면 px) {w, h}. apply(pos): 비율 위치를 화면에 반영.
 // enabled(): false면 끌기를 받지 않는다(모바일 성과 차트처럼 흐름 배치일 때).
-function bindChartOverlayDrag(handle, kind, { range, apply, enabled = () => true }) {
+// fallback(): 옮겨 둔 자리가 없을 때의 기본 자리(없으면 왼쪽 위) — 끌기 시작점과 '두 번 눌러 되돌리기'가 같은 자리를 쓴다.
+function bindChartOverlayDrag(handle, kind, { range, apply, enabled = () => true, fallback = () => ({ x: 0, y: 0 }) }) {
   if (!handle || handle.dataset?.overlayDragBound) return;
   if (handle.dataset) handle.dataset.overlayDragBound = "1";
   handle.addEventListener("pointerdown", event => {
     if (event.button !== 0 || !enabled()) return;
     event.preventDefault();
     event.stopPropagation();
-    const start = chartOverlayPosition(kind);
+    const start = chartOverlaySavedPosition(kind) || fallback();
     const { w, h } = range();
     const startX = event.clientX;
     const startY = event.clientY;
@@ -414,7 +419,7 @@ function bindChartOverlayDrag(handle, kind, { range, apply, enabled = () => true
     if (!enabled()) return;
     event.stopPropagation();
     saveChartOverlayPosition(kind, null);
-    apply({ x: 0, y: 0 });
+    apply(fallback());
   });
 }
 

@@ -27,3 +27,15 @@ assert.match(body.innerHTML.split('<tr').find(tr => tr.includes('data-chart-tick
 const desc = render(-1);
 assert.deepEqual(desc.filter(t => t !== 'OCT'), ['NEXT', 'QLD', 'TODAY', 'PAST'], `내림차순: ${desc}`);
 console.log('Dividend today marker: payments due today sit on the upcoming side in both directions');
+
+// 배당 탭 손질(2026-11-20 디자인 재검토 10): 같은 종목·같은 회차가 이어지면 둘째 줄부터 대상별 숫자만.
+{
+  const row = (extra = {}) => ({ kind: 'row', monthKey: '2026-11', row: { ticker: 'AAA', pay_date: '2026-11-03', ex_date: '2026-10-29', amount: 3, currency: 'KRW', ...extra } });
+  const cont = (a, b) => ctx.dividendRowContinues(a, b);
+  assert.equal(cont(row(), row({ target: 'Claire' })), true);
+  assert.equal(cont(row(), row({ ticker: 'BBB' })), false);
+  assert.equal(cont(row(), row({ amount: 4 })), false);
+  assert.equal(cont(row(), row({ pay_date: '2026-11-04' })), false);
+  assert.equal(cont({ kind: 'month', key: '2026-11' }, row()), false);
+  assert.equal(cont(row(), { ...row(), monthKey: '2026-12' }), false);
+}

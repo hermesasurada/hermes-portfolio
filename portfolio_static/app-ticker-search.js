@@ -46,6 +46,38 @@ function resolveTickerFromDirectory(value, directory, allowRaw = true) {
   return matches.length ? String(matches[0].item.ticker || "").toUpperCase() : (allowRaw ? query.toUpperCase() : "");
 }
 
+// ── 빈 검색어일 때: 최근 본 종목 + 찐관심(2026-11-20 디자인 재검토 10) ──
+// 예전엔 안내 한 줄뿐이었다. 최근 본 종목은 이 브라우저에만 기억한다(차트를 열 때마다 맨 앞으로, 최대 8개).
+const RECENT_TICKERS_KEY = "portfolio.search.recentTickers";
+const RECENT_TICKERS_MAX = 8;
+function recentTickers() {
+  try {
+    const saved = JSON.parse(storageGet(RECENT_TICKERS_KEY) || "[]");
+    return Array.isArray(saved) ? saved.map(value => String(value || "").toUpperCase()).filter(Boolean).slice(0, RECENT_TICKERS_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+function rememberRecentTicker(ticker) {
+  const clean = String(ticker || "").trim().toUpperCase();
+  if (!clean) return;
+  const next = [clean, ...recentTickers().filter(value => value !== clean)].slice(0, RECENT_TICKERS_MAX);
+  storageSet(RECENT_TICKERS_KEY, JSON.stringify(next));
+}
+// [{label, items:[{ticker,name}]}] — 찐관심에서는 최근 본 종목과 겹치는 것을 뺀다.
+function tickerSearchSuggestions() {
+  const names = new Map((tickerSearchDirectory || []).map(item => [String(item.ticker).toUpperCase(), item.name]));
+  const named = ticker => ({ ticker, name: names.get(ticker) || (typeof findTickerMeta === "function" ? findTickerMeta(ticker)?.name : "") || ticker });
+  const recent = recentTickers();
+  const favorites = typeof favoriteInterestGroup === "function"
+    ? (favoriteInterestGroup()?.items || []).map(item => String(item.ticker).toUpperCase()).filter(ticker => !recent.includes(ticker)).slice(0, 12)
+    : [];
+  return [
+    { label: "최근 본 종목", items: recent.map(named) },
+    { label: "찐관심", items: favorites.map(named) },
+  ].filter(section => section.items.length);
+}
+
 function renderTickerSearchResults(query) {
   const results = document.getElementById("tickerSearchResults");
   if (!results) return;
@@ -53,8 +85,22 @@ function renderTickerSearchResults(query) {
   tickerSearchActiveIndex = -1;
 
   if (!cleanQuery) {
-    tickerSearchMatches = [];
-    results.innerHTML = `<div class="ticker-search-empty">티커 또는 종목명을 입력하세요.</div>`;
+    const sections = tickerSearchSuggestions();
+    tickerSearchMatches = sections.flatMap(section => section.items);
+    if (!tickerSearchMatches.length) {
+      results.innerHTML = `<div class="ticker-search-empty">티커 또는 종목명을 입력하세요.</div>`;
+      return;
+    }
+    let index = 0;
+    results.innerHTML = sections.map(section => `
+      <div class="ticker-search-section">${esc(section.label)}</div>
+      ${section.items.map(item => `
+        <button class="ticker-search-result" type="button" role="option"
+          data-ticker-search-index="${index++}" aria-selected="false">
+          <strong>${esc(item.ticker)}</strong>
+          <span>${esc(item.name || item.ticker)}</span>
+        </button>`).join("")}
+    `).join("");
     return;
   }
   if (!tickerSearchDirectory) {

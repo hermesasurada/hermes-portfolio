@@ -188,19 +188,37 @@ async function toggleFavorite(ticker) {
   }
 }
 
-function interestGroupIcon(name, fixed = false, favorite = false) {
-  if (fixed) return "…";
-  if (favorite) return "★";
+// 그룹 아이콘(2026-11-20 디자인 재검토 10): 국가 그룹은 국기, 나머지는 한 벌의 선 아이콘(16px, 선 굵기 같음).
+// 예전엔 국기 그림·글자(₩·₿)·기호(★·✓·•)가 섞여 있었다. 돌려주는 값은 우리가 만든 마크업이라 esc 없이 넣는다.
+const INTEREST_GROUP_FLAGS = [["미국", "🇺🇸"], ["한국", "🇰🇷"], ["일본", "🇯🇵"], ["유럽", "🇪🇺"], ["대만", "🇹🇼"], ["중국", "🇨🇳"]];
+const INTEREST_GROUP_LINE_ICONS = {
+  index: '<path d="M4 4v16h16"/><path d="M8 15l3.5-4 3 2.5L19 8"/>',
+  fx: '<path d="M4 8h15l-3-3"/><path d="M20 16H5l3 3"/>',
+  favorite: '<path d="M12 4l2.5 5 5.5.8-4 3.9.9 5.5L12 16.6 7.1 19.2l.9-5.5-4-3.9 5.5-.8z"/>',
+  crypto: '<circle cx="12" cy="12" r="8"/><path d="M10 8.5h3a1.75 1.75 0 010 3.5h-3zM10 12h3.4a1.75 1.75 0 010 3.5H10zM11.5 7v1.5M11.5 15.5V17"/>',
+  ended: '<path d="M4 6h16v4H4z"/><path d="M6 10v9h12v-9"/><path d="M10 14h4"/>',
+  leverage: '<path d="M8 20V5"/><path d="M4.5 8.5L8 5l3.5 3.5"/><path d="M16 4v15"/><path d="M12.5 15.5L16 19l3.5-3.5"/>',
+  more: '<path d="M6 12h.01M12 12h.01M18 12h.01"/>',
+  folder: '<path d="M4 7h5l2 2h9v9a1 1 0 01-1 1H5a1 1 0 01-1-1z"/>',
+};
+function interestGroupIconKind(name, fixed = false, favorite = false) {
+  if (fixed) return "more";
+  if (favorite) return "favorite";
   const text = String(name || "");
-  if (text.includes("지수")) return "📈";
-  if (text.includes("환율")) return "₩";
-  if (text.includes("디지털")) return "₿";
-  if (text.includes("한국")) return "🇰🇷";
-  if (text.includes("미국")) return "🇺🇸";
-  if (text.includes("일본")) return "🇯🇵";
-  if (text.includes("유럽")) return "🇪🇺";
-  if (text.includes("투자종료")) return "✓";
-  return "•";
+  if (text.includes("지수")) return "index";
+  if (text.includes("환율")) return "fx";
+  if (text.includes("디지털")) return "crypto";
+  if (text.includes("투자종료")) return "ended";
+  if (text.includes("레버리지") || text.includes("롱숏")) return "leverage";
+  return "folder";
+}
+function interestGroupIcon(name, fixed = false, favorite = false) {
+  const text = String(name || "");
+  const flag = !fixed && !favorite && !text.includes("지수") && !text.includes("환율")
+    ? INTEREST_GROUP_FLAGS.find(([word]) => text.includes(word)) : null;
+  if (flag) return `<span class="interest-group-flag">${flag[1]}</span>`;
+  const kind = interestGroupIconKind(name, fixed, favorite);
+  return `<svg class="interest-group-line-icon" data-icon="${kind}" viewBox="0 0 24 24" focusable="false">${INTEREST_GROUP_LINE_ICONS[kind]}</svg>`;
 }
 
 function isProtectedInterestGroup(group) {
@@ -223,7 +241,7 @@ function interestGroupMarkup(group) {
     return `
     <section class="interest-group fixed ${active ? "active" : ""}" data-interest-group="${group.id}">
       <button class="interest-group-select" type="button" data-interest-select="${group.id}" aria-pressed="${active}">
-        <span class="interest-group-icon" aria-hidden="true">${esc(icon)}</span>
+        <span class="interest-group-icon" aria-hidden="true">${icon}</span>
         <span class="interest-group-name">${esc(group.name)}</span>
         <span class="interest-count">${group.items.length}</span>
       </button>
@@ -242,7 +260,7 @@ function interestGroupMarkup(group) {
   return `
     <section class="interest-group ${active ? "active" : ""}" data-interest-group="${group.id}">
       <button class="interest-group-select" type="button" data-interest-select="${group.id}" aria-pressed="${active}">
-        <span class="interest-group-icon" aria-hidden="true">${esc(icon)}</span>
+        <span class="interest-group-icon" aria-hidden="true">${icon}</span>
         <span class="interest-group-name">${esc(group.name)}</span>
         <span class="interest-count">${group.items.length}</span>
       </button>

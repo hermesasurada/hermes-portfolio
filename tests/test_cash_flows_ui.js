@@ -36,7 +36,7 @@ assert.equal(run("matrix.rows.length"), 3); // only dates with entries, no gener
 assert.equal(run("matrix.rows[0].date"), "2024-02-01");
 assert.equal(run("matrix.rows[2].cells.get('1').length"), 2); // zero-net date is retained
 assert.equal(run("matrix.totals.get('1').length"), 4); // original entries kept for later editing
-assert.match(run("cashFlowsAmountMarkup(matrix.rows[2].cells.get('1'))"), /flat\">0/);
+assert.match(run("cashFlowsAmountMarkup(matrix.rows[2].cells.get('1'))"), /cash-flows-amount\">0/);
 const mixed = run("cashFlowsAmountMarkup(matrix.rows[0].cells.get('1'))");
 assert.match(mixed, /\+12.34<small>USD/);
 assert.match(mixed, /\+0<\/span>/);
@@ -44,7 +44,17 @@ assert.match(run("cashFlowsAmountMarkup([{amount: 10000, currency: 'KRW'}])"), /
 assert.match(run("cashFlowsAmountMarkup([{amount: -12345678, currency: 'KRW'}])"), /−1,235<\/span>/);
 assert.match(run("cashFlowsAmountMarkup([{amount: 3000, currency: 'KRW'}, {amount: 3000, currency: 'KRW'}])"), /\+1<\/span>/); // sum before rounding
 assert.match(run("cashFlowsAmountMarkup([{amount: -5000, currency: 'KRW'}])"), /−1<\/span>/);
-assert.match(run("cashFlowsAmountMarkup(matrix.totals.get('3'))"), /down\">−10/);
+assert.match(run("cashFlowsAmountMarkup(matrix.totals.get('3'))"), /cash-flows-amount\">−10/);
+// 입출금은 +/− 부호로만 — 상승·하락 색 클래스를 붙이지 않는다(2026-11-20).
+assert.doesNotMatch(run("cashFlowsAmountMarkup([{amount: 10000, currency: 'KRW'}, {amount: -5, currency: 'USD'}])"), /class="[^"]*\b(up|down|flat)\b/);
+// 날짜순 목록 보기: 값이 있는 (일자, 계좌)만 한 줄씩, 맨 위에 합계.
+{
+  const list = run("cashFlowsListMarkup(matrix)");
+  assert.equal((list.match(/<tr data-account-id=/g) || []).length, run("matrix.rows.reduce((n, row) => n + row.cells.size, 0)"));
+  assert.match(list, /class="cash-flows-total"><th scope="row">순입금 합계<\/th>/);
+  assert.doesNotMatch(list, /cash-flows-empty/);   // 빈 칸이 없다
+  assert.ok(list.indexOf('2024-02-01') < list.indexOf('2024-01-15'), '최신 날짜가 위');
+}
 assert.match(run("cashFlowsAmountMarkup(undefined)"), /—/);
 const html = run("cashFlowsTableMarkup(matrix)");
 assert.match(html, /&lt;Account>/);
