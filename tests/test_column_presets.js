@@ -11,32 +11,29 @@ assert.deepEqual(run('columnPresetOptions("interest").map(p => p.label)'), ['전
 // 종목·등락·현재가는 어느 묶음에서나 보인다. '전체'는 아무것도 숨기지 않는다.
 for (const preset of ['summary', 'tech', 'value', 'dividend', 'perf', 'trend']) {
   for (const key of ['logo', 'name', 'display_change_pct', 'current_price']) {
-    assert.equal(run(`columnInPreset("${key}", "${preset}", "detail", "", false)`), true, `${preset}:${key}`);
+    assert.equal(run(`columnInPreset("${key}", "${preset}", "detail", "")`), true, `${preset}:${key}`);
   }
 }
-assert.equal(run('columnInPreset("perf_1y", "all", "detail", "", true)'), true);
+assert.equal(run('columnInPreset("perf_1y", "all", "detail", "")'), true);
 // 묶음마다 제 열만.
-assert.equal(run('columnInPreset("value_krw", "summary", "detail", "", false)'), true);
-assert.equal(run('columnInPreset("value_krw", "value", "detail", "", false)'), false);
-assert.equal(run('columnInPreset("rsi_day", "tech", "detail", "", false)'), true);
-assert.equal(run('columnInPreset("yield_on_cost", "dividend", "detail", "", false)'), true);
-assert.equal(run('columnInPreset("trend10_strength", "trend", "detail", "", false)'), true);
-assert.equal(run('columnInPreset("trade", "summary", "detail", "", false)'), true);
-// 좁은 화면의 계좌표 '요약'은 현재단가·수량만 뺀다 — 연장은 보인다(2026-11-20 사용자 지시). PC와 다른 묶음은 그대로.
-assert.equal(run('columnInPreset("extended_change_pct", "summary", "detail", "", true)'), true);
-assert.equal(run('columnInPreset("extended_change_pct", "summary", "interest", "", true)'), true);
-for (const key of ['current_price', 'qty']) {
-  assert.equal(run(`columnInPreset("${key}", "summary", "detail", "", true)`), false, key);
-  assert.equal(run(`columnInPreset("${key}", "summary", "detail", "", false)`), true, key);
+assert.equal(run('columnInPreset("value_krw", "summary", "detail", "")'), true);
+assert.equal(run('columnInPreset("value_krw", "value", "detail", "")'), false);
+assert.equal(run('columnInPreset("rsi_day", "tech", "detail", "")'), true);
+assert.equal(run('columnInPreset("yield_on_cost", "dividend", "detail", "")'), true);
+assert.equal(run('columnInPreset("trend10_strength", "trend", "detail", "")'), true);
+assert.equal(run('columnInPreset("trade", "summary", "detail", "")'), true);
+// '요약'은 좁은 화면도 PC와 같은 열 — 연장·현재단가·수량이 보인다(2026-11-21 사용자 지시).
+for (const key of ['extended_change_pct', 'current_price', 'qty', 'change_krw', 'value_krw', 'weight_pct', 'trade']) {
+  assert.equal(run(`columnInPreset("${key}", "summary", "detail", "")`), true, key);
 }
-assert.equal(run('columnInPreset("current_price", "perf", "detail", "", true)'), true);
-assert.equal(run('columnInPreset("value_krw", "summary", "detail", "", true)'), true);
+assert.equal(run('columnInPreset("extended_change_pct", "summary", "interest", "")'), true);
+assert.doesNotMatch(h.readStatic('app-interest-columns.js'), /COMPACT_SUMMARY_HIDDEN/);
 // 관심목록: 요약에 시총·52주 고점 대비·실적일, 재무·컨센서스는 열 정의의 group으로.
-assert.equal(run('columnInPreset("market_cap_usd", "summary", "interest", "", true)'), true);
-assert.equal(run('columnInPreset("market_cap_usd", "summary", "detail", "", false)'), false);
-assert.equal(run('columnInPreset("gross_margin", "fund", "interest", "profitability", false)'), true);
-assert.equal(run('columnInPreset("target_price", "consensus", "interest", "consensus", false)'), true);
-assert.equal(run('columnInPreset("target_price", "fund", "interest", "consensus", false)'), false);
+assert.equal(run('columnInPreset("market_cap_usd", "summary", "interest", "")'), true);
+assert.equal(run('columnInPreset("market_cap_usd", "summary", "detail", "")'), false);
+assert.equal(run('columnInPreset("gross_margin", "fund", "interest", "profitability")'), true);
+assert.equal(run('columnInPreset("target_price", "consensus", "interest", "consensus")'), true);
+assert.equal(run('columnInPreset("target_price", "fund", "interest", "consensus")'), false);
 
 // 모든 열이 '전체' 말고도 적어도 한 묶음에 든다(새 열을 더하고 묶음을 빠뜨리지 않게). 삭제 열 등 늘 보이는 열은 예외.
 const orphans = run(`INTEREST_COLUMNS.filter(c => !COLUMN_PRESET_ALWAYS.has(c.key)
@@ -47,7 +44,7 @@ const detailKeys = [...html.slice(html.indexOf('detail-group-head'), html.indexO
 assert.ok(detailKeys.length >= 45, detailKeys.length);
 for (const key of new Set(detailKeys)) {
   if (['ticker', 'name'].includes(key)) continue;   // 종목 열 안의 정렬 버튼
-  const inSome = ['summary', 'tech', 'value', 'dividend', 'perf', 'trend', 'fund', 'consensus'].some(p => run(`columnInPreset("${key}", "${p}", "detail", "", false)`));
+  const inSome = ['summary', 'tech', 'value', 'dividend', 'perf', 'trend', 'fund', 'consensus'].some(p => run(`columnInPreset("${key}", "${p}", "detail", "")`));
   assert.ok(inSome, `계좌표 열 ${key}가 어느 묶음에도 없다`);
 }
 
@@ -58,8 +55,8 @@ assert.equal(run('activeColumnPreset("detail")'), 'perf');
 assert.equal(run('activeColumnPreset("interest")'), 'all');
 h.evaluate(ctx, 'setColumnPreset("detail", "nonexistent")');   // 없는 묶음은 기본값으로
 assert.equal(run('activeColumnPreset("detail")'), 'all');
-assert.equal(run('columnInPreset("target_price", "consensus", "detail", "", false)'), true);
-assert.equal(run('columnInPreset("gross_margin", "fund", "detail", "", false)'), true);
+assert.equal(run('columnInPreset("target_price", "consensus", "detail", "")'), true);
+assert.equal(run('columnInPreset("gross_margin", "fund", "detail", "")'), true);
 
 // 관심목록은 좁은 화면에서만 열 정의를 걸러 그린다. PC는 늘 전체(버튼은 그 위치로 스크롤 — 2026-11-20 사용자 지시).
 h.evaluate(ctx, 'setColumnPreset("interest", "dividend")');

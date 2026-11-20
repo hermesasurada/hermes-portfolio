@@ -1234,7 +1234,7 @@ function columnPresetFirstHeads(table) {
   return columnPresetNavOptions(table).map(preset => ({
     key: preset.key,
     th: (visible.find(column => column.key === COLUMN_PRESET_NAV_ANCHORS[preset.key])
-      || visible.find(column => columnInPreset(column.key, preset.key, table, column.group, false)))?.th || null,
+      || visible.find(column => columnInPreset(column.key, preset.key, table, column.group)))?.th || null,
   })).filter(item => item.th);
 }
 // 그 묶음 첫 열이 틀고정 열(로고·종목명) 바로 오른쪽에 오는 가로 스크롤 값. '요약'은 맨 왼쪽.
