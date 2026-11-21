@@ -49,6 +49,12 @@ function statsRows(rows) {
       trailing_pe: hideFundamentals ? null : stats.trailing_pe,
       forward_pe: hideFundamentals ? null : stats.forward_pe,
       price_to_book: hideFundamentals ? null : stats.price_to_book,
+      ev_to_ebitda: hideFundamentals ? null : stats.ev_to_ebitda,
+      price_to_sales: hideFundamentals ? null : stats.price_to_sales,
+      peg_ratio: hideFundamentals ? null : stats.peg_ratio,
+      current_ratio: hideFundamentals ? null : stats.current_ratio,
+      net_cash: hideFundamentals ? null : stats.net_cash,
+      expense_ratio: isEtf ? stats.expense_ratio : null,   // ETF 운용보수(%) — 개별주·지수는 없음
       gross_margin: hideFundamentals ? null : stats.gross_margin,
       operating_margin: hideFundamentals ? null : stats.operating_margin,
       ebitda_margin: hideFundamentals ? null : stats.ebitda_margin,

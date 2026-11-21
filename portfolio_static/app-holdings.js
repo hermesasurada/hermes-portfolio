@@ -1546,6 +1546,9 @@ function renderTable() {
       <td class="group-start">${peText(r.trailing_pe)}</td>
       <td>${peText(r.forward_pe)}</td>
       <td>${peText(r.price_to_book)}</td>
+      <td>${peText(r.ev_to_ebitda)}</td>
+      <td>${peText(r.price_to_sales)}</td>
+      <td>${ratioText(r.peg_ratio)}</td>
       <td class="group-start">${dividendYieldMarkup(r)}</td>
       <td>${signedPercentText(r.dividend_growth_5y, 1)}</td>
       <td>${noPosition ? "-" : yieldOnCostMarkup(r)}</td>
@@ -1568,6 +1571,7 @@ function renderTable() {
       <td>${trendDeviationText(r.trend10_deviation)}</td>
       <td>${trendStrengthText(r.trend10_strength)}</td>
       <td class="group-start">${marketCapMarkup(r)}</td>
+      <td>${expenseRatioText(r.expense_ratio)}</td>
       <td>${noPosition ? "-" : earningsText(r.next_earnings_date)}</td>
       <td class="group-start">${fractionPercentText(r.gross_margin)}</td>
       <td>${fractionPercentText(r.operating_margin)}</td>
@@ -1580,6 +1584,8 @@ function renderTable() {
       <td>${fractionSignedPercentText(r.earnings_quarterly_growth)}</td>
       <td class="group-start">${rawPercentText(r.debt_to_equity)}</td>
       <td>${freeCashFlowText(r.free_cash_flow, r.financial_currency || r.currency)}</td>
+      <td>${ratioText(r.current_ratio)}</td>
+      <td>${freeCashFlowText(r.net_cash, r.financial_currency || r.currency)}</td>
       <td class="group-start">${fractionPercentText(r.short_percent_float)}</td>
       <td>${fractionPercentText(r.short_percent_shares)}</td>
       <td>${numberText(r.short_ratio, 1)}</td>

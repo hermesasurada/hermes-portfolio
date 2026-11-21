@@ -35,6 +35,12 @@ YFINANCE_PROFILE_FIELDS = {
     "short_ratio": "shortRatio",
     "insider_ownership": "heldPercentInsiders",
     "institutional_ownership": "heldPercentInstitutions",
+    # 2026-11-21 추가(사용자 승인) — 매일 저장하던 야후 원본에 이미 있던 값이라 추가 조회가 없다.
+    "ev_to_ebitda": "enterpriseToEbitda",
+    "price_to_sales": "priceToSalesTrailing12Months",
+    "peg_ratio": "trailingPegRatio",
+    "current_ratio": "currentRatio",
+    "expense_ratio": "netExpenseRatio",   # ETF 운용보수(% 단위 그대로, 0.18 = 0.18%)
 }
 
 
@@ -211,6 +217,9 @@ def yfinance_profile_metrics(raw: dict | str | None) -> dict:
     }
     financial_currency = str(info.get("financialCurrency") or "").strip().upper()
     result["financial_currency"] = financial_currency or None
+    # 순현금 = 현금 − 총부채(재무통화). 둘 중 하나라도 없으면 계산하지 않는다.
+    cash, debt = finite_float(info.get("totalCash")), finite_float(info.get("totalDebt"))
+    result["net_cash"] = cash - debt if cash is not None and debt is not None else None
     # 캐시의 과거 배당률도 raw_json을 기준으로 다시 검증해 즉시 교정한다.
     result["dividend_yield"] = yfinance_dividend_yield(info)
     return result
@@ -259,6 +268,8 @@ def load_stats_cache_items(
             "price_to_book": normalize_pe(row["price_to_book"]),
             "next_earnings_date": row["next_earnings_date"],
         }
+        if row["source"] == "naver":
+            item.update(naver_profile_metrics(row["raw_json"]))
         if row["source"] == "yfinance":
             stored_yield = item["dividend_yield"]
             item.update(yfinance_profile_metrics(row["raw_json"]))
@@ -345,6 +356,42 @@ def store_ticker_sector(conn: sqlite3.Connection, ticker: str, sector: str) -> N
         "UPDATE tickers SET sector = ? WHERE ticker = ? AND COALESCE(sector, '') <> ?",
         (sector, ticker, sector),
     )
+
+
+# 한국 종목은 시총·P/E·P/B·배당을 네이버에서 받고, 수익성·성장·재무·보유율은 야후에서 보완한다(2026-11-21 사용자 승인 —
+# 네이버 경로만 쓰던 탓에 한국 개별주의 이 지표들이 전부 비어 있었다). 야후 info는 네이버 원본 안 "yahoo_info"에 담는다.
+# 한국 ETF의 운용보수(총보수 %)는 네이버 ETF 기본정보의 totalFee — 원본 안 "etf_total_fee".
+NAVER_RAW_YAHOO_KEY = "yahoo_info"
+NAVER_RAW_ETF_FEE_KEY = "etf_total_fee"
+
+
+def fetch_naver_etf_total_fee(ticker: str) -> float | None:
+    code = kr_ticker_code(ticker)
+    url = f"https://m.stock.naver.com/api/etf/{quote(code)}/basic"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        obj = json.loads(resp.read().decode("utf-8"))
+    return finite_float(obj.get("totalFee"))
+
+
+def naver_profile_metrics(raw: dict | str | None) -> dict:
+    """네이버 원본에 함께 담아 둔 야후 info·ETF 보수에서 보조 지표를 꺼낸다(배당율은 네이버 값을 쓴다)."""
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            raw = {}
+    if not isinstance(raw, dict):
+        return {}
+    result: dict = {}
+    yahoo = raw.get(NAVER_RAW_YAHOO_KEY)
+    if isinstance(yahoo, dict) and yahoo:
+        result.update(yfinance_profile_metrics(yahoo))
+        result.pop("dividend_yield", None)
+    fee = finite_float(raw.get(NAVER_RAW_ETF_FEE_KEY))
+    if fee is not None:
+        result["expense_ratio"] = fee
+    return result
 
 
 def fetch_naver_fundamentals(ticker: str) -> tuple[dict, dict]:
@@ -435,6 +482,18 @@ def fetch_fundamentals(conn: sqlite3.Connection, tickers: list[str], refresh_sta
                 data, raw = fetch_naver_fundamentals(ticker)
                 source = "naver"
                 fetched = True
+                # 보조 원천은 실패해도 네이버 값은 살린다.
+                try:
+                    if raw.get("type") == "EF":
+                        raw[NAVER_RAW_ETF_FEE_KEY] = fetch_naver_etf_total_fee(ticker)
+                    else:
+                        import yfinance as yf
+
+                        symbol = normalize_yfinance_symbol(ticker)
+                        raw[NAVER_RAW_YAHOO_KEY] = (yf.Ticker(symbol).info or {}) if symbol else {}
+                except Exception as exc:
+                    print(f"[stats] supplementary fundamentals failed for {ticker}: {exc}")
+                data.update(naver_profile_metrics(raw))
                 # 한국 종목의 업종은 네이버 응답의 upJongName(KRX 업종명). 2026-10-28까지 yfinance 경로만 저장해
                 # 한국 전 종목의 섹터가 비어 있었다(증류 점수표 섹터 결측 61건).
                 store_ticker_sector(conn, ticker, naver_sector(raw))

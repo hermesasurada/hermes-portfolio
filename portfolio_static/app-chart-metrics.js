@@ -37,12 +37,18 @@ function chartStatMetricRows(payload) {
   const financialCurrency = s.financial_currency || payload?.currency;
   const freeCashFlow = finiteMetric(s.free_cash_flow);
   const freeCashFlowUsd = freeCashFlow == null ? null : toUsd(freeCashFlow, financialCurrency);
+  const netCash = finiteMetric(s.net_cash);
+  const netCashUsd = netCash == null ? null : toUsd(netCash, financialCurrency);
   // 첫 칸은 묶음 이름 — 지표판이 묶음이 바뀌는 자리에 제목 줄을 넣고(2026-11-20 디자인 재검토 03), 비교 보드는 지표 이름 위에 작게 붙인다.
   return [
     ["밸류에이션", "시총/AUM", mcap, scaleRaw, "high"],
     ["밸류에이션", "P/E (t)", peText(s.trailing_pe), positiveMetric(s.trailing_pe), "low"],
     ["밸류에이션", "P/E (f)", peText(s.forward_pe), positiveMetric(s.forward_pe), "low"],
     ["밸류에이션", "P/B", peText(s.price_to_book), positiveMetric(s.price_to_book), "low"],
+    ["밸류에이션", "EV/EBITDA", peText(s.ev_to_ebitda), positiveMetric(s.ev_to_ebitda), "low"],
+    ["밸류에이션", "P/S", peText(s.price_to_sales), positiveMetric(s.price_to_sales), "low"],
+    ["밸류에이션", "PEG", ratioText(s.peg_ratio), positiveMetric(s.peg_ratio), "low"],
+    ["밸류에이션", "운용보수", expenseRatioText(s.expense_ratio), finiteMetric(s.expense_ratio), "low"],
     ["밸류에이션", "실적일", earningsText(s.next_earnings_date), null, null],
     ["배당", "배당수익률", dividendYieldCell, Number.isFinite(dividendYield) ? dividendYield : null, "high"],
     ["배당", "5년 배당성장률", chartStatPercent(s.dividend_growth_5y), finiteMetric(s.dividend_growth_5y), "high"],
@@ -60,6 +66,8 @@ function chartStatMetricRows(payload) {
     ["수익성·성장", "분기이익 (YoY)", fractionSignedPercentText(s.earnings_quarterly_growth), finiteMetric(s.earnings_quarterly_growth), "high"],
     ["재무·수급", "부채비율", rawPercentText(s.debt_to_equity), positiveMetric(s.debt_to_equity), "low"],
     ["재무·수급", "FCF", freeCashFlowText(s.free_cash_flow, financialCurrency), freeCashFlowUsd, "high"],
+    ["재무·수급", "유동비율", ratioText(s.current_ratio), finiteMetric(s.current_ratio), "high"],
+    ["재무·수급", "순현금", freeCashFlowText(s.net_cash, financialCurrency), netCashUsd, "high"],
     ["재무·수급", "유통주식 비율", fractionPercentText(s.short_percent_float), finiteMetric(s.short_percent_float), "low"],
     ["재무·수급", "발행주식 비율", fractionPercentText(s.short_percent_shares), finiteMetric(s.short_percent_shares), "low"],
     ["재무·수급", "커버일", numberText(s.short_ratio, 1), finiteMetric(s.short_ratio), "low"],

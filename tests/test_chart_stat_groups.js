@@ -31,7 +31,7 @@ assert.deepEqual(shape(many, 2), { size: 30, lengths: [30, 29] });
 
 // 묶음 일곱 개, 지표 52개. 순서는 묶음끼리 이어진다.
 const rows = h.plain(ctx.chartStatMetricRows({ ticker: 'TEST', currency: 'USD' }).map(row => row[0]));
-assert.equal(rows.length, 52);
+assert.equal(rows.length, 58);   // 2026-11-21: EV/EBITDA·P/S·PEG·운용보수·유동비율·순현금 추가
 const groups = rows.filter((name, index) => index === 0 || rows[index - 1] !== name);
 assert.deepEqual(groups, ['밸류에이션', '배당', '수익성·성장', '재무·수급', '기술 지표', '기간 수익률', '추세·위험']);
 

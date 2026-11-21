@@ -340,6 +340,15 @@ function dividendKrwText(v) {
 function peText(v) {
   return v != null && Number.isFinite(Number(v)) ? Number(v).toLocaleString("ko-KR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : "-";
 }
+// 2026-11-21 추가 지표: 유동비율·PEG(배, 소수 둘째 자리 — PEG는 0.18처럼 1 아래가 흔하다), ETF 운용보수(%) — 자릿수 고정.
+function ratioText(v) {
+  const n = optionalNumber(v);
+  return n === null ? "-" : fixedDigits(n, 2);
+}
+function expenseRatioText(v) {
+  const n = optionalNumber(v);
+  return n === null ? "-" : `${fixedDigits(n, 2)}%`;
+}
 function betaText(v) {
   return v != null && Number.isFinite(Number(v)) ? Number(v).toFixed(2) : "-";
 }
