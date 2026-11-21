@@ -22,7 +22,7 @@ for (const file of ['app-tabs.js', 'app-holdings.js', 'app-interest-watchlists.j
 // 추가·일괄 버튼 글자가 세로로 꺾이지 않는다
 assert.match(mobile, /\.interest-main-form button \{ flex: 0 0 auto;[^}]*white-space: nowrap;/);
 // 모바일 헤더 한 줄: 버전·도움말을 빼고 제목은 남긴다. 폰 폭(480px 이하)은 메뉴를 아이콘으로, 전부 오른쪽 정렬
-assert.match(mobile, /\.service-brand em, \.help-icon-btn \{ display: none; \}/);
+assert.match(mobile, /\.help-icon-btn \{ display: none; \}/);
 const phone = h.mediaBlocks(css, '(max-width: 480px)').map(block => block.text).join('\n');
 assert.match(phone, /\.controls \{[^}]*flex-wrap: nowrap;/);
 assert.doesNotMatch(phone, /\.service-name \{ display: none/);
@@ -45,4 +45,5 @@ assert.match(phone, /\.controls \.ctrl-group \.ghost-btn \{ display: inline-grid
 assert.doesNotMatch(html, /accountCollapseToggle/);
 console.log('mobile density ok');
 // 영문 제목 아래 한글 부제 '금융자산관리'(2026-11-21 사용자 지시, sa·td와 같은 모양)
-assert.match(h.readStatic('index.html'), /<span class="service-name">Portfolio <em>v2<\/em><\/span><small class="service-sub">금융자산관리<\/small>/);
+assert.match(h.readStatic('index.html'), /<span class="service-name">Portfolio<\/span><small class="service-sub">금융자산관리<\/small>/);
+assert.doesNotMatch(h.readStatic('index.html'), /Portfolio v2|<em>v2/);   // v2 표기는 2026-11-21 제거
