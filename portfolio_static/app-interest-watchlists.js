@@ -68,7 +68,29 @@ function activeInterestGroup() {
 }
 
 function otherInterestGroup() {
-  return interestWatchlists.find(group => group.fixed || group.name === "기타") || null;
+  return interestWatchlists.find(group => group.id === 0 || (group.fixed && !group.all) || group.name === "기타") || null;
+}
+
+// 가상 '전체' 그룹(2026-11-21 사용자 지시): 환율 다음에, 지수·환율을 뺀 모든 수집 종목을 한 목록으로 본다.
+// 화면에서만 만든다 — 서버 응답에 넣으면 관심그룹 목록을 읽는 공시 수집(watchlist_sync)이 제외 그룹 종목까지 모은다.
+// 선택만 되고 이름변경·삭제·이동·종목 추가·행 삭제는 없다(행에는 찐관심 별만). id는 -1.
+const ALL_INTEREST_GROUP_ID = -1;
+function withAllInterestGroup(groups) {
+  const real = (groups || []).filter(group => group.id !== ALL_INTEREST_GROUP_ID);
+  const seen = new Set();
+  const items = [];
+  real.forEach(group => (group.items || []).forEach(item => {
+    const key = String(item.ticker || "").toUpperCase();
+    const category = String(item.category || "").toLowerCase();
+    if (!key || seen.has(key) || category === "index" || category === "fx") return;
+    seen.add(key);
+    items.push({ ...item });
+  }));
+  const all = { id: ALL_INTEREST_GROUP_ID, name: "전체", fixed: true, all: true, items };
+  const fxIndex = real.findIndex(group => group.name === "환율");
+  const indexIndex = real.findIndex(group => group.name === "주요 지수");
+  const at = fxIndex >= 0 ? fxIndex + 1 : indexIndex >= 0 ? indexIndex + 1 : 0;
+  return [...real.slice(0, at), all, ...real.slice(at)];
 }
 
 function interestGroupIsFx(group = activeInterestGroup()) {
@@ -199,9 +221,11 @@ const INTEREST_GROUP_LINE_ICONS = {
   ended: '<path d="M4 6h16v4H4z"/><path d="M6 10v9h12v-9"/><path d="M10 14h4"/>',
   leverage: '<path d="M8 20V5"/><path d="M4.5 8.5L8 5l3.5 3.5"/><path d="M16 4v15"/><path d="M12.5 15.5L16 19l3.5-3.5"/>',
   more: '<path d="M6 12h.01M12 12h.01M18 12h.01"/>',
+  all: '<rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/>',
   folder: '<path d="M4 7h5l2 2h9v9a1 1 0 01-1 1H5a1 1 0 01-1-1z"/>',
 };
 function interestGroupIconKind(name, fixed = false, favorite = false) {
+  if (fixed && name === "전체") return "all";
   if (fixed) return "more";
   if (favorite) return "favorite";
   const text = String(name || "");
@@ -309,7 +333,7 @@ function normalizeActiveInterestGroup() {
 }
 
 function applyInterestWatchlistPayload(payload) {
-  interestWatchlists = payload.groups || [];
+  interestWatchlists = withAllInterestGroup(payload.groups || []);
   const aliases = payload.group_aliases || {};
   const selected = activeInterestGroupId ?? storageGet(sidebarStorage.interestGroupId);
   if (selected != null && aliases[selected] != null) {
@@ -370,10 +394,10 @@ function reorderedInterestGroups(draggedId, targetId, insertAfter) {
 async function saveInterestGroupOrder(reordered) {
   if (interestGroupOrderSaving || !reordered?.length) return;
   const previous = interestWatchlists;
-  const fixedGroups = interestWatchlists.filter(group => group.fixed || group.id <= 0);
+  const fixedGroups = interestWatchlists.filter(group => (group.fixed || group.id <= 0) && !group.all);
   interestGroupOrderSaving = true;
   setInterestStatus("순서 저장 중...");
-  interestWatchlists = [...reordered, ...fixedGroups];
+  interestWatchlists = withAllInterestGroup([...reordered, ...fixedGroups]);
   renderInterestWatchlists();
   try {
     applyInterestWatchlistPayload(
@@ -766,7 +790,7 @@ function renderInterestMainTable() {
   const suppressIndexHighlight = interestGroupIsIndex(group);
   const table = body.closest("table");
   const columns = visibleInterestColumns(rows, suppressIndexHighlight,
-    {starOnly: Boolean(group.favorite) || isProtectedInterestGroup(group)});
+    {starOnly: Boolean(group.favorite || group.all) || isProtectedInterestGroup(group)});
   renderInterestFrame(table, columns);
   resetInterestScrollIfListChanged(group, rows);
   if (rows.length) {
@@ -783,6 +807,7 @@ function renderInterestMainTable() {
       ? "명칭 검색 결과가 없습니다."
       : tagFilterSelection.size && baseRows.length ? "선택한 태그의 종목이 없습니다."
       : interestAssetType !== "all" && interestAssetFilterAvailable() ? "선택한 유형에 해당하는 종목이 없습니다."
+      : group.all ? "수집 중인 종목이 없습니다."
       : group.fixed ? "모든 수집 종목이 관심그룹에 분류되어 있습니다." : "이 그룹에 등록된 종목이 없습니다.");
   }
   // 이름 열 폭은 DOM이 아니라 행 데이터 전체로 잰다 — 창 렌더링이라 DOM엔 일부 행만 있다.

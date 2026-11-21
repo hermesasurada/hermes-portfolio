@@ -158,7 +158,7 @@ const INTEREST_COLUMNS = [
   // 맨 끝 칸: 찐관심 별 + 삭제(2026-10-30 별을 종목명 앞에서 이리로 옮김)
   // 버튼 두 개(26px×2)+칸 여백이 들어가야 해서 좁은 화면 축소(--col-scale)에서 뺀다 — 64px·축소 때 ×가 잘렸다
   { key: "delete", width: 76, noScale: true, label: "", headClass: "group-start interest-leaf-head interest-delete-col", ariaLabel: "찐관심·삭제", cellClass: "group-start interest-delete-col", always: true,
-    cell: (r, group) => `<span class="row-actions">${favoriteStarMarkup(r)}${isProtectedInterestItem(r, group) || group?.favorite
+    cell: (r, group) => `<span class="row-actions">${favoriteStarMarkup(r)}${isProtectedInterestItem(r, group) || group?.favorite || group?.all
         // 찐관심 목록은 별(해제)로 빠지므로 삭제 버튼을 두지 않는다(2026-11-07)
         ? ""
         : group.fixed
