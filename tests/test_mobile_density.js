@@ -44,3 +44,5 @@ assert.match(sidebar, /const nextTab = btn\.dataset\.sidebarTab === "interest" \
 assert.match(phone, /\.controls \.ctrl-group \.ghost-btn \{ display: inline-grid; place-items: center;/);
 assert.doesNotMatch(html, /accountCollapseToggle/);
 console.log('mobile density ok');
+// 영문 제목 아래 한글 부제 '금융자산관리'(2026-11-21 사용자 지시, sa·td와 같은 모양)
+assert.match(h.readStatic('index.html'), /<span class="service-name">Portfolio <em>v2<\/em><\/span><small class="service-sub">금융자산관리<\/small>/);
