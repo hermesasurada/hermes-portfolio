@@ -13,9 +13,10 @@ case "$job" in
     command=("$python" collect_prices.py --dividends-only)
     ;;
   sa-dividends)
-    # SA 배당선언 기사 → 임시 배당 이벤트(2026-10-28, portfolio_core/sa_dividends.py). sa-collect(:00·:30) 뒤.
+    # 뉴스 배당 → 임시 배당 이벤트: SA 배당선언(2026-10-28, sa_dividends) + wm 회사 배당 공시(2026-11-23, wm_dividends).
+    # sa-collect(:00·:30) 뒤. 크론 shim이 'sa-dividends'로 부르므로 이름은 그대로 둔다.
     log_name=portfolio-sa-dividends.log
-    command=("$python" -m portfolio_core.sa_dividends --days 7)
+    command=("$python" -m portfolio_core.news_dividends --days 7)
     ;;
   price-crypto)
     log_name=portfolio-price-crypto.log

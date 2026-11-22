@@ -31,6 +31,8 @@ from .tickers import ticker_currency
 
 SA_DB_PATH = Path(os.environ.get("SA_NEWS_DB", Path.home() / "projects" / "sa-news" / "sa_news.db"))
 SOURCE = "sa"
+# 임시 배당 출처 — 자체 수집이 같은 배당을 가져오면 지운다(wm 회사 배당 공시 2026-11-23, `wm_dividends`).
+PROVISIONAL_SOURCES = ("sa", "wm")
 MATCH_WINDOW_DAYS = 7
 
 _MONTHS = {m: i for i, m in enumerate(
@@ -191,7 +193,7 @@ def import_recent(days: int = 7, dry_run: bool = False) -> dict:
 
 
 def drop_superseded(conn, ticker: str, ex_dates: list[str]) -> int:
-    """자체 수집이 가져온 배당(배당락일 목록)의 ±7일 안 SA 임시 행을 지운다. 지운 행 수."""
+    """자체 수집이 가져온 배당(배당락일 목록)의 ±7일 안 임시 행(sa·wm)을 지운다. 지운 행 수."""
     removed = 0
     for ex_date in ex_dates:
         try:
@@ -199,8 +201,8 @@ def drop_superseded(conn, ticker: str, ex_dates: list[str]) -> int:
         except (TypeError, ValueError):
             continue
         cur = conn.execute(
-            "DELETE FROM dividend_events WHERE ticker = ? AND source = ? AND ex_date BETWEEN ? AND ?",
-            (ticker, SOURCE, lo, hi),
+            "DELETE FROM dividend_events WHERE ticker = ? AND source IN (?, ?) AND ex_date BETWEEN ? AND ?",
+            (ticker, *PROVISIONAL_SOURCES, lo, hi),
         )
         removed += max(0, int(getattr(cur, "rowcount", 0) or 0))
     return removed
