@@ -1,4 +1,4 @@
-// 일정 팝업(2026-11-08 개편): 목록 하나, 유형 4종(실적·배당기준·배당지급·촉매) 토글, 시장·종류·보유 필터.
+// 일정 팝업(2026-11-08 개편): 목록 하나, 유형(실적·배당기준·배당지급·촉매·공통) 토글, 시장·종류·보유 필터.
 const assert = require('node:assert/strict');
 const h = require('./harness');
 const ctx = h.loadScripts(h.createContext());
@@ -51,4 +51,25 @@ assert.match(html, /기준일 · 주당/);
 assert.match(html, /schedule-day past/);
 assert.doesNotMatch(html, /schedule-calendar|schedule-weekday/);
 assert.match(run('renderScheduleList([], "2026-11-08")'), /일정이 없습니다/);
+
+// 공통(2026-11-22): 증류 '공통' 묶음. 시장·종류·보유 필터를 타지 않고 칩으로만, 차트 링크 없는 줄
+ctx.__payload2 = { ...payload, general: [{ date: '2026-11-20', title: '<i>PCE</i> 발표', cluster: '미국' }] };
+run('schedulePayload = __payload2; scheduleMonth = new Date(2026, 10, 1); scheduleHeldOnly = true; scheduleKind = "etf"; scheduleMarketVisible.clear()');
+assert.equal(visible(), 'general:');
+const generalHtml = run('renderScheduleList(visibleScheduleEvents(), "2026-11-08")');
+assert.match(generalHtml, /<div class="schedule-row general"[\s\S]*<strong>미국<\/strong>[\s\S]*공통[\s\S]*&lt;i&gt;PCE&lt;\/i&gt; 발표/);
+assert.doesNotMatch(generalHtml, /data-chart-ticker/);
+run('scheduleTypeVisible.delete("general")');
+assert.equal(visible(), '');
+run('scheduleTypeVisible.add("general"); scheduleHeldOnly = false; scheduleKind = "all"; ["us","jp","kr","other"].forEach(m => scheduleMarketVisible.add(m))');
+// 같은 날은 실적·촉매 다음에 공통
+assert.equal(run('normalizedScheduleEvents(__payload2).filter(e => e.date === "2026-11-20").map(e => e.type).join(",")'), 'earnings,catalyst,general');
+
+// 유형 저장은 끈 것만 — 예전 켠 목록을 저장해 둔 사람도 새 유형(공통)은 켜져 보인다
+const store = {};
+ctx.storageGet = key => (key in store ? store[key] : null);
+store['portfolio.schedule.types'] = JSON.stringify(['earnings', 'catalyst']);
+assert.deepEqual(h.plain([...run('scheduleHiddenTypes()')]).sort(), ['dividend_base', 'dividend_pay']);
+store['portfolio.schedule.hiddenTypes'] = JSON.stringify(['general']);
+assert.deepEqual(h.plain([...run('scheduleHiddenTypes()')]), ['general']);
 console.log('schedule view ok');

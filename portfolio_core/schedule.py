@@ -191,14 +191,26 @@ def load_schedule(
         "earnings": earnings,
         "dividends": dividends,
         "catalysts": _catalysts(ticker_meta, owned, start, end, logo_hint),
+        "general": _general_events(start, end),
     }
 
 
+def _calendar_day(event, start, end):
+    """일정표에 올릴 증류 사건의 날짜. 실적 역주입분(portfolio_db)은 실적 일정과 겹쳐 빼고, 근거 감사가 캘린더에서 뺀
+    사건(calendar_unsupported)과 판정이 끝난 사건(bucket resolved — 날짜가 실제 발생일이 아니라 원래 기한이라, 11-19에
+    상장한 'Anthropic 상장'이 기한 11-26에 앞으로 올 일처럼 보였다, 2026-11-22)도 뺀다. 일 단위 날짜만."""
+    if not isinstance(event, dict):
+        return None
+    if event.get("attribution") == company_events.PORTFOLIO_ATTRIBUTION or event.get("audit") == "calendar_unsupported":
+        return None
+    if event.get("bucket") == "resolved" or event.get("date_precision") != "day":
+        return None
+    day = parse_date(event.get("date"))
+    return day if day and start <= day <= end else None
+
+
 def _catalysts(ticker_meta: dict, owned: set[str], start, end, logo_hint) -> list[dict]:
-    """증류 리포트의 날짜 확정(일 단위) 촉매. 실적 역주입분(portfolio_db)은 실적 일정과 겹쳐 뺀다.
-    근거 감사가 캘린더에서 뺀 사건(calendar_unsupported)도 넣지 않는다. 제목만 싣는다.
-    판정이 끝난 촉매(bucket resolved)는 뺀다 — 날짜가 실제 발생일이 아니라 원래 기한이라, 11-19에 상장한
-    'Anthropic 상장'이 기한 11-26에 앞으로 올 일처럼 보였다(2026-11-22). 기업 팝업에서는 '지난'에 남는다."""
+    """증류 리포트의 기업별 촉매(제목만). 기업 팝업에서는 판정분이 '지난'에 남는다."""
     try:
         companies = company_events._cache().get("companies") or {}
     except Exception:
@@ -213,14 +225,8 @@ def _catalysts(ticker_meta: dict, owned: set[str], start, end, logo_hint) -> lis
         for event in entry.get("events") or []:
             if not isinstance(event, dict) or event.get("kind") != "catalyst":
                 continue
-            if event.get("attribution") == company_events.PORTFOLIO_ATTRIBUTION or event.get("audit") == "calendar_unsupported":
-                continue
-            if event.get("bucket") == "resolved":
-                continue
-            if event.get("date_precision") != "day":
-                continue
-            day = parse_date(event.get("date"))
-            if not day or day < start or day > end:
+            day = _calendar_day(event, start, end)
+            if not day:
                 continue
             rows.append({
                 "date": day.isoformat(),
@@ -234,6 +240,28 @@ def _catalysts(ticker_meta: dict, owned: set[str], start, end, logo_hint) -> lis
                 "logo": logo_hint(meta["ticker"], meta["name"]),
             })
     rows.sort(key=lambda row: (row["date"], row["ticker"]))
+    return rows
+
+
+def _general_events(start, end) -> list[dict]:
+    """증류 리포트의 '공통' 묶음(대상 기업이 없는 거시·정책·산업 촉매와 FOMC, 2026-11-22 사용자 지시).
+    거르는 규칙은 기업 촉매와 같다. cluster는 출처 장(미국·금융·자본시장 등)."""
+    try:
+        general = company_events._cache().get("general") or {}
+    except Exception:
+        return []
+    rows = []
+    for event in general.get("events") or [] if isinstance(general, dict) else ():
+        day = _calendar_day(event, start, end)
+        if not day:
+            continue
+        source = event.get("source") if isinstance(event.get("source"), dict) else {}
+        rows.append({
+            "date": day.isoformat(),
+            "title": company_events_plain(event.get("title")),
+            "cluster": "연준" if event.get("kind") == "macro" else str(source.get("cluster") or ""),
+        })
+    rows.sort(key=lambda row: (row["date"], row["title"]))
     return rows
 
 

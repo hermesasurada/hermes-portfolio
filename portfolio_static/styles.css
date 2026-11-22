@@ -42,6 +42,8 @@
   --schedule-record-soft: #e6f6f3;
   --schedule-catalyst: #b45309;
   --schedule-catalyst-soft: #fdf3e4;
+  --schedule-general: #475569;
+  --schedule-general-soft: #edf0f4;
   --up: #dc3545;            /* KR convention: 상승=빨강 */
   --down: #1976d2;          /* 하락=파랑 */
   --buy: #0284c7;
@@ -140,6 +142,8 @@
     --schedule-record-soft: #10393a;
     --schedule-catalyst: #fbbf24;
     --schedule-catalyst-soft: #3a2a10;
+    --schedule-general: #cbd5e1;
+    --schedule-general-soft: #273142;
     --up: #fb7185;
     --down: #60a5fa;
     --buy: #38bdf8;
@@ -4684,6 +4688,7 @@ tr:hover .fav-star,
 .schedule-chip.dividend-base.active { background: var(--schedule-record-soft); color: var(--schedule-record); }
 .schedule-chip.dividend-pay.active { background: var(--schedule-dividend-soft); color: var(--schedule-dividend); }
 .schedule-chip.catalyst.active { background: var(--schedule-catalyst-soft); color: var(--schedule-catalyst); }
+.schedule-chip.general.active { background: var(--schedule-general-soft); color: var(--schedule-general); }
 .schedule-modal .segmented { background: var(--surface-2); }
 .schedule-modal .seg-btn { min-height: 28px; font-size: 12px; font-weight: 500; }
 #scheduleModal .segmented .seg-btn.active { background: var(--panel); color: var(--brand); border-color: transparent; }
@@ -4719,7 +4724,7 @@ tr:hover .fav-star,
   border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--ink);
   font: inherit; text-align: left; cursor: pointer;
 }
-.schedule-row:hover, .schedule-row:focus-visible { background: var(--surface-hover); }
+.schedule-row:not(.general):hover, .schedule-row:focus-visible { background: var(--surface-hover); }
 .schedule-row-logo { display: inline-flex; width: 26px; height: 26px; }
 .schedule-row-logo > * { width: 26px; height: 26px; }
 .schedule-row-name { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
@@ -4733,7 +4738,9 @@ tr:hover .fav-star,
 .schedule-row.dividend-pay .schedule-row-type { background: var(--schedule-dividend-soft); color: var(--schedule-dividend); }
 .schedule-row.catalyst .schedule-row-type { background: var(--schedule-catalyst-soft); color: var(--schedule-catalyst); }
 .schedule-row-detail { min-width: 0; color: var(--muted); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
-.schedule-row.catalyst .schedule-row-detail { color: var(--ink); }
+.schedule-row.general .schedule-row-type { background: var(--schedule-general-soft); color: var(--schedule-general); }
+.schedule-row:is(.catalyst, .general) .schedule-row-detail { color: var(--ink); }
+.schedule-row.general { cursor: default; }
 .schedule-row.estimated .schedule-row-detail { font-style: italic; }
 .schedule-row-owned {
   justify-self: end; padding: 0 5px; border: 1px solid var(--line); border-radius: 4px;

@@ -1,8 +1,10 @@
 // 일정 팝업(2026-11-08 사용자 지시로 개편): 격자 폐기, 월별 목록 하나.
-// 유형 = 실적·배당기준·배당지급·촉매(제목만)를 각각 켜고 끈다. 종목 = 시장(미국·일본·한국·기타) × 종류(전체·개별·ETF) × 보유만.
+// 유형 = 실적·배당기준·배당지급·촉매(제목만)·공통을 각각 켜고 끈다. 종목 = 시장(미국·일본·한국·기타) × 종류(전체·개별·ETF) × 보유만.
 // 촉매는 증류 리포트(company-events)의 일 단위 날짜 촉매를 서버가 /api/schedule에 실어 준다.
+// 공통(2026-11-22)은 증류의 '공통' 묶음(대상 기업이 없는 거시·정책 촉매·FOMC) — 종목이 아니라 시장·종류·보유 필터를 타지 않고 칩으로만 켜고 끈다.
 const scheduleStorage = {
-  types: "portfolio.schedule.types",
+  types: "portfolio.schedule.types",          // 예전 '켠 유형' 목록 — hiddenTypes로 옮겨 읽는다
+  hiddenTypes: "portfolio.schedule.hiddenTypes",   // 끈 유형만 저장해서 새 유형은 처음부터 켜져 보인다
   markets: "portfolio.schedule.markets",
   kind: "portfolio.schedule.kind",
   heldOnly: "portfolio.schedule.heldOnly",
@@ -13,6 +15,7 @@ const SCHEDULE_TYPES = [
   { key: "dividend_base", label: "배당기준" },
   { key: "dividend_pay", label: "배당지급" },
   { key: "catalyst", label: "촉매" },
+  { key: "general", label: "공통" },
 ];
 const SCHEDULE_MARKETS = ["us", "jp", "kr", "other"];
 
@@ -28,7 +31,20 @@ function scheduleStoredSet(key, allowed) {
   return new Set(allowed);
 }
 
-const scheduleTypeVisible = scheduleStoredSet(scheduleStorage.types, SCHEDULE_TYPES.map(type => type.key));
+// 유형은 끈 것만 저장한다(2026-11-22) — 켠 목록을 저장하면 나중에 생긴 유형(공통)이 저장해 둔 사람에게 꺼진 채로 나온다.
+// 예전 켠 목록(types)이 있으면 그때 있던 네 유형 중 빠진 것을 끈 것으로 옮긴다.
+function scheduleHiddenTypes() {
+  const keys = SCHEDULE_TYPES.map(type => type.key);
+  try {
+    const hidden = JSON.parse(storageGet(scheduleStorage.hiddenTypes) || "null");
+    if (Array.isArray(hidden)) return new Set(hidden.filter(value => keys.includes(value)));
+    const shown = JSON.parse(storageGet(scheduleStorage.types) || "null");
+    if (Array.isArray(shown)) return new Set(["earnings", "dividend_base", "dividend_pay", "catalyst"].filter(key => !shown.includes(key)));
+  } catch { /* 저장값이 깨졌으면 모두 켬 */ }
+  return new Set();
+}
+
+const scheduleTypeVisible = (hidden => new Set(SCHEDULE_TYPES.map(type => type.key).filter(key => !hidden.has(key))))(scheduleHiddenTypes());
 const scheduleMarketVisible = scheduleStoredSet(scheduleStorage.markets, SCHEDULE_MARKETS);
 let scheduleKind = ["all", "stock", "etf"].includes(storageGet(scheduleStorage.kind)) ? storageGet(scheduleStorage.kind) : "all";
 let scheduleHeldOnly = storageGet(scheduleStorage.heldOnly) === "1";
@@ -89,6 +105,10 @@ function normalizedScheduleEvents(payload = schedulePayload) {
   for (const row of payload.catalysts || []) {
     events.push({ ...base(row), type: "catalyst", date: String(row.date || "").slice(0, 10), title: row.title || "", estimated: false });
   }
+  for (const row of payload.general || []) {
+    events.push({ type: "general", ticker: "", name: row.cluster || "공통", market: null, owned: false, marketCapUsd: null,
+      date: String(row.date || "").slice(0, 10), title: row.title || "", estimated: false });
+  }
   return events
     .filter(event => /^\d{4}-\d{2}-\d{2}$/.test(event.date))
     .map(event => ({ ...event, past: event.date < today }))
@@ -96,6 +116,7 @@ function normalizedScheduleEvents(payload = schedulePayload) {
 }
 
 function scheduleEventVisible(event) {
+  if (event.type === "general") return scheduleTypeVisible.has("general");
   return scheduleTypeVisible.has(event.type)
     && scheduleMarketVisible.has(event.market)
     && (scheduleKind === "all" || event.kind === scheduleKind)
@@ -108,7 +129,7 @@ function visibleScheduleEvents() {
 }
 
 function scheduleEventDetail(event) {
-  if (event.type === "catalyst") return esc(event.title);
+  if (event.type === "catalyst" || event.type === "general") return esc(event.title);
   if (event.type === "earnings") return event.past ? "발표" : "발표 예정";
   const amount = event.amount == null ? "금액 미정" : `주당 ${unitMoney(event.amount, event.currency, event.ticker)}`;
   if (event.type === "dividend_base") return `${event.baseKind === "ex" ? "배당락" : "기준일"} · ${amount}`;
@@ -117,6 +138,16 @@ function scheduleEventDetail(event) {
 
 function scheduleRowMarkup(event) {
   const typeLabel = SCHEDULE_TYPES.find(type => type.key === event.type)?.label || "";
+  if (event.type === "general") {
+    // 종목이 없어 차트로 가지 않는다 — 버튼이 아니라 줄. 이름 칸은 출처 장(미국·금융·자본시장 등)
+    return `<div class="schedule-row general" title="${esc(`${typeLabel} · ${event.name}`)}">
+    <span class="schedule-row-logo" aria-hidden="true"></span>
+    <span class="schedule-row-name"><strong>${esc(event.name)}</strong></span>
+    <span class="schedule-row-type">${typeLabel}</span>
+    <span class="schedule-row-detail">${scheduleEventDetail(event)}</span>
+    <span></span>
+  </div>`;
+  }
   const label = event.market === "kr" ? event.name : event.ticker;
   const title = `${typeLabel} · ${event.name} (${event.ticker})${event.estimated ? " · 예상일" : ""}`;
   return `<button class="schedule-row ${event.type.replace("_", "-")}${event.estimated ? " estimated" : ""}" type="button"
@@ -220,6 +251,12 @@ function toggleScheduleSetValue(set, value, storageKey) {
   renderSchedule();
 }
 
+function toggleScheduleType(value) {
+  if (scheduleTypeVisible.has(value)) scheduleTypeVisible.delete(value); else scheduleTypeVisible.add(value);
+  storageSet(scheduleStorage.hiddenTypes, JSON.stringify(SCHEDULE_TYPES.map(type => type.key).filter(key => !scheduleTypeVisible.has(key))));
+  renderSchedule();
+}
+
 function initScheduleModal() {
   const modal = document.getElementById("scheduleModal");
   if (!modal) return;
@@ -229,7 +266,7 @@ function initScheduleModal() {
   document.getElementById("scheduleNext")?.addEventListener("click", () => moveScheduleMonth(1));
   document.getElementById("scheduleToday")?.addEventListener("click", () => moveScheduleMonth(null));
   document.querySelectorAll("[data-schedule-type]").forEach(button => button.addEventListener("click", () =>
-    toggleScheduleSetValue(scheduleTypeVisible, button.dataset.scheduleType, scheduleStorage.types)));
+    toggleScheduleType(button.dataset.scheduleType)));
   document.querySelectorAll("[data-schedule-market]").forEach(button => button.addEventListener("click", () =>
     toggleScheduleSetValue(scheduleMarketVisible, button.dataset.scheduleMarket, scheduleStorage.markets)));
   document.querySelectorAll("[data-schedule-kind]").forEach(button => button.addEventListener("click", () => {
