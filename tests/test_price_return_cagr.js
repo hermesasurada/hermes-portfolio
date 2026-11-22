@@ -18,7 +18,7 @@ assert.equal(ctx.priceReturnCagr(-100, 5), -100);
 const performance = {one_week: 2, one_month: 4, one_year: 30,
   three_year: 33.1, five_year: 61.051, ten_year: null};
 const before = JSON.stringify(performance);
-ctx.__statsFixture = {TEST: {performance, risk_reward_score: 7}};
+ctx.__statsFixture = {TEST: {performance, beta: 0.7}};
 h.evaluate(ctx, 'statsData = __statsFixture');
 const row = ctx.statsRows([{ticker: 'TEST'}])[0];
 assert.ok(Math.abs(row.perf_3y - 10) < 1e-8);
@@ -27,7 +27,7 @@ assert.equal(row.perf_10y, null);
 assert.equal(row.perf_1w, 2);
 assert.equal(row.perf_1m, 4);
 assert.equal(row.perf_1y, 30);
-assert.equal(row.risk_reward_score, 7);
+assert.equal(row.beta, 0.7);
 assert.equal(JSON.stringify(performance), before, 'API cumulative data must not be mutated');
 assert.equal(ctx.chartStatPercent(ctx.priceReturnCagr(null, 10), 1), '-');
 assert.match(ctx.chartStatPercent(row.perf_3y, 1), /10\.0%/);

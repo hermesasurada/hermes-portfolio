@@ -7,7 +7,7 @@ from bisect import bisect_left, bisect_right
 from datetime import date, datetime, timedelta
 from typing import Callable, Iterable
 
-from .constants import FX_DEFAULT_RATES, FX_TICKERS
+from .constants import FX_TICKERS
 from .corporate_actions import (
     dedupe_dividend_event_rows,
     entitlement_date,
@@ -27,10 +27,9 @@ from .indicators import (
     rsi_value,
 )
 from .paths import KST
-from .risk_reward import RISK_FREE_RATE_PCT, score_asset_kind
 from .tickers import is_korean_stock_ticker, ticker_currency, normalize_tickers
 
-TECHNICAL_CACHE_VERSION = 21  # 21: 10년 추세(trend10_*) 추가(2026-11-16). 20: 추세를 배당 포함 가격으로·이탈폭 5년 환산·강도 분자 연속복리(2026-11-15). 19: 추세 강도 추가(2026-11-07). 18: 추세 이탈폭 추가(2026-11-07). 17: 추세 수익률 창 3년→5년(2026-10-23). 16: 추세 수익률·R² 추가. 15: 매수·매도 타점 참고(폐지)
+TECHNICAL_CACHE_VERSION = 22  # 22: 변동성 손익비(risk_reward·asset_class) 삭제(2026-11-22). 21: 10년 추세(trend10_*) 추가(2026-11-16). 20: 추세를 배당 포함 가격으로·이탈폭 5년 환산·강도 분자 연속복리(2026-11-15). 19: 추세 강도 추가(2026-11-07). 18: 추세 이탈폭 추가(2026-11-07). 17: 추세 수익률 창 3년→5년(2026-10-23). 16: 추세 수익률·R² 추가. 15: 매수·매도 타점 참고(폐지)
 TECHNICAL_LOOKBACK_DAYS = 11 * 366
 PRICE_ADJUSTED_LOOKBACK_DAYS = 6 * 366
 BETA_BENCHMARK = "SP500"
@@ -51,7 +50,7 @@ def trend_performance(daily: list[float]) -> dict[str, float | None]:
     꾸준함은 같은 회귀의 잔차 표준편차(이탈폭, 로그 기준 %)로 본다(2026-11-07). R²는 분모가 전체 변동폭이라
     많이 오르면 크게 흔들려도 높고(PLTR 0.84, MDD 78%), 평평하면 안정적이어도 낮다(PG 0.04).
     R²는 값을 바꾸지 않고 통계 팝업에만 남긴다.
-    이력이 5년보다 짧으면 있는 만큼(최소 1년)으로 계산한다 — 각주는 붙이지 않는다(변동성 손익비와 동일).
+    이력이 5년보다 짧으면 있는 만큼(최소 1년)으로 계산한다 — 각주는 붙이지 않는다.
 
     2026-11-15 전 종목 점검 뒤 두 가지를 고쳤다(사용자 승인):
     - 이탈폭은 5년 기준으로 환산한다(× √(1260 ÷ 실제 일수)). 잔차 표준편차는 창이 짧을수록 작아져서
@@ -165,10 +164,6 @@ def beta_benchmark(ticker: str) -> str:
 
 # 예전 이름 — 외부에서 참조하던 코드가 있으면 그대로 동작하게 남긴다.
 
-# 손익비 점수용 비겹침 창. (key, 필요 이력 거래일, 슬라이스 끝 오프셋)
-# 5y = 3~5년 전(returns[-1260:-756]), 3y = 1~3년 전, 1y = 최근 1년.
-# 가용 판정은 해당 이력의 95% 이상.
-TOTAL_RETURN_PERIODS = (("5y", 1260, 756), ("3y", 756, 252), ("1y", 252, 0))
 DIVIDEND_MAP_MAX_DAYS = 5   # 휴장일 이월 한도 — 초과 배당은 반영하지 않고 품질 P
 FX_LOOKUP_MAX_DAYS = 14
 
@@ -248,47 +243,10 @@ def build_fx_lookup(fx_series: dict[str, list[tuple[str, float]]]) -> Callable:
     return lookup
 
 
-def _krw_rates_for_dates(
-    dates: list[str],
-    currency: str,
-    fx_lookup: Callable | None,
-) -> list[float]:
-    """일자별 종목통화→KRW 환율. 룩업 실패 시 직전 성공값, 그것도 없으면 기본환율."""
-    if not currency or currency == "KRW":
-        return [1.0] * len(dates)
-    rates: list[float] = []
-    last: float | None = None
-    fallback = FX_DEFAULT_RATES.get(currency, 1.0)
-    for day in dates:
-        on = parse_iso_date(day)
-        rate = None
-        if on is not None and fx_lookup is not None:
-            rate = fx_lookup(currency, "KRW", on)
-        if rate is None:
-            rate = last if last is not None else fallback
-        last = rate
-        rates.append(rate)
-    return rates
-
-
-def _annualized_mean_and_vol(
-    window: list[float],
-    rf_pct: float,
-) -> tuple[float, float, float]:
-    """(산술 연율 %, 초과수익 %, 연율 총변동성 %)."""
-    count = len(window)
-    mean = sum(window) / count
-    mean_ann = mean * 252 * 100
-    excess = mean_ann - rf_pct
-    variance = sum((value - mean) ** 2 for value in window) / count
-    vol = (variance ** 0.5) * (252 ** 0.5) * 100
-    return mean_ann, excess, vol
-
-
 # 기간 수익률(1주~10년)의 배당 포함판 — 목록 표의 기간 수익률 열이 항상 이 값을 쓴다(2026-11-07 사용자 지시).
 # 가격 수익률(recent_performance)과 같은 기준일·같은 현지 통화로, 배당락일 뒤 첫 거래일에 분할
 # 보정한 배당을 더해 일간 수익률을 복리로 곱한다(배당 재투자 가정). 배당 매핑 규칙은
-# total_return_periods와 같고 원화 환산만 하지 않는다 — 표의 가격 수익률도 현지 통화다.
+# 기간 수익률 계산 공통이고 현지 통화 그대로다 — 표의 가격 수익률도 현지 통화다.
 # 품질 'P' = 실제보다 낮을 수 있다: 배당을 주는 종목인데 수집된 배당 이력이 기간 시작까지 닿지
 # 않거나(한국 종목은 길어야 5년 남짓), 기간 안 배당을 가격일에 매핑하지 못했을 때.
 PERFORMANCE_KEYS = ("one_week", "one_month", "three_month", "six_month", "ytd", "one_year", "three_year", "five_year", "ten_year")
@@ -379,101 +337,6 @@ def total_return_performance(
         partial = partial or any(dates[start] <= day <= dates[-1] for day in unmapped_dates)
         quality[key] = "P" if partial else "TR"
     return {"values": values, "quality": quality, "growth": growth}
-
-
-def total_return_periods(
-    price_rows: list,
-    dividend_rows: list,
-    splits: list[dict],
-    currency: str,
-    fx_lookup: Callable | None = None,
-    dividend_yield: float | None = None,
-    risk_free_pct: float | None = None,
-) -> dict[str, dict | None]:
-    """기간별(5y/3y/1y, 비겹침) KRW 총수익 산술연율·총변동성·품질(TR/P).
-
-    일간 총수익률 r(t) = (P_krw(t) + 분할·통화보정 배당_krw(t)) / P_krw(t-1) - 1.
-    배당은 배당락일(ex_date) 이후 첫 거래일에 가산하되 5일 초과 이월은
-    반영하지 않고 품질을 P로 낮춘다. 매핑된 배당은 그대로 남긴다.
-    통화가 다른 배당은 종목통화로 맞춘 뒤 KRW 환산, 불가하면 미반영+P.
-    배당수익률이 있는데 기간 내 반영된 배당이 없으면 품질 P."""
-    dates = [row["date"] for row in price_rows]
-    closes = [float(row["close"]) for row in price_rows]
-    result: dict[str, dict | None] = {key: None for key, _hist, _end in TOTAL_RETURN_PERIODS}
-    if len(closes) < 2:
-        return result
-
-    rf_pct = RISK_FREE_RATE_PCT if risk_free_pct is None else float(risk_free_pct)
-    krw_rates = _krw_rates_for_dates(dates, currency, fx_lookup)
-    closes_krw = [close * rate for close, rate in zip(closes, krw_rates)]
-
-    last_price_date = parse_iso_date(dates[-1])
-    dividend_by_index: dict[int, float] = {}
-    unmapped_dates: list[str] = []
-    for event in dedupe_dividend_event_rows(dividend_rows, splits):
-        event_date = parse_iso_date(event["ex_date"]) or entitlement_date(event)
-        amount = positive_float(event["amount"])
-        if event_date is None or not amount:
-            continue
-        if last_price_date is not None and event_date > last_price_date:
-            # 마지막 가격일 이후 배당락 = 아직 대응 가격이 없는 미래 이벤트
-            # (미국 종목은 KST 기준 하루 늦게 가격이 온다) — 다음 배치에서
-            # 가격과 함께 반영되므로 실패로 세지 않는다.
-            continue
-        adjusted, _factor = split_adjusted_amount(amount, event_date, event["source"], splits)
-        event_currency = str(event["currency"] or "").upper() or currency
-        if event_currency != currency:
-            ratio = fx_lookup(event_currency, currency, event_date) if fx_lookup else None
-            if ratio is None:
-                unmapped_dates.append(event_date.isoformat())
-                continue
-            adjusted *= ratio
-        index = bisect_left(dates, event_date.isoformat())
-        mapped_date = parse_iso_date(dates[index]) if index < len(dates) else None
-        if (
-            index == 0
-            or mapped_date is None
-            or (mapped_date - event_date).days > DIVIDEND_MAP_MAX_DAYS
-        ):
-            unmapped_dates.append(event_date.isoformat())
-            continue
-        adjusted *= krw_rates[index]
-        dividend_by_index[index] = dividend_by_index.get(index, 0.0) + adjusted
-
-    total_returns: list[float] = []
-    for index in range(1, len(closes_krw)):
-        previous = closes_krw[index - 1]
-        if previous <= 0:
-            total_returns.append(0.0)
-            continue
-        total_returns.append(
-            (closes_krw[index] + dividend_by_index.get(index, 0.0)) / previous - 1
-        )
-
-    n = len(total_returns)
-    for key, history_days, end_offset in TOTAL_RETURN_PERIODS:
-        if n < history_days * 0.95:
-            continue
-        lo = max(0, n - history_days)
-        hi = n - end_offset if end_offset else n
-        window = total_returns[lo:hi]
-        if not window:
-            continue
-        window_start = dates[lo]
-        window_end = dates[hi]
-        has_dividend = any(lo < index <= hi for index in dividend_by_index)
-        has_unmapped = any(window_start <= day <= window_end for day in unmapped_dates)
-        mean_ann, excess, vol = _annualized_mean_and_vol(window, rf_pct)
-        quality = "TR"
-        if has_unmapped or (not has_dividend and (dividend_yield or 0) > 0.5):
-            quality = "P"
-        result[key] = {
-            "mean": round(mean_ann, 2),
-            "excess": round(excess, 2),
-            "vol": round(vol, 2),
-            "quality": quality,
-        }
-    return result
 
 
 def beta_stats(rows: list[sqlite3.Row], benchmark_rows: list[sqlite3.Row]) -> dict[str, float | None]:
@@ -647,7 +510,7 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
         for row in rows:
             grouped[row["ticker"]].append(row)
         # 상장일 이전 가격(SPAC 합병 전 10달러대, DELL의 추적주 DVMT 등)은 그 종목의 가격이 아니다 —
-        # 수익률·추세·β·손익비에 넣지 않는다(2026-10-30: OKLO 3·5년 수익률이 전부 SPAC 가격이었다).
+        # 수익률·추세·β에 넣지 않는다(2026-10-30: OKLO 3·5년 수익률이 전부 SPAC 가격이었다).
         for ticker, list_date in load_listing_dates(conn, clean_tickers).items():
             if list_date and grouped.get(ticker):
                 grouped[ticker] = [row for row in grouped[ticker] if row["date"] >= list_date]
@@ -700,17 +563,15 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
             ).fetchall()
         }
         currency_by_ticker: dict[str, str] = {}
-        name_by_ticker: dict[str, str] = {}
         for row in conn.execute(
             f"""
-            SELECT ticker, currency, COALESCE(NULLIF(display_name, ''), name) AS name
+            SELECT ticker, currency
             FROM tickers
             WHERE ticker IN ({ticker_placeholders})
             """,
             clean_tickers,
         ).fetchall():
             currency_by_ticker[row["ticker"]] = row["currency"] or ticker_currency(row["ticker"])
-            name_by_ticker[row["ticker"]] = row["name"] or ""
 
         now_text = datetime.now(KST).isoformat(timespec="seconds")
         updated = 0
@@ -723,7 +584,6 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
                 grouped.get(adj_benchmark, []) if adj_benchmark != BETA_BENCHMARK else None,
             )
             payload["beta_benchmark"] = adj_benchmark
-            payload["asset_class"] = score_asset_kind(ticker, name_by_ticker.get(ticker) or "")
             tr_performance = total_return_performance(
                 price_rows,
                 dividend_rows_by_ticker.get(ticker, []),
@@ -737,14 +597,6 @@ def refresh_technical_stats_cache(tickers: Iterable[str]) -> int:
             # 추세 3종은 기간 수익률과 같은 배당 포함 가격으로 다시 낸다(calculate_technical_stats는 종가 기준).
             payload.update(trend_performance(tr_performance["growth"]))
             payload.update(trend_performance_10y(tr_performance["growth"], [row["date"] for row in price_rows]))
-            payload["risk_reward"] = total_return_periods(
-                price_rows,
-                dividend_rows_by_ticker.get(ticker, []),
-                splits_by_ticker.get(ticker, []),
-                currency_by_ticker.get(ticker) or ticker_currency(ticker),
-                fx_lookup,
-                yield_by_ticker.get(ticker),
-            )
             conn.execute(
                 """
                 INSERT INTO ticker_technical_stats_cache

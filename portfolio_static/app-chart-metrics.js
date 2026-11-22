@@ -96,7 +96,6 @@ function chartStatMetricRows(payload) {
     ["추세·위험", "10년 추세 이탈폭", trendDeviationText(s.trend10_deviation), finiteMetric(s.trend10_deviation), "low"],
     ["추세·위험", "10년 추세 강도", trendStrengthText(s.trend10_strength), finiteMetric(s.trend10_strength), "high"],
     ["추세·위험", "52주 고점 대비", chartStatPercent(s.drawdown_52w), finiteMetric(s.drawdown_52w), "high"],
-    ["추세·위험", "변동성 손익비", riskRewardScoreText(s.risk_reward_score), finiteMetric(s.risk_reward_score), "high"],
     ["추세·위험", "β", betaText(s.beta), finiteMetric(s.beta), "lowAbs"],
     ["추세·위험", "β″", betaText(s.beta_adj), finiteMetric(s.beta_adj), "lowAbs"],
   ];

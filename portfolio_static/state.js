@@ -106,7 +106,6 @@ const defaultSortDir = {
   trend10_return: -1,
   trend10_deviation: 1,
   trend10_strength: -1,
-  risk_reward_score: -1,
   beta: -1,
   beta_adj: -1,
   drawdown_52w: -1,

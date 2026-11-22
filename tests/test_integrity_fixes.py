@@ -158,7 +158,7 @@ class TechnicalStatsListingTests(unittest.TestCase):
             cached = technical.load_technical_stats_cache(conn, ["OKLO"])["OKLO"]
         self.assertIsNone(cached["performance"]["three_year"])      # 상장 전 가격으로 만든 3년 수익률은 없어야 한다
         self.assertIsNotNone(cached["performance"]["one_year"])
-        self.assertIsNone(cached["risk_reward"]["5y"])
+        self.assertNotIn("risk_reward", cached)                    # 변동성 손익비 폐지(2026-11-22)
         row_ = conn.execute("SELECT price_count FROM ticker_technical_stats_cache WHERE ticker='OKLO'").fetchone()
         self.assertEqual(row_[0], 400)
 

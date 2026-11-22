@@ -1,5 +1,5 @@
 // 관심목록의 순서·헤더·폭·셀 포맷을 함께 관리한다. 숨긴 열은 DOM에 만들지 않는다.
-// 열 순서는 계좌표와 같다(2026-11-20 사용자 지시): 등락·연장·현재단가 → 52주·손익비·β → 모멘텀 → 밸류 → 배당 → 수익률 → 추세 → 시총·실적 → 수익성…컨센서스.
+// 열 순서는 계좌표와 같다(2026-11-20 사용자 지시): 등락·연장·현재단가 → 52주·β → 모멘텀 → 밸류 → 배당 → 수익률 → 추세 → 시총·실적 → 수익성…컨센서스.
 // 폭(2026-11-09 재조정): 전 관심그룹 값의 최장폭+좌우 여백 10px(묶음 경계는 +3~4). fixed 레이아웃이라
 // 폭보다 긴 값은 잘리므로 줄일 때는 전 그룹 실측으로 확인한다. 극단값 열(매출 성장 등)은 넓히지 않았다.
 const INTEREST_COLUMN_GROUPS = {
@@ -38,8 +38,6 @@ const INTEREST_COLUMNS = [
 
   { key: "drawdown_52w", width: 56, label: "<span>52주高</span><span>대비</span>", headClass: "indicator-head group-start interest-leaf-head", cellClass: "group-start", ariaLabel: "52주 고점 대비",
     cell: (r, group) => `${signedPercentText(r.drawdown_52w, 1)}` },
-  { key: "risk_reward_score", width: 46, label: "<span>변동성</span><span>손익비</span>", headClass: "indicator-head interest-leaf-head", title: "변동성 손익비 = 10 × Σ w(h) × 기간점수(h)\n기간점수(h) = clamp((연율수익(h) − 3%) ÷ max(변동성(h), 바닥), −2, +2)\n · 연율수익: KRW 환산 일간 총수익(배당 재투자)의 산술 연율\n · 변동성: 같은 기간 일간 수익률의 연율 표준편차(상승·하락 모두)\n · 바닥: 주식·ETF·지수 8% / 크립토 20% / FX·채권 3%\n · 창(비겹침): 5Y=3~5년 전 w=0.4 / 3Y=1~3년 전 w=0.3 / 1Y=최근 1년 w=0.3 — 없는 창은 0점(이력 1년이면 최대 30%만 반영)",
-    cell: (r, group) => `${riskRewardScoreText(r.risk_reward_score)}` },
   { key: "beta", width: 46, label: "β", headClass: "interest-leaf-head", title: BETA_TOOLTIP,
     cell: (r, group) => `${betaText(r.beta)}` },
   { key: "beta_adj", width: 48, label: "β″", headClass: "interest-leaf-head", title: BETA_ADJ_TOOLTIP,
@@ -207,7 +205,7 @@ const COLUMN_PRESET_KEYS = {
   value: ["trailing_pe", "forward_pe", "price_to_book", "ev_to_ebitda", "price_to_sales", "peg_ratio", "market_cap_usd", "expense_ratio", "next_earnings_date"],
   dividend: ["dividend_yield", "dividend_growth_5y", "yield_on_cost", "dividend_streak_years", "dividend_growth_streak_years", "payout_ratio"],
   perf: ["perf_1w", "perf_1m", "perf_3m", "perf_6m", "perf_ytd", "perf_1y", "perf_3y", "perf_5y", "perf_10y"],
-  trend: ["risk_reward_score", "beta", "beta_adj", "trend_return", "trend_deviation", "trend_strength",
+  trend: ["beta", "beta_adj", "trend_return", "trend_deviation", "trend_strength",
     "trend10_return", "trend10_deviation", "trend10_strength"],
   // 계좌표도 관심목록과 같은 재무·컨센서스 열을 가진다(2026-11-20) — 계좌표 열에는 group이 없어 키로 정한다.
   fund: ["gross_margin", "operating_margin", "ebitda_margin", "profit_margin", "return_on_assets", "return_on_equity",

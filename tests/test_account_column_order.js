@@ -19,67 +19,67 @@ assert.match(headRows[0].join(''), /colspan="6"[^>]*data-detail-group="dividend"
 const source = read('app-holdings.js');
 const body = source.slice(source.indexOf('<tr class="${tableRowClass(r)}">'), source.indexOf('// 다음 렌더의 펄스'));
 const cells = [...body.matchAll(/<td\b[^>]*>[\s\S]*?<\/td>/g)].map(m => m[0]);
-assert.equal(headers.length, 76);   // 2026-11-20: 관심목록 21열 추가, 2026-11-21: EV/EBITDA·P/S·PEG·보수·유동비율·순현금 6열 추가
+assert.equal(headers.length, 75);   // 2026-11-20: 관심목록 21열 추가, 2026-11-21: 6열 추가, 2026-11-22: 변동성 손익비 삭제
 assert.equal(cells.length, headers.length);
-assert.match(headers[49], /data-key="market_cap_usd">시총\/AUM/);
-assert.match(headers[51], /data-key="next_earnings_date">실적일/);
-assert.match(headers[75], />거래</);
-assert.match(headers[52], /class="indicator-head group-start" data-key="gross_margin"/);
-assert.match(headers[74], /data-key="rating_rank">투자의견/);
-assert.match(cells[52], /class="group-start">\$\{fractionPercentText\(r.gross_margin\)\}/);
-assert.match(cells[74], /ratingChipMarkup\(r.rating_label\)/);
-assert.match(cells[49], /marketCapMarkup\(r\)/);
-assert.match(cells[51], /earningsText\(r.next_earnings_date\)/);
-assert.match(cells[75], /tx-pick/);
+assert.match(headers[48], /data-key="market_cap_usd">시총\/AUM/);
+assert.match(headers[50], /data-key="next_earnings_date">실적일/);
+assert.match(headers[74], />거래</);
+assert.match(headers[51], /class="indicator-head group-start" data-key="gross_margin"/);
+assert.match(headers[73], /data-key="rating_rank">투자의견/);
+assert.match(cells[51], /class="group-start">\$\{fractionPercentText\(r.gross_margin\)\}/);
+assert.match(cells[73], /ratingChipMarkup\(r.rating_label\)/);
+assert.match(cells[48], /marketCapMarkup\(r\)/);
+assert.match(cells[50], /earningsText\(r.next_earnings_date\)/);
+assert.match(cells[74], /tx-pick/);
 // 배당 묶음(배당율·성장·평단 배당율)은 P/B 다음(2026-11-07, 관심목록과 같은 배치)
 assert.match(headers[9], /drawdown_52w/);
-assert.match(headers[10], /risk_reward_score/);
-assert.match(headers[24], /price_to_book/);
-assert.match(headers[28], /class="group-start" data-key="dividend_yield"/);
-assert.match(cells[28], /class="group-start">\$\{dividendYieldMarkup\(r\)\}/);
-// 진입 손익비 열 폐지(2026-11-07) — 변동성 손익비 바로 다음이 β
-assert.match(headers[11], /data-key="beta"/);
+assert.match(headers[23], /price_to_book/);
+assert.match(headers[27], /class="group-start" data-key="dividend_yield"/);
+assert.match(cells[27], /class="group-start">\$\{dividendYieldMarkup\(r\)\}/);
+// 진입 손익비(2026-11-07)·변동성 손익비(2026-11-22) 열 폐지 — 52주高 바로 다음이 β
+assert.match(headers[10], /data-key="beta"/);
+assert.doesNotMatch(html + source, /risk_reward|riskReward/);
 assert.doesNotMatch(html + source, /entry_risk_reward|entryRewardText/);
 assert.doesNotMatch(html + source, /trade_timing|tradeTimingMarkup/);
-assert.match(headers[13], /rsi_day/);
-assert.match(headers[18], /bb_month/);
-assert.match(headers[19], /ma20_pct/);
-assert.match(headers[34], /perf_1w/);
+assert.match(headers[12], /rsi_day/);
+assert.match(headers[17], /bb_month/);
+assert.match(headers[18], /ma20_pct/);
+assert.match(headers[33], /perf_1w/);
 // 5년 → 10년 → 추세 수익률 → 이탈폭 → 강도(2026-11-07)
-assert.match(headers[41], /perf_5y/);
-assert.match(headers[42], /perf_10y/);
-assert.match(cells[42], /perf_10y/);
-assert.match(headers[43], /data-key="trend_return"/);
-assert.match(cells[43], /class="group-start">\$\{trendReturnText\(r.trend_return\)\}/);
-assert.match(headers[44], /data-key="trend_deviation"/);
-assert.match(cells[44], /trendDeviationText\(r.trend_deviation\)/);
-assert.match(headers[45], /data-key="trend_strength"/);
-assert.match(cells[45], /trendStrengthText\(r.trend_strength\)/);
+assert.match(headers[40], /perf_5y/);
+assert.match(headers[41], /perf_10y/);
+assert.match(cells[41], /perf_10y/);
+assert.match(headers[42], /data-key="trend_return"/);
+assert.match(cells[42], /class="group-start">\$\{trendReturnText\(r.trend_return\)\}/);
+assert.match(headers[43], /data-key="trend_deviation"/);
+assert.match(cells[43], /trendDeviationText\(r.trend_deviation\)/);
+assert.match(headers[44], /data-key="trend_strength"/);
+assert.match(cells[44], /trendStrengthText\(r.trend_strength\)/);
 // 10년 추세 묶음(2026-11-16): 5년 추세 바로 다음
-assert.match(headers[46], /class="group-start" data-key="trend10_return"/);
-assert.match(cells[46], /class="group-start">\$\{trendReturnText\(r.trend10_return\)\}/);
-assert.match(headers[47], /data-key="trend10_deviation"/);
-assert.match(cells[47], /trendDeviationText\(r.trend10_deviation\)/);
-assert.match(headers[48], /data-key="trend10_strength"/);
-assert.match(cells[48], /trendStrengthText\(r.trend10_strength\)/);
+assert.match(headers[45], /class="group-start" data-key="trend10_return"/);
+assert.match(cells[45], /class="group-start">\$\{trendReturnText\(r.trend10_return\)\}/);
+assert.match(headers[46], /data-key="trend10_deviation"/);
+assert.match(cells[46], /trendDeviationText\(r.trend10_deviation\)/);
+assert.match(headers[47], /data-key="trend10_strength"/);
+assert.match(cells[47], /trendStrengthText\(r.trend10_strength\)/);
 // 평단 배당율(추정, 2026-10-31)은 계좌표에만, 5년 배당성장 바로 오른쪽 — 보유 없는 행은 '-'
-assert.match(headers[29], /dividend_growth_5y/);
-assert.match(headers[30], /data-key="yield_on_cost"[\s\S]*평단[\s\S]*배당율/);
-assert.match(cells[30], /noPosition \? "-" : yieldOnCostMarkup\(r\)/);
+assert.match(headers[28], /dividend_growth_5y/);
+assert.match(headers[29], /data-key="yield_on_cost"[\s\S]*평단[\s\S]*배당율/);
+assert.match(cells[29], /noPosition \? "-" : yieldOnCostMarkup\(r\)/);
 const interestColumns = read('app-interest-columns.js');
 assert.doesNotMatch(interestColumns, /key: "yield_on_cost"/);   // 열 정의에 없다(열 묶음 키 목록에는 계좌표용으로 이름이 있다)
 const css = read('styles.css');
-assert.match(css, /td:nth-child\(31\) \{ min-width: calc\(54px \* var\(--col-scale, 1\)\); \} \/\* 평단 배당율/);
+assert.match(css, /td:nth-child\(30\) \{ min-width: calc\(54px \* var\(--col-scale, 1\)\); \} \/\* 평단 배당율/);
 // 폭은 --col-scale 배율을 타되 기본값(데스크톱)은 원래 값 그대로다.
-assert.match(css, /td:nth-child\(52\) \{ min-width: calc\(48px \* var\(--col-scale, 1\)\); \} \/\* 실적일/);
-assert.match(css, /td:nth-child\(50\) \{ min-width: calc\(70px \* var\(--col-scale, 1\)\); \} \/\* 시총\/AUM/);
+assert.match(css, /td:nth-child\(51\) \{ min-width: calc\(48px \* var\(--col-scale, 1\)\); \} \/\* 실적일/);
+assert.match(css, /td:nth-child\(49\) \{ min-width: calc\(70px \* var\(--col-scale, 1\)\); \} \/\* 시총\/AUM/);
 // 연속지급·연속증액·배당성향(2026-11-07) — 평단 배당율 다음, 배당 묶음 6열
-assert.match(headers[31], /data-key="dividend_streak_years"/);
-assert.match(cells[31], /dividendStreakText\(r.dividend_streak_years, r.dividend_streak_floor\)/);
-assert.match(headers[32], /data-key="dividend_growth_streak_years"/);
-assert.match(cells[32], /dividendStreakText\(r.dividend_growth_streak_years\)/);
-assert.match(headers[33], /data-key="payout_ratio"/);
-assert.match(cells[33], /fractionPercentText\(r.payout_ratio\)/);
+assert.match(headers[30], /data-key="dividend_streak_years"/);
+assert.match(cells[30], /dividendStreakText\(r.dividend_streak_years, r.dividend_streak_floor\)/);
+assert.match(headers[31], /data-key="dividend_growth_streak_years"/);
+assert.match(cells[31], /dividendStreakText\(r.dividend_growth_streak_years\)/);
+assert.match(headers[32], /data-key="payout_ratio"/);
+assert.match(cells[32], /fractionPercentText\(r.payout_ratio\)/);
 assert.match(html, /colspan="6"[^>]*data-detail-group="dividend"/);
 console.log('Account headers, cells and widths aligned; market cap and earnings date precede trade action.');
 

@@ -33,7 +33,7 @@ const fields = run('interestScreenFields()');
 const keys = new Set(fields.map(f => f.key));
 for (const excluded of ['current_price', 'target_price', 'free_cash_flow', 'next_earnings_date', 'rating_rank', 'name'])
   assert.ok(!keys.has(excluded), excluded);
-for (const key of ['rsi_day', 'perf_1y', 'gross_margin', 'market_cap_usd', 'risk_reward_score', 'ma200_pct']) assert.ok(keys.has(key), key);
+for (const key of ['rsi_day', 'perf_1y', 'gross_margin', 'market_cap_usd', 'beta', 'ma200_pct']) assert.ok(keys.has(key), key);
 const byKey = Object.fromEntries(fields.map(f => [f.key, f]));
 assert.equal(byKey.gross_margin.unit, '%');
 assert.equal(byKey.market_cap_usd.unit, 'B$');

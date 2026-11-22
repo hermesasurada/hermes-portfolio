@@ -9,7 +9,6 @@ from .dividend_raise import dividend_raise_status
 from .fundamentals import fetch_fundamentals
 from .paths import KST
 from .prices import build_market_snapshot, latest_prices
-from .risk_reward import risk_reward_score
 from .technical_stats import (
     PRICE_ADJUSTED_LOOKBACK_DAYS,
     calculate_price_adjusted_indicators,
@@ -105,13 +104,6 @@ def load_stats(tickers: list[str], us_extended: bool = False) -> dict:
             **technical.get(ticker, {}),
             **fundamentals.get(ticker, {}),
         }
-        score, basis, quality = risk_reward_score(
-            merged.get("risk_reward"),
-            merged.get("asset_class"),
-        )
-        merged["risk_reward_score"] = score
-        merged["risk_reward_basis"] = basis
-        merged["risk_reward_quality"] = quality
         merged["dividend_raise"] = raise_status.get(ticker)   # 분기배당 기업 증액 확정·예상(목록 배당율 강조)
         merged.pop("trade_timing", None)   # 매매참고(실험적) 폐지(2026-10-16) — 옛 캐시에 남은 값은 내보내지 않는다
         stats[ticker] = merged
