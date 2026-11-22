@@ -196,7 +196,9 @@ def load_schedule(
 
 def _catalysts(ticker_meta: dict, owned: set[str], start, end, logo_hint) -> list[dict]:
     """증류 리포트의 날짜 확정(일 단위) 촉매. 실적 역주입분(portfolio_db)은 실적 일정과 겹쳐 뺀다.
-    근거 감사가 캘린더에서 뺀 사건(calendar_unsupported)도 넣지 않는다. 제목만 싣는다."""
+    근거 감사가 캘린더에서 뺀 사건(calendar_unsupported)도 넣지 않는다. 제목만 싣는다.
+    판정이 끝난 촉매(bucket resolved)는 뺀다 — 날짜가 실제 발생일이 아니라 원래 기한이라, 11-19에 상장한
+    'Anthropic 상장'이 기한 11-26에 앞으로 올 일처럼 보였다(2026-11-22). 기업 팝업에서는 '지난'에 남는다."""
     try:
         companies = company_events._cache().get("companies") or {}
     except Exception:
@@ -212,6 +214,8 @@ def _catalysts(ticker_meta: dict, owned: set[str], start, end, logo_hint) -> lis
             if not isinstance(event, dict) or event.get("kind") != "catalyst":
                 continue
             if event.get("attribution") == company_events.PORTFOLIO_ATTRIBUTION or event.get("audit") == "calendar_unsupported":
+                continue
+            if event.get("bucket") == "resolved":
                 continue
             if event.get("date_precision") != "day":
                 continue
