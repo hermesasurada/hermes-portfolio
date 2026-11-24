@@ -38,6 +38,7 @@
 - 거래 수정 시 잔고에 반영됐던 거래의 유형·수량·단가가 바뀌면 `#txEditHoldingsModal`로 한 번 묻는다. 서버는 되돌리기+재적용을 한 트랜잭션으로. 테스트 `test_transaction_edit_holdings.js`.
 - 거래 줄의 관리 칸은 `편집`만 늘 보이고 메모·숨김·삭제는 `⋯`(`details.tx-more`) 안(2026-11-20 디자인 재검토 08). 메뉴는 칸 왼쪽으로 같은 줄에 펼친다(표 스크롤 상자에 위아래로 안 잘리게). 메모가 있으면 ⋯에도 `has-memo`. 닫기(바깥·메뉴 버튼·Esc)는 app.js 문서 위임 → `handleTransactionMoreMenuClick`·`closeTransactionMoreMenus`. 테스트 `test_transaction_memo.js`.
 - 거래내역 API는 전체 이력(200건 제한 금지), 프런트에서 필터 후 20건씩. 테스트 `test_transaction_filter.js`.
+- 거래내역 표 열: 거래일·계좌·티커·종목명·유형·단가·수량·잔고·금액·현재가·현재대비·**현재가치**·관리. 현재가치 = 거래 수량 × 현재가, 금액 칸과 같은 통화(2026-11-24 사용자 지시). 열을 더하면 편집 줄·빈 줄 `colspan`·숫자 글꼴 규칙(`#transactions … nth-child`)을 함께 맞춘다. 테스트 `test_transaction_current_value.js`.
 - 배당이력 팝업 PC 최소 너비 600px.
 - 관심목록 고정열은 CSS sticky만(로고·종목명, 삭제 열 고정 금지). 종목명 `left`는 `--interest-logo-col`. 셀은 `overflow: hidden`.
 - 표는 기본 12행 + 헤더만 보이고 안에서 스크롤. 높이는 `syncTableViewportRows()`가 실측(rAF 금지), 가로로 넘치면 가로 스크롤바 두께(`horizontalScrollbarHeight`, offsetHeight − clientHeight − 테두리)를 더한다(빼먹으면 마지막 행이 스크롤바에 가린다, 2026-11-15). 테스트 `test_table_viewport_rows.js`.
