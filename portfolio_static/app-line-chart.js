@@ -29,6 +29,7 @@ function chartPayloadExtent(payloads, common = false) {
 
 function chartRangeUnavailable(range, extent) {
   if (!range || !extent || range.all || range.key === "cmax" || range.key === "custom") return false;
+  if (range.days) return false;   // 1주는 이력이 며칠뿐인 신규 상장 종목에서도 고를 수 있다
   if (range.months) return range.months > extent.months + 0.5;
   if (range.ytd) {
     const yearStart = new Date(extent.endDate.getFullYear(), 0, 1).getTime();
@@ -106,6 +107,7 @@ let chartIntervalPreference = null;
 
 function chartDisplayedYears() {
   const range = chartRanges.find(item => item.key === chartRange);
+  if (range?.days) return range.days / 365.25;
   if (range?.months) return range.months / 12;
   if (range?.ytd) return 1;
   if (chartRange === "custom") {

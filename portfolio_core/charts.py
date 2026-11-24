@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from itertools import groupby
 
 from .constants import MARKET_INDEXES
@@ -17,6 +17,7 @@ from .performance_snapshots import twr_index
 from .us_live_quotes import us_market_status
 
 
+CHART_RANGE_DAYS = {"1w": 7}
 PRICE_CHART_RANGE_MONTHS = {
     "1m": 1,
     "3m": 3,
@@ -177,6 +178,9 @@ def price_chart_date_bounds(
         return None, None
     if clean_range == "ytd":
         return date(last_date.year, 1, 1), None
+    days = CHART_RANGE_DAYS.get(clean_range)
+    if days:
+        return last_date - timedelta(days=days), None
     months = PRICE_CHART_RANGE_MONTHS.get(clean_range)
     return (shift_months(last_date, -months), None) if months else (None, None)
 
@@ -464,7 +468,11 @@ def performance_date_bounds(
     today = today_kst()
     if range_key == "ytd":
         return f"{today.year:04d}-01-01", None
-    months = PERFORMANCE_RANGE_MONTHS.get(str(range_key or "").lower())
+    clean_range = str(range_key or "").lower()
+    days = CHART_RANGE_DAYS.get(clean_range)
+    if days:
+        return (today - timedelta(days=days)).isoformat(), None
+    months = PERFORMANCE_RANGE_MONTHS.get(clean_range)
     return (shift_months(today, -months).isoformat(), None) if months else (None, None)
 
 

@@ -53,6 +53,7 @@ let showHiddenTransactions = false;
 const transactionPageSize = 20;
 
 const chartRanges = [
+  { key: "1w", label: "1W", days: 7 },
   { key: "1m", label: "1M", months: 1 },
   { key: "3m", label: "3M", months: 3 },
   { key: "6m", label: "6M", months: 6 },

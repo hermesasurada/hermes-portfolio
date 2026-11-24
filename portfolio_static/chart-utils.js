@@ -12,6 +12,7 @@ function pctChartLabel1(value) {
 }
 
 function chartGridUnit(rangeKey) {
+  if (rangeKey === "1w") return "day";
   if (rangeKey === "1m") return "week";
   if (rangeKey === "3y" || rangeKey === "5y") return "quarter";
   return "month";
@@ -21,7 +22,10 @@ function verticalDateGrid(minTime, maxTime, rangeKey) {
   const unit = chartGridUnit(rangeKey);
   const start = new Date(minTime);
   let cursor;
-  if (unit === "week") {
+  if (unit === "day") {
+    cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    if (cursor.getTime() < minTime) cursor.setDate(cursor.getDate() + 1);
+  } else if (unit === "week") {
     cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
     cursor.setDate(cursor.getDate() - ((cursor.getDay() + 6) % 7));
     if (cursor.getTime() < minTime) cursor.setDate(cursor.getDate() + 7);
@@ -36,7 +40,8 @@ function verticalDateGrid(minTime, maxTime, rangeKey) {
   let guard = 0;
   while (cursor.getTime() <= maxTime && guard++ < 240) {
     lines.push(cursor.getTime());
-    if (unit === "week") cursor.setDate(cursor.getDate() + 7);
+    if (unit === "day") cursor.setDate(cursor.getDate() + 1);
+    else if (unit === "week") cursor.setDate(cursor.getDate() + 7);
     else if (unit === "quarter") cursor.setMonth(cursor.getMonth() + 3);
     else cursor.setMonth(cursor.getMonth() + 1);
   }
@@ -45,7 +50,7 @@ function verticalDateGrid(minTime, maxTime, rangeKey) {
 
 function chartGridLabel(time, unit) {
   const d = new Date(time);
-  if (unit === "week") return `${d.getMonth() + 1}/${d.getDate()}`;
+  if (unit === "day" || unit === "week") return `${d.getMonth() + 1}/${d.getDate()}`;
   return `${String(d.getFullYear()).slice(2)}.${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 

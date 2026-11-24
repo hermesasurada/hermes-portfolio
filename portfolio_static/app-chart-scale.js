@@ -34,7 +34,8 @@ function chartRangeStartDate(points, rangeKey) {
   const range = chartRanges.find(item => item.key === rangeKey)
     || chartRanges.find(item => item.key === DEFAULT_CHART_RANGE);
   const start = new Date(lastDate);
-  start.setMonth(start.getMonth() - (range.months || 6));
+  if (range.days) start.setDate(start.getDate() - range.days);
+  else start.setMonth(start.getMonth() - (range.months || 6));
   return start;
 }
 
@@ -386,6 +387,15 @@ function indexedChartVerticalGrid(points, xFor, rangeKey) {
   const minTime = new Date(`${points[0].date}T00:00:00`).getTime();
   const maxTime = new Date(`${points[points.length - 1].date}T00:00:00`).getTime();
   const grid = perfVerticalGrid(minTime, maxTime, rangeKey);
+  // 일 단위 격자는 거래일마다 한 줄 — 달력 날짜로 그으면 주말 선이 옆 거래일에 붙어 날짜가 어긋난다.
+  if (grid.unit === "day") {
+    return {
+      unit: grid.unit,
+      ticks: points.map((point, index) => ({
+        time: new Date(`${point.date}T00:00:00`).getTime(), index, x: xFor(index), date: point.date,
+      })),
+    };
+  }
   const seen = new Set();
   const ticks = grid.lines
     .map(time => {

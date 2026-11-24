@@ -9,7 +9,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from portfolio_core.charts import price_chart_date_bounds, price_chart_points_for_range
+from portfolio_core.charts import performance_date_bounds, price_chart_date_bounds, price_chart_points_for_range
+from portfolio_core.dates import today_kst
 from portfolio_web_server import accepts_gzip, gzip_response_body
 
 
@@ -44,6 +45,10 @@ def test_price_chart_range() -> None:
     assert one_year[-1] == points[-1]
     assert len(one_year) < len(points) / 5
 
+    one_week, start, end = price_chart_points_for_range(points, "1w")
+    assert start == date.fromisoformat(points[-1]["date"]) - timedelta(days=7) and end is None
+    assert len(one_week) == 8 and one_week[-1] == points[-1]
+
     custom, start, end = price_chart_points_for_range(
         points,
         "custom",
@@ -53,6 +58,11 @@ def test_price_chart_range() -> None:
     assert (start, end) == (date(2021, 3, 1), date(2021, 3, 31))
     assert custom[0]["date"] == "2021-03-01"
     assert custom[-1]["date"] == "2021-03-31"
+
+
+def test_performance_week_range() -> None:
+    start, end = performance_date_bounds("1w")
+    assert start == (today_kst() - timedelta(days=7)).isoformat() and end is None
 
 
 def test_invalid_custom_range() -> None:
