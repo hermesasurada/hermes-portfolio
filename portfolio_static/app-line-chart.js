@@ -67,6 +67,8 @@ function availableChartRangeChoices() {
   ];
 }
 
+// 기간은 PC에서 구분 버튼으로 한 번에 고르고(2026-11-25 사용자 지시), 좁은 화면은 줄 폭 때문에 팝업 버튼을 둔다 —
+// 둘 다 그려 두고 CSS(981px)가 하나만 보인다. '직접'은 날짜를 받아야 해서 PC도 팝업을 연다.
 function renderChartRangeButtons() {
   const isCompare = chartComparePayloads.length > 0;
   const choices = availableChartRangeChoices();
@@ -76,6 +78,10 @@ function renderChartRangeButtons() {
     <div class="chart-ranges" role="group" aria-label="차트 기간">
       <span class="chart-control-label">기간</span>
       <button class="chart-range-btn range-popup-btn active" type="button" data-chart-range-popup aria-haspopup="dialog" aria-label="현재 조회 기간 ${rangeLabel}, 기간 선택">${rangeLabel}</button>
+      <div class="segmented chart-range-segments">
+        ${choices.map(range => `<button class="seg-btn ${chartRange === range.key ? "active" : ""}" type="button" data-chart-range="${range.key}" aria-pressed="${chartRange === range.key}" ${range.disabled ? 'disabled title="이력이 이 기간보다 짧다"' : ""}>${range.label}</button>`).join("")}
+        <button class="seg-btn ${chartRange === "custom" ? "active" : ""}" type="button" data-chart-custom aria-haspopup="dialog" aria-pressed="${chartRange === "custom"}" title="시작일·종료일 직접 설정">직접</button>
+      </div>
       ${(!isCompare && !performanceChartOpen) ? `
         <span class="chart-marker-toggles" role="group" aria-label="거래 마커 표시">
           <span class="chart-control-label">거래</span>
@@ -130,6 +136,30 @@ function enforceChartInterval() {
   chartInterval = allowed.includes(chartIntervalPreference) ? chartIntervalPreference : allowed[allowed.length - 1];
 }
 
+// PC 단위 구분 버튼(2026-11-25 사용자 지시): 일·주·월을 한 번에 고른다. 못 고르는 단위는 흐리게 남겨 조건을 알린다.
+function renderChartIntervalSegments(options, current, disabledTitle) {
+  const host = document.getElementById("chartIntervalSegments");
+  if (!host) return;
+  const labels = { day: "일", week: "주", month: "월" };
+  host.innerHTML = options.map(option => `<button class="seg-btn ${option.key === current ? "active" : ""}" type="button" data-chart-interval="${option.key}" aria-pressed="${option.key === current}" ${option.disabled ? `disabled title="${disabledTitle}"` : ""}>${labels[option.key]}</button>`).join("");
+}
+
+function selectChartInterval(interval) {
+  if (performanceChartOpen) {
+    if (performanceWeeklyForced()) return;
+    performanceIntervalPreference = interval === "week" ? "week" : "day";
+    syncChartIntervalControl();
+    if (performancePayload) renderPerformanceChart(performancePayload);
+    return;
+  }
+  if (!allowedChartIntervals().includes(interval)) return;
+  chartInterval = interval;
+  chartIntervalPreference = chartInterval;
+  storageSet(detailStorage.chartInterval, chartInterval);
+  syncChartIntervalControl();
+  if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
+}
+
 function syncChartIntervalControl() {
   const toggle = document.getElementById("chartIntervalToggle");
   if (!toggle) return;
@@ -144,9 +174,15 @@ function syncChartIntervalControl() {
     toggle.disabled = forced;
     toggle.setAttribute("aria-label", forced ? "주 단위 — 3년 이상 기간은 주 단위로 그린다" : `현재 ${labels[current]} 단위, 클릭하면 ${current === "day" ? "주" : "일"}`);
     toggle.title = forced ? "3년 이상 기간은 주 단위로 그린다" : `성과 단위: ${labels[current]} → ${current === "day" ? "주" : "일"}`;
+    renderChartIntervalSegments([{ key: "day", disabled: forced }, { key: "week" }], current, "3년 이상 기간은 주 단위로 그린다");
     return;
   }
   const allowed = allowedChartIntervals();
+  renderChartIntervalSegments(
+    CHART_INTERVAL_ORDER.map(key => ({ key, disabled: !allowed.includes(key) })),
+    chartInterval,
+    "주 단위는 기간 3년 이상, 월 단위는 10년 이상에서 선택할 수 있다"
+  );
   const next = allowed[(allowed.indexOf(chartInterval) + 1) % allowed.length];
   toggle.classList.toggle("hidden", !chartTicker);
   document.getElementById("chartUnitControls")?.classList.toggle("hidden", !chartTicker);
@@ -167,18 +203,15 @@ function initChartIntervalControl() {
   syncChartIntervalControl();
   toggle.addEventListener("click", () => {
     if (performanceChartOpen) {
-      if (performanceWeeklyForced()) return;
-      performanceIntervalPreference = performanceIntervalPreference === "week" ? "day" : "week";
-      syncChartIntervalControl();
-      if (performancePayload) renderPerformanceChart(performancePayload);
+      selectChartInterval(performanceIntervalPreference === "week" ? "day" : "week");
       return;
     }
     const allowed = allowedChartIntervals();
-    chartInterval = allowed[(allowed.indexOf(chartInterval) + 1) % allowed.length];
-    chartIntervalPreference = chartInterval;
-    storageSet(detailStorage.chartInterval, chartInterval);
-    syncChartIntervalControl();
-    if (chartPayload && !performanceChartOpen) renderLineChart(chartPayload);
+    selectChartInterval(allowed[(allowed.indexOf(chartInterval) + 1) % allowed.length]);
+  });
+  document.getElementById("chartIntervalSegments")?.addEventListener("click", event => {
+    const button = event.target.closest("[data-chart-interval]");
+    if (button && !button.disabled) selectChartInterval(button.dataset.chartInterval);
   });
 }
 
@@ -813,7 +846,7 @@ function initChartInterestModal() {
 }
 
 function bindLineChartControls(payload) {
-  document.querySelectorAll(".chart-range-btn").forEach(btn => {
+  document.querySelectorAll(".chart-range-btn, .chart-range-segments .seg-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       if (btn.disabled) return;
       if (btn.dataset.chartOverlayToggle != null) {

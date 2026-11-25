@@ -489,7 +489,7 @@ function bindPerformanceChartControls() {
       renderPerformanceChart(performancePayload);
     });
   });
-  document.querySelectorAll(".chart-range-btn").forEach(btn => {
+  document.querySelectorAll(".chart-range-btn, .chart-range-segments .seg-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       if (btn.dataset.chartRangePopup != null || btn.dataset.chartCustom != null) {
         openChartRangeModal();

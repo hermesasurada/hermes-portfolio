@@ -7066,6 +7066,21 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 /* 열 묶음(2026-11-20): PC는 통화와 같은 버튼 묶음, 모바일은 '열' 선택 상자 */
 .column-preset-segments { height: 30px; }
 .column-preset-segments .seg-btn { height: 24px; }
+/* 차트 기간·단위(2026-11-25 사용자 지시): PC는 열 묶음과 같은 구분 버튼으로 한 번에 고르고,
+   좁은 화면은 줄 폭 때문에 기간 팝업 버튼·단위 순환 버튼을 그대로 둔다. */
+:is(.chart-range-segments, .chart-interval-segments) { height: 30px; flex: 0 0 auto; background: var(--panel); }
+:is(.chart-range-segments, .chart-interval-segments) .seg-btn { height: 24px; min-width: 34px; padding: 0 7px; cursor: pointer; }
+:is(.chart-range-segments, .chart-interval-segments) .seg-btn:not(.active):not(:disabled):hover { color: var(--brand); background: var(--brand-soft); }
+:is(.chart-range-segments, .chart-interval-segments) .seg-btn:disabled { opacity: .38; cursor: not-allowed; }
+@media (min-width: 981px) {
+  #chartBottomControls #chartIntervalToggle, .chart-range-btn.range-popup-btn { display: none; }
+  /* 구분 버튼만큼 줄이 길어져 좁은 PC 창(약 1200px 아래)에서는 넘친다 — 잘리지 않게 묶음 단위로 줄을 바꾼다. */
+  .chart-bottom-controls { flex-wrap: wrap; row-gap: 6px; }
+  .perf-legend-groups .perf-controls-section { flex-wrap: wrap; }
+  /* 성과 화면은 순환 버튼 글자에 '단위:'가 붙어 꼬리표를 숨겼다 — 구분 버튼에는 꼬리표가 다시 필요하다. */
+  .chart-bottom-controls.perf-mode #chartUnitControls .chart-control-label { display: inline; }
+}
+@media (max-width: 980px) { .chart-range-segments, .chart-interval-segments { display: none; } }
 
 /* ── PC 전용(2026-11-15): 거래내역 팝업 · 본문 폭 전환 ── */
 .watch-modal.transactions-modal {
