@@ -433,8 +433,13 @@ function applyChartCustomRange() {
 }
 
 function initChartRangeModal() {
+  const rangeModal = document.getElementById("chartRangeModal");
   document.getElementById("chartRangeClose").addEventListener("click", () => {
-    document.getElementById("chartRangeModal").close();
+    rangeModal.close();
+  });
+  // 팝업 바깥(어두운 영역)을 누르면 닫는다(2026-11-25 사용자 지시) — 다른 팝업과 같은 방식.
+  rangeModal.addEventListener("click", event => {
+    if (event.target === rangeModal) rangeModal.close();
   });
   document.getElementById("chartRangeApply").addEventListener("click", applyChartCustomRange);
   document.getElementById("chartRangePresets").addEventListener("click", event => {

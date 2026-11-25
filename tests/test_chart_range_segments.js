@@ -90,4 +90,14 @@ for (const file of ['portfolio_static/app-line-chart.js', 'portfolio_static/app-
 const css = fs.readFileSync('portfolio_static/styles.css', 'utf8');
 assert.match(css, /@media \(min-width: 981px\) \{\s*#chartBottomControls #chartIntervalToggle, \.chart-range-btn\.range-popup-btn \{ display: none; \}/);
 assert.match(css, /@media \(max-width: 980px\) \{ \.chart-range-segments, \.chart-interval-segments \{ display: none; \} \}/);
+
+// ── 기간 팝업: 바깥(어두운 영역)을 누르면 닫히고, 팝업 안을 누르면 그대로다 ──
+ctx.initChartRangeModal();
+const rangeModal = elements.chartRangeModal;
+let closed = 0;
+rangeModal.close = () => { closed += 1; };
+rangeModal.click({target: {inside: true}});
+assert.equal(closed, 0);
+rangeModal.click({target: rangeModal});
+assert.equal(closed, 1);
 console.log('chart range segments ok');
