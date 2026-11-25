@@ -62,6 +62,22 @@ class EarningsDateCollectionTests(unittest.TestCase):
              mock.patch.object(collect_prices, "fetch_yahoo_earnings_date", side_effect=error):
             self.assertEqual(collect_prices.collect_earnings_dates(["overseas"], None, 24, force=True), ([], ["AAA"]))
 
+    def test_daily_run_refreshes_dates_updated_by_previous_daily_run(self):
+        # 전날 실행이 10:11에 끝나고 오늘 실행이 10:05에 시작해도(23시간 54분) 다시 갱신 대상이어야 한다.
+        from datetime import datetime, timedelta
+        from portfolio_core import price_store
+
+        yesterday = (datetime.now(price_store.KST) - timedelta(hours=23, minutes=54)).isoformat(timespec="seconds")
+        just_now = (datetime.now(price_store.KST) - timedelta(hours=1)).isoformat(timespec="seconds")
+        with connect() as conn:
+            conn.executemany(
+                "INSERT OR REPLACE INTO tickers (ticker, name, region, currency, added_date, category, earnings_updated_at) "
+                "VALUES (?, ?, 'US', 'USD', '2026-01-01', 'overseas', ?)",
+                [("DAILY1", "Daily One", yesterday), ("FRESH1", "Fresh One", just_now)],
+            )
+            conn.commit()
+        self.assertEqual(price_store.earnings_update_due_tickers(["DAILY1", "FRESH1"]), ["DAILY1"])
+
 
 class OpendartStatusTests(unittest.TestCase):
     def fetch(self, body: bytes):

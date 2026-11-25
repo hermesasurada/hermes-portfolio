@@ -574,7 +574,7 @@ def update_earnings_dates(entries: Iterable[tuple[str, str | None]]) -> int:
     return len(clean_entries)
 
 
-def earnings_update_due_tickers(tickers: Iterable[str], max_age_hours: float = 24) -> list[str]:
+def earnings_update_due_tickers(tickers: Iterable[str], max_age_hours: float = 12) -> list[str]:
     clean_tickers = normalize_tickers(tickers)
     if not clean_tickers:
         return []

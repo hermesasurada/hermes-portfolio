@@ -267,7 +267,9 @@ def main() -> int:
     parser.add_argument("--skip-dividends", action="store_true", help="Do not update dividend event cache.")
     parser.add_argument("--skip-splits", action="store_true", help="Do not update stock split history.")
     parser.add_argument("--force-earnings", action="store_true", help="Refresh earnings dates even if recently updated.")
-    parser.add_argument("--earnings-max-age-hours", type=float, default=24, help="Refresh earnings dates older than this many hours.")
+    # 일배치는 하루 한 번 비슷한 시각에 돈다. 기준이 24시간이면 직전 실행이 몇 분 늦게 끝난 것만으로
+    # '아직 신선'으로 걸러져 하루 걸러 갱신됐다(2026-11-25: 전날 10:11 갱신 → 당일 10:05 실행이 전부 건너뜀).
+    parser.add_argument("--earnings-max-age-hours", type=float, default=12, help="Refresh earnings dates older than this many hours.")
     parser.add_argument("--dividends-only", action="store_true", help="Only collect dividend events + splits (전 추적종목), skip prices/earnings. 가격 크론과 분리해 일배치로 돌릴 때 사용.")
     args = parser.parse_args()
 
