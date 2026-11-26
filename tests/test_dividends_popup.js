@@ -18,6 +18,27 @@ assert.deepEqual(heads.slice(0, 5), ['지급일자', '계좌', '종목', '배당
 assert.equal(heads.length, 15);
 assert.match(css, /\.watch-modal\.dividends-modal \{[^}]*width: fit-content;/);
 assert.match(css, /\.dividends-modal \.dividend-list \{ width: 0; min-width: 0; \}/);
+// 항목 구분: 계좌 칸 한 줄(block 금지), 실지급액 강조, 열 묶음 세로선
+assert.doesNotMatch(css, /\.dividend-owner, \.dividend-account \{ display: block/);
+assert.match(css, /td\.net-krw \{\s*font-weight: 700;/);
+assert.match(css, /:is\(:nth-child\(4\), :nth-child\(7\), :nth-child\(12\), :nth-child\(13\)\) \{\s*border-left: 1px solid var\(--line\);/);
+
+// 항목 줄무늬: 같은 회차(대상별 줄)는 같은 바탕, 다음 회차는 번갈아, 달이 바뀌면 처음부터
+{
+  const c = h.loadScripts(h.createContext());
+  const body = h.element();
+  const others = new Map();
+  c.document.getElementById = id => (id === 'dividendRows' ? body : (others.get(id) || others.set(id, h.element()).get(id)));
+  c.todayLocal = () => '2026-11-26';
+  c.schedulePcFrozenColumns = () => {};
+  const r = (ticker, pay, target) => ({ticker, name: ticker, pay_date: pay, ex_date: pay, amount: 1, qty: 1, gross: 1, net: 1, net_krw: 1, currency: 'USD', target});
+  c.__rows = [r('A', '2026-12-01', 'Ray'), r('A', '2026-12-01', 'Claire'), r('B', '2026-12-02', 'Ray'), r('C', '2026-12-03', 'Ray'), r('D', '2027-01-05', 'Ray')];
+  h.evaluate(c, "dividendLoadKey = dividendSelectionKey(); dividendData = {rows: __rows}; sortState.dividend = {key: 'pay_date', dir: 1}; dividendMonthOverrides = new Map([['2027-01', false]]);");
+  c.renderDividendTable();
+  const bands = body.innerHTML.split('<tr').filter(tr => /dividend-(paid|upcoming)-row/.test(tr))
+    .map(tr => (tr.match(/<td[^>]*>[\s\S]*?data-chart-ticker="(\w)"/)?.[1] || '+') + (tr.includes('dividend-band') ? '*' : ''));
+  assert.deepEqual(bands, ['A', '+', 'B*', 'C', 'D']);
+}
 
 // ── 동작 ──
 const ctx = h.loadScripts(h.createContext());
@@ -49,6 +70,7 @@ ctx.scheduleTableViewportRows = () => {};
   const cells = dataRow.match(/<td[\s\S]*?<\/td>/g);
   assert.match(cells[1], /dividend-owner">Ray<[\s\S]*dividend-account">연금저축</);
   assert.match(cells[3], /class="dividend-yield"/);
+  assert.match(cells[1], /dividend-owner">Ray<\/span><span class="dividend-account">연금저축/, '계좌는 한 줄');
   // 다시 열면 다시 받는다(거래를 고친 뒤 바로 반영)
   ctx.closeDividendsPopup();
   assert.ok(!modal.open);

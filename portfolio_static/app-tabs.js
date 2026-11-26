@@ -174,7 +174,7 @@ function renderDividendTable() {
   if (count) count.textContent = `${rows.length}건`;
   const empty = `<tr><td colspan="15" class="flat">${tagFilterSelection.size && dividendData.rows?.length ? "선택한 태그 종목의 예정 배당 없음" : "예정 배당 없음"}</td></tr>`;
   const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : "confirmed-date"}">${dividendDateText(value)}</span>`;
-  // 계좌 칸(2026-11-26 사용자 지시): 예전 이니셜 동그라미 대신 이름(위)·계좌명(아래) 두 줄
+  // 계좌 칸(2026-11-26 사용자 지시): 예전 이니셜 동그라미 대신 이름·계좌명을 한 줄로
   const accountNames = new Map((typeof flattenAccounts === "function" && data?.members ? flattenAccounts() : [])
     .map(account => [String(account.id), account.name]));
   const targetCell = row => {
@@ -227,6 +227,16 @@ function renderDividendTable() {
   const nonZero = key => rows.some(row => Number.isFinite(Number(row[key])) && Number(row[key]) !== 0);
   wrap?.classList?.toggle("dividend-no-tax", !nonZero("tax") && !nonZero("tax_rate"));
   wrap?.classList?.toggle("dividend-no-fx", !rows.some(row => row.fx_rate != null && Number.isFinite(Number(row.fx_rate))));
+  // 항목 줄무늬(2026-11-26 사용자 지시 '항목 간 구분'): 한 배당 회차(같은 종목·회차의 대상별 줄 묶음)마다
+  // 바탕을 번갈아 깐다. 행 단위 줄무늬가 아니라 묶음 단위라 이어진 줄은 같은 바탕이다. 달이 바뀌면 처음부터.
+  let bandIndex = -1;
+  const bandOf = groupedRows.map((item, itemIndex) => {
+    if (item.kind === "month") bandIndex = -1;
+    if (item.kind !== "row") return false;
+    if (!dividendRowContinues(groupedRows[itemIndex - 1], item)) bandIndex += 1;
+    return bandIndex % 2 === 1;
+  });
+  const band = itemIndex => (bandOf[itemIndex] ? " dividend-band" : "");
   document.getElementById("dividendRows").innerHTML = rows.length ? groupedRows.map((item, itemIndex) => {
     if (item.kind === "today") return `
       <tr class="dividend-today-row">
@@ -256,7 +266,7 @@ function renderDividendTable() {
     // 같은 종목·같은 회차가 대상(계좌 주인)마다 한 줄씩 이어지면, 둘째 줄부터는 대상별 숫자만 남긴다 —
     // 지급일·종목명·주당배당금·배당율·배당락일·상세는 윗줄과 같아 되풀이하지 않는다. 합치지 않으므로 값은 그대로다.
     if (dividendRowContinues(groupedRows[itemIndex - 1], item)) return `
-    <tr class="${paid ? "dividend-paid-row" : "dividend-upcoming-row"} dividend-same-row">
+    <tr class="${paid ? "dividend-paid-row" : "dividend-upcoming-row"} dividend-same-row${band(itemIndex)}">
       <td></td>
       ${targetCell(item.row)}
       <td class="dividend-name"><span class="sr-only">${esc(item.row.name || item.row.ticker || "-")}</span></td>
@@ -275,7 +285,7 @@ function renderDividendTable() {
     </tr>
   `;
     return `
-    <tr class="${paid ? "dividend-paid-row" : "dividend-upcoming-row"}">
+    <tr class="${paid ? "dividend-paid-row" : "dividend-upcoming-row"}${band(itemIndex)}">
       <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
       ${targetCell(item.row)}
       <td class="dividend-name" title="${esc(item.row.name || item.row.ticker || "-")}"><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(item.row.name || item.row.ticker || "-")}</a></td>
