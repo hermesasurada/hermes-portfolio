@@ -26,6 +26,9 @@ assert.match(css, /:is\(:nth-child\(4\), :nth-child\(7\), :nth-child\(12\), :nth
 // 모바일 고정 영역(2026-11-26): 지급일자·종목만 고정, 계좌는 흘려보낸다. 종목 칸도 좁힌다.
 assert.match(h.readStatic('app-holdings.js'), /\["#dividendTableWrap table", narrow \? \[0, 2\] : \[0, 1, 2\]\]/);
 assert.ok(h.mediaBlocks(css, '(max-width: 980px)').some(block => /\.dividend-list td:nth-child\(3\) \{\s*width: 96px;/.test(block.text)));
+// 계좌 칸은 가장 긴 계좌명에 맞춘 폭 — 넓히면 종목명과 벌어진다(2026-11-26 사용자 지적)
+assert.match(h.withoutMediaBlocks(css, '(max-width: 980px)'), /\.dividend-list td:nth-child\(2\) \{\s*text-align: left;\s*width: 104px;/);
+assert.ok(h.mediaBlocks(css, '(max-width: 980px)').some(block => /\.dividend-list td:nth-child\(2\) \{\s*width: 92px;/.test(block.text)));
 
 // 항목 줄무늬: 같은 회차(대상별 줄)는 같은 바탕, 다음 회차는 번갈아, 달이 바뀌면 처음부터
 {

@@ -1807,10 +1807,11 @@ th:first-child, td:first-child { text-align: left; }
   text-align: center;
   width: 72px;
 }
+/* 계좌 칸은 가장 긴 'Claire 한국개별주'(PC 92px·모바일 81px)에 여백만 더한 폭 — 넓히면 종목명과 벌어진다(2026-11-26) */
 .dividend-list th:nth-child(2),
 .dividend-list td:nth-child(2) {
   text-align: left;
-  width: 112px;
+  width: 104px;
 }
 .dividend-list th:nth-child(3),
 .dividend-list td:nth-child(3) {
@@ -6026,6 +6027,10 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   .dividend-list td:nth-child(3) {
     width: 96px;
     max-width: 96px;
+  }
+  .dividend-list th:nth-child(2),
+  .dividend-list td:nth-child(2) {
+    width: 92px;
   }
   /* 고정 영역 = 지급일자 + 종목(계좌는 스크롤되며 그 밑으로 들어간다, syncPcFrozenColumns) */
   .dividend-list th:nth-child(1),
