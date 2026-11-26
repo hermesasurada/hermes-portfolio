@@ -106,7 +106,7 @@
 - `scripts/repair_transaction_split_units.py`는 5종목 청산 거래 전용 수동 도구(기본 dry-run).
 
 ## 외부 서비스·운영
-- 다른 서비스의 종목 전광판(티커칩 시세 팝오버: wm·sa·td·xw·filings·지식증류 8768)은 이 서비스의 `/api/chart`를 받아 그린다. **기업명 오른쪽에 티커(응답의 ticker, 접미사 포함)를 작고 옅게** 함께 적는다(2026-11-21 사용자 지시, 각 세션에 전파). 기업명은 응답의 `name` = 수정종목명(`tickers.display_name`, 비면 원래 이름)을 그대로 쓴다 — 티커와 같아도(AMD·ASML) 각 서비스 쪽 회사명으로 바꾸지 않는다(2026-11-24 사용자 지시, filings 9106dc8에서 마지막 예외 정리). 미등록 종목만 칩 글자로 남는다.
+- 다른 서비스의 종목 전광판(티커칩 시세 팝오버: wm·sa·td·xw·filings·지식증류 8768)은 이 서비스의 `/api/chart`를 받아 그린다. 머리줄은 **기업명만 이 서비스 종목 페이지 링크, 티커(응답의 ticker, 접미사 포함)는 링크 없이 오른쪽 끝에 작고 옅게**(2026-11-26 사용자 지시로 6곳 같은 꼴 `.tqp-head` > `.tqp-name` + `.tqp-ticker`; 11-21엔 링크 안 이름 옆). 기업명은 응답의 `name` = 수정종목명(`tickers.display_name`, 비면 원래 이름)을 그대로 쓴다 — 티커와 같아도(AMD·ASML) 각 서비스 쪽 회사명으로 바꾸지 않는다(2026-11-24 사용자 지시, filings 9106dc8에서 마지막 예외 정리). 미등록 종목만 칩 글자로 남는다.
 - 일정표의 촉매는 증류 `company-events.latest.json`의 일 단위 촉매만(`schedule._catalysts`): 실적 역주입분(portfolio_db)·근거 감사 제외분·**판정이 끝난 촉매(bucket resolved — 날짜가 실제 발생일이 아닌 원래 기한, 2026-11-22 ANT 상장 사고)**는 뺀다. 기업 팝업은 판정분을 '지난'에 그대로 보인다. 증류의 **'공통' 묶음(대상 기업 없는 거시·정책 촉매·FOMC)도 같은 규칙으로 `general`에 실어** 일정표 유형 '공통'으로 보인다(2026-11-22 사용자 지시, `_general_events`) — 종목이 아니라 시장·종류·보유 필터를 타지 않고 칩으로만 켜고 끄며, 이름 칸은 출처 장(미국·금융·자본시장 등), 차트 링크 없는 줄. 일정 유형은 **끈 것만 저장**(`portfolio.schedule.hiddenTypes`)해 새 유형이 처음부터 켜진다(예전 켠 목록 `types`는 읽어서 옮김). 테스트 `test_schedule_catalysts.py`·`test_schedule_view.js`.
 - 컨센서스는 analyst-reports(8767)를 `/api/quote`로 프록시. 죽으면 `{}` → 컨센서스만 빠진다. '리포트 상세'는 8767 모달을 iframe 임베드(`?embed=1&ticker=`, `postMessage ar-modal-close`).
 - 크론: `collect_quotes.py`(분 단위), `collect_prices.py`(일배치·`--dividends-only`), `portfolio_healthcheck.py`. 래퍼 `scripts/run_collector.sh`는 성공 시 한 줄만 로그.
