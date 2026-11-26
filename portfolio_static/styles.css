@@ -260,7 +260,7 @@ body {
   border-radius: var(--radius-sm);
 }
 /* smooth state changes across interactive surfaces */
-button, .account, .group-head, .tab-btn, .pill,
+button, .account, .group-head, .pill,
 .chart-range-btn, th[data-key], .ticker-link, .toggle-ui {
   transition: background var(--t-fast), color var(--t-fast),
     border-color var(--t-fast), box-shadow var(--t-fast);
@@ -2292,28 +2292,6 @@ th.pc-frozen-edge {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-}
-.detail-tabs {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px;
-  background: var(--surface-2);
-}
-.tab-btn {
-  height: 30px;
-  min-width: 72px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--muted);
-  padding: 0 9px;
-  font-size: 11.5px;
-}
-.tab-btn.active {
-  background: var(--panel);
-  color: var(--brand);
-  box-shadow: none;
 }
 .pill {
   display: inline-flex;
@@ -5753,7 +5731,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 }
 
 /* ── 공통 UI 계층: 탐색 / 필터 / 편집 ───────────────────────────────── */
-.sidebar-tab, .tab-btn,
+.sidebar-tab,
 .filter-toggle-control .toggle-label,
 .currency-filter-control label, .currency-filter-control select,
 .interest-detail-list thead th, .interest-detail-list thead .interest-group-head th:not([rowspan]),
@@ -5763,7 +5741,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
 .interest-detail-list thead .interest-group-head th:not([rowspan]) { letter-spacing: 0; }
 .asset-name { font-weight: 600; }
 .change-cell, .pct-chip, .ticker-symbol { font-weight: 500; }
-.sidebar-tabs, .detail-tabs { border: 0; border-radius: 8px; }
+.sidebar-tabs { border: 0; border-radius: 8px; }
 /* 그룹 추가·이름변경·순서·삭제와 종목 추가/삭제 컨트롤은 항상 보인다(2026-09-15 사용자 지시).
    2026-09-06 개편이 이것들을 '편집' 토글 뒤에 숨겼다가, 기능이 사라진 것으로 읽혀 원복했다.
    다시 숨기려면 토글이 아니라 컨트롤 자체를 재검토할 것. */
@@ -7023,8 +7001,6 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
   #tableTitle { order: -2; }
   #rowCount { order: -1; height: auto; margin-left: -2px; padding: 0; color: var(--muted); font-size: 11px; }
   .row-count-unit { display: none; }
-  .detail-tabs { gap: 2px; padding-inline: 2px; }
-  .tab-btn { min-width: 52px; padding: 0 4px; }
   .visible-rows-control input { width: 26px; }
   .perf-legend-item { padding-inline: 5px; }
 
@@ -7101,6 +7077,25 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 .transaction-panel.in-popup { margin-top: 0; border: 0; }
 .transaction-panel.in-popup #transactionToggle,
 .transaction-panel:not(.in-popup) #transactionsPopupClose { display: none; }
+/* ── 배당 팝업(2026-11-26): 예전 배당 탭의 표를 그대로 옮겼다. PC·모바일 공용, 표 안에서 세로·가로 스크롤 ── */
+.watch-modal.dividends-modal {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(1320px, calc(100vw - 48px));
+  max-width: none;
+  max-height: calc(100dvh - 48px);
+  overflow: hidden;
+}
+.dividends-modal[open] { display: flex; flex-direction: column; }
+.dividends-modal .dividends-modal-card { display: flex; flex-direction: column; gap: 8px; min-height: 0; padding: 10px; overflow: hidden; }
+/* 표는 가로 화살표용 .table-scroll-shell(initTableScrollNudges)에 싸여 있어 그 껍데기까지 남는 높이에 맞춘다 */
+.dividends-modal .table-scroll-shell { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.dividends-modal #dividendTableWrap { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+#dividendsCount { font-variant-numeric: tabular-nums; }
+@media (max-width: 980px) {
+  .watch-modal.dividends-modal { width: calc(100vw - 16px); max-height: calc(100dvh - 28px); }
+}
 #layoutWidthToggle[aria-pressed="true"] { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); }
 @media (min-width: 981px) {
   html.layout-wide main,

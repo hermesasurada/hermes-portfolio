@@ -170,7 +170,8 @@ function renderDividendTable() {
     return;
   }
   const rows = applyTagFilter([...(dividendData.rows || [])]);
-  document.getElementById("rowCountValue").textContent = rows.length;
+  const count = document.getElementById("dividendsCount");
+  if (count) count.textContent = `${rows.length}건`;
   const empty = `<tr><td colspan="15" class="flat">${tagFilterSelection.size && dividendData.rows?.length ? "선택한 태그 종목의 예정 배당 없음" : "예정 배당 없음"}</td></tr>`;
   const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : "confirmed-date"}">${dividendDateText(value)}</span>`;
   const targetInitial = value => {
@@ -299,8 +300,29 @@ function renderDividendTable() {
     });
   });
   // 티커 링크·배당이력 버튼 클릭은 app.js의 문서 위임이 처리 (개별 바인딩 금지)
+  updateSortHeaders();   // 팝업 표 머리글을 눌러 정렬하면 renderTable을 거치지 않는다
   schedulePcFrozenColumns();
-  scheduleTableViewportRows();   // 10행 뷰포트는 rAF를 기다리지 않는다
+}
+
+// ── 배당 팝업(2026-11-26 사용자 지시): 예전 '세부내역/배당' 탭을 없애고 거래내역 옆 '배당' 버튼으로 연다 ──
+// PC·모바일 공용. 열 때마다 새로 받는다(거래를 고친 뒤 다시 열면 바로 반영). 차트·관심목록·성과에서는
+// 버튼을 숨기고, 표의 종목 링크로 차트에 가면 팝업을 닫는다.
+function openDividendsPopup() {
+  const modal = document.getElementById("dividendsModal");
+  if (!modal) return;
+  dividendLoadKey = "";
+  if (!modal.open) modal.showModal?.();
+  renderDividendTable();
+}
+
+function closeDividendsPopup() {
+  const modal = document.getElementById("dividendsModal");
+  if (modal?.open) modal.close();
+}
+
+function syncDividendsPopup(blocked) {
+  document.getElementById("dividendsPopupOpen")?.classList.toggle("hidden", blocked);
+  if (blocked) closeDividendsPopup();
 }
 
 function dividendHistoryPercent(value) {

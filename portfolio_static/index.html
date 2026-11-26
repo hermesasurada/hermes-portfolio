@@ -208,10 +208,6 @@
               </label>
             </span>
             <span class="perf-account-title hidden" id="performanceTitle"></span>
-            <span class="detail-tabs" role="tablist" aria-label="상세 탭">
-              <button class="tab-btn active" id="detailTabBtn" type="button" data-tab="detail">세부내역</button>
-              <button class="tab-btn" id="dividendTabBtn" type="button" data-tab="dividend">배당</button>
-            </span>
             <span class="filter-toggle-control" id="fxAdjustedControl">
               <label class="toggle-switch" for="fxAdjustedToggle">
                 <input id="fxAdjustedToggle" type="checkbox">
@@ -267,6 +263,8 @@
             </span>
             <div class="segmented currency-segments single-option" id="currencySegments" role="group" aria-label="통화 필터"></div>
             <button class="ghost-btn tx-popup-open" id="transactionsPopupOpen" type="button" aria-haspopup="dialog" aria-controls="transactionsModal">거래내역</button>
+            <!-- 배당(2026-11-26 사용자 지시): 예전 '세부내역/배당' 탭 대신 거래내역 옆 버튼 → 팝업. PC·모바일 공용 -->
+            <button class="ghost-btn dividends-popup-open" id="dividendsPopupOpen" type="button" aria-haspopup="dialog" aria-controls="dividendsModal">배당</button>
             <span class="pill" id="rowCount"><span id="rowCountValue">0</span><span class="row-count-unit"> rows</span></span>
             <form class="interest-main-form hidden" id="interestMainItemForm">
               <input id="interestMainTicker" type="search" list="interestTickerOptions" placeholder="티커 또는 종목명" autocomplete="off">
@@ -376,30 +374,6 @@
             <colgroup></colgroup>
             <thead></thead>
             <tbody id="interestRows"></tbody>
-          </table>
-        </div>
-        <div class="table-wrap hidden" id="dividendTableWrap">
-          <table class="dividend-list">
-            <thead>
-              <tr>
-                <th data-key="pay_date">지급일자</th>
-                <th data-key="target">대상</th>
-                <th data-key="name">종목</th>
-                <th data-key="amount">주당배당금</th>
-                <th data-key="qty">수량</th>
-                <th data-key="gross">세전</th>
-                <th data-key="tax">세금</th>
-                <th data-key="tax_rate">세율</th>
-                <th data-key="net">세후</th>
-                <th data-key="fx_rate">환율</th>
-                <th data-key="net_krw">실지급액</th>
-                <th data-key="dividend_yield">배당율</th>
-                <th class="indicator-head" data-key="dividend_growth_5y"><span>5년</span><span>배당성장율</span></th>
-                <th data-key="ex_date">배당락일</th>
-                <th>상세</th>
-              </tr>
-            </thead>
-            <tbody id="dividendRows"></tbody>
           </table>
         </div>
         <div class="chart-view hidden" id="chartView">
@@ -1013,6 +987,42 @@
       </div>
       <div class="interest-main-status" id="interestBulkStatus" aria-live="polite"></div>
     </form>
+  </dialog>
+  <!-- 배당 팝업(2026-11-26): 선택한 계좌의 지난·예정 배당. 표·정렬·월 접기·상세 버튼은 예전 배당 탭 그대로 -->
+  <dialog class="watch-modal dividends-modal" id="dividendsModal" aria-labelledby="dividendsTitle">
+    <div class="modal-card dividends-modal-card">
+      <div class="modal-head">
+        <div class="dividend-history-title">
+          <strong id="dividendsTitle">배당</strong>
+          <span id="dividendsCount"></span>
+        </div>
+        <button class="ghost-btn" id="dividendsPopupClose" type="button" aria-label="닫기">닫기</button>
+      </div>
+          <div class="table-wrap" id="dividendTableWrap">
+            <table class="dividend-list">
+              <thead>
+                <tr>
+                  <th data-key="pay_date">지급일자</th>
+                  <th data-key="target">대상</th>
+                  <th data-key="name">종목</th>
+                  <th data-key="amount">주당배당금</th>
+                  <th data-key="qty">수량</th>
+                  <th data-key="gross">세전</th>
+                  <th data-key="tax">세금</th>
+                  <th data-key="tax_rate">세율</th>
+                  <th data-key="net">세후</th>
+                  <th data-key="fx_rate">환율</th>
+                  <th data-key="net_krw">실지급액</th>
+                  <th data-key="dividend_yield">배당율</th>
+                  <th class="indicator-head" data-key="dividend_growth_5y"><span>5년</span><span>배당성장율</span></th>
+                  <th data-key="ex_date">배당락일</th>
+                  <th>상세</th>
+                </tr>
+              </thead>
+              <tbody id="dividendRows"></tbody>
+            </table>
+          </div>
+    </div>
   </dialog>
   <!-- PC 거래내역 팝업(2026-11-15): 하단 패널(.transaction-panel)을 이 자리로 옮겨 연다 -->
   <dialog class="watch-modal transactions-modal" id="transactionsModal" aria-label="거래내역">

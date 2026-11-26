@@ -98,7 +98,7 @@ for (const period of [20, 50, 200]) {
   assert.ok(read('app-holdings.js').includes(`signedPercentText(r.${key}, 1)`));
 }
 // Exercise the real comparator: absent SMA stays last for both sort directions.
-run(`sortState.detail = {key:'ma200_pct',dir:1}; activeDetailTab = 'detail';`);
+run(`sortState.detail = {key:'ma200_pct',dir:1};`);
 for (const dir of [1,-1]) {
   assert.equal(run(`sortState.detail.dir=${dir}; sortRows([{ma200_pct:null},{ma200_pct:0},{ma200_pct:-5},{ma200_pct:10}], 'detail').map(r=>r.ma200_pct).join(',')`), dir === 1 ? '-5,0,10,' : '10,0,-5,');
 }

@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const h = require('./harness');
 const ctx = h.loadScripts(h.createContext());
-const setDir = dir => h.evaluate(ctx, `sortState.detail = {key:'extended_change_pct',dir:${dir}}; activeDetailTab = 'detail';
+const setDir = dir => h.evaluate(ctx, `sortState.detail = {key:'extended_change_pct',dir:${dir}};
   Object.assign(interestSortState, {key:'extended_change_pct',dir:${dir},manual:false});`);
 const rows = [
   {ticker:'missing',extended_change_pct:null,display_change_pct:null},

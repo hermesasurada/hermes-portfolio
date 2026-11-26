@@ -579,7 +579,7 @@ function discardHiddenListRowsForChart() {
 // 차트를 열면 목록 표는 숨겨지고(display:none) 행도 비워져 스크롤이 맨 위로 돌아간다.
 // 열기 직전 위치를 기억했다가 목록으로 돌아올 때 되돌린다. 차트에서 다른 차트로 넘어갈 때는
 // 처음 목록 위치를 그대로 둔다.
-const LIST_SCROLL_WRAP_IDS = ["detailTableWrap", "interestTableWrap", "dividendTableWrap"];
+const LIST_SCROLL_WRAP_IDS = ["detailTableWrap", "interestTableWrap"];
 let listScrollMemory = null;
 
 function rememberListScroll() {

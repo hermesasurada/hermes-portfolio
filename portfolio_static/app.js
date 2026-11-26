@@ -10,7 +10,6 @@ let selectedTrade = { accountId: "", ticker: "" };
 let autoRefreshTimer = null;
 let loadInFlight = null;
 let transactionsExpanded = false;
-let activeDetailTab = "detail";
 let statsData = {};
 let statsLoadKey = "";
 let statsInFlight = null;
@@ -355,6 +354,11 @@ document.getElementById("chartTxHistoryOpen").addEventListener("click", () => {
   if (chartPayload) openTickerTransactions(chartPayload.ticker, chartPayload.name, chartPayload.current_price);
 });
 document.getElementById("transactionsPopupClose").addEventListener("click", closeTransactionsPopup);
+document.getElementById("dividendsPopupOpen").addEventListener("click", openDividendsPopup);
+document.getElementById("dividendsPopupClose").addEventListener("click", closeDividendsPopup);
+document.getElementById("dividendsModal").addEventListener("click", event => {
+  if (event.target === event.currentTarget) closeDividendsPopup();
+});
 // 닫으면 접는다 — 펼친 채로 두면 계좌를 바꿀 때마다 보이지 않는 거래내역을 다시 받는다.
 document.getElementById("transactionsModal").addEventListener("close", () => setTransactionsExpanded(false));
 document.getElementById("transactionsModal").addEventListener("click", event => {
@@ -560,18 +564,13 @@ window.addEventListener("resize", () => {
 });
 // 창 높이가 바뀌면 10행 뷰포트도 다시 잡는다(낮은 화면은 뷰포트가 상한).
 window.addEventListener("resize", scheduleTableViewportRows);
-document.querySelectorAll(".tab-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    activeDetailTab = btn.dataset.tab || "detail";
-    ensureTabSortKey(activeDetailTab);
-    renderTable();
-  });
-});
-// th[data-key] 헤더 + .name-head 안의 티커/종목 미니 정렬 라벨
+// th[data-key] 헤더 + .name-head 안의 티커/종목 미니 정렬 라벨 — 배당 팝업 표는 따로 정렬한다
 document.querySelectorAll("th[data-key], .name-head .sort-mini[data-key]").forEach(el => {
   el.addEventListener("click", () => {
-    setCurrentSort(el.dataset.key);
-    renderTable();
+    const table = sortTableOf(el);
+    setCurrentSort(el.dataset.key, table);
+    if (table === "dividend") renderDividendTable();
+    else renderTable();
   });
 });
 // 첫 렌더 전에 URL의 차트 상태를 세팅한다. 기존에는 목록을 먼저 그린 뒤

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const h = require('./harness');
 const ctx = h.loadScripts(h.createContext());
 
-const wraps = Object.fromEntries(['detailTableWrap', 'interestTableWrap', 'dividendTableWrap'].map(id => [id, h.element({id, scrollTop: 0, scrollLeft: 0})]));
+const wraps = Object.fromEntries(['detailTableWrap', 'interestTableWrap'].map(id => [id, h.element({id, scrollTop: 0, scrollLeft: 0})]));
 const show = id => Object.entries(wraps).forEach(([key, el]) => el.classList.toggle('hidden', key !== id));
 ctx.document.getElementById = id => wraps[id] || null;
 let windowY = 0;

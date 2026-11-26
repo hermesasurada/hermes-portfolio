@@ -6,9 +6,14 @@ function ensureTabSortKey(tab) {
   state.dir = defaultSortDir[state.key] || -1;
 }
 
-function setCurrentSort(key) {
-  ensureTabSortKey(activeDetailTab);
-  const state = sortState[activeDetailTab] || sortState.detail;
+// 정렬 머리글이 어느 표의 것인지 — 배당 팝업 표(#dividendTableWrap)만 따로, 나머지는 계좌 표
+function sortTableOf(el) {
+  return el?.closest?.("#dividendTableWrap") ? "dividend" : "detail";
+}
+
+function setCurrentSort(key, tab = "detail") {
+  ensureTabSortKey(tab);
+  const state = sortState[tab] || sortState.detail;
   if (state.key === key) state.dir *= -1;
   else {
     state.key = key;
@@ -990,7 +995,7 @@ function compareListRows(a, b, key, dir) {
   return (an - bn) * dir;
 }
 
-function sortRows(rows, tab = activeDetailTab) {
+function sortRows(rows, tab = "detail") {
   const state = sortState[tab] || sortState.detail;
   rows.sort((a, b) => compareListRows(a, b, state.key, state.dir));
   return rows;
@@ -1028,12 +1033,8 @@ function syncDetailTabs() {
   const showingInterest = interestModeActive() && !showingChart;
   const showingFxInterest = showingInterest && interestGroupIsFx();
   document.getElementById("mobileFiltersToggle")?.classList.toggle("hidden", showingChart || showingFxInterest);
-  document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.classList.toggle("active", !showingChart && !showingInterest && btn.dataset.tab === activeDetailTab);
-  });
   document.getElementById("tableTitle").classList.toggle("hidden", showingChart);
-  document.getElementById("detailTableWrap").classList.toggle("hidden", showingChart || showingInterest || activeDetailTab !== "detail");
-  document.getElementById("dividendTableWrap").classList.toggle("hidden", showingChart || showingInterest || activeDetailTab !== "dividend");
+  document.getElementById("detailTableWrap").classList.toggle("hidden", showingChart || showingInterest);
   document.getElementById("interestTableWrap").classList.toggle("hidden", showingChart || !showingInterest);
   document.getElementById("chartView").classList.toggle("hidden", !showingChart);
   document.getElementById("chartBack").classList.toggle("hidden", !showingChart);
@@ -1058,13 +1059,10 @@ function syncDetailTabs() {
   document.getElementById("chartIntervalToggle")?.classList.toggle("hidden", !chartTicker && !performanceChartOpen);
   document.getElementById("chartDisplayControls")?.classList.toggle("hidden", !showingChart);
   document.getElementById("performanceDetailControl")?.classList.toggle("hidden", !performanceChartOpen);
-  document.querySelector(".detail-tabs").classList.toggle("hidden", showingChart || showingInterest);
+  syncDividendsPopup(showingChart || showingInterest);
   // 통계 지표 도움말 버튼은 통합 세부내역에서 노출
   document.getElementById("fxAdjustedControl")?.classList.toggle("hidden", showingChart || showingFxInterest);
-  document.getElementById("nameFilterControl")?.classList.toggle(
-    "hidden",
-    showingChart || (!showingInterest && activeDetailTab !== "detail")
-  );
+  document.getElementById("nameFilterControl")?.classList.toggle("hidden", showingChart);
   document.getElementById("currencyFilterControl")?.classList.toggle("hidden", showingChart || showingFxInterest);
   document.getElementById("currencySegments")?.classList.toggle("hidden", showingChart || showingFxInterest);
   document.getElementById("rowCount")?.classList.toggle("hidden", showingChart);
@@ -1200,7 +1198,7 @@ function syncColumnPresetControl() {
   if (!control || !select) return;
   const showingChart = Boolean(chartTicker) || performanceChartOpen;
   const interest = interestModeActive();
-  control.classList.toggle("hidden", showingChart || (!interest && activeDetailTab !== "detail"));
+  control.classList.toggle("hidden", showingChart);
   const table = interest ? "interest" : "detail";
   if (select.dataset.table !== table) {
     select.innerHTML = columnPresetOptions(table).map(preset => `<option value="${preset.key}">${esc(preset.label)}</option>`).join("");
@@ -1468,7 +1466,7 @@ function syncPcFrozenColumns() {
 }
 
 function renderTable() {
-  ensureTabSortKey(activeDetailTab);
+  ensureTabSortKey("detail");
   syncTransactionPanel();
   syncFilterToggleControls();
   syncDetailTabs();
@@ -1611,7 +1609,7 @@ function renderTable() {
   });
   // 티커 링크·배당이력 버튼 클릭은 app.js의 문서 위임이 처리 (개별 바인딩 금지)
   syncTickerNameColumnWidth(document.querySelector("#detailTableWrap table"));
-  if (activeDetailTab === "dividend") renderDividendTable();
+  if (document.getElementById("dividendsModal")?.open) renderDividendTable();   // 계좌를 바꾸면 열린 배당 팝업도 따라간다
   schedulePcFrozenColumns();
   scheduleTableViewportRows();   // 10행 뷰포트는 rAF를 기다리지 않는다
   syncColumnPresetNavActive();   // 컨센서스 등이 늦게 와 다시 그려지면 열 위치가 바뀐다

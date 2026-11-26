@@ -6,7 +6,7 @@ const ctx = h.loadScripts(h.createContext());
 const orderOf = (rows, key, dir, which) => {
   const copy = rows.map(r => ({...r}));
   if (which === 'detail') {
-    h.evaluate(ctx, `sortState.detail = {key: ${JSON.stringify(key)}, dir: ${dir}}; activeDetailTab = 'detail';`);
+    h.evaluate(ctx, `sortState.detail = {key: ${JSON.stringify(key)}, dir: ${dir}};`);
     return ctx.sortRows(copy, 'detail').map(r => r.ticker).join(',');
   }
   h.evaluate(ctx, `Object.assign(interestSortState, {key: ${JSON.stringify(key)}, dir: ${dir}, manual: false});`);

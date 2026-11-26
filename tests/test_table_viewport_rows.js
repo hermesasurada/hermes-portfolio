@@ -86,7 +86,8 @@ assert.equal(hidden.vars['--list-rows-max-height'], undefined);
 
 // 렌더 직후 동기 호출 — rAF에 미루면 백그라운드 탭에서 높이가 늦게 잡힌다.
 assert.match(holdings, /function scheduleTableViewportRows\(\) \{\s*\n\s*syncTableViewportRows\(\);/);
-for (const file of ['app-tabs.js', 'app-interest-watchlists.js']) {
+// 배당 표(app-tabs.js)는 2026-11-26부터 팝업 안이라 팝업 높이에 맞춰 스크롤한다 — 행 수 뷰포트 대상 아님.
+for (const file of ['app-interest-watchlists.js']) {
   assert.ok(fs.readFileSync(path.join(root, file), 'utf8').includes('scheduleTableViewportRows()'),
     `${file}에서 표를 그린 뒤 10행 뷰포트를 잡지 않는다`);
 }
