@@ -174,9 +174,13 @@ function renderDividendTable() {
   if (count) count.textContent = `${rows.length}건`;
   const empty = `<tr><td colspan="15" class="flat">${tagFilterSelection.size && dividendData.rows?.length ? "선택한 태그 종목의 예정 배당 없음" : "예정 배당 없음"}</td></tr>`;
   const dateCell = (value, estimated) => `<span class="${estimated ? "estimated-date" : "confirmed-date"}">${dividendDateText(value)}</span>`;
-  const targetInitial = value => {
-    const match = String(value || "").match(/[A-Za-z]/);
-    return match ? match[0].toUpperCase() : "?";
+  // 계좌 칸(2026-11-26 사용자 지시): 예전 이니셜 동그라미 대신 이름(위)·계좌명(아래) 두 줄
+  const accountNames = new Map((typeof flattenAccounts === "function" && data?.members ? flattenAccounts() : [])
+    .map(account => [String(account.id), account.name]));
+  const targetCell = row => {
+    const owner = row.target || row.member || "-";
+    const account = accountNames.get(String(row.account_id ?? "")) || "";
+    return `<td class="dividend-target" title="${esc(account ? `${owner} · ${account}` : owner)}"><span class="dividend-owner">${esc(owner)}</span>${account ? `<span class="dividend-account">${esc(account)}</span>` : ""}</td>`;
   };
   const taxRateText = value => {
     const rate = Number(value);
@@ -254,8 +258,9 @@ function renderDividendTable() {
     if (dividendRowContinues(groupedRows[itemIndex - 1], item)) return `
     <tr class="${paid ? "dividend-paid-row" : "dividend-upcoming-row"} dividend-same-row">
       <td></td>
-      <td class="dividend-target" title="${esc(item.row.target || item.row.member || "-")}"><span class="dividend-target-icon" aria-label="${esc(item.row.target || item.row.member || "-")}">${esc(targetInitial(item.row.target || item.row.member))}</span></td>
+      ${targetCell(item.row)}
       <td class="dividend-name"><span class="sr-only">${esc(item.row.name || item.row.ticker || "-")}</span></td>
+      <td class="dividend-yield"></td>
       <td></td>
       <td>${dividendQtyCell(item.row)}</td>
       <td>${dividendMoneyText(item.row.gross, item.row.currency)}</td>
@@ -264,7 +269,6 @@ function renderDividendTable() {
       <td class="net-dividend">${dividendMoneyText(item.row.net, item.row.currency)}</td>
       <td class="fx-rate">${dividendFxText(item.row.fx_rate)}</td>
       <td class="net-krw">${dividendKrwText(item.row.net_krw)}</td>
-      <td class="dividend-yield"></td>
       <td class="dividend-growth"></td>
       <td class="dividend-ex-date"></td>
       <td class="dividend-detail-cell"></td>
@@ -273,8 +277,9 @@ function renderDividendTable() {
     return `
     <tr class="${paid ? "dividend-paid-row" : "dividend-upcoming-row"}">
       <td>${dateCell(item.row.pay_date, item.row.pay_date_estimated)}</td>
-      <td class="dividend-target" title="${esc(item.row.target || item.row.member || "-")}"><span class="dividend-target-icon" aria-label="${esc(item.row.target || item.row.member || "-")}">${esc(targetInitial(item.row.target || item.row.member))}</span></td>
+      ${targetCell(item.row)}
       <td class="dividend-name" title="${esc(item.row.name || item.row.ticker || "-")}"><a class="ticker-link" href="${esc(chartHref(item.row.ticker))}" data-chart-ticker="${esc(item.row.ticker)}">${esc(item.row.name || item.row.ticker || "-")}</a></td>
+      <td class="dividend-yield">${dividendYieldText(item.row.dividend_yield)}</td>
       <td>${dividendAmountCell(item.row)}</td>
       <td>${dividendQtyCell(item.row)}</td>
       <td>${dividendMoneyText(item.row.gross, item.row.currency)}</td>
@@ -283,7 +288,6 @@ function renderDividendTable() {
       <td class="net-dividend">${dividendMoneyText(item.row.net, item.row.currency)}</td>
       <td class="fx-rate">${dividendFxText(item.row.fx_rate)}</td>
       <td class="net-krw">${dividendKrwText(item.row.net_krw)}</td>
-      <td class="dividend-yield">${dividendYieldText(item.row.dividend_yield)}</td>
       <td class="dividend-growth">${signedPercentText(item.row.dividend_growth_5y, 1)}</td>
       <td class="dividend-ex-date">${dateCell(item.row.ex_date, item.row.ex_date_estimated)}</td>
       <td class="dividend-detail-cell"><button class="ghost-btn dividend-detail-btn" type="button" data-dividend-history="${esc(item.row.ticker)}">상세</button></td>

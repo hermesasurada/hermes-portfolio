@@ -12,6 +12,12 @@ assert.doesNotMatch(html, /id="dividendTableWrap"[^>]*class="[^"]*hidden|class="
 // 모바일에서도 배당 버튼은 보인다(거래내역 버튼만 PC 전용)
 for (const block of h.mediaBlocks(css, '(max-width: 980px)')) assert.doesNotMatch(block.text, /#dividendsPopupOpen[^{]*\{[^}]*display:\s*none/);
 assert.doesNotMatch(css, /\.detail-tabs|\.tab-btn/);
+// 열 순서(2026-11-26): 배당율은 종목 바로 다음, 대상은 '계좌'(이름·계좌명 두 줄). 팝업 폭은 표 폭에 맞춘다.
+const heads = [...html.match(/<table class="dividend-list">[\s\S]*?<\/thead>/)[0].matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].map(m => m[1].replace(/<[^>]+>/g, '').trim());
+assert.deepEqual(heads.slice(0, 5), ['지급일자', '계좌', '종목', '배당율', '주당배당금']);
+assert.equal(heads.length, 15);
+assert.match(css, /\.watch-modal\.dividends-modal \{[^}]*width: fit-content;/);
+assert.match(css, /\.dividends-modal \.dividend-list \{ width: 0; min-width: 0; \}/);
 
 // ── 동작 ──
 const ctx = h.loadScripts(h.createContext());
@@ -21,7 +27,8 @@ const modal = Object.assign(h.element({id: 'dividendsModal'}), {open: false, sho
 els.set('dividendsModal', modal);
 ctx.document.getElementById = el;
 let loads = 0;
-ctx.apiFetchDividends = async () => { loads += 1; return {rows: [{ticker: 'QLD', name: 'QLD', pay_date: '2026-12-30', net_krw: 1000, currency: 'USD'}]}; };
+ctx.apiFetchDividends = async () => { loads += 1; return {rows: [{ticker: 'QLD', name: 'QLD', pay_date: '2026-12-30', net_krw: 1000, currency: 'USD', target: 'Ray', account_id: '2', dividend_yield: 0.5}]}; };
+h.evaluate(ctx, "data = {members: [{name: 'Ray', accounts: [{id: '2', name: '연금저축'}]}]}");
 ctx.visibleAccounts = () => [{id: 'a1'}];
 ctx.schedulePcFrozenColumns = () => {};
 ctx.scheduleTableViewportRows = () => {};
@@ -37,6 +44,11 @@ ctx.scheduleTableViewportRows = () => {};
   assert.match(el('dividendRows').innerHTML, /data-chart-ticker="QLD"/);
   assert.equal(el('dividendsCount').textContent, '1건');
   assert.equal(el('rowCountValue').textContent, '37');
+  // 계좌 칸: 이름 + 계좌명(account_id로 찾는다), 배당율은 종목 다음 칸
+  const dataRow = el('dividendRows').innerHTML.split('<tr').find(tr => tr.includes('data-chart-ticker="QLD"'));
+  const cells = dataRow.match(/<td[\s\S]*?<\/td>/g);
+  assert.match(cells[1], /dividend-owner">Ray<[\s\S]*dividend-account">연금저축</);
+  assert.match(cells[3], /class="dividend-yield"/);
   // 다시 열면 다시 받는다(거래를 고친 뒤 바로 반영)
   ctx.closeDividendsPopup();
   assert.ok(!modal.open);
