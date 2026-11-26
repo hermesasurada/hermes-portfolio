@@ -6024,8 +6024,13 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   }
   .dividend-list th:nth-child(3),
   .dividend-list td:nth-child(3) {
-    width: 110px;
-    max-width: 110px;
+    width: 96px;
+    max-width: 96px;
+  }
+  /* 고정 영역 = 지급일자 + 종목(계좌는 스크롤되며 그 밑으로 들어간다, syncPcFrozenColumns) */
+  .dividend-list th:nth-child(1),
+  .dividend-list td:nth-child(1) {
+    width: 52px;
   }
   /* 배당이력 팝업도 px 고정폭 — 모바일은 가로 스크롤만 허용(압축 금지) */
   .dividend-history-table-wrap {

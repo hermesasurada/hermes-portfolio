@@ -23,6 +23,10 @@ assert.doesNotMatch(css, /\.dividend-owner, \.dividend-account \{ display: block
 assert.match(css, /td\.net-krw \{\s*font-weight: 700;/);
 assert.match(css, /:is\(:nth-child\(4\), :nth-child\(7\), :nth-child\(12\), :nth-child\(13\)\) \{\s*border-left: 1px solid var\(--line\);/);
 
+// 모바일 고정 영역(2026-11-26): 지급일자·종목만 고정, 계좌는 흘려보낸다. 종목 칸도 좁힌다.
+assert.match(h.readStatic('app-holdings.js'), /\["#dividendTableWrap table", narrow \? \[0, 2\] : \[0, 1, 2\]\]/);
+assert.ok(h.mediaBlocks(css, '(max-width: 980px)').some(block => /\.dividend-list td:nth-child\(3\) \{\s*width: 96px;/.test(block.text)));
+
 // 항목 줄무늬: 같은 회차(대상별 줄)는 같은 바탕, 다음 회차는 번갈아, 달이 바뀌면 처음부터
 {
   const c = h.loadScripts(h.createContext());
@@ -55,6 +59,13 @@ ctx.schedulePcFrozenColumns = () => {};
 ctx.scheduleTableViewportRows = () => {};
 
 (async () => {
+  // 계좌 데이터가 오기 전에 누르면 불러오기를 미룬다 — 키를 잡아 두면 팝업이 끝까지 빈 채로 남았다
+  h.evaluate(ctx, "__saved = data; data = null; dividendLoadKey = ''; dividendData = null;");
+  ctx.loadDividendsForSelection();
+  assert.equal(loads, 0);
+  assert.equal(h.evaluate(ctx, 'dividendLoadKey'), '');
+  h.evaluate(ctx, "data = __saved;");
+
   // 열면 새로 받아 그리고, 건수는 팝업 머리에 쓴다(계좌 표의 행 수는 건드리지 않는다)
   el('rowCountValue').textContent = '37';
   ctx.openDividendsPopup();

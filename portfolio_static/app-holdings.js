@@ -1438,30 +1438,34 @@ function syncPcFrozenColumns() {
   // 여기서 다루지 않는다 — 두 시스템이 같은 셀을 두고 겹치면 폭 변경 시
   // left 값이 어긋나는 회귀의 온상이 된다.
 
+  // 배당 표(2026-11-26 사용자 지시): 모바일은 지급일자·종목만 고정하고 계좌는 그 사이로 흘려보낸다
+  // — 세 열을 다 고정하면 375px 화면에서 고정 영역이 294px라 숫자 칸이 거의 안 보였다.
+  const narrow = Boolean(window.matchMedia?.("(max-width: 980px)").matches);
   [
-    ["#detailTableWrap table", 2],
-    ["#dividendTableWrap table", 3]
-  ].forEach(([selector, columnCount]) => {
+    ["#detailTableWrap table", [0, 1]],
+    ["#dividendTableWrap table", narrow ? [0, 2] : [0, 1, 2]]
+  ].forEach(([selector, columns]) => {
     const table = document.querySelector(selector);
     if (!table || table.closest(".hidden")) return;
     // 틀고정 열(로고·종목명)은 헤더 첫 행에 있다 — 계좌표는 2행 헤더라 두 열이 rowspan으로
     // 첫 행에만 있고, 단일 헤더 표(배당)는 first==last(2026-11-07 계좌표 묶음 머리글 도입).
     const headers = Array.from(table.querySelectorAll("thead tr:first-child > th"));
+    const frozen = columns.filter(index => index < headers.length);
     let left = 0;
-    for (let index = 0; index < Math.min(columnCount, headers.length); index += 1) {
+    frozen.forEach((index, order) => {
       const cells = [headers[index]];
       table.querySelectorAll("tbody > tr").forEach(row => {
         const cell = row.cells[index];
         if (cell && cell.colSpan === 1) cells.push(cell);
       });
-      const isEdge = index === columnCount - 1;
+      const isEdge = order === frozen.length - 1;
       cells.forEach(cell => {
         cell.classList.add("pc-frozen-col");
         if (isEdge) cell.classList.add("pc-frozen-edge");
         cell.style.setProperty("--pc-frozen-left", `${left}px`);
       });
       left += headers[index].getBoundingClientRect().width;
-    }
+    });
   });
 }
 

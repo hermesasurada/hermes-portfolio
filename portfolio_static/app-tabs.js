@@ -149,6 +149,12 @@ function dividendSelectionKey() {
 async function loadDividendsForSelection() {
   const key = dividendSelectionKey();
   if (dividendInFlight || dividendLoadKey === key) return;
+  // 계좌 데이터가 오기 전(첫 로딩 중 버튼을 누른 경우)엔 키를 잡지 않는다 — 잡아 두면 이후 렌더가
+  // '이미 불러옴'으로 보고 팝업이 빈 채로 남는다. 데이터가 오면 renderTable이 팝업을 다시 그린다.
+  if (!data?.members) {
+    document.getElementById("dividendRows").innerHTML = skeletonRows(15);
+    return;
+  }
   dividendLoadKey = key;
   const accounts = visibleAccounts();
   const allAccounts = selectionMode === "all";
