@@ -22,6 +22,8 @@ assert.match(css, /\.dividends-modal \.dividend-list \{ width: 0; min-width: 0; 
 assert.doesNotMatch(css, /\.dividend-owner, \.dividend-account \{ display: block/);
 assert.match(css, /td\.net-krw \{\s*font-weight: 700;/);
 assert.match(css, /:is\(:nth-child\(4\), :nth-child\(7\), :nth-child\(12\), :nth-child\(13\)\) \{\s*border-left: 1px solid var\(--line\);/);
+// 세로선 앞 칸(수량·환율·실지급액)은 숫자가 선에 붙지 않게 오른쪽 여백을 더 준다
+assert.match(css, /#dividendTableWrap \.dividend-list :is\(th, td:not\(\[colspan\]\)\):is\(:nth-child\(6\), :nth-child\(11\), :nth-child\(12\)\) \{\s*padding-right: 10px;/);
 
 // 모바일 고정 영역(2026-11-26): 지급일자·종목만 고정, 계좌는 흘려보낸다. 종목 칸도 좁힌다.
 assert.match(h.readStatic('app-holdings.js'), /\["#dividendTableWrap table", narrow \? \[0, 2\] : \[0, 1, 2\]\]/);

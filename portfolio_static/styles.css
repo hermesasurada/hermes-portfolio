@@ -1828,7 +1828,7 @@ th:first-child, td:first-child { text-align: left; }
 }
 .dividend-list th:nth-child(6),
 .dividend-list td:nth-child(6) {
-  width: 52px;
+  width: 56px;
 }
 .dividend-list th:nth-child(7),
 .dividend-list td:nth-child(7) {
@@ -1848,11 +1848,11 @@ th:first-child, td:first-child { text-align: left; }
 }
 .dividend-list th:nth-child(11),
 .dividend-list td:nth-child(11) {
-  width: 58px;
+  width: 62px;
 }
 .dividend-list th:nth-child(12),
 .dividend-list td:nth-child(12) {
-  width: 72px;
+  width: 76px;
 }
 .dividend-list th:nth-child(13),
 .dividend-list td:nth-child(13) {
@@ -6035,7 +6035,7 @@ tr.skeleton-row td { border-bottom: 1px solid var(--line); }
   /* 고정 영역 = 지급일자 + 종목(계좌는 스크롤되며 그 밑으로 들어간다, syncPcFrozenColumns) */
   .dividend-list th:nth-child(1),
   .dividend-list td:nth-child(1) {
-    width: 52px;
+    width: 62px;   /* 머리글 '지급일자'+정렬 화살표가 들어가는 최소 폭 */
   }
   /* 배당이력 팝업도 px 고정폭 — 모바일은 가로 스크롤만 허용(압축 금지) */
   .dividend-history-table-wrap {
@@ -7108,6 +7108,11 @@ html:has(dialog.watch-modal[open]) { overflow: hidden; }
 #dividendRows > tr.dividend-band:hover > .pc-frozen-col { background: var(--surface-hover); }
 .dividend-list :is(th, td:not([colspan])):is(:nth-child(4), :nth-child(7), :nth-child(12), :nth-child(13)) {
   border-left: 1px solid var(--line);
+}
+/* 세로선 바로 앞 칸(수량·환율·실지급액)은 숫자가 선에 붙지 않게 오른쪽 여백을 더 준다(2026-11-26 사용자 지적).
+   border-box라 여백만큼 열 폭도 4px씩 늘렸다. 모바일 공통 여백 규칙이 id 특이도라 id로 이긴다. */
+#dividendTableWrap .dividend-list :is(th, td:not([colspan])):is(:nth-child(6), :nth-child(11), :nth-child(12)) {
+  padding-right: 10px;
 }
 #dividendTableWrap #dividendRows > tr:is(.dividend-paid-row, .dividend-upcoming-row) > td.net-krw {
   font-weight: 700;
