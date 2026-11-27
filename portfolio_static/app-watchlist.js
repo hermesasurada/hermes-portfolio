@@ -112,6 +112,8 @@ function initWatchlistControls() {
       statsLoadKey = "";
       statsFetchedTickers = new Set();
       await load();
+      // 서버가 새 종목을 관심목록 그룹에 자동 배정한다(2026-11-27) — 그룹 목록도 다시 받아 바로 보이게
+      if (typeof loadInterestWatchlists === "function") loadInterestWatchlists().catch(() => {});
       setWatchStatus(result.message || "등록되었습니다. 동기화는 백그라운드에서 진행됩니다.");
     } catch (err) {
       setWatchStatus(err.message || String(err), true);

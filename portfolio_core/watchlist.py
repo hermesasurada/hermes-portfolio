@@ -6,7 +6,8 @@ from typing import Iterable
 from .constants import FX_TICKERS, MARKET_INDEXES
 from .db import connect
 from .hydration import estimate_hydration_minutes, hydrate_ticker
-from .interest_watchlists import load_interest_watchlists, sync_special_interest_items
+from .interest_auto_group import auto_assign_interest_groups
+from .interest_watchlists import load_interest_watchlists
 from .logos import logo_stem
 from .paths import LOGO_DIR
 from .price_store import infer_category
@@ -62,14 +63,30 @@ def upsert_ticker(item: dict) -> dict:
             (ticker, name, region, currency, category, disp),
         )
         conn.commit()
-    return {"ticker": ticker, "name": name, "currency": currency, "category": category, "region": region}
+    return {"ticker": ticker, "name": name, "currency": currency, "category": category, "region": region,
+            "country": resolved.get("country"), "quote_type": resolved.get("quote_type")}
+
+
+def interest_group_note(tickers: list[str], groups: dict[str, str]) -> str:
+    """등록 안내 끝에 붙는 관심목록 배정 결과 한 줄(배정 안 된 종목은 '기타')."""
+    if not tickers:
+        return ""
+    placed = [f"{ticker} → {groups[ticker]}" for ticker in tickers if ticker in groups]
+    left = [ticker for ticker in tickers if ticker not in groups]
+    parts = []
+    if placed:
+        parts.append("관심목록: " + ", ".join(placed))
+    if left:
+        parts.append(", ".join(left) + "은(는) 분류가 애매해 '기타'에 둡니다")
+    return " " + " · ".join(parts) + "."
 
 
 def add_watchlist_async(items: Iterable[dict]) -> dict:
     """Register tickers immediately, then hydrate them (history/fundamentals/
     earnings/logo) in a background thread so the request returns right away. (#2)"""
     added = [upsert_ticker(item) for item in items]
-    sync_special_interest_items(added)
+    # 관심목록 자동 배정(2026-11-27 사용자 지시) — 애매하면 넣지 않아 '기타'에 남는다
+    groups = auto_assign_interest_groups(added)
     tickers = [item["ticker"] for item in added]
 
     def _worker(target: list[str]) -> None:
@@ -90,7 +107,8 @@ def add_watchlist_async(items: Iterable[dict]) -> dict:
         "tickers": added,
         "async": True,
         "eta_minutes": eta,
-        "message": f"종목 데이터 동기화에 시간이 소요됩니다. 약 {eta}분 뒤 새로고침해 확인하세요.",
+        "interest_groups": groups,
+        "message": f"종목 데이터 동기화에 시간이 소요됩니다. 약 {eta}분 뒤 새로고침해 확인하세요." + interest_group_note(tickers, groups),
     }
 
 

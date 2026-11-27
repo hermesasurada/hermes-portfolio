@@ -171,6 +171,9 @@ def lookup_yahoo_ticker(ticker: str) -> dict | None:
         "currency": str(currency).upper(),
         "category": category,
         "region": ticker_region(ticker, category),
+        # 관심목록 자동 배정(interest_auto_group)용 — tickers 표에는 저장하지 않는다
+        "country": info.get("country") or None,
+        "quote_type": info.get("quoteType") or None,
     }
 
 
