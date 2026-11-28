@@ -1150,7 +1150,9 @@ function detailLeafColumns() {
   const leaves = [];
   let subIndex = 0;
   wrap.querySelectorAll("thead tr.detail-group-head > th").forEach(th => {
-    const span = Number(th.getAttribute("colspan")) || 0;
+    // 빈 열을 숨기면 묶음 제목의 colspan을 줄이므로(syncDetailColumnPreset) 원래 폭은 data-span에 둔다.
+    if (th.hasAttribute("colspan") && !th.dataset.span) th.dataset.span = th.getAttribute("colspan");
+    const span = Number(th.dataset.span || th.getAttribute("colspan")) || 0;
     if (!span) { leaves.push({ th }); return; }
     for (let i = 0; i < span; i += 1) leaves.push({ th: sub[subIndex++], groupTh: th });
   });
@@ -1161,7 +1163,25 @@ function detailLeafColumns() {
       || (leaf.th.classList.contains("logo-col") ? "logo" : leaf.th.classList.contains("name-head") ? "name" : ""),
   }));
 }
-function syncDetailColumnPreset() {
+// 요약 열(등락·수량·평가액…)과 거래 열은 값이 비어도 숨기지 않는다. 연장은 renderTable이 따로 다룬다.
+const DETAIL_KEEP_EMPTY_COLUMNS = new Set(["logo", "name", "display_change_pct", "extended_change_pct", "current_price",
+  "qty", "change_krw", "value_krw", "weight_pct", "trade"]);
+const DETAIL_CONSENSUS_KEYS = new Set(["target_price", "upside_pct", "dispersion_pct", "buy_strength", "rating_rank"]);
+// 보이는 종목 전부가 값이 없는 지표 열 — 연금 계좌처럼 ETF만 고르면 밸류·수익성·성장·재무 등이 통째로 빈다
+// (2026-11-28 사용자 지시). 규칙은 관심목록과 같다(hasInterestColumnValue). 통계·컨센서스가 다 오기 전에는
+// 숨기지 않는다 — 도착하며 열이 생겼다 사라지는 깜빡임 방지.
+function emptyDetailColumnKeys(leaves, rows) {
+  if (!Array.isArray(rows) || !rows.length) return new Set();
+  const statsReady = rows.every(row => !row.ticker || statsData[row.ticker]);
+  const quotesReady = rows.every(row => !consensusCandidate(row)
+    || quoteFetchedTickers.has(String(row.ticker || "").toUpperCase()));
+  return new Set(leaves
+    .filter(leaf => leaf.key && !DETAIL_KEEP_EMPTY_COLUMNS.has(leaf.key))
+    .filter(leaf => (DETAIL_CONSENSUS_KEYS.has(leaf.key) ? quotesReady : statsReady)
+      && !rows.some(row => hasInterestColumnValue(row, leaf.key)))
+    .map(leaf => leaf.key));
+}
+function syncDetailColumnPreset(rows = []) {
   const leaves = detailLeafColumns();
   if (!leaves.length || !document.head?.appendChild) return;
   let style = document.getElementById("detailColumnPresetStyle");
@@ -1173,7 +1193,9 @@ function syncDetailColumnPreset() {
   const preset = effectiveColumnPreset("detail");
   // 묶음을 고르면 열이 몇 개뿐이라 표의 최소 폭(660px) 규칙을 푼다 — 그대로 두면 남은 열이 그 폭을 나눠 가져 벌어진다.
   document.getElementById("detailTableWrap")?.classList.toggle("column-preset", preset !== "all");
-  const hidden = preset === "all" ? [] : leaves.filter(leaf => !columnInPreset(leaf.key, preset, "detail"));
+  const empty = emptyDetailColumnKeys(leaves, rows);
+  const hidden = leaves.filter(leaf => empty.has(leaf.key)
+    || (preset !== "all" && !columnInPreset(leaf.key, preset, "detail")));
   const selectors = [];
   const groups = new Map();
   leaves.forEach(leaf => {
@@ -1184,10 +1206,14 @@ function syncDetailColumnPreset() {
     selectors.push(`#detailTableWrap tbody td:nth-child(${leaf.index})`, `#detailTableWrap thead th[data-leaf="${leaf.index}"]`);
   });
   // 묶음 제목(배당·추세…)은 그 아래 열이 모두 숨을 때 함께 숨긴다.
+  // 일부만 숨으면 colspan을 남은 열 수로 줄인다 — 그대로 두면 제목이 옆 묶음 위로 밀린다.
   groups.forEach((members, groupTh) => {
-    if (members.every(leaf => hidden.includes(leaf))) {
+    const shown = members.filter(leaf => !hidden.includes(leaf)).length;
+    if (!shown) {
       selectors.push(`#detailTableWrap thead th[data-detail-group="${groupTh.dataset.detailGroup}"]`);
     }
+    const span = String(Math.max(1, shown));
+    if (groupTh.getAttribute("colspan") !== span) groupTh.setAttribute("colspan", span);
   });
   const css = selectors.length ? `${selectors.join(",\n")} { display: none; }` : "";
   if (style.textContent !== css) style.textContent = css;
@@ -1481,8 +1507,8 @@ function renderTable() {
     renderInterestMainTable();
     return;
   }
-  syncDetailColumnPreset();
   const rows = applyTagFilter(statsRows(filteredRows()).map(attachConsensus).filter(row => matchesNameFilter(row)));
+  syncDetailColumnPreset(rows);
   sortRows(rows, "detail");
   if (rows.some(row => row.ticker && !statsData[row.ticker])) loadStatsForRows(rows);
   // 애널리스트 컨센서스 열(2026-11-20, 관심목록과 같은 항목) — 도착하면 다시 그린다.

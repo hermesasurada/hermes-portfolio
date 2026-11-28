@@ -71,8 +71,20 @@ h.evaluate(ctx, 'setColumnPreset("interest", "all")');
 assert.ok(run(`visibleInterestColumns([${row}]).map(c => c.key)`).includes('perf_1y'));
 
 assert.match(html, /<select id="columnPresetSelect"/);
-assert.match(h.readStatic('app-holdings.js'), /syncDetailColumnPreset\(\);\s*\n\s*const rows = applyTagFilter/);
+assert.match(h.readStatic('app-holdings.js'), /const rows = applyTagFilter[^\n]*\n\s*syncDetailColumnPreset\(rows\);/);
 // PC는 통화처럼 버튼 묶음, 모바일은 선택 상자(2026-11-20 사용자 지시).
 assert.match(html, /<div class="segmented column-preset-segments" id="columnPresetSegments"/);
 assert.match(h.readStatic('app-holdings.js'), /data-column-preset="\$\{preset\.key\}"/);
+// 계좌표: 보이는 종목 전부가 값이 없는 지표 열은 숨긴다(2026-11-28 — 연금 계좌는 ETF만이라 밸류·수익성 등이 빈다).
+// 요약 열은 비어도 두고, 통계·컨센서스가 다 오기 전에는 숨기지 않는다.
+const leaves = '["qty", "trailing_pe", "gross_margin", "dividend_yield", "perf_1y", "target_price"].map(key => ({key}))';
+const etfRows = '[{ticker: "ETF1", category: "kr", qty: 0, dividend_yield: 3, perf_1y: 5}, {ticker: "ETF2", category: "kr", perf_1y: 2}]';
+h.evaluate(ctx, 'statsData = {}; quoteFetchedTickers = new Set()');
+assert.deepEqual(run(`[...emptyDetailColumnKeys(${leaves}, ${etfRows})]`), []);
+h.evaluate(ctx, 'statsData = {ETF1: {}, ETF2: {}}');
+assert.deepEqual(run(`[...emptyDetailColumnKeys(${leaves}, ${etfRows})]`), ['trailing_pe', 'gross_margin']);
+h.evaluate(ctx, 'quoteFetchedTickers = new Set(["ETF1", "ETF2"])');
+assert.deepEqual(run(`[...emptyDetailColumnKeys(${leaves}, ${etfRows})]`), ['trailing_pe', 'gross_margin', 'target_price']);
+assert.deepEqual(run(`[...emptyDetailColumnKeys(${leaves}, [])]`), []);
+h.evaluate(ctx, 'statsData = {}; quoteFetchedTickers = new Set()');
 console.log('column presets ok');
