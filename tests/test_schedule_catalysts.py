@@ -41,6 +41,9 @@ class ScheduleCatalystTests(unittest.TestCase):
             ev("11월 PMI", "2026-11-23", source={"cluster": "미국"}),
             {"kind": "macro", "date": "2026-12-09", "date_precision": "day", "bucket": "upcoming",
              "attribution": "fed_calendar", "title": "FOMC 성명 발표"},
+            {"kind": "macro", "date": "2026-12-18", "date_precision": "day", "bucket": "upcoming",
+             "attribution": "boj_calendar", "title": "일본은행 금융정책결정회의 결과 발표",
+             "source": {"scope": "macro", "origin": "일본은행 일정"}},
             ev("판정 끝", "2026-11-24", bucket="resolved", status="충족"),
             ev("미정", None, date_precision="unknown", bucket="undated"),
             ev("범위 밖", "2027-03-01"),
@@ -50,6 +53,7 @@ class ScheduleCatalystTests(unittest.TestCase):
         self.assertEqual(rows, [
             {"date": "2026-11-23", "title": "11월 PMI", "cluster": "미국"},
             {"date": "2026-12-09", "title": "FOMC 성명 발표", "cluster": "연준"},
+            {"date": "2026-12-18", "title": "일본은행 금융정책결정회의 결과 발표", "cluster": "일본은행"},
         ])
 
 

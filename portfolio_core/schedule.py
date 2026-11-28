@@ -259,7 +259,9 @@ def _general_events(start, end) -> list[dict]:
         rows.append({
             "date": day.isoformat(),
             "title": company_events_plain(event.get("title")),
-            "cluster": "연준" if event.get("kind") == "macro" else str(source.get("cluster") or ""),
+            # 거시 일정 행은 출처 이름을 갖는다('연준 일정'·'일본은행 일정', 2026-11-29). 없으면 옛 사본의 연준 행
+            "cluster": (str(source.get("origin") or "연준 일정").removesuffix(" 일정") if event.get("kind") == "macro"
+                        else str(source.get("cluster") or "")),
         })
     rows.sort(key=lambda row: (row["date"], row["title"]))
     return rows
